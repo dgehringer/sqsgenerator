@@ -25,7 +25,7 @@ EXTRA_LINK_ARGS = ['-L{ld}'.format(ld=libdir) for libdir in LIB_DIRS]+['-lgmp']
 EXTRA_COMPILE_ARGS = ['-Wa,-q']
 INCLUDE_DIRS = [numpy.get_include(), join(BUILD_DIRECTORY, 'include')] + INCLUDE_DIRECTORIES
 
-with open(join(THIS_DIR, 'README.txt'), encoding='utf-8') as file:
+with open(join(THIS_DIR, 'README.md'), encoding='utf-8') as file:
     long_description = file.read()
 
 
