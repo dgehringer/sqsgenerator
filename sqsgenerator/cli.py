@@ -77,7 +77,7 @@ Options:
 --verbosity=<VERBOSITY>          Sets the level of verbosity. Values from 1-5 are possible [default: 1]
 
 --objective=<OBJECTIVE>          Specifies the value the objective functions. The program tries to reach the specified
-                                 objective function. [default 0.0]
+                                 objective function. [default: 0.0]
 
 --version                        Displays the version of sqsgen
 """
@@ -91,12 +91,10 @@ from sqsgenerator.utils import write_message, unicode_alpha, get_superscript, co
 from sqsgenerator.utils.optionparser import parse_options
 
 
-
-
 def main():
     options = docopt(__doc__, version=__VERSION__)
+    print(options)
     options = parse_options(options)
-
 
     if options['alpha']:
         structure = options['structure']
