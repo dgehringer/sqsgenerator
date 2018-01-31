@@ -1,7 +1,7 @@
 from libc.stdint cimport uint8_t, uint32_t, uint64_t
 cimport sqsgenerator.core.base
 
-cdef class SqsIterator(base.BaseIterator):
+cdef class SqsIterator(sqsgenerator.core.base.BaseIterator):
 
     cdef double[:, :] constant_factor_matrix
     cdef double *constant_factor_matrix_ptr
