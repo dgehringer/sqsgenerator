@@ -12,7 +12,7 @@ import os
 #os.environ['CC'] = '/usr/local/bin/gcc-7'
 
 #Directory of gmp.h
-#LIB_DIRS = ['/usr/local/include']
+#INCLUDE_DIRECTORIES = ['/usr/local/include']
 INCLUDE_DIRECTORIES = []
 
 #Specify gmp lib directory
@@ -85,7 +85,7 @@ Extension(
 setup(
         name='sqsgenerator',
         version="0.1",
-        description='A simple command line Special quasi random structure generator program in Python.',
+        description='A simple command line Special Quasirandom Structure generator program in Python/Cython.',
         long_description=long_description,
         author='Dominik Noeger',
         author_email='dominik-franz-josef.noeger@stud.unileoben.ac.at',
