@@ -93,9 +93,7 @@ from sqsgenerator.utils.optionparser import parse_options
 
 def main():
     options = docopt(__doc__, version=__VERSION__)
-    print(options)
     options = parse_options(options)
-
     if options['alpha']:
         structure = options['structure']
         atoms = len(structure.sites)
