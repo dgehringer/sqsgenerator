@@ -2,7 +2,6 @@
 
 This package is a Special Quasirandom Structure generator written in Python3/Cython. Please note that the programm currently only works with Python 3.
 
----
 
 ## Getting Started
 
@@ -77,4 +76,4 @@ To install the package run [setup.py](https://github.com/dnoeger/sqsgenerator/bl
 python setup.py install
 ```
 
-# Usage
+## Usage
