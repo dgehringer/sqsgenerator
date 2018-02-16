@@ -86,7 +86,7 @@ cdef class SqsIterator(base.BaseIterator):
                         current_bond_ratio = alpha_decomposition[i * d1 + j * d2 + k]
                         current_alpha = self.weights_ptr[i] / 2 - current_bond_ratio
                         alpha_decomposition[i * d1 + j * d2 + k] = current_alpha
-                        alpha += current_alpha
+                        alpha += fabs(current_alpha)
 
         return alpha
 
