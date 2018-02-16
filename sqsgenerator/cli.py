@@ -228,13 +228,13 @@ def print_result_internal(alpha, verbosity, prefix=''):
         if 1 <= verbosity < 2:
             shell_alphas = np.sum(np.array(list(alpha.values())),axis=0).tolist()
             for i, shell_alpha in enumerate(shell_alphas):
-                print(colored('{alpha}{prefix}{sub}={value:.4f}'.format(alpha=unicode_alpha,
+                print(colored('{alpha}{prefix}{sub}={value:.14f}'.format(alpha=unicode_alpha,
                                                             sub=get_superscript(i+1),
                                                             prefix=prefix,
                                                             value=shell_alpha), color='magenta'))
         if 2 <= verbosity <= 3:
             for bond, values in alpha.items():
-                print(colored('{alpha}{prefix}[{bond}]={value:.4f}'.format(alpha=unicode_alpha,
+                print(colored('{alpha}{prefix}[{bond}]={value:.14f}'.format(alpha=unicode_alpha,
                                                                bond=bond,
                                                                prefix=prefix,
                                                                value=sum(values)), color='magenta'))
@@ -242,13 +242,13 @@ def print_result_internal(alpha, verbosity, prefix=''):
             for bond, values in alpha.items():
                 line_str = ""
                 for i, value in enumerate(values[:-1]):
-                    line_str += colored('{alpha}{sub}[{bond}]={value:.4f}, '.format(
+                    line_str += colored('{alpha}{sub}[{bond}]={value:.14f}, '.format(
                         alpha=unicode_alpha,
                         bond=bond,
                         sub=get_superscript(i+1),
                         value=value
                     ), color='magenta')
-                line_str += colored('{alpha}{sub}[{bond}]={value:.4f}'.format(
+                line_str += colored('{alpha}{sub}[{bond}]={value:.14f}'.format(
                         alpha=unicode_alpha,
                         bond=bond,
                         sub=get_superscript(len(values)),

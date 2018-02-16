@@ -61,7 +61,7 @@ cdef class SqsIterator(base.BaseIterator):
         cdef uint8_t current_species
         cdef uint8_t compare_species
         cdef uint8_t shell
-        cdef double alpha = 0,
+        cdef double alpha = 0.0,
         cdef double current_bond_ratio = 0.0
         cdef double current_alpha
 

@@ -1,5 +1,6 @@
 #include "utils.h"
 
+
 static uint32_t d = 6615241;
 static uint32_t v = 5783321;
 static uint32_t w = 88675123;
@@ -67,20 +68,62 @@ inline uint32_t xorwow()
 }
 
 inline uint32_t rand_int(uint32_t n) {
-    uint32_t limit = RAND_MAX - RAND_MAX % n;
-    uint32_t rnd;
-    while ((rnd = rand()) >= limit);
-    return rnd % n;
+    if ((n - 1) == RAND_MAX) {
+    return rand();
+    } else {
+        // Chop off all of the values that would cause skew...
+        long end = RAND_MAX / n; // truncate skew
+        //assert (end > 0L);
+        end *= n;
+
+        // ... and ignore results from rand() that fall above that limit.
+        // (Worst case the loop condition should succeed 50% of the time,
+        // so we can expect to bail out of this loop pretty quickly.)
+        int r;
+        while ((r = rand()) >= end);
+
+        return r % n;
+    }
 }
 
 void reseed_xor() {
-    srand(time(NULL));
-    d = rand_int(6615241);
-    v = rand_int(5783321);
-    w = rand_int(88675123);
-    x = rand_int(123456789);
-    y = rand_int(362436069);
-    z = rand_int(521288629);
+      srand(time(NULL));
+      d = rand_int(6615241);
+      uint32_t t = (x^(x<<2));
+      t = (x^(x<<2));
+      x = y;
+      y = z;
+      z = w;
+      w = v;
+      v = (v^(v<<4))^(t^(t<<1));
+      v = (d+=362437)+v;
+      t = (x^(x<<2));
+      x = y;
+      y = z;
+      z = w;
+      w = v;
+      v = (v^(v<<4))^(t^(t<<1));
+      w = (d+=362437)+v;
+      x = y;
+      y = z;
+      z = w;
+      w = v;
+      v = (v^(v<<4))^(t^(t<<1));
+      x = (d+=362437)+v;
+      t = (x^(x<<2));
+      x = y;
+      y = z;
+      z = w;
+      w = v;
+      v = (v^(v<<4))^(t^(t<<1));
+      y = (d+=362437)+v;
+      t = (x^(x<<2));
+      x = y;
+      y = z;
+      z = w;
+      w = v;
+      v = (v^(v<<4))^(t^(t<<1));
+      z = (d+=362437)+v;;
 }
 
 bool knuth_fisher_yates_shuffle(uint8_t *configuration, size_t atoms) {
