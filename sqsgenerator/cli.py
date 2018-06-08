@@ -111,11 +111,11 @@ def main():
 
         if options['sqs']:
             from sqsgenerator.core.sqs import SqsIterator
-            iterator = SqsIterator(options[structure], mole_fractions, options['weights'], verbosity=options['verbosity'])
+            iterator = SqsIterator(options['structure'], mole_fractions, options['weights'], verbosity=options['verbosity'])
             alpha = iterator.calculate_alpha()
         elif options['dosqs']:
             from sqsgenerator.core.sqs import DosqsIterator
-            iterator = DosqsIterator(options[structure], mole_fractions, options['weights'], verbosity=options['verbosity'])
+            iterator = DosqsIterator(options['structure'], mole_fractions, options['weights'], verbosity=options['verbosity'])
             main_sum_weight, anisotropy_weights = options['anisotropy']
             alpha = iterator.calculate_alpha(main_sum_weight, anisotropy_weights)
         else:
@@ -130,8 +130,8 @@ def main():
         else:
             structures = default_iterations(options)
 
-    fname = '{x}x{y}x{z}'.format(x=options['supercellx'], y=options['supercelly'], z=options['supercellz'])
-    write_structures(structures, fname)
+        fname = '{x}x{y}x{z}'.format(x=options['supercellx'], y=options['supercelly'], z=options['supercellz'])
+        write_structures(structures, fname)
 
 
 def do_sqs_iterations(structure, mole_fractions, weights, iterations=10000, prefix='', verbosity=0, parallel=True, output_structures=10, objective=0.0):
