@@ -9,22 +9,22 @@ import numpy
 import os
 
 #Specify OpenMP capable compiler
-#os.environ['CC'] = '/usr/local/bin/gcc-7'
+os.environ['CC'] = '/usr/local/bin/clang-omp'
 
 #Directory of gmp.h
-#INCLUDE_DIRECTORIES = ['/usr/local/include']
-INCLUDE_DIRECTORIES = []
+INCLUDE_DIRECTORIES = ['/usr/local/include']
+#INCLUDE_DIRECTORIES = []
 
 #Specify gmp lib directory
-#LIB_DIRS = ['/usr/local/Cellar/gmp/6.1.2_1/lib']
-LIB_DIRS = []
+LIB_DIRS = ['/usr/local/Cellar/gmp/6.1.2_1/lib', '/usr/local/opt/llvm/lib']
+#LIB_DIRS = []
 
 ################################################
 THIS_DIR = dirname(__file__)
 CORE_EXT_DIRECTORY = join('sqsgenerator', 'core')
 BUILD_DIRECTORY = join(THIS_DIR, CORE_EXT_DIRECTORY)
 EXTRA_LINK_ARGS = ['-L{ld}'.format(ld=libdir) for libdir in LIB_DIRS]+['-lgmp']
-EXTRA_COMPILE_ARGS = ['-Wa,-q', '-std=c1x']
+EXTRA_COMPILE_ARGS = ['-std=c1x']
 INCLUDE_DIRS = [numpy.get_include(), join(BUILD_DIRECTORY, 'include')] + INCLUDE_DIRECTORIES
 
 with open(join(THIS_DIR, 'README.md'), encoding='utf-8') as file:

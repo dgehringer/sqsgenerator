@@ -87,6 +87,8 @@ class CompositionalArgument(ArgumentBase):
             mole_fractions = {}
             dummy_z = 1
             dummy_species = []
+            atoms_in_supercell = atoms *  SupercellXArgument(self._options)() * SupercellYArgument(self._options)() * SupercellZArgument(self._options)()
+            atoms_mode = False
             for species_comp in composition:
                 try:
                     _species, mole_fraction = species_comp.split(':')
@@ -101,10 +103,15 @@ class CompositionalArgument(ArgumentBase):
                             mole_fraction = species_comp
                         else:
                             continue
-
                 try:
-                    mole_fraction = int(mole_fraction)
-                    mole_fraction = float(mole_fraction) / atoms
+
+                    mole_fraction = abs(float(mole_fraction))
+                    if mole_fraction.is_integer() and mole_fraction > 1:
+                        atoms_mode = True
+
+                        mole_fraction = mole_fraction / atoms_in_supercell
+                    else:
+                        mole_fraction = float(mole_fraction)
                 except ValueError:
                     try:
                         mole_fraction = float(mole_fraction)
@@ -123,6 +130,7 @@ class CompositionalArgument(ArgumentBase):
                     mole_fractions[_species] = mole_fraction
             missing_species = [specie for specie in species if specie not in mole_fractions.keys()]
             if sum(mole_fractions.values()) > 1.0:
+                print(mole_fractions)
                 self.write_message('The mole fractions specified exceed 1. {0}'.format(mole_fractions))
                 raise InvalidOption
             if len(missing_species) > 1:
