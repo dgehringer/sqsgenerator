@@ -243,7 +243,7 @@ cdef class DosqsIterator(base.BaseIterator):
         for i in range(c_iterations):
             dosqs_alpha = fabs(self.calculate_parameter(self.configuration_ptr, self.constant_factor_matrix_ptr, dosqs_alpha_decomposition, dimensions, main_sum_weight, dosqs_anisotropy_weights_ptr))
 
-            if dosqs_alpha < shared_collection.best_objective():
+            if dosqs_alpha <= shared_collection.best_objective():
                 shared_collection.add(dosqs_alpha, self.configuration_ptr, dosqs_alpha_decomposition)
                 reseed_xor()
             self.reset_alpha_results(dosqs_alpha_decomposition)
