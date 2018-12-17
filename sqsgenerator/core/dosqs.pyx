@@ -341,7 +341,7 @@ cdef class ParallelDosqsIterator(DosqsIterator):
 
             for k in range(start_permutation, end_permutation):
                 local_dosqs_alpha = fabs(self.calculate_parameter(local_configuration, self.constant_factor_matrix_ptr, local_dosqs_alpha_decomposition, dimensions, main_sum_weight, dosqs_anisotropy_weights_ptr))
-                if local_dosqs_alpha < shared_collection.best_objective():
+                if local_dosqs_alpha <= shared_collection.best_objective():
                     shared_collection.add(local_dosqs_alpha, local_configuration, local_dosqs_alpha_decomposition)
                     reseed_xor()
                 self.reset_alpha_results(local_dosqs_alpha_decomposition)

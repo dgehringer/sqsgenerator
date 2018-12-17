@@ -125,7 +125,7 @@ bool conf_array_add(conf_array_t* array, double objective, uint8_t* conf, double
         array->best_objective = objective;
         conf_array_clear(array);
     }
-    if(objective > array->best_objective) {
+    if(objective >= array->best_objective) {
         conf_array_release_mutex(array);
         return false;
     }
