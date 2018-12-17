@@ -194,7 +194,7 @@ cdef class DosqsIterator(base.BaseIterator):
     def sort_numpy(self, uint8_t[:] a, kind='quick'):
         np.asarray(a).sort(kind=kind)
 
-    def iteration(self, double main_sum_weight, list anisotropic_weights, output_structures=10, iterations=100000, divergent=False):
+    def iteration(self, double main_sum_weight, list anisotropic_weights, output_structures=10, iterations=100000):
         cdef double dosqs_alpha
         cdef double sqs_best_alpha
         cdef double sqs_alpha
@@ -202,7 +202,6 @@ cdef class DosqsIterator(base.BaseIterator):
         cdef uint64_t c_iterations
         cdef bint all_flag = iterations == 'all'
         cdef bint all_output_structures_flag = output_structures == 'all'
-        cdef bint divergent_flag = divergent == True
         cdef ConfigurationCollection shared_collection
         cdef double[:] dosqs_anisotropy_weights = np.ascontiguousarray(anisotropic_weights)
         cdef double *dosqs_anisotropy_weights_ptr = <double*> &dosqs_anisotropy_weights[0]
@@ -217,9 +216,6 @@ cdef class DosqsIterator(base.BaseIterator):
         # dimensions 0 = x, 1 = y, 2 = z
         self.reset_alpha_results(dosqs_alpha_decomposition)
 
-        if divergent:
-            self.sqs_iterator.reset_alpha_results(sqs_alpha_decomposition)
-            sqs_best_alpha = 1.0e22
         if iterations == 'all':
             self.sort_numpy(self.configuration)
             composition = dict(Counter(np.asarray(self.configuration)))
@@ -246,19 +242,10 @@ cdef class DosqsIterator(base.BaseIterator):
         t0 = time.time()
         for i in range(c_iterations):
             dosqs_alpha = fabs(self.calculate_parameter(self.configuration_ptr, self.constant_factor_matrix_ptr, dosqs_alpha_decomposition, dimensions, main_sum_weight, dosqs_anisotropy_weights_ptr))
-            if divergent_flag:
 
-                if dosqs_alpha >= fabs(shared_collection.best_objective()):
-                    sqs_alpha = fabs(self.sqs_iterator.calculate_parameter(self.configuration_ptr, self.sqs_iterator.constant_factor_matrix_ptr, sqs_alpha_decomposition))
-                    if sqs_alpha <= sqs_best_alpha:
-                        shared_collection.add(-dosqs_alpha, self.configuration_ptr, dosqs_alpha_decomposition)
-                        sqs_best_alpha = sqs_alpha
-                        reseed_xor()
-                    self.sqs_iterator.reset_alpha_results(sqs_alpha_decomposition)
-            else:
-                if dosqs_alpha <= shared_collection.best_objective():
-                    shared_collection.add(dosqs_alpha, self.configuration_ptr, dosqs_alpha_decomposition)
-                    reseed_xor()
+            if dosqs_alpha < shared_collection.best_objective():
+                shared_collection.add(dosqs_alpha, self.configuration_ptr, dosqs_alpha_decomposition)
+                reseed_xor()
             self.reset_alpha_results(dosqs_alpha_decomposition)
             next_permutation_function_ptr(self.configuration_ptr, self.atoms)
         total = time.time() - t0
@@ -268,6 +255,8 @@ cdef class DosqsIterator(base.BaseIterator):
         decomp_list = [self.alpha_to_dict(np.asarray(<double[:3, :self.shell_count, :self.species_count, :self.species_count]>shared_collection.get_decomposition(i))) for i in range(shared_collection.size())]
 
         lps = total_iterations if iterations == 'all' else iterations
+        for i in range(shared_collection.size()):
+            print('LIST AFTER: {}/{} {}'.format(i, shared_collection.size(), np.array(<uint8_t[:self.atoms]>shared_collection.get_configuration(i))))
 
         return structure_list, decomp_list, lps, total/lps
 
@@ -283,13 +272,12 @@ cdef class ParallelDosqsIterator(DosqsIterator):
     def __cinit__(self, structure, dict mole_fractions, dict weights, verbosity=0, num_threads=multiprocessing.cpu_count()):
         self.num_threads = num_threads
 
-    def iteration(self, double main_sum_weight, list anisotropic_weights, iterations=100000, divergent=False, int threads=multiprocessing.cpu_count(), output_structures=10):
+    def iteration(self, double main_sum_weight, list anisotropic_weights, iterations=100000, int threads=multiprocessing.cpu_count(), output_structures=10):
         cdef int num_threads = threads
         cdef int thread_id
         cdef int dimensions = 3
         cdef bint all_flag = iterations == 'all'
         cdef bint all_output_structures_flag = output_structures == 'all'
-        cdef bint divergent_flag = divergent == True
         cdef uint64_t permutations
         cdef uint64_t start_permutation
         cdef uint64_t end_permutation
@@ -301,7 +289,6 @@ cdef class ParallelDosqsIterator(DosqsIterator):
         cdef double local_best_sqs_alpha
         cdef double local_dosqs_alpha
         cdef uint8_t* local_configuration
-        cdef double* local_sqs_alpha_decomposition
         cdef double* local_dosqs_alpha_decomposition
         cdef next_permutation_function next_permutation_function_ptr
         cdef ConfigurationCollection shared_collection
@@ -330,17 +317,11 @@ cdef class ParallelDosqsIterator(DosqsIterator):
 
             thread_id = openmp.omp_get_thread_num()
             local_configuration = <uint8_t*>malloc(sizeof(uint8_t)*self.atoms)
-            if divergent_flag:
-                local_sqs_alpha_decomposition = <double*>malloc(sizeof(double)*self.shell_count*self.species_count*self.species_count)
             local_dosqs_alpha_decomposition = <double*>malloc(sizeof(double)*3*self.shell_count*self.species_count*self.species_count)
 
             for i in range(self.atoms):
                 local_configuration[i] = self.configuration[i]
             self.reset_alpha_results(local_dosqs_alpha_decomposition)
-
-            if divergent_flag:
-                self.sqs_iterator.reset_alpha_results(local_sqs_alpha_decomposition)
-                local_best_sqs_alpha = 1e22
 
             start_permutation = thread_id*(permutations if all_flag else c_iterations)/num_threads
             end_permutation = (thread_id+1)*(permutations if all_flag else c_iterations)/num_threads+1
@@ -360,24 +341,14 @@ cdef class ParallelDosqsIterator(DosqsIterator):
 
             for k in range(start_permutation, end_permutation):
                 local_dosqs_alpha = fabs(self.calculate_parameter(local_configuration, self.constant_factor_matrix_ptr, local_dosqs_alpha_decomposition, dimensions, main_sum_weight, dosqs_anisotropy_weights_ptr))
-                if divergent_flag:
-                    if local_dosqs_alpha >= fabs(shared_collection.best_objective()):
-                        local_sqs_alpha = self.sqs_iterator.calculate_parameter(local_configuration, self.sqs_iterator.constant_factor_matrix_ptr, local_sqs_alpha_decomposition)
-
-                        if local_sqs_alpha <= local_best_sqs_alpha:
-                            local_best_sqs_alpha = local_sqs_alpha
-                            shared_collection.add(-local_dosqs_alpha, local_configuration, local_dosqs_alpha_decomposition)
-                            reseed_xor()
-                        self.sqs_iterator.reset_alpha_results(local_sqs_alpha_decomposition)
-                elif local_dosqs_alpha <= shared_collection.best_objective():
+                if local_dosqs_alpha < shared_collection.best_objective():
                     shared_collection.add(local_dosqs_alpha, local_configuration, local_dosqs_alpha_decomposition)
                     reseed_xor()
                 self.reset_alpha_results(local_dosqs_alpha_decomposition)
                 next_permutation_function_ptr(local_configuration, self.atoms)
 
+
             free(local_configuration)
-            if divergent_flag:
-                free(local_sqs_alpha_decomposition)
 
         total = time.time()-t0
 

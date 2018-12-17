@@ -294,11 +294,6 @@ class ParallelOption(ArgumentBase):
         super(ParallelOption, self).__init__(options, key='parallel', option=True)
 
 
-class DivergentOption(ArgumentBase):
-
-    def __init__(self, options):
-        super(DivergentOption, self).__init__(options, key='divergent', option=True)
-
 
 class VerbosityOption(ArgumentBase):
 
@@ -514,3 +509,27 @@ class SupercellZArgument(ArgumentBase):
             raise InvalidOption
         else:
             return supercell_z
+
+class ExcludeOption(ArgumentBase):
+
+    def __init__(self, options):
+        super(ExcludeOption, self).__init__(options, key='exclude', option=True)
+
+    def parse(self, options, *args, **kwargs):
+        from pymatgen.core.periodic_table import Element
+        if self.raw_value == '""':
+            return []
+        list_of_elements = [f for f in self.raw_value.split(',') if f != '']
+        structure = StructureFileArgument(options)()
+        species = list(set([element.symbol for element in structure.species]))
+        for element in list_of_elements:
+            try:
+                Element(element)
+            except ValueError:
+                self.write_message('"{0}" is not an element!'.format(element))
+                raise InvalidOption
+
+            if element not in species:
+                self.write_message('No "{0}" atoms are contained in the specified structure file!')
+                raise InvalidOption
+        return list_of_elements

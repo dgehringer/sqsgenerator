@@ -229,13 +229,8 @@ cdef class BaseIterator:
         cdef uint8_t[:] configuration = np.ascontiguousarray(np.zeros((self.atoms), dtype=np.uint8))
         cdef Py_ssize_t i = 0
 
-        specie_index_mapping = {}
-
         for i, site in enumerate(self.structure.sites):
-            if site.specie.name not in specie_index_mapping:
-                specie_index_mapping[site.specie.name] = species_count
-                species_count += 1
-            configuration[i] = specie_index_mapping[site.specie.name]
+            configuration[i] = self.species_index_map[site.specie.name]
 
         return configuration
 

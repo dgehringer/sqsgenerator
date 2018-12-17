@@ -6,9 +6,9 @@ Usage:
   sqsgen sqs <structure> <supercellx> <supercelly> <supercellz> [<composition>| --lattice=<SPECIES>...]
   [--verbosity=<VERBOSITY> --vacancy=<VACANCY> --weights=<WEIGHTS> --output=<FILE> --iterations=<ITERATIONS> --parallel --objective=<OBJECTIVE>]
   sqsgen dosqs <structure> <supercellx> <supercelly> <supercellz> [<composition>| --lattice=<SPECIES>...] [--parallel]
-  [--verbosity=<VERBOSITY> --vacancy=<VACANCY> --weights=<WEIGHTS> --output=<FILE> --iterations=<ITERATIONS> --anisotropy=<ANISOTROPY> --divergent]
-  sqsgen alpha sqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY>]
-  sqsgen alpha dosqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --anisotropy=<ANISOTROPY>]
+  [--verbosity=<VERBOSITY> --vacancy=<VACANCY> --weights=<WEIGHTS> --output=<FILE> --iterations=<ITERATIONS> --anisotropy=<ANISOTROPY>]
+  sqsgen alpha sqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --exclude=<EXCLUDE>]
+  sqsgen alpha dosqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --anisotropy=<ANISOTROPY> --exclude=<EXCLUDE>]
   sqsgen --help
   sqsgen --version
 
@@ -34,8 +34,6 @@ Options:
 
 --parallel, -P                   Flag for either making the computation parallel or not. Since this project is currently
                                  under development use this flag preferably with "-I all" to get optimal performance.
-
---divergent, -D                  Please do not use this feature is in progress
 
 --lattice, -L=<SPECIES>          Specify the sublattice/s on which the sqsgen should run. At first specify the
                                  sublattice species followed by the compositions. For example to place Tantalum carbide
@@ -78,6 +76,8 @@ Options:
 
 --objective=<OBJECTIVE>          Specifies the value the objective functions. The program tries to reach the specified
                                  objective function. [default: 0.0]
+                                 
+--exclude=<EXCLUDE>              Exclude elements or sublattice. [default: ""]
 
 --version                        Displays the version of sqsgen
 """
@@ -96,6 +96,11 @@ def main():
     options = parse_options(options)
     if options['alpha']:
         structure = options['structure']
+        if options['exclude']:
+            exclude_list = options['exclude']
+        else:
+            exclude_list = []
+        structure = Structure(structure.lattice, [s.specie.symbol for s in structure if s.specie.symbol not in exclude_list], [s.frac_coords for s in structure if s.specie.symbol not in exclude_list])
         atoms = len(structure.sites)
         species = list(set([element.symbol for element in structure.species]))
         mole_fractions = {}
@@ -108,14 +113,13 @@ def main():
                     )
                 )
             )/atoms
-
         if options['sqs']:
             from sqsgenerator.core.sqs import SqsIterator
-            iterator = SqsIterator(options['structure'], mole_fractions, options['weights'], verbosity=options['verbosity'])
+            iterator = SqsIterator(structure, mole_fractions, options['weights'], verbosity=options['verbosity'])
             alpha = iterator.calculate_alpha()
         elif options['dosqs']:
-            from sqsgenerator.core.sqs import DosqsIterator
-            iterator = DosqsIterator(options['structure'], mole_fractions, options['weights'], verbosity=options['verbosity'])
+            from sqsgenerator.core.dosqs import DosqsIterator
+            iterator = DosqsIterator(structure, mole_fractions, options['weights'], verbosity=options['verbosity'])
             main_sum_weight, anisotropy_weights = options['anisotropy']
             alpha = iterator.calculate_alpha(main_sum_weight, anisotropy_weights)
         else:
@@ -181,7 +185,7 @@ def do_sqs_iterations(structure, mole_fractions, weights, iterations=10000, pref
 
 
 def do_dosqs_iterations(structure, mole_fractions, weights, sum_weight, anisotropic_weights, iterations=10000,
-                        prefix='', divergent=False, verbosity=0, parallel=False, output_structures=10):
+                        prefix='', verbosity=0, parallel=False, output_structures=10):
     header = """
     {prefix}Direction optimized SQS Iteration input:
     {prefix}========================================
@@ -211,17 +215,16 @@ def do_dosqs_iterations(structure, mole_fractions, weights, sum_weight, anisotro
         from sqsgenerator.core.dosqs import ParallelDosqsIterator
         iterator = ParallelDosqsIterator(structure, mole_fractions, weights, verbosity=verbosity)
 
-    structures, decmp, iter_, cycle_time = iterator.iteration(sum_weight, anisotropic_weights, iterations=iterations,
-                                                            divergent=divergent, output_structures=output_structures)
+    structures, decmp, iter_, cycle_time = iterator.iteration(sum_weight, anisotropic_weights, iterations=iterations, output_structures=output_structures)
     print("{1}Needed {0:.2f} microsec per permutation".format(cycle_time * 1e6, prefix))
     return structures, decmp, iter_
 
 
-def print_result_internal(alpha, verbosity, prefix=''):
+def print_result_internal(alpha, verbosity, options, prefix=''):
         if verbosity > 0:
             sum_alpha = 0
             for bond, values in alpha.items():
-                sum_alpha += sum(values)
+                sum_alpha += sum([abs(v)*(options['weights'][shell] if shell in options['weights'] else 0.0) for shell, v in enumerate(values)])
             print(colored('{alpha}{prefix}={value}'.format(alpha=unicode_alpha,
                                                            value=sum_alpha,
                                                            prefix=prefix,), color='magenta'))
@@ -261,11 +264,11 @@ def print_result(options, alpha, verbosity):
     if options['sqs']:
         print_result_internal(alpha, verbosity)
     if options['dosqs']:
-        print_result_internal(alpha['x'], verbosity, prefix='{x}')
+        print_result_internal(alpha['x'], verbosity, options, prefix='{x}')
         print()
-        print_result_internal(alpha['y'], verbosity, prefix='{y}')
+        print_result_internal(alpha['y'], verbosity, options, prefix='{y}')
         print()
-        print_result_internal(alpha['z'], verbosity, prefix='{z}')
+        print_result_internal(alpha['z'], verbosity, options, prefix='{z}')
 
 
 def write_structures(structures, file_name):
@@ -314,7 +317,6 @@ def default_iterations(options):
                                                    main_sum_weight,
                                                    anisotropy_weights,
                                                    iterations=options['iterations'],
-                                                   divergent=options['divergent'],
                                                    verbosity=options['verbosity'],
                                                    parallel=options['parallel'],
                                                    output_structures=options['output'])
@@ -363,7 +365,6 @@ def sublattice_iterations(options):
                                                        iterations=options['iterations'],
                                                        prefix=colored('{0} => '.format(sublattice),
                                                                     color='magenta'),
-                                                       divergent=options['divergent'],
                                                        verbosity=options['verbosity'],
                                                        parallel=options['parallel'],
                                                        output_structures=options['output'])
