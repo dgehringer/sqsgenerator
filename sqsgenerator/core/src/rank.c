@@ -17,7 +17,7 @@ size_t configuration_species_count(uint8_t *configuration, size_t atoms) {
     qsort(sorted_configuration, atoms, sizeof(uint8_t), spec_comparator);
 
     size_t unique = 1; //incrase we have only one element; it is unique!
-    for (int i = 0; i < atoms - 1; i++) {
+    for (size_t i = 0; i < atoms - 1; i++) {
         if (sorted_configuration[i] == sorted_configuration[i + 1])
             continue;
         else

@@ -1,6 +1,8 @@
 
 #include <float.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "conf_array.h"
 
 /* Locks the arrays mutex only if the lock was not acquired */
@@ -21,7 +23,6 @@ void conf_array_release_mutex(conf_array_t* a){
 void conf_array_clear(conf_array_t* array){
     conf_array_acquire_mutex(array);
     uint8_t* d = array->data;
-    size_t atoms = array->atoms;
     for (size_t i = 0; i < array->max_size; i++) {
         array->objective[i] = DBL_MAX;
         array->set_flags[i] = false;
@@ -37,7 +38,14 @@ conf_array_t* conf_array_init(size_t max_size, size_t atoms, size_t decomp_size)
     bool* flags = malloc(sizeof(bool) * max_size);
     double* obj = malloc(sizeof(double) * max_size);
     double* decomp = malloc(sizeof(double) * max_size * decomp_size);
+    mpz_t* r = malloc(sizeof(mpz_t) * max_size);
+    for (size_t i = 0; i < max_size; i++) {
+        mpz_init(r[i]);
+        mpz_set_ui(r[i], 0);
+    }
     pthread_mutex_init(&(a->mutex), NULL);
+    a->species_count = 0;
+    a->ranks = r;
     a->max_size = max_size;
     a->size = 0;
     a->atoms = atoms;
@@ -54,10 +62,13 @@ conf_array_t* conf_array_init(size_t max_size, size_t atoms, size_t decomp_size)
 void conf_array_set(conf_array_t* array, size_t index, double objective, uint8_t* conf, double* decomp){
     conf_array_acquire_mutex(array);
     if (index < array->max_size) {
+        //Count number of species in the configuration if it was not done before
         memcpy(&(array->data[index*array->atoms]), conf, sizeof(uint8_t)*array->atoms);
         memcpy(&(array->alpha_decomp[index*(array->alpha_decomp_size)]), decomp, sizeof(double)*array->alpha_decomp_size);
         array->objective[index] = objective;
         array->set_flags[index] = true;
+        //Rank permutation
+        rank_permutation_mpz(array->ranks[index], conf, array->atoms, array->species_count);
     }
     conf_array_release_mutex(array);
 }
@@ -105,6 +116,7 @@ void conf_array_destroy(conf_array_t* array){
     free(array->set_flags);
     free(array->data);
     free(array->objective);
+    free(array->ranks);
     conf_array_release_mutex(array);
     pthread_mutex_destroy(&(array->mutex));
     free(array);
@@ -121,14 +133,35 @@ int conf_array_available(conf_array_t* array){
 
 bool conf_array_add(conf_array_t* array, double objective, uint8_t* conf, double* decomp){
     conf_array_acquire_mutex(array);
+    //New configuration is better than anything we had before
     if(objective < array->best_objective){
         array->best_objective = objective;
         conf_array_clear(array);
     }
-    if(objective >= array->best_objective) {
+    //New objective is bad =(
+    if(objective > array->best_objective) {
         conf_array_release_mutex(array);
         return false;
     }
+    if (array->species_count <= 0) {
+        array->species_count = configuration_species_count(conf, array->atoms);
+    }
+    //Check if this configuration is already stored
+    if(objective == array->best_objective) {
+        //Check if configuration is already there
+        mpz_t current_rank;
+        mpz_init(current_rank);
+
+        rank_permutation_mpz(current_rank, conf, array->atoms, array->species_count);
+        for (size_t i = 0; i < array->size; i++) {
+            if(mpz_cmp(current_rank, array->ranks[i]) == 0) {
+                 conf_array_release_mutex(array);
+                 return false;
+            }
+        }
+    }
+
+    //Here if the new objective is smaller of if its EQUAL
     int available_index = conf_array_available(array);
     if (available_index >= 0) {
         conf_array_set(array, (size_t)available_index, objective, conf, decomp);

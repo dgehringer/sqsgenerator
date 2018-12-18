@@ -1,12 +1,16 @@
-from .utils import write_message, full_name, ERROR, WARNING, parse_separated_string, isclose, parse_float, all_subclasses
+from .utils import write_message, full_name, ERROR, WARNING, parse_separated_string, isclose, parse_float, \
+    all_subclasses
 from pymatgen.core.periodic_table import Element
 from os.path import exists, isfile, basename
+from math import isclose
+from pymatgen import Structure
 
 
 def parse_options(docopt_options):
     options = {}
     exceptions = [CompositionalArgument]
-    parsers = {subcls(docopt_options).format_key(): subcls(docopt_options) for subcls in all_subclasses(ArgumentBase) if subcls not in exceptions}
+    parsers = {subcls(docopt_options).format_key(): subcls(docopt_options) for subcls in all_subclasses(ArgumentBase) if
+               subcls not in exceptions}
     for key in docopt_options.keys():
         if key.startswith('--') or (key.startswith('<') and key.endswith('>')):
             if docopt_options[key] is None:
@@ -21,19 +25,19 @@ def parse_options(docopt_options):
 
 class Singleton(object):
     # the one, true Singleton
-  __single = None
+    __single = None
 
-  def __new__(classtype, *args, **kwargs):
-    # Check to see if a __single exists already for this class
-    # Compare class types instead of just looking for None so
-    # that subclasses will create their own __single objects
-    if classtype != type(classtype.__single):
-        classtype.__single = object.__new__(classtype)
-        classtype.__single.__init__(*args, **kwargs)
-    return classtype.__single
+    def __new__(classtype, *args, **kwargs):
+        # Check to see if a __single exists already for this class
+        # Compare class types instead of just looking for None so
+        # that subclasses will create their own __single objects
+        if classtype != type(classtype.__single):
+            classtype.__single = object.__new__(classtype)
+            classtype.__single.__init__(*args, **kwargs)
+        return classtype.__single
+
 
 class InvalidOption(Exception):
-
     """
     Arguments vor options are invalid
     """
@@ -67,7 +71,9 @@ class ArgumentBase(Singleton):
             try:
                 self._result = self.parse(self._options, args, kwargs)
             except InvalidOption:
-                write_message('{name}: Failed to parse "{arg}" for '+'argument' if not self._option else 'option' +' "{option}"'.format(name=full_name(self), option=self.key, arg=self.raw_value, exit=True))
+                write_message(
+                    '{name}: Failed to parse "{arg}" for ' + 'argument' if not self._option else 'option' + ' "{option}"'.format(
+                        name=full_name(self), option=self.key, arg=self.raw_value, exit=True))
             else:
                 self._parsed = True
         return self._result
@@ -87,7 +93,8 @@ class CompositionalArgument(ArgumentBase):
             mole_fractions = {}
             dummy_z = 1
             dummy_species = []
-            atoms_in_supercell = atoms *  SupercellXArgument(self._options)() * SupercellYArgument(self._options)() * SupercellZArgument(self._options)()
+            atoms_in_supercell = atoms * SupercellXArgument(self._options)() * SupercellYArgument(
+                self._options)() * SupercellZArgument(self._options)()
             atoms_mode = False
             for species_comp in composition:
                 try:
@@ -156,11 +163,10 @@ class CompositionalArgument(ArgumentBase):
                 raise InvalidOption
             if len(dummy_species) > 0:
                 self.write_message('Missing elements resuming with {0} for undefined elements'.format(dummy_species),
-                              level=WARNING)
+                                   level=WARNING)
             return mole_fractions
         except:
             write_message('Could not parse composition')
-
 
     def parse(self, options, *args, **kwargs):
         raise NotImplementedError
@@ -191,7 +197,7 @@ class LatticeOption(CompositionalArgument):
                 except ValueError:
                     if Element.is_valid_symbol(
                             sublattice_composition_string) or sublattice_composition_string.startswith(
-                            '0'):
+                        '0'):
                         _species = sublattice_composition_string
                     else:
                         _species = Element.from_Z(dummy_z).symbol
@@ -217,7 +223,7 @@ class LatticeOption(CompositionalArgument):
                 raise InvalidOption
             sublattice_composition[sublattice] = \
                 self.parse_composition(composition, sublattice_species,
-                                  atoms=self.get_atom_number_on_sublattice(sublattice, structure))
+                                       atoms=self.get_atom_number_on_sublattice(sublattice, structure))
 
         return sublattice_composition
 
@@ -257,7 +263,8 @@ class ObjectiveOption(ArgumentBase):
             try:
                 objective_value = float(options[self.format_key()].lower())
             except ValueError:
-                self.write_message('Cannot parse objective function value: "{0}" . Exiting!\n'.format(options[self.format_key()]))
+                self.write_message(
+                    'Cannot parse objective function value: "{0}" . Exiting!\n'.format(options[self.format_key()]))
                 raise InvalidOption
         return objective_value
 
@@ -273,7 +280,7 @@ class AnisotropyOption(ArgumentBase):
                                          parse_separated_string(self.raw_value)))
             if len(anisotropy_values) not in (1, 2, 4):
                 self.write_message("Only 1, 2 or 4 values can be specified for the directional weighting. "
-                              "Use the -h switch for help")
+                                   "Use the -h switch for help")
                 raise InvalidOption
 
             main_sum_weight = anisotropy_values[0]
@@ -292,7 +299,6 @@ class ParallelOption(ArgumentBase):
 
     def __init__(self, options):
         super(ParallelOption, self).__init__(options, key='parallel', option=True)
-
 
 
 class VerbosityOption(ArgumentBase):
@@ -510,26 +516,102 @@ class SupercellZArgument(ArgumentBase):
         else:
             return supercell_z
 
-class ExcludeOption(ArgumentBase):
+
+class SublatticeOption(ArgumentBase):
 
     def __init__(self, options):
-        super(ExcludeOption, self).__init__(options, key='exclude', option=True)
+        super(SublatticeOption, self).__init__(options, key='sublattice', option=True)
 
     def parse(self, options, *args, **kwargs):
         from pymatgen.core.periodic_table import Element
-        if self.raw_value == '""':
-            return []
-        list_of_elements = [f for f in self.raw_value.split(',') if f != '']
-        structure = StructureFileArgument(options)()
-        species = list(set([element.symbol for element in structure.species]))
-        for element in list_of_elements:
+        calculation_structure = StructureFileArgument(options)()
+        if not self.raw_value:
+            return [calculation_structure]
+
+        converters = [str, int, int, int, str]
+        sublattice_structures = []
+        for arg_string in self.raw_value:
+            # Check list length and type conversion
+            crumbs = [c for c in arg_string.split(',') if c != '']
+            if len(crumbs) != len(converters):
+                write_message(
+                    'Invalid Argument: Sublattice specification must contains {0} arguments'.format(len(converters)))
+                raise InvalidOption
             try:
-                Element(element)
+                crumbs = [c(cr) for c, cr in zip(converters, crumbs)]
+                structure_file_name, sx, sy, sz, species = crumbs
             except ValueError:
-                self.write_message('"{0}" is not an element!'.format(element))
+                write_message(
+                    'Invalid argument type in --sublattice option. Format is <STRUCTURE>,<SUPERCELLX>,<SUPERCELLY>,<SUPERCELLZ>,<SPECIES>')
                 raise InvalidOption
 
-            if element not in species:
-                self.write_message('No "{0}" atoms are contained in the specified structure file!')
+            species_list = [s for s in species.split(':') if s != '']
+            # Check if given elements are valid chmical symbols
+            for specie in species_list:
+                try:
+                    Element(specie)
+                except ValueError:
+                    write_message('"{0}" is not a valid specifier for a chemical element.'.format(species))
+                    raise InvalidOption
+
+            # Load structure to compare
+            selection_structure = StructureFileArgument({'<structure>': structure_file_name})()
+            selection_species = list(set([s.specie.symbol for s in selection_structure.sites]))
+
+            # Check if species are present
+            if not all([s in selection_species for s in species_list]):
+                write_message(
+                    'One of the sublattice species ("{0}") is not present in the original structure file ("{1}")!'.format(
+                        species_list, selection_species))
                 raise InvalidOption
-        return list_of_elements
+
+            # Make selection supercell
+            selection_structure.make_supercell([sx, sy, sz])
+
+            if len(calculation_structure) != len(selection_structure):
+                write_message(
+                    'The number of atoms in the supercell of the structure file to select the sublattice does not match those the input structure file.')
+                raise InvalidOption
+
+            #Check if lattices match
+            props = [
+                lambda s: s.lattice.a,
+                lambda s: s.lattice.b,
+                lambda s: s.lattice.c,
+                lambda s: s.lattice.alpha,
+                lambda s: s.lattice.beta,
+                lambda s: s.lattice.gamma
+            ]
+            if not all([isclose(p(selection_structure), p(calculation_structure),abs_tol=1e-3) for p in props]):
+                write_message('Lattices do not match!')
+                raise InvalidOption
+
+            #Check if also sites match
+            for calculation_site in calculation_structure:
+                match_found = False
+                for selection_site in selection_structure:
+                    if isclose(calculation_site.distance(selection_site), 0.0, abs_tol=1e-3):
+                        match_found = True
+                        break
+                if not match_found:
+                    write_message('The structures do not match')
+                    raise InvalidOption
+
+            #Filtering
+            selection_sites = [s for s in selection_structure.sites if s.specie.symbol in species_list]
+            calculation_sites = []
+            for selection_site in selection_sites:
+                for calculation_site in calculation_structure:
+                    if isclose(selection_site.distance(calculation_site), 0.0):
+                        calculation_sites.append(calculation_site)
+                        break
+            assert len(selection_sites) == len(calculation_sites)
+
+            sublattice_structures.append(
+                Structure(
+                    calculation_structure.lattice,
+                    [s.specie.symbol for s in calculation_sites],
+                    [s.frac_coords for s in calculation_sites]
+                )
+            )
+        return sublattice_structures

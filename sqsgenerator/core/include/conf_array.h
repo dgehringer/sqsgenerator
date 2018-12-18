@@ -2,6 +2,8 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <gmp.h>
+#include "rank.h"
 
 typedef struct __conf_array_struct {
     size_t max_size;
@@ -14,6 +16,8 @@ typedef struct __conf_array_struct {
     bool* set_flags;
     double best_objective;
     bool lock_acquired;
+    uint64_t species_count;
+    mpz_t *ranks;
     pthread_mutex_t mutex;
 } conf_array_t;
 

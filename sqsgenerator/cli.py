@@ -7,8 +7,8 @@ Usage:
   [--verbosity=<VERBOSITY> --vacancy=<VACANCY> --weights=<WEIGHTS> --output=<FILE> --iterations=<ITERATIONS> --parallel --objective=<OBJECTIVE>]
   sqsgen dosqs <structure> <supercellx> <supercelly> <supercellz> [<composition>| --lattice=<SPECIES>...] [--parallel]
   [--verbosity=<VERBOSITY> --vacancy=<VACANCY> --weights=<WEIGHTS> --output=<FILE> --iterations=<ITERATIONS> --anisotropy=<ANISOTROPY>]
-  sqsgen alpha sqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --exclude=<EXCLUDE>]
-  sqsgen alpha dosqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --anisotropy=<ANISOTROPY> --exclude=<EXCLUDE>]
+  sqsgen alpha sqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --sublattice=<SUBLATTICE>...]
+  sqsgen alpha dosqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --anisotropy=<ANISOTROPY> --sublattice=<SUBLATTICE>...]
   sqsgen --help
   sqsgen --version
 
@@ -77,7 +77,8 @@ Options:
 --objective=<OBJECTIVE>          Specifies the value the objective functions. The program tries to reach the specified
                                  objective function. [default: 0.0]
                                  
---exclude=<EXCLUDE>              Exclude elements or sublattice. [default: ""]
+--sublattice, -S=<SUBLATTICE>    Specify a sublattice using the original structure file form which the system, which is
+                                 to be analyzed was created from. --sublattice=/path/to/orig_structure,2,2,2,Ga:Fe [default:]
 
 --version                        Displays the version of sqsgen
 """
@@ -95,36 +96,9 @@ def main():
     options = docopt(__doc__, version=__VERSION__)
     options = parse_options(options)
     if options['alpha']:
-        structure = options['structure']
-        if options['exclude']:
-            exclude_list = options['exclude']
-        else:
-            exclude_list = []
-        structure = Structure(structure.lattice, [s.specie.symbol for s in structure if s.specie.symbol not in exclude_list], [s.frac_coords for s in structure if s.specie.symbol not in exclude_list])
-        atoms = len(structure.sites)
-        species = list(set([element.symbol for element in structure.species]))
-        mole_fractions = {}
-        #Compute mole fraction dictionary of given structure
-        for specie in species:
-            mole_fractions[specie] = float(
-                len(
-                    list(
-                        filter(lambda site: site.specie.name == specie, structure.sites)
-                    )
-                )
-            )/atoms
-        if options['sqs']:
-            from sqsgenerator.core.sqs import SqsIterator
-            iterator = SqsIterator(structure, mole_fractions, options['weights'], verbosity=options['verbosity'])
-            alpha = iterator.calculate_alpha()
-        elif options['dosqs']:
-            from sqsgenerator.core.dosqs import DosqsIterator
-            iterator = DosqsIterator(structure, mole_fractions, options['weights'], verbosity=options['verbosity'])
-            main_sum_weight, anisotropy_weights = options['anisotropy']
-            alpha = iterator.calculate_alpha(main_sum_weight, anisotropy_weights)
-        else:
-            write_message('An unexpected error occurred')
-        print_result(options, alpha, options['verbosity'])
+        if options['sublattice']:
+            for s in options['sublattice']:
+                calculate_alpha(options, s)
     else:
         structure = options['structure']
         structure.make_supercell([options[k] for k in ['supercellx', 'supercelly', 'supercellz']])
@@ -137,6 +111,32 @@ def main():
         fname = '{x}x{y}x{z}'.format(x=options['supercellx'], y=options['supercelly'], z=options['supercellz'])
         write_structures(structures, fname)
 
+
+def calculate_alpha(options, structure):
+    atoms = len(structure.sites)
+    species = list(set([element.symbol for element in structure.species]))
+    mole_fractions = {}
+    # Compute mole fraction dictionary of given structure
+    for specie in species:
+        mole_fractions[specie] = float(
+            len(
+                list(
+                    filter(lambda site: site.specie.name == specie, structure.sites)
+                )
+            )
+        ) / atoms
+    if options['sqs']:
+        from sqsgenerator.core.sqs import SqsIterator
+        iterator = SqsIterator(structure, mole_fractions, options['weights'], verbosity=options['verbosity'])
+        alpha = iterator.calculate_alpha()
+    elif options['dosqs']:
+        from sqsgenerator.core.dosqs import DosqsIterator
+        iterator = DosqsIterator(structure, mole_fractions, options['weights'], verbosity=options['verbosity'])
+        main_sum_weight, anisotropy_weights = options['anisotropy']
+        alpha = iterator.calculate_alpha(main_sum_weight, anisotropy_weights)
+    else:
+        write_message('An unexpected error occurred')
+    print_result(options, alpha, options['verbosity'])
 
 def do_sqs_iterations(structure, mole_fractions, weights, iterations=10000, prefix='', verbosity=0, parallel=True, output_structures=10, objective=0.0):
     """
@@ -224,7 +224,7 @@ def print_result_internal(alpha, verbosity, options, prefix=''):
         if verbosity > 0:
             sum_alpha = 0
             for bond, values in alpha.items():
-                sum_alpha += sum([abs(v)*(options['weights'][shell] if shell in options['weights'] else 0.0) for shell, v in enumerate(values)])
+                sum_alpha += sum([abs(v) for v in values])
             print(colored('{alpha}{prefix}={value}'.format(alpha=unicode_alpha,
                                                            value=sum_alpha,
                                                            prefix=prefix,), color='magenta'))
@@ -262,7 +262,7 @@ def print_result_internal(alpha, verbosity, options, prefix=''):
 
 def print_result(options, alpha, verbosity):
     if options['sqs']:
-        print_result_internal(alpha, verbosity)
+        print_result_internal(alpha, verbosity, options)
     if options['dosqs']:
         print_result_internal(alpha['x'], verbosity, options, prefix='{x}')
         print()
@@ -343,7 +343,7 @@ def sublattice_iterations(options):
         # initial_structure = structure
         sublattice_structure = Structure(structure.lattice,
                                          [site.specie for site in sublattice_site_collection],
-                                         np.asarray([site.frac_coords for site in sublattice_site_collection]))
+                                         [site.frac_coords for site in sublattice_site_collection])
         if options['sqs']:
             sublattice_structures, decompositions, iterations = do_sqs_iterations(sublattice_structure,
                                                                                   mole_fractions,
