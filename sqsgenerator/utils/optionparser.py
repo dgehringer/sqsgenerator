@@ -113,7 +113,7 @@ class CompositionalArgument(ArgumentBase):
                 try:
 
                     mole_fraction = abs(float(mole_fraction))
-                    if mole_fraction.is_integer() and mole_fraction > 1:
+                    if mole_fraction.is_integer() and mole_fraction >= 1:
                         atoms_mode = True
 
                         mole_fraction = mole_fraction / atoms_in_supercell

@@ -9,15 +9,15 @@ import numpy
 import os
 
 #Specify OpenMP capable compiler
-os.environ['CC'] = '/usr/local/bin/clang-omp'
+#os.environ['CC'] = '/usr/local/bin/clang-omp'
 
 #Directory of gmp.h
-INCLUDE_DIRECTORIES = ['/usr/local/include']
-#INCLUDE_DIRECTORIES = []
+#INCLUDE_DIRECTORIES = ['/usr/local/include']
+INCLUDE_DIRECTORIES = []
 
 #Specify gmp lib directory
-LIB_DIRS = ['/usr/local/Cellar/gmp/6.1.2_1/lib', '/usr/local/opt/llvm/lib']
-#LIB_DIRS = []
+#LIB_DIRS = ['/usr/local/Cellar/gmp/6.1.2_1/lib', '/usr/local/opt/llvm/lib']
+LIB_DIRS = []
 
 ################################################
 THIS_DIR = dirname(__file__)
@@ -54,7 +54,9 @@ ext_modules = [
                  join(BUILD_DIRECTORY, 'src', 'list.c'),
                  join(BUILD_DIRECTORY, 'src', 'conf_list.c'),
                  join(BUILD_DIRECTORY, 'src', 'conf_array.c'),
-                 join(BUILD_DIRECTORY, 'src', 'conf_collection.c')],
+                 join(BUILD_DIRECTORY, 'src', 'conf_collection.c'),
+                 join(BUILD_DIRECTORY, 'src', 'rank.c'),
+                 join(BUILD_DIRECTORY, 'src', 'utils.c')],
         extra_compile_args=EXTRA_COMPILE_ARGS,
         extra_link_args=EXTRA_LINK_ARGS,
         include_dirs=INCLUDE_DIRS
