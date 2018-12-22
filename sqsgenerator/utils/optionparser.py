@@ -602,7 +602,7 @@ class SublatticeOption(ArgumentBase):
             calculation_sites = []
             for selection_site in selection_sites:
                 for calculation_site in calculation_structure:
-                    if isclose(selection_site.distance(calculation_site), 0.0):
+                    if isclose(selection_site.distance(calculation_site), 0.0, abs_tol=1e-3):
                         calculation_sites.append(calculation_site)
                         break
             assert len(selection_sites) == len(calculation_sites)
