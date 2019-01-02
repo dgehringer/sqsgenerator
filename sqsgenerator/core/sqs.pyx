@@ -124,11 +124,12 @@ cdef class SqsIterator(base.BaseIterator):
             current_iteration = 0
             for species, amount in composition.items():
                 total_iterations = total_iterations/factorial(amount)
-            print('Configurations to check: {0}'.format(total_iterations))
-
+            print('Configurations to check: {0}'.format(round(total_iterations)))
+            iterations = total_iterations
             t0 = time.time()
-            while next_permutation_lex(self.configuration_ptr, self.atoms):
-                current_iteration += 1
+            #Set to frist configuration
+            unrank_permutation(self.configuration_ptr, self.atoms, self.composition_hist_ptr, self.species_count, iterations, 1)
+            for i in range(iterations):
                 alpha = self.calculate_parameter(self.configuration_ptr, self.constant_factor_matrix_ptr, alpha_decomposition_ptr)
 
                 if objective_value == -DBL_MAX:
@@ -142,6 +143,7 @@ cdef class SqsIterator(base.BaseIterator):
                     shared_collection.add(alpha, self.configuration_ptr, alpha_decomposition_ptr)
                     reseed_xor()
                 self.reset_alpha_results(alpha_decomposition_ptr)
+                next_permutation_lex(self.configuration_ptr, self.atoms)
         else:
             t0 = time.time()
             for i in range(iterations):

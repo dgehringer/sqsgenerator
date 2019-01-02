@@ -15,7 +15,6 @@ typedef struct __conf_array_struct {
     uint8_t* data;
     bool* set_flags;
     double best_objective;
-    bool lock_acquired;
     uint64_t species_count;
     mpz_t *ranks;
     pthread_mutex_t mutex;

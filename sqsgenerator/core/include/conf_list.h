@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <gmp.h>
 #include "list.h"
+#include "rank.h"
 
 #define conf_list_size(l) (l->__inner_list->size)
 
@@ -8,6 +10,7 @@ typedef struct __node_conf_data {
     uint8_t* configuration;
     double* alpha_decomp;
     double alpha;
+    mpz_t rank;
 } node_conf_data_t;
 
 
@@ -17,6 +20,7 @@ typedef struct __conf_list {
     size_t alpha_decomp_size;
     size_t atoms;
     size_t size;
+    uint64_t species_count;
 } conf_list_t;
 
 conf_list_t* conf_list_init(size_t atoms, size_t decomp_size);

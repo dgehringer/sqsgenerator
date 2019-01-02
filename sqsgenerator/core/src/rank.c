@@ -66,6 +66,8 @@ void permutation_count_mpz(mpz_t mi_result, uint8_t *configuration, size_t atoms
         mpz_cdiv_q(mi_permutations, mi_permutations, mi_species_permutations);
     }
     mpz_init_set(mi_result, mi_permutations);
+    mpz_clear(mi_permutations);
+    mpz_clear(mi_species_permutations);
 }
 
 
@@ -114,7 +116,9 @@ uint64_t rank_permutation(uint8_t *configuration, size_t atoms, size_t species) 
     mpz_t mi_result;
     mpz_init(mi_result);
     rank_permutation_mpz(mi_result, configuration, atoms, species);
-    return (uint64_t)mpz_get_ui(mi_result);
+    uint64_t result = (uint64_t)mpz_get_ui(mi_result);
+    mpz_clear(mi_result);
+    return result;
 }
 
 void unrank_permutation_mpz(uint8_t *configuration, size_t atoms, size_t *hist, size_t species, mpz_t mi_permutations, mpz_t mi_rank) {

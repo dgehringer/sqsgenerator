@@ -4,6 +4,7 @@
 
 void conf_list_destroy_element(void *data, void *meta_data){
     node_conf_data_t* node_data = (node_conf_data_t*)data;
+    mpz_clear(node_data->rank);
     free(node_data->alpha_decomp);
     free(node_data->configuration);
     free(node_data);
@@ -26,6 +27,8 @@ node_conf_data_t* conf_list_create_data_struct(conf_list_t* l, double alpha, uin
         node_data->alpha_decomp = decomp_ptr;
         node_data->alpha = alpha;
         node_data->configuration = conf_ptr;
+        mpz_init(node_data->rank);
+        rank_permutation_mpz(node_data->rank, conf, l->atoms, l->species_count);
         return node_data;
     }
     return NULL;
@@ -37,6 +40,7 @@ conf_list_t* conf_list_init(size_t atoms, size_t decomp_size){
         l->best_objective = DBL_MAX;
         l->atoms = atoms;
         l->alpha_decomp_size = decomp_size;
+        l->species_count = 0;
         list_t* inner = list_init(conf_list_destroy_element);
         if (inner) {
             l->__inner_list = inner;
@@ -47,18 +51,48 @@ conf_list_t* conf_list_init(size_t atoms, size_t decomp_size){
 
 bool conf_list_add(conf_list_t* l, double alpha, uint8_t *conf, double* decomp){
     list_acquire_mutex(l->__inner_list);
+
+    if (alpha < l->best_objective) {
+        l->best_objective = alpha;
+        __list_clear_internal(l->__inner_list);
+        l->size  = 0;
+    }
+
+    if (alpha > l->best_objective){
+        list_release_mutex(l->__inner_list);
+        return false;
+    }
+
+    if (l->species_count <= 0) {
+        l->species_count = configuration_species_count(conf, l->atoms);
+    }
+
+    if(alpha == l->best_objective) {
+    //Check if configuration is already there
+        mpz_t current_rank;
+        mpz_init(current_rank);
+        node_t *current;
+        node_conf_data_t *current_data;
+        rank_permutation_mpz(current_rank, conf, l->atoms, l->species_count);
+        for (size_t i = 0; i < l->__inner_list->size; i++) {
+            current = __list_get_node_internal(l->__inner_list, i);
+            current_data = current->data;
+            if(mpz_cmp(current_rank, current_data->rank) == 0) {
+                 mpz_clear(current_rank);
+                 list_release_mutex(l->__inner_list);
+                 return false;
+            }
+        }
+    }
+
     node_conf_data_t* data = conf_list_create_data_struct(l, alpha, conf, decomp);
     if (data) {
-        if (alpha < l->best_objective) {
-            l->best_objective = alpha;
-            list_clear(l->__inner_list);
-        }
-        bool result = list_append(l->__inner_list, data, NULL);
+        bool result = __list_append_internal(l->__inner_list, data, NULL);
         if (result) {
             l->size = l->__inner_list->size;
         }
         list_release_mutex(l->__inner_list);
-        return result;
+            return result;
     }
     list_release_mutex(l->__inner_list);
     return false;

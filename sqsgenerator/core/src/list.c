@@ -12,17 +12,11 @@
 
 /* Locks the lists mutex only if the lock was not acquired */
 void list_acquire_mutex(list_t* l){
-    if (!l->lock_aquired) {
-        pthread_mutex_lock(&(l->mutex));
-        l->lock_aquired = true;
-    }
+    pthread_mutex_lock(&(l->mutex));
 }
 /* Releases the lists mutex only if the lock was acquired */
 void list_release_mutex(list_t* l){
-    if (l->lock_aquired) {
-        l->lock_aquired = false;
-        pthread_mutex_unlock(&(l->mutex));
-    }
+    pthread_mutex_unlock(&(l->mutex));
 }
 
 list_t* list_init(void (*destroy)(void *data, void *meta_data)){
@@ -33,18 +27,16 @@ list_t* list_init(void (*destroy)(void *data, void *meta_data)){
     ll->size = 0;
     ll->head = NULL;
     ll->tail = NULL;
-    ll->lock_aquired = false;
     ll->destroy = destroy;
     pthread_mutex_init(&(ll->mutex), NULL);
     return ll;
 }
 
-bool list_append(list_t* l, void* data, void* meta_data){
+bool __list_append_internal(list_t* l, void* data, void* meta_data){
     node_t *element = malloc(sizeof(node_t));
     if (!element) {
         return false;
     }
-    list_acquire_mutex(l);
     element->data = data;
     element->meta_data = meta_data;
     if (l->size == 0) {
@@ -62,20 +54,24 @@ bool list_append(list_t* l, void* data, void* meta_data){
         l->tail = element;
         l->size++;
     }
+    return true;
+}
+bool list_append(list_t* l, void* data, void* meta_data){
+    list_acquire_mutex(l);
+    __list_append_internal(l, data, meta_data);
     list_release_mutex(l);
     return true;
 }
 
-bool list_push(list_t* l, void* data, void* meta_data){
+bool __list_push_internal(list_t* l, void* data, void* meta_data){
     node_t *element = malloc(sizeof(node_t));
     if (!element) {
         return false;
     }
-    list_acquire_mutex(l);
     element->data = data;
     element->meta_data = meta_data;
     if (l->size == 0) {
-        return list_append(l, data, meta_data);
+        return __list_append_internal(l, data, meta_data);
     }
     else
     {
@@ -85,12 +81,17 @@ bool list_push(list_t* l, void* data, void* meta_data){
         l->head = element;
         l->size++;
     }
+    return true;
+}
+
+bool list_push(list_t* l, void* data, void* meta_data){
+    list_acquire_mutex(l);
+    __list_push_internal(l, data, meta_data);
     list_release_mutex(l);
     return true;
 }
 
-node_t *list_get_node(list_t* l, size_t index){
-    list_acquire_mutex(l);
+node_t *__list_get_node_internal(list_t* l, size_t index){
     if (index < l->size) {
         node_t *n;
         size_t i;
@@ -100,7 +101,6 @@ node_t *list_get_node(list_t* l, size_t index){
             for (i = 0; i < index; i++) {
                 n = n->next;
             }
-            list_release_mutex(l);
             return n;
         }
         else {
@@ -108,12 +108,16 @@ node_t *list_get_node(list_t* l, size_t index){
             for (i = (l->size - 1); i > index; i--) {
                 n = n->before;
             }
-            list_release_mutex(l);
             return n;
         }
     }
-    list_release_mutex(l);
     return NULL;
+}
+
+node_t *list_get_node(list_t* l, size_t index){
+    list_acquire_mutex(l);
+    __list_get_node_internal(l, index);
+    list_release_mutex(l);
 }
 
 void* list_get_data(list_t* l, size_t index){
@@ -132,27 +136,35 @@ void* list_get_meta_data(list_t* l, size_t index){
     return n->meta_data;
 }
 
-bool list_insert(list_t* l, void* data, void* meta_data, size_t index) {
+
+bool __list_insert_internal(list_t* l, void* data, void* meta_data, size_t index) {
     if (index < l->size) {
         if (index == l->size-1) {
-            return list_append(l, data, meta_data);
+            return __list_append_internal(l, data, meta_data);
         }
         if (index == 0) {
-            return list_push(l, data, meta_data);
+            return __list_push_internal(l, data, meta_data);
         }
         node_t *n = list_get_node(l, index);
         node_t *element = malloc(sizeof(node_t));
         if (!element) {
             return false;
         }
-        list_acquire_mutex(l);
         element->next = n;
         element->before = n->before;
         n->before->next = element;
         n->before =element;
         l->size++;
-        list_release_mutex(l);
         return true;
+    }
+    return false;
+}
+
+bool list_insert(list_t* l, void* data, void* meta_data, size_t index) {
+    if (index < l->size) {
+        list_acquire_mutex(l);
+        __list_insert_internal(l, data, meta_data, index);
+        list_release_mutex(l);
     }
     return false;
 }
@@ -165,8 +177,8 @@ void list_destroy(list_t* l) {
     }
 }
 
-void list_clear(list_t* l){
-    list_acquire_mutex(l);
+
+void __list_clear_internal(list_t* l){
     node_t *n = l->head;
     node_t *tmp;
     while (n) {
@@ -181,47 +193,58 @@ void list_clear(list_t* l){
     l->size = 0;
     l->head = NULL;
     l->tail = NULL;
+}
+
+void list_clear(list_t* l){
+    list_acquire_mutex(l);
+    __list_clear_internal(l);
     list_release_mutex(l);
 }
 
-node_t* list_remove_node(list_t* l, size_t index) {
+node_t* __list_remove_node_internal(list_t* l, size_t index) {
     node_t *n;
     if (index == 0) {
-        list_acquire_mutex(l);
         n = l->head;
         if (n) {
             n->next->before = NULL;
             l->head = n->next;
             n->next = NULL;
-            list_release_mutex(l);
             return n;
         }
     }
     if(index == l->size-1){
-        list_acquire_mutex(l);
         n = l->tail;
         if (n) {
             n->before->next = NULL;
             l->tail = n->before;
             n->before = NULL;
-            list_release_mutex(l);
             return n->data;
         }
     }
     else {
-        list_acquire_mutex(l);
-        n = list_get_node(l, index);
+        n = __list_get_node_internal(l, index);
         n->before->next = n->next;
         n->next->before = n->before;
         n->next = NULL;
         n->before = NULL;
-        list_release_mutex(l);
         return n;
     }
     return NULL;
 }
 
+node_t* list_remove_node(list_t* l, size_t index) {
+    list_acquire_mutex(l);
+    node_t* result = __list_remove_node_internal(l, index);
+    list_release_mutex(l);
+    return result;
+}
+
 void* list_pop(list_t* l){
     node_t* removed = list_remove_node(l, l->size-1);
+    return removed->data;
+}
+
+void* __list_pop_internal(list_t* l){
+    node_t* removed = __list_remove_node_internal(l, l->size-1);
     return removed->data;
 }
