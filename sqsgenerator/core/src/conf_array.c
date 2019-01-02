@@ -5,19 +5,14 @@
 #include <stdlib.h>
 #include "conf_array.h"
 
+
 /* Locks the arrays mutex only if the lock was not acquired */
 void conf_array_acquire_mutex(conf_array_t* a){
-    if(!a->lock_acquired) {
-        pthread_mutex_lock(&(a->mutex));
-        a->lock_acquired = true;
-    }
+    pthread_mutex_lock(&(a->mutex));
 }
 /* Releases the arrays mutex only if the lock was acquired */
 void conf_array_release_mutex(conf_array_t* a){
-    if(a->lock_acquired){
-        a->lock_acquired = false;
-        pthread_mutex_unlock(&(a->mutex));
-    }
+    pthread_mutex_unlock(&(a->mutex));
 }
 
 void conf_array_clear(conf_array_t* array){
@@ -136,7 +131,9 @@ bool conf_array_add(conf_array_t* array, double objective, uint8_t* conf, double
     //New configuration is better than anything we had before
     if(objective < array->best_objective){
         array->best_objective = objective;
+        conf_array_release_mutex(array);
         conf_array_clear(array);
+        conf_array_acquire_mutex(array);
     }
     //New objective is bad =(
     if(objective > array->best_objective) {
@@ -164,7 +161,9 @@ bool conf_array_add(conf_array_t* array, double objective, uint8_t* conf, double
     //Here if the new objective is smaller of if its EQUAL
     int available_index = conf_array_available(array);
     if (available_index >= 0) {
+        conf_array_release_mutex(array);
         conf_array_set(array, (size_t)available_index, objective, conf, decomp);
+        conf_array_acquire_mutex(array);
         array->size = (available_index+1);
         conf_array_release_mutex(array);
         return true;
