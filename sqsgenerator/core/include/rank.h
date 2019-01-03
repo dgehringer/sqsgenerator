@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include "utils.h"
 
 void permutation_count_mpz(mpz_t mi_result, uint8_t *configuration, size_t atoms);
 uint64_t rank_permutation(uint8_t *configuration, size_t atoms, size_t species);

@@ -116,8 +116,9 @@ node_t *__list_get_node_internal(list_t* l, size_t index){
 
 node_t *list_get_node(list_t* l, size_t index){
     list_acquire_mutex(l);
-    __list_get_node_internal(l, index);
+    node_t *result = __list_get_node_internal(l, index);
     list_release_mutex(l);
+    return result;
 }
 
 void* list_get_data(list_t* l, size_t index){

@@ -1,6 +1,7 @@
 #include "conf_list.h"
 #include <float.h>
 #include <string.h>
+#include <stdio.h>
 
 void conf_list_destroy_element(void *data, void *meta_data){
     node_conf_data_t* node_data = (node_conf_data_t*)data;
@@ -74,10 +75,12 @@ bool conf_list_add(conf_list_t* l, double alpha, uint8_t *conf, double* decomp){
         node_t *current;
         node_conf_data_t *current_data;
         rank_permutation_mpz(current_rank, conf, l->atoms, l->species_count);
+
         for (size_t i = 0; i < l->__inner_list->size; i++) {
             current = __list_get_node_internal(l->__inner_list, i);
             current_data = current->data;
             if(mpz_cmp(current_rank, current_data->rank) == 0) {
+                 //printf("Duplicate rank: %u and %u -> CMP: %i\n", mpz_get_ui(current_rank), mpz_get_ui(current_data->rank), mpz_cmp(current_rank, current_data->rank));
                  mpz_clear(current_rank);
                  list_release_mutex(l->__inner_list);
                  return false;
@@ -90,9 +93,10 @@ bool conf_list_add(conf_list_t* l, double alpha, uint8_t *conf, double* decomp){
         bool result = __list_append_internal(l->__inner_list, data, NULL);
         if (result) {
             l->size = l->__inner_list->size;
+            list_release_mutex(l->__inner_list);
+            return result;
         }
         list_release_mutex(l->__inner_list);
-            return result;
     }
     list_release_mutex(l->__inner_list);
     return false;
