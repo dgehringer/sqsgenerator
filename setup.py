@@ -116,7 +116,5 @@ setup(
         # cmdclass = {'test': RunTests},
 )
 
-rmtree('build')
-#Copy compiled extensions
 
 
