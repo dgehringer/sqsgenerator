@@ -25,7 +25,7 @@ cdef class SqsIterator(base.BaseIterator):
     #cdef double[:, :] constant_factor_matrix
     #cdef double *constant_factor_matrix_ptr
 
-    def __cinit__(self, structure, dict mole_fractions, dict weights, verbosity=0):
+    def __cinit__(self, structure, dict mole_fractions, dict weights, verbosity=0, **kwargs):
         #super(SqsIterator, self).__cinit__(structure, mole_fractions, weights, verbosity=verbosity)
         self.constant_factor_matrix = self.make_constant_factor_matrix()
         self.constant_factor_matrix_ptr = <double*> &self.constant_factor_matrix[0, 0]
@@ -231,7 +231,7 @@ cdef class ParallelSqsIterator(SqsIterator):
         self.num_threads = num_threads
 
     @cython.boundscheck(False)
-    def iteration(self, iterations=100000, output_structures=10, objective=0.0, int threads=multiprocessing.cpu_count()):
+    def iteration(self, iterations=100000, output_structures=10, objective=0.0):
         #Definition
         cdef int thread_id
         cdef bint all_flag = iterations == 'all'
@@ -259,7 +259,7 @@ cdef class ParallelSqsIterator(SqsIterator):
             current_iteration = 0
             for species, amount in composition.items():
                 total_iterations = total_iterations/factorial(amount)
-            print('Configurations to check: {0}'.format(total_iterations))
+            print('Configurations to check: {0}'.format(int(total_iterations)))
             permutations = total_iterations
         else:
             c_iterations = iterations

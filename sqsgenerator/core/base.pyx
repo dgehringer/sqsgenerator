@@ -31,7 +31,7 @@ cdef bint isclose(double a, double b, double rel_tol=1e-9, double abs_tol=0.0) n
 
 cdef class BaseIterator:
 
-    def __cinit__(self, structure, dict mole_fractions, dict weights, verbosity=0):
+    def __cinit__(self, structure, dict mole_fractions, dict weights, verbosity=0, **kwargs):
         self.structure = structure
         self.fractional_coordinates = structure.frac_coords
         self.lattice = structure.lattice
