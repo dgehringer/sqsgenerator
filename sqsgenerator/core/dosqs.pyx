@@ -272,8 +272,8 @@ cdef class ParallelDosqsIterator(DosqsIterator):
     def __cinit__(self, structure, dict mole_fractions, dict weights, verbosity=0, num_threads=multiprocessing.cpu_count()):
         self.num_threads = num_threads
 
-    def iteration(self, double main_sum_weight, list anisotropic_weights, iterations=100000, int threads=multiprocessing.cpu_count(), output_structures=10):
-        cdef int num_threads = threads
+    def iteration(self, double main_sum_weight, list anisotropic_weights, iterations=100000, output_structures=10):
+        cdef int num_threads = self.num_threads
         cdef int thread_id
         cdef int dimensions = 3
         cdef bint all_flag = iterations == 'all'
@@ -295,7 +295,8 @@ cdef class ParallelDosqsIterator(DosqsIterator):
 
         shared_collection = ConfigurationCollection(output_structures if not all_output_structures_flag else 0, self.atoms, self.shell_count, self.species_count, dimension=3)
 
-        openmp.omp_set_num_threads(num_threads)
+        openmp.omp_set_num_threads(self.num_threads)
+        print('Threads used: {}'.format(self.num_threads))
 
         cdef double[:] dosqs_anisotropy_weights = np.array(anisotropic_weights)
         cdef double *dosqs_anisotropy_weights_ptr = <double*> &dosqs_anisotropy_weights[0]
@@ -307,7 +308,7 @@ cdef class ParallelDosqsIterator(DosqsIterator):
             current_iteration = 0
             for species, amount in composition.items():
                 total_iterations = total_iterations/factorial(amount)
-            print('Configurations to check: {0}'.format(total_iterations))
+            print('Configurations to check: {0}'.format(int(total_iterations)))
             permutations = total_iterations
         else:
             c_iterations = iterations
