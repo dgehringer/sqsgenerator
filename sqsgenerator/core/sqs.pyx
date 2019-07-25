@@ -251,7 +251,7 @@ cdef class ParallelSqsIterator(SqsIterator):
         shared_collection = ConfigurationCollection(output_structures if not all_output_structures_flag else 0, self.atoms, self.shell_count, self.species_count)
 
         openmp.omp_set_num_threads(self.num_threads)
-
+        print('Threads used: {}'.format(self.num_threads))
         if iterations == 'all':
             self.sort_numpy(self.configuration)
             composition = dict(Counter(np.asarray(self.configuration)))
