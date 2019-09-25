@@ -1,5 +1,4 @@
-from .utils import write_message, full_name, ERROR, WARNING, parse_separated_string, isclose, parse_float, \
-    all_subclasses
+from .utils import write_message, full_name, ERROR, WARNING, parse_separated_string, parse_float, all_subclasses
 from pymatgen.core.periodic_table import Element
 from os.path import exists, isfile, basename
 from math import isclose
@@ -388,6 +387,30 @@ class VersionOption(ArgumentBase):
         return __VERSION__
 
 
+class FormatOption(ArgumentBase):
+
+    def __init__(self, options):
+        super(FormatOption, self).__init__(options, key='format', option=True)
+        from pymatgen.io.vasp import Poscar
+        from pymatgen.io.cif import CifWriter
+        from pymatgen.io.cssr import Cssr
+        from pymatgen.io.lammps.inputs import LammpsData
+
+        def _lammps_wrapper(structure):
+            return LammpsData.from_structure(structure, atom_style='atomic')
+
+        self._class_mapping = {
+            'vasp': Poscar,
+            'lammps': _lammps_wrapper,
+            'cssr': Cssr,
+            'cif': CifWriter
+        }
+
+    def parse(self, options, *args, **kwargs):
+        if self.raw_value not in self._class_mapping:
+            raise InvalidOption('Output format must be in {}'.format(self._options))
+        return self.raw_value, self._class_mapping[self.raw_value]
+
 class StructureFileArgument(ArgumentBase):
 
     def __init__(self, options):
@@ -402,6 +425,7 @@ class StructureFileArgument(ArgumentBase):
                     from pymatgen.io.cif import CifParser
                     try:
                         result = CifParser(path).get_structures()[0]
+                        format = 'cif'
                     except:
                         self.write_message('Could not parse CIF file: "{0}"'.format(path))
                         raise InvalidOption
@@ -409,20 +433,15 @@ class StructureFileArgument(ArgumentBase):
                     from pymatgen.io.cssr import Cssr
                     try:
                         result = Cssr.from_file(path).structure
+                        format = 'cssr'
                     except:
                         self.write_message('Could not parse CSSR file: "{0}"'.format(path))
-                        raise InvalidOption
-                elif filename.lower().endswith('.xml'):
-                    from pymatgen.io.exciting import ExcitingInput
-                    try:
-                        result = ExcitingInput.from_file(path).structure
-                    except:
-                        self.write_message('Could not parse Exciting input file: "{0}"'.format(path))
                         raise InvalidOption
                 else:
                     from pymatgen.io.vasp import Poscar
                     try:
                         result = Poscar.from_file(path).structure
+                        fromat = 'vasp'
                     except:
                         self.write_message('Could not parse POSCAR file "{0}"'.format(path))
                         raise InvalidOption

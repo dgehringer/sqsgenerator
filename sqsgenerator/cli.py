@@ -1,18 +1,18 @@
-__VERSION__ = '0.2a'
+__VERSION__ = '0.2b'
 __doc__ = """
-sqsgen
+sqsgenerator
 
 Usage:
-  sqsgen sqs <structure> <supercellx> <supercelly> <supercellz> [<composition>| --lattice=<SPECIES>...]
-  [--verbosity=<VERBOSITY> --vacancy=<VACANCY> --weights=<WEIGHTS> --output=<FILE> --iterations=<ITERATIONS> --parallel --objective=<OBJECTIVE>]
-  sqsgen dosqs <structure> <supercellx> <supercelly> <supercellz> [<composition>| --lattice=<SPECIES>...] [--parallel]
-  [--verbosity=<VERBOSITY> --vacancy=<VACANCY> --weights=<WEIGHTS> --output=<FILE> --iterations=<ITERATIONS> --anisotropy=<ANISOTROPY>]
-  sqsgen alpha sqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --sublattice=<SUBLATTICE>...]
-  sqsgen alpha dosqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --anisotropy=<ANISOTROPY> --sublattice=<SUBLATTICE>...]
-  sqsgen --help
-  sqsgen --version
+  sqsgenerator sqs <structure> <supercellx> <supercelly> <supercellz> [<composition>| --lattice=<SPECIES>...]
+  [--verbosity=<VERBOSITY> --weights=<WEIGHTS> --output=<FILE> --iterations=<ITERATIONS> --parallel --objective=<OBJECTIVE> --format=<FORMAT>]
+  sqsgenerator dosqs <structure> <supercellx> <supercelly> <supercellz> [<composition>| --lattice=<SPECIES>...]
+  [--verbosity=<VERBOSITY> --weights=<WEIGHTS> --output=<FILE> --iterations=<ITERATIONS> --parallel --anisotropy=<ANISOTROPY> --format=<FORMAT>]
+  sqsgenerator alpha sqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --sublattice=<SUBLATTICE>...]
+  sqsgenerator alpha dosqs <structure> [--weights=<WEIGHTS> --verbosity=<VERBOSITY> --anisotropy=<ANISOTROPY> --sublattice=<SUBLATTICE>...]
+  sqsgenerator --help
+  sqsgenerator --version
 
-<structure>              The POSCAR input file which contains the structural information
+<structure>              The POSCAR, cif, cssr or Exciting input xml file which contains the structural information
 <supercellx>             The amount of unitcells to be stacked into x direction
 <supercelly>             The amount of unitcells to be stacked into y direction
 <supercellz>             The amount of unitcells to be stacked into z direction
@@ -45,11 +45,6 @@ Options:
                                  for which no value was specified are set to 0. The position in the list corresponds to
                                  the shell number. [default: 1,0.5,0.3333333333,0.25,0.2,0.166666667,0.1428571429]
 
---vacancy, -V=<VACANCY>          Specifies the mole fractions of vacancies. When using this option the mole fractions
-                                 given in the composition argument will be corrected to x=(1*<VACANCY>*x). If the
-                                 argument of the species switch contains a vacancy "0" species the mole fraction will
-                                 be set. This option can't be used with the lattice switch.
-
 --anisotropy, -A=<ANISOTROPY>    This option is only available when using the "dosqs" command. The first value specifies
                                  the weight of the sum of all alphas (alpha_x + alpha_y + alpha_z). The second value
                                  represents the weight of the difference of (alpha_x - alpha_y). The third for
@@ -79,8 +74,12 @@ Options:
                                  
 --sublattice, -S=<SUBLATTICE>    Specify a sublattice using the original structure file form which the system, which is
                                  to be analyzed was created from. --sublattice=/path/to/orig_structure,2,2,2,Ga:Fe [default:]
+                                 
+--format, -F=<FORMAT>            Specifies the output file format. Currently "cif", "lammps", "cssr", and "vasp"
+                                 is available. [default: vasp]
 
 --version                        Displays the version of sqsgen
+
 """
 import numpy as np
 
@@ -109,7 +108,7 @@ def main():
             structures = default_iterations(options)
 
         fname = '{x}x{y}x{z}'.format(x=options['supercellx'], y=options['supercelly'], z=options['supercellz'])
-        write_structures(structures, fname)
+        write_structures(structures, fname, options['format'])
 
 
 def calculate_alpha(options, structure):
@@ -271,19 +270,21 @@ def print_result(options, alpha, verbosity):
         print_result_internal(alpha['z'], verbosity, options, prefix='{z}')
 
 
-def write_structures(structures, file_name):
+def write_structures(structures, file_name, format):
     import tempfile
     import zipfile
     from os.path import basename, join
     import os
+    format_name, Writer = format
+    file_type = format_name
     if len(structures) > 1:
         result_archive = zipfile.ZipFile(join(os.getcwd(), basename(file_name) + '.zip'), mode='w')
         for name , structure in structures.items():
             sorted_sites = list(sorted(structure.sites.copy(), key=lambda site: site.specie.symbol))
             sorted_structure = Structure.from_sites(sorted_sites)
             with tempfile.NamedTemporaryFile() as tmpfile:
-                Poscar(structure=sorted_structure).write_file(tmpfile.name)
-                result_archive.write(tmpfile.name, arcname=basename(file_name)+'-'+name)
+                Writer(sorted_structure).write_file(tmpfile.name)
+                result_archive.write(tmpfile.name, arcname='{}.{}'.format(name, file_type))
         result_archive.close()
         write_message('Archive file: {0}'.format(join(os.getcwd(), basename(file_name) + '.zip')), level=DEBUG)
     else:
@@ -291,8 +292,8 @@ def write_structures(structures, file_name):
         structure_key = list(structures.keys())[0]
         sorted_sites = list(sorted(structures[structure_key].sites.copy(), key=lambda site: site.specie.symbol))
         sorted_structure = Structure.from_sites(sorted_sites)
-        p = Poscar(structure=sorted_structure)
-        fname = join(os.getcwd(), basename(file_name)+structure_key+'.vasp')
+        p = Writer(sorted_structure)
+        fname = join(os.getcwd(), '{}.{}'.format(structure_key, file_type))
         p.write_file(fname)
         write_message('Output file: {0}'.format(fname), level=DEBUG)
 

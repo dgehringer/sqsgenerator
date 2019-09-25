@@ -87,4 +87,4 @@ python setup.py install
 
 ## Usage
 
-Please refer to `sqsgenerator --help`. - Nicer documentation should come here
+Please refer to `sqsgenerator --help`. - Nicer documentation should come herecd
