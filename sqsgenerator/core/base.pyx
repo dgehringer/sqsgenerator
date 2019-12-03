@@ -106,7 +106,6 @@ cdef class BaseIterator:
 
         # sort species in ascending order
         species_order = list(sorted(list(mole_fractions.keys())))
-
         for i, species in enumerate(species_order):
             mole_fraction = mole_fractions[species]
             atoms_per_species = round(self.atoms*mole_fraction)
