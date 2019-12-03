@@ -101,11 +101,15 @@ cdef class BaseIterator:
         cdef mole_fraction_view_list = [0.0]*self.species_count
         cdef mole_fraction_item_list = list(mole_fractions.items())
         cdef dict corrected_mole_fractions = {}
+        cdef list species_order = []
         self.species_index_map = {}
 
-        for i, item in enumerate(mole_fractions.items()):
-            species, mole_fraction = item
-            atoms_per_species = int(self.atoms*mole_fraction)
+        # sort species in ascending order
+        species_order = list(sorted(list(mole_fractions.keys())))
+
+        for i, species in enumerate(species_order):
+            mole_fraction = mole_fractions[species]
+            atoms_per_species = round(self.atoms*mole_fraction)
             conf_list.extend([i]*atoms_per_species)
             corrected_mole_fractions[species] = float(atoms_per_species)
             self.species_index_map[species] = i
