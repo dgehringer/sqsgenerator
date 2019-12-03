@@ -1,4 +1,4 @@
-__VERSION__ = '0.2b'
+__VERSION__ = 'v0.0.4'
 __doc__ = """
 sqsgenerator
 
