@@ -72,7 +72,7 @@ cdef class SqsIterator(base.BaseIterator):
             for j in range(i, self.atoms):
                 current_species = configuration[j]
                 shell = self.shell_number_matrix_ptr[i * self.atoms + j] - 1
-                if current_species != compare_species and -1 < shell <= self.shell_count - 1:
+                if -1 < shell <= self.shell_count - 1:
                     current_bond_ratio = alpha_decomposition[shell * d1 + compare_species * d2 + current_species]
                     current_bond_ratio += constant_factor_matrix[i * self.atoms + j] / (
                             self.mole_fractions_ptr[current_species] * self.mole_fractions_ptr[compare_species])
@@ -82,11 +82,10 @@ cdef class SqsIterator(base.BaseIterator):
         for i in range(self.shell_count):
             for j in range(self.species_count):
                 for k in range(self.species_count):
-                    if j != k:
-                        current_bond_ratio = alpha_decomposition[i * d1 + j * d2 + k]
-                        current_alpha = self.weights_ptr[i] / 2 - current_bond_ratio
-                        alpha_decomposition[i * d1 + j * d2 + k] = current_alpha
-                        alpha += fabs(current_alpha)
+                    current_bond_ratio = alpha_decomposition[i * d1 + j * d2 + k]
+                    current_alpha = self.weights_ptr[i] / 2 - current_bond_ratio
+                    alpha_decomposition[i * d1 + j * d2 + k] = current_alpha
+                    alpha += fabs(current_alpha)
 
         return alpha
 
@@ -183,11 +182,10 @@ cdef class SqsIterator(base.BaseIterator):
         species = list(self.mole_fractions.keys())
         for i in range(self.species_count):
             for j in range(i, self.species_count):
-                if i != j:
-                    alphas = []
-                    for k in range(self.shell_count):
-                        alphas.append(alpha_decomposition[k, i, j] * 2)
-                    rearranged_alphas['{0}-{1}'.format(species[i], species[j])] = alphas
+                alphas = []
+                for k in range(self.shell_count):
+                    alphas.append(alpha_decomposition[k, i, j] * 2)
+                rearranged_alphas['{0}-{1}'.format(species[i], species[j])] = alphas
 
         return rearranged_alphas
 
