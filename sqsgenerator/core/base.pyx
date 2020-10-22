@@ -4,6 +4,7 @@ cimport numpy as np
 from random import randint
 from pymatgen import Structure
 from pymatgen.util.coord import pbc_shortest_vectors
+from pymatgen.core import Element
 from collections import Counter
 cimport sqsgenerator.core.utils as utils
 from libc.math cimport fabs, fmax
@@ -104,8 +105,8 @@ cdef class BaseIterator:
         cdef list species_order = []
         self.species_index_map = {}
 
-        # sort species in ascending order
-        species_order = list(sorted(list(mole_fractions.keys())))
+        # sort species in ascending order (ordered by their atomic weight)
+        species_order = list(sorted(list(mole_fractions.keys()), key=lambda sym: Element(sym).Z))
         for i, species in enumerate(species_order):
             mole_fraction = mole_fractions[species]
             atoms_per_species = round(self.atoms*mole_fraction)

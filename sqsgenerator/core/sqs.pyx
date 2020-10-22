@@ -4,6 +4,7 @@ from libc.stdlib cimport malloc, free
 from libc.math cimport fabs
 from sqsgenerator.core.utils cimport next_permutation_lex, knuth_fisher_yates_shuffle, reseed_xor, unrank_permutation
 from sqsgenerator.core.collection cimport ConfigurationCollection
+from pymatgen.core import Element
 cimport numpy as np
 cimport cython
 cimport base
@@ -168,8 +169,10 @@ cdef class SqsIterator(base.BaseIterator):
             #assert isclose(shared_collection.best_objective, fabs(self.calculate_parameter_ptr(conf_collection_get_conf(shared_collection, i), self.sqs_constant_factor_matrix, &alpha_decomposition[0,0,0])))
             #self.reset_alpha_results(alpha_decomposition)
 
-        structure_list = [self.configuration_to_structure(<uint8_t[:self.atoms]>shared_collection.get_configuration(i)) for i in range(shared_collection.size())]
-        decomp_list = [self.alpha_to_dict(np.asarray(<double[:self.shell_count, :self.species_count, :self.species_count]>shared_collection.get_decomposition(i))) for i in range(shared_collection.size())]
+        structure_list = [self.configuration_to_structure(<uint8_t[:self.atoms]>shared_collection.get_configuration(i))
+                          for i in range(shared_collection.size())]
+        decomp_list = [
+            self.alpha_to_dict(np.asarray(<double[:self.shell_count, :self.species_count, :self.species_count]>shared_collection.get_decomposition(i))) for i in range(shared_collection.size())]
 
         lps = total_iterations if iterations == 'all' else iterations
 
@@ -177,15 +180,21 @@ cdef class SqsIterator(base.BaseIterator):
 
     cdef alpha_to_dict(self, double[:, :, :]  alpha_decomposition):
         rearranged_alphas = {}
+        index_species_map = {}
         cdef size_t i = 0, j = 0, k = 0
 
-        species = list(self.mole_fractions.keys())
+        # invert the species mapping, to preserve the order
+        for key, value in self.species_index_map.items():
+            index_species_map[value] = key
+
+        species = list(sorted(self.mole_fractions.keys(), key=lambda sym: Element(sym).Z))
+
         for i in range(self.species_count):
             for j in range(i, self.species_count):
                 alphas = []
                 for k in range(self.shell_count):
                     alphas.append(alpha_decomposition[k, i, j] * 2)
-                rearranged_alphas['{0}-{1}'.format(species[i], species[j])] = alphas
+                rearranged_alphas['{0}-{1}'.format(index_species_map[i], index_species_map[j])] = alphas
 
         return rearranged_alphas
 
@@ -246,7 +255,8 @@ cdef class ParallelSqsIterator(SqsIterator):
         cdef ConfigurationCollection collection
         cdef next_permutation_function next_permutation_function_ptr
 
-        shared_collection = ConfigurationCollection(output_structures if not all_output_structures_flag else 0, self.atoms, self.shell_count, self.species_count)
+        shared_collection = ConfigurationCollection(output_structures if not all_output_structures_flag else 0,
+                                                    self.atoms, self.shell_count, self.species_count)
 
         openmp.omp_set_num_threads(self.num_threads)
         print('Threads used: {}'.format(self.num_threads))
@@ -286,12 +296,14 @@ cdef class ParallelSqsIterator(SqsIterator):
                 next_permutation_function_ptr = knuth_fisher_yates_shuffle
 
             if all_flag:
-                unrank_permutation(local_configuration, self.atoms, self.composition_hist_ptr, self.species_count, permutations, start_permutation)
+                unrank_permutation(local_configuration, self.atoms, self.composition_hist_ptr, self.species_count,
+                                   permutations, start_permutation)
             else:
                 knuth_fisher_yates_shuffle(local_configuration, self.atoms)
 
             for j in range(start_permutation, end_permutation):
-                local_alpha = self.calculate_parameter(local_configuration, self.constant_factor_matrix_ptr, local_alpha_decomposition)
+                local_alpha = self.calculate_parameter(local_configuration, self.constant_factor_matrix_ptr,
+                                                       local_alpha_decomposition)
 
                 if objective_value == -DBL_MAX:
                     pass
@@ -311,8 +323,14 @@ cdef class ParallelSqsIterator(SqsIterator):
 
         total = time.time()-t0
 
-        structure_list = [self.configuration_to_structure(<uint8_t[:self.atoms]>shared_collection.get_configuration(i)) for i in range(shared_collection.size())]
-        decomp_list = [self.alpha_to_dict(np.asarray(<double[:self.shell_count, :self.species_count, :self.species_count]>shared_collection.get_decomposition(i))) for i in range(shared_collection.size())]
+        structure_list = [
+            self.configuration_to_structure(<uint8_t[:self.atoms]>
+                                            shared_collection.get_configuration(i))
+            for i in range(shared_collection.size())]
+        decomp_list = [
+            self.alpha_to_dict(
+                np.asarray(<double[:self.shell_count, :self.species_count, :self.species_count]>
+                           shared_collection.get_decomposition(i))) for i in range(shared_collection.size())]
 
         lps = total_iterations if iterations == 'all' else iterations
 

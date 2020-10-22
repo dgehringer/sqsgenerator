@@ -5,6 +5,7 @@ from libc.math cimport fabs
 from sqsgenerator.core.collection cimport ConfigurationCollection
 from sqsgenerator.core.sqs cimport SqsIterator
 from sqsgenerator.core.utils cimport next_permutation_lex, knuth_fisher_yates_shuffle, reseed_xor, unrank_permutation
+from pymatgen.core import Element
 cimport cython
 cimport base
 cimport openmp
@@ -79,10 +80,14 @@ cdef class DosqsIterator(base.BaseIterator):
             1: "y",
             2: "z"
         }
-
+        index_species_map = {}
         cdef int dimensions = 3
 
-        species = list(self.mole_fractions.keys())
+        # invert the species mapping
+        for key, value in self.species_index_map.items():
+            index_species_map[value] = key
+
+        species = list(sorted(self.mole_fractions.keys(), key=lambda sym: Element(sym).Z))
         rearranged_alphas = {}
         for i in range(dimensions):
             directional_rearranged_alphas = {}
@@ -92,7 +97,7 @@ cdef class DosqsIterator(base.BaseIterator):
                         alphas = []
                         for l in range(self.shell_count):
                             alphas.append(alpha_decomposition[i, l, j, k] + alpha_decomposition[i, l, k, j])
-                        directional_rearranged_alphas['{0}-{1}'.format(species[j], species[k])] = alphas
+                        directional_rearranged_alphas['{0}-{1}'.format(index_species_map[j], index_species_map[k])] = alphas
             rearranged_alphas[axis_mapping[i]] = directional_rearranged_alphas
 
         return rearranged_alphas
