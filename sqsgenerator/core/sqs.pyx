@@ -57,7 +57,8 @@ cdef class SqsIterator(base.BaseIterator):
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef double calculate_parameter(self, uint8_t* configuration, double *constant_factor_matrix, double* alpha_decomposition) nogil:
+    cdef double calculate_parameter(self, uint8_t* configuration, double *constant_factor_matrix,
+                                    double* alpha_decomposition) nogil:
         cdef size_t i = 0, j = 0, k = 0
         cdef uint8_t current_species
         cdef uint8_t compare_species
@@ -106,12 +107,14 @@ cdef class SqsIterator(base.BaseIterator):
         else:
             objective_value = objective
 
-        cdef double[:, :, :] alpha_decomposition = np.ascontiguousarray(np.zeros((self.shell_count, self.species_count, self.species_count)))
+        cdef double[:, :, :] alpha_decomposition = np.ascontiguousarray(
+            np.zeros((self.shell_count, self.species_count, self.species_count)))
         alpha_decomposition_ptr = <double*> &alpha_decomposition[0, 0, 0]
 
         cdef size_t i = 0, j = 0, k = 0
 
-        shared_collection = ConfigurationCollection(output_structures if not all_output_structures_flag else 0, self.atoms, self.shell_count, self.species_count)
+        shared_collection = ConfigurationCollection(output_structures if not all_output_structures_flag else 0,
+                                                    self.atoms, self.shell_count, self.species_count)
 
         self.reset_alpha_results(alpha_decomposition_ptr)
         best_alpha = 1e15
