@@ -86,11 +86,11 @@ Extension(
 
 setup(
         name='sqsgenerator',
-        version="0.1",
+        version="v0.05",
         description='A simple command line Special Quasirandom Structure generator program in Python/Cython.',
         long_description=long_description,
-        author='Dominik Noeger',
-        author_email='dominik-franz-josef.noeger@stud.unileoben.ac.at',
+        author='Dominik Gehringer',
+        author_email='dominik.gehringer@unileoben.ac.at',
         license='UNLICENSE',
         classifiers=[
             'Intended Audience :: Developers',

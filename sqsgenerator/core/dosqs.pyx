@@ -86,8 +86,9 @@ cdef class DosqsIterator(base.BaseIterator):
         # invert the species mapping
         for key, value in self.species_index_map.items():
             index_species_map[value] = key
-
-        species = list(sorted(self.mole_fractions.keys(), key=lambda sym: Element(sym).Z))
+        # here we are sure that is can only be a valid element as element or "0". Vacancy is always the frist one
+        species = list(sorted(self.mole_fractions.keys(), key=lambda sym: Element(sym).Z
+            if Element.is_valid_symbol(sym) else 0))
         rearranged_alphas = {}
         for i in range(dimensions):
             directional_rearranged_alphas = {}

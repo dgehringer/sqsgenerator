@@ -189,8 +189,9 @@ cdef class SqsIterator(base.BaseIterator):
         # invert the species mapping, to preserve the order
         for key, value in self.species_index_map.items():
             index_species_map[value] = key
-
-        species = list(sorted(self.mole_fractions.keys(), key=lambda sym: Element(sym).Z))
+        # here we are sure that is can only be a valid element as element or "0". Vacancy is alwys the frist one
+        species = list(sorted(self.mole_fractions.keys(), key=lambda sym: Element(sym).Z
+            if Element.is_valid_symbol(sym) else 0))
 
         for i in range(self.species_count):
             for j in range(i, self.species_count):

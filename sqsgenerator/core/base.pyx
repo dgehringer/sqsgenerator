@@ -106,7 +106,9 @@ cdef class BaseIterator:
         self.species_index_map = {}
 
         # sort species in ascending order (ordered by their atomic weight)
-        species_order = list(sorted(list(mole_fractions.keys()), key=lambda sym: Element(sym).Z))
+        # here we are sure that is can only be a valid element as element or "0". Vacancy is alwys the frist one
+        species_order = list(sorted(list(mole_fractions.keys()), key=lambda sym: Element(sym).Z
+            if Element.is_valid_symbol(sym) else 0))
         for i, species in enumerate(species_order):
             mole_fraction = mole_fractions[species]
             atoms_per_species = round(self.atoms*mole_fraction)
