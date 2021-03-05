@@ -2,7 +2,7 @@ from .utils import write_message, full_name, ERROR, WARNING, parse_separated_str
 from pymatgen.core.periodic_table import Element
 from os.path import exists, isfile, basename
 from math import isclose
-from pymatgen import Structure
+from pymatgen.core.structure import Structure
 
 
 def parse_options(docopt_options):
