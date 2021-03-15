@@ -84,7 +84,7 @@ Options:
 import numpy as np
 
 
-from pymatgen import Structure
+from pymatgen.core.structure import Structure
 from pymatgen.io.vasp import Poscar
 from sqsgenerator.utils.docopt import docopt
 from sqsgenerator.utils import write_message, unicode_alpha, get_superscript, colored, DEBUG, unicode_capital_sigma
