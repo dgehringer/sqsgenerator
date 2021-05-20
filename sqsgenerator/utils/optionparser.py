@@ -1,4 +1,7 @@
-from .utils import write_message, full_name, ERROR, WARNING, parse_separated_string, parse_float, all_subclasses
+import re
+
+from .utils import write_message, full_name, ERROR, WARNING, parse_separated_string, parse_float, all_subclasses, \
+    ilen, INFO
 from pymatgen.core.periodic_table import Element
 from os.path import exists, isfile, basename
 from math import isclose
@@ -77,6 +80,9 @@ class ArgumentBase(Singleton):
                 self._parsed = True
         return self._result
 
+    def get_value(self, other, *args, **kwargs):
+        return other(self._options, *args, **kwargs)()
+
     def write_message(self, message, level=ERROR, exit=False):
         write_message('{name}: {message}'.format(name=full_name(self), message=message), level=level, exit=exit)
 
@@ -85,87 +91,63 @@ class CompositionalArgument(ArgumentBase):
 
     def __init__(self, options, key, option=False):
         super(CompositionalArgument, self).__init__(options, key, option=option)
+        self._composition_regex = re.compile(r"([0A-Z][a-z]?)(?=:|$)(:)?(0?\.\d+|\d+)?")
+        self._sx, self._sy, self._sz = map(self.get_value, [
+            SupercellXArgument,
+            SupercellYArgument,
+            SupercellZArgument
+        ])
+
+    @staticmethod
+    def is_valid_species(s: str):
+        return Element.is_valid_symbol(s) or s == "0"
 
     def parse_composition(self, composition, species, atoms):
-        try:
-            composition = parse_separated_string(composition)
-            mole_fractions = {}
-            dummy_z = 1
-            dummy_species = []
-            atoms_in_supercell = atoms * SupercellXArgument(self._options)() * SupercellYArgument(
-                self._options)() * SupercellZArgument(self._options)()
-            atoms_mode = False
-            for species_comp in composition:
-                try:
-                    _species, mole_fraction = species_comp.split(':')
-                except ValueError:
-                    if ':' not in species_comp:
-                        if species_comp == '0':
-                            _species = species_comp
-                        elif not Element.is_valid_symbol(species_comp):
-                            _species = Element.from_Z(dummy_z).symbol
-                            dummy_species.append(_species)
-                            dummy_z += 1
-                            mole_fraction = species_comp
-                        else:
-                            continue
-                try:
+        matches = list(map(self._composition_regex.match, parse_separated_string(composition)))
+        # check if we can parse all parts
+        if any(m is None for m in matches):
+            self.write_message(f"Invalid composition \"{composition}\"", level=ERROR)
+            raise InvalidOption
+        matches = [m.groups() for m in matches] # retrieve groups from matches
+        mole_fractions = {element: parse_float(amount) for element, _, amount in matches}
+        # one species is allowed to be given no composition, since we always fill up to 1
+        missing_species = [element for element, amount in mole_fractions.items() if amount is None]
+        atoms_in_supercell = atoms * self._sx * self._sy * self._sz
 
-                    mole_fraction = abs(float(mole_fraction))
-                    if mole_fraction.is_integer() and mole_fraction >= 1:
-                        atoms_mode = True
+        # if any of those atomic fractions is larger than one and an integer value we, think that the
+        # user wants to specify the composition in atoms rather than in fractions
+        atom_mode = any(
+            fraction.is_integer() and fraction >= 1
+            for fraction in mole_fractions.values()
+            if fraction is not None
+        )
+        # if we are in atom mode we have to rescale the number of atoms by the total number of atoms in the cell
+        if atom_mode:
+            self.write_message(f"Assuming atom style composition input mode: Rescaling by {atoms_in_supercell}", level=INFO)
+            mole_fractions = {
+                element: amount if amount is None else amount/atoms_in_supercell
+                for element, amount in mole_fractions.items()
+            }
 
-                        mole_fraction = mole_fraction / atoms_in_supercell
-                    else:
-                        mole_fraction = float(mole_fraction)
-                except ValueError:
-                    try:
-                        mole_fraction = float(mole_fraction)
-                    except ValueError:
-                        self.write_message(
-                            'Could not parse {0} in composition string. Resuming with 0.0'.format(mole_fraction))
-                        raise InvalidOption
-
-                if _species == '0' and '0' not in species:
-                    species.append('0')
-
-                # if _species not in species and _species != '0':
-                #    write_message('Species "{0}" is not defined in POSCAR file'.format(_species))
-
-                if mole_fraction:
-                    mole_fractions[_species] = mole_fraction
-            missing_species = [specie for specie in species if specie not in mole_fractions.keys()]
-            if sum(mole_fractions.values()) > 1.0:
-                print(mole_fractions)
-                self.write_message('The mole fractions specified exceed 1. {0}'.format(mole_fractions))
+        # if more than one species is undetermined we cannot continue
+        if len(missing_species) > 1:
+            self.write_message('You did not specify enough species. '
+                               'I\'m missing {0}!'.format(missing_species), level=ERROR)
+            raise InvalidOption
+        elif len(missing_species) == 1:
+            # in this case we are sure that our mole_fractions sum up to one
+            missing_amount = 1.0 - sum(amount for amount in mole_fractions.values() if amount is not None)
+            missing_specie = missing_species[0]
+            mole_fractions[missing_specie] = missing_amount
+        else:
+            # missing_species == 0 everything is here
+            assigned_fraction = sum(mole_fractions.values())
+            # as tolerance we take half an atom
+            if not isclose(assigned_fraction, 1, abs_tol=0.5/atoms_in_supercell):
+                self.write_message(f"The mole fractions/number of atoms do not sum up to 1/{atoms_in_supercell}", level=ERROR)
                 raise InvalidOption
-            if len(missing_species) > 1:
-                self.write_message('You did not specify enough species. I\'m missing {0}!'.format(missing_species))
-                raise InvalidOption
-            elif len(missing_species) == 1:
-                missing_species = missing_species[0]
-                mole_fractions[missing_species] = (1.0 - sum(mole_fractions.values()))
-            elif len(missing_species) == 0:
-                if not isclose(sum(mole_fractions.values()), 1.0):
-                    if '0' not in mole_fractions:
-                        self.write_message(
-                            "The mole fractions you specified do not. Resuming by filling the missing percentage with vacancies in composition definition {0}".format(
-                                composition), level=WARNING)
-                        mole_fractions['0'] = (1 - sum(mole_fractions.values()))
-                    else:
-                        self.write_message('Your composition does not sum up to 1')
-                        raise InvalidOption
-            else:
-                self.write_message(
-                    'The amount of specified mole fractions does not match the species specified. Expected list of length {0} or {1}'.format(
-                        len(species), len(species) - 1))
-                raise InvalidOption
-            if len(dummy_species) > 0:
-                self.write_message('Missing elements resuming with {0} for undefined elements'.format(dummy_species),
-                                   level=WARNING)
-            return mole_fractions
-        except:
-            write_message('Could not parse composition')
+
+        return mole_fractions
 
     def parse(self, options, *args, **kwargs):
         raise NotImplementedError
@@ -195,8 +177,7 @@ class LatticeOption(CompositionalArgument):
                     _species, mole_fraction = sublattice_composition_string.split(':')
                 except ValueError:
                     if Element.is_valid_symbol(
-                            sublattice_composition_string) or sublattice_composition_string.startswith(
-                        '0'):
+                            sublattice_composition_string) or sublattice_composition_string.startswith('0'):
                         _species = sublattice_composition_string
                     else:
                         _species = Element.from_Z(dummy_z).symbol
@@ -226,8 +207,9 @@ class LatticeOption(CompositionalArgument):
 
         return sublattice_composition
 
-    def get_atom_number_on_sublattice(self, species, structure):
-        return len(list(filter(lambda site: site.specie.symbol == species, structure.sites)))
+    @staticmethod
+    def get_atom_number_on_sublattice(species, structure):
+        return ilen(filter(lambda site: site.specie.symbol == species, structure.sites))
 
 
 class WeightsOption(ArgumentBase):
@@ -411,6 +393,7 @@ class FormatOption(ArgumentBase):
             raise InvalidOption('Output format must be in {}'.format(self._options))
         return self.raw_value, self._class_mapping[self.raw_value]
 
+
 class StructureFileArgument(ArgumentBase):
 
     def __init__(self, options):
@@ -592,7 +575,7 @@ class SublatticeOption(ArgumentBase):
                     'The number of atoms in the supercell of the structure file to select the sublattice does not match those the input structure file.')
                 raise InvalidOption
 
-            #Check if lattices match
+            # Check if lattices match
             props = [
                 lambda s: s.lattice.a,
                 lambda s: s.lattice.b,
@@ -601,11 +584,11 @@ class SublatticeOption(ArgumentBase):
                 lambda s: s.lattice.beta,
                 lambda s: s.lattice.gamma
             ]
-            if not all([isclose(p(selection_structure), p(calculation_structure),abs_tol=1e-3) for p in props]):
+            if not all([isclose(p(selection_structure), p(calculation_structure), abs_tol=1e-3) for p in props]):
                 write_message('Lattices do not match!')
                 raise InvalidOption
 
-            #Check if also sites match
+            # Check if also sites match
             for calculation_site in calculation_structure:
                 match_found = False
                 for selection_site in selection_structure:
@@ -616,7 +599,7 @@ class SublatticeOption(ArgumentBase):
                     write_message('The structures do not match')
                     raise InvalidOption
 
-            #Filtering
+            # Filtering
             selection_sites = [s for s in selection_structure.sites if s.specie.symbol in species_list]
             calculation_sites = []
             for selection_site in selection_sites:

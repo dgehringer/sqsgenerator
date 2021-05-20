@@ -137,6 +137,7 @@ def calculate_alpha(options, structure):
         write_message('An unexpected error occurred')
     print_result(options, alpha, options['verbosity'])
 
+
 def do_sqs_iterations(structure, mole_fractions, weights, iterations=10000, prefix='', verbosity=0, parallel=True, output_structures=10, objective=0.0):
     """
     Performs a the iteration by generating random arrangements of the atoms.

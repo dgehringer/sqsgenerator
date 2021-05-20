@@ -11,6 +11,7 @@ except:
 ERROR = logging.ERROR
 WARNING = logging.WARNING
 DEBUG = logging.DEBUG
+INFO = logging.INFO
 unicode_alpha = unicodedata.lookup('GREEK SMALL LETTER ALPHA')
 unicode_capital_sigma = unicodedata.lookup('GREEK CAPITAL LETTER SIGMA')
 
@@ -42,25 +43,32 @@ subscript_mapping = {
 def star(f):
   return lambda args: f(*args)
 
+
 def parse_float(string, except_val=None, raise_exc=False):
     if raise_exc:
         return float(string)
     else:
         try:
             return float(string)
-        except ValueError:
+        except (ValueError, TypeError):
             return except_val
 
 
 def parse_separated_string(string, delimiter=','):
-    return list(filter(lambda string_: not string_.strip().isspace() and string_ is not '', string.split(delimiter)))
+    return list(
+        filter(
+            lambda string_: not string_.strip().isspace() and string_ is not '',
+            string.split(delimiter)
+        )
+    )
 
 
 def write_message(message, level=logging.ERROR, exit=False):
     color_mapping = {
         logging.ERROR: 'red',
         logging.WARNING: 'yellow',
-        logging.DEBUG: 'blue'
+        logging.DEBUG: 'blue',
+        logging.INFO: 'green'
     }
     text = colored(message, color=color_mapping[level])
     logging.log(level, text)
@@ -81,3 +89,7 @@ def full_name(thing):
 
 def all_subclasses(cls):
     return cls.__subclasses__() + [g for s in cls.__subclasses__() for g in all_subclasses(s)]
+
+
+def ilen(it):
+    return sum(1 for _ in it)
