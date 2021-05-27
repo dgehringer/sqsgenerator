@@ -1,0 +1,18 @@
+stages:
+  - build
+  - test
+
+image: alpine
+
+before_script:
+  - apt get update
+  - apt get install gcc
+
+variables:
+  BUILD_DIR: build
+
+build:
+  stage: build
+  script:
+    - echo "building in ${BUILD_DIR}"
+

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.16)
 project(sqsgenerator.core.test)
 
 set(CMAKE_CXX_COMPILER g++)
