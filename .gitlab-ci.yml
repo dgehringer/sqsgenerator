@@ -5,8 +5,8 @@ stages:
 image: alpine
 
 before_script:
-  - apt get update
-  - apt get install gcc
+  - apt install update
+  - apt install gcc
 
 variables:
   BUILD_DIR: build
