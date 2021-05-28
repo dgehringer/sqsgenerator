@@ -8,6 +8,8 @@
 #include <vector>
 #include <algorithm>
 #include <rank.h>
+#include <utils.h>
+#include <xoroshiro256.h>
 
 void print_conf(const Configuration &conf) {
     std::cout << "[";
@@ -24,20 +26,9 @@ int main(int argc, char *argv[]) {
     using namespace rigtorp;
     using namespace sqsgenerator;
 
-    Configuration conf{0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
-    Configuration conf1{1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0};
-    auto species = unique_species(conf);
-    auto nspecies = unique_species(conf).size();
-    auto total_permutation = total_permutations(conf);
-    auto max_rank = rank_permutation_gmp(conf1, nspecies);
-    auto hist = configuration_histogram(conf);
-    std::cout << conf.size() << std::endl;
-    std::cout << species.size() << std::endl;
-    std::cout << total_permutations(conf) << std::endl;
-    std::cout << "RANK:" << rank_permutation_gmp(conf, nspecies) << " , " << rank_permutation_gmp(conf1, nspecies) << " , "<<  mpz_class(1) <<std::endl;
-    Configuration last(conf.size());
-    unrank_permutation_gmp(last, hist, total_permutation, mpz_class{1567});
-    std::cout << "NEW RANK: "<< rank_permutation_gmp(last, nspecies) << std::endl;
+    for (int i = 0; i < 40; i++) {
+        std::cout << bounded_rand(rng, 40) << ", "
+    }
 //   print_conf(last);
     MPMCQueue<int> q(10);
     auto t1 = std::thread([&] {
