@@ -2,14 +2,12 @@
 // Created by dominik on 21.05.21.
 
 #include <iostream>
-#include <rigtorp/MPMCQueue.h>
 #include <thread>
 #include <types.h>
 #include <vector>
 #include <algorithm>
 #include <rank.h>
-#include <utils.h>
-#include <xoroshiro256.h>
+#include "containers.h"
 
 void print_conf(const Configuration &conf) {
     std::cout << "[";
@@ -22,31 +20,29 @@ void print_conf(const Configuration &conf) {
 
 int main(int argc, char *argv[]) {
     (void)argc, (void)argv;
-
-    using namespace rigtorp;
     using namespace sqsgenerator;
 
-    for (int i = 0; i < 40; i++) {
-        std::cout << bounded_rand(rng, 40) << ", "
-    }
-//   print_conf(last);
-    MPMCQueue<int> q(10);
-    auto t1 = std::thread([&] {
-        int v;
-        q.pop(v);
-        std::cout << "t1 " << v << "\n";
-    });
-    auto t2 = std::thread([&] {
-        int v;
-        q.pop(v);
-        std::cout << "t2 " << v << "\n";
-    });
-    q.push(1);
-    q.push(2);
-    t1.join();
-    t2.join();
+    size_t nshells {7}, nspecies {2};
 
-    return 0;
+   Configuration conf {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
+   PairSROParameters params(boost::extents[nshells][nspecies][nspecies]);
+   PairSQSResult result(0.0, conf, 7);
+
+   SQSResultCollection results(5);
+   size_t nthread = 8;
+
+
+   std::thread generator([&](){
+       for (size_t i = 1; i < 11; i++) {
+           double objective = 1/i;
+           uint64_t rank = i;
+           bool res = results.addResult(result);
+           std::cout << i << ": " << res << std::endl;
+       }
+   });
+
+
+   generator.join();
 }
 //
 

@@ -7,11 +7,12 @@
 
 #include <vector>
 #include <stdint.h>
+#include <boost/multi_array.hpp>
 
 namespace sqsgenerator {
     typedef uint8_t Species;
     typedef std::vector<Species> Configuration;
-    typedef std::vector<double> SROParameters;
-    typedef std::tuple<double, Configuration, SROParameters> SQSResult;
+    typedef boost::multi_array<double, 3> PairSROParameters;
+
 }
 #endif //SQSGENERATOR_TYPES_H
