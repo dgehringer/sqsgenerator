@@ -27,22 +27,25 @@ int main(int argc, char *argv[]) {
    Configuration conf {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
    PairSROParameters params(boost::extents[nshells][nspecies][nspecies]);
    PairSQSResult result(0.0, conf, 7);
-
+   PairSQSResult result1(0.0, 1, conf, params);
    SQSResultCollection results(5);
    size_t nthread = 8;
 
 
    std::thread generator([&](){
        for (size_t i = 1; i < 11; i++) {
-           double objective = 1/i;
+           double objective = 1.0/i;
            uint64_t rank = i;
+           result.rank = rank;
+           result.objective = objective;
            bool res = results.addResult(result);
-           std::cout << i << ": " << res << std::endl;
+           std::cout << i << ": " << results.bestObjective()<< ", " << objective << std::endl;
        }
    });
 
 
    generator.join();
+    std::cout << results.size() << std::endl;
 }
 //
 

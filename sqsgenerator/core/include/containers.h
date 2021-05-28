@@ -38,19 +38,17 @@ namespace sqsgenerator {
         PairSQSResult(double objective, const Configuration conf, size_t nshells): PairSQSResult(objective, conf, nshells, unique_species(conf).size()) {}
         PairSQSResult(const PairSQSResult &other) = default;
 
-        PairSQSResult(const PairSQSResult &&other) noexcept {
-            std::cout << "Move constructor" << std::endl;
-        };
 
         PairSQSResult& operator=(const PairSQSResult&& other) {
-            std::cout << "Move assignment" << std::endl;
+            rank = other.rank;
+            objective = other.objective;
+            PairSROParameters::extent_gen extent;
+            auto shape = other.parameters.shape();
+            parameters.resize(extent[shape[0]][shape[1]][shape[2]]);
+            parameters = std::move(other.parameters);
+            configuration = std::move(other.configuration);
             return *this;
         }
-/*
-        PairSQSResult(const PairSQSResult &&other) {
-            std::cout << "Move constructor" << std::endl;
-        }
-*/
 
     };
 
@@ -65,14 +63,16 @@ namespace sqsgenerator {
         }
 
         bool addResult(const PairSQSResult &item) {
-            std::cout << "addResult" << std::endl;
             if (item.objective > m_bestObjective) return false;
             else if (item.objective < m_bestObjective) {
                 // we have to clear and remove all elements in the queue
-                //clearQueue();
-                //assert(m_q.size_approx() == 0);
+                clearQueue();
+                assert(m_q.size_approx() == 0);
                 bool success  = m_q.try_enqueue(item);
-                if (success) m_size += 1;
+                if (success) {
+                    m_size += 1;
+                    m_bestObjective = item.objective;
+                }
                 return success;
             }
             else {
@@ -94,6 +94,7 @@ namespace sqsgenerator {
         int m_maxSize;
 
         void clearQueue() {
+            std::cout << "clearQueue()" << std::endl;
             m_mutex_clear.lock();
             // Only one threa can clear the queue, this is important for m_q.apporx_size() to accomodate
             while(m_q.size_approx()) {
