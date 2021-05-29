@@ -105,7 +105,6 @@ namespace sqsgenerator {
             while(m_q.size_approx()) {
                 T item;
                 m_q.try_dequeue(item);
-                std::cout << "\tdequeue: " << item.objective << std::endl;
             }
             m_size = 0;
             m_mutex_clear.unlock();
