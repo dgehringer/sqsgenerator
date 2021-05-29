@@ -26,9 +26,9 @@ int main(int argc, char *argv[]) {
 
    Configuration conf {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
    PairSROParameters params(boost::extents[nshells][nspecies][nspecies]);
-   PairSQSResult result(0.0, conf, 7);
-   PairSQSResult result1(0.0, 1, conf, params);
-   SQSResultCollection results(5);
+   SQSResult<PairSROParameters> result(0.0, 1, conf, params);
+
+   SQSResultCollection<SQSResult<PairSROParameters>> results(5);
    size_t nthread = 8;
 
 
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
            result.rank = rank;
            result.objective = objective;
            bool res = results.addResult(result);
-           std::cout << i << ": " << results.bestObjective()<< ", " << objective << std::endl;
+           std::cout << i << ": " << results.bestObjective()<< ", " << objective << ", "  << "res" << std::endl;
        }
    });
 

@@ -13,6 +13,7 @@ namespace sqsgenerator {
     typedef uint8_t Species;
     typedef std::vector<Species> Configuration;
     typedef boost::multi_array<double, 3> PairSROParameters;
+    typedef boost::multi_array<double, 6> TripletSROParameters;
 
 }
 #endif //SQSGENERATOR_TYPES_H

@@ -14,37 +14,38 @@
 #include <limits>
 #include <thread>
 #include <mutex>
+#include <type_traits>
+#include "utils.h"
 #include "moodycamel/concurrentqueue.h"
 
 namespace sqsgenerator {
 
-    class PairSQSResult {
+    template<typename T>
+    class SQSResult {
 
     public:
         double objective;
         uint64_t rank;
-        PairSROParameters parameters;
+        T parameters;
         Configuration configuration;
-        PairSQSResult() {}
-        PairSQSResult(double objective, uint64_t rank, const Configuration conf, const PairSROParameters parameters) : objective(objective), rank(rank), configuration(conf), parameters(parameters) {}
-        PairSQSResult(double objective, const Configuration conf, const PairSROParameters parameters) : objective(objective), configuration(conf), parameters(parameters) {
+        SQSResult() {}
+        SQSResult(double objective, uint64_t rank, const Configuration conf, const T parameters) : objective(objective), rank(rank), configuration(conf), parameters(parameters) {
+            std::cout << "Constructor = parameters(" << parameters.num_elements() << ")" << std::endl;
+        }
+        SQSResult(double objective, const Configuration conf, const T parameters) : objective(objective), configuration(conf), parameters(parameters) {
             auto nspecies = unique_species(conf).size();
             rank = rank_permutation_std(conf, nspecies);
         }
 
-        PairSQSResult(double objective, uint64_t rank, const Configuration conf, size_t nshells, size_t nspecies): objective(objective), configuration(conf),
-                                                                                   parameters(boost::extents[nshells][nspecies][nspecies]), rank(rank) { }
-        PairSQSResult(double objective, const Configuration conf, size_t nshells, size_t nspecies): PairSQSResult(objective, rank_permutation_std(conf, nspecies), conf, nshells, nspecies) {}
-        PairSQSResult(double objective, const Configuration conf, size_t nshells): PairSQSResult(objective, conf, nshells, unique_species(conf).size()) {}
-        PairSQSResult(const PairSQSResult &other) = default;
+        SQSResult(const SQSResult &other) : objective(other.objective), rank(other.rank), configuration(other.configuration){
+            boost::extentTo(parameters, other.parameters);
+            parameters = other.parameters;
+        };
 
-
-        PairSQSResult& operator=(const PairSQSResult&& other) {
+        SQSResult& operator=(const SQSResult&& other) {
             rank = other.rank;
             objective = other.objective;
-            PairSROParameters::extent_gen extent;
-            auto shape = other.parameters.shape();
-            parameters.resize(extent[shape[0]][shape[1]][shape[2]]);
+            boost::extentTo(parameters, other.parameters);
             parameters = std::move(other.parameters);
             configuration = std::move(other.configuration);
             return *this;
@@ -52,17 +53,16 @@ namespace sqsgenerator {
 
     };
 
+    template<typename T>
     class SQSResultCollection {
 
     public:
-        SQSResultCollection(int maxSize): m_bestObjective(std::numeric_limits<double>::max()), m_size(0), m_q(maxSize > 0 ? static_cast<size_t>(maxSize): 6 * moodycamel::ConcurrentQueueDefaultTraits::BLOCK_SIZE), m_maxSize(maxSize) {
-        }
-
+        SQSResultCollection(int maxSize): m_bestObjective(std::numeric_limits<double>::max()), m_size(0), m_q(maxSize > 0 ? static_cast<size_t>(maxSize): 6 * moodycamel::ConcurrentQueueDefaultTraits::BLOCK_SIZE), m_maxSize(maxSize) {}
         double bestObjective() const {
             return m_bestObjective;
         }
 
-        bool addResult(const PairSQSResult &item) {
+        bool addResult(const T &item) {
             if (item.objective > m_bestObjective) return false;
             else if (item.objective < m_bestObjective) {
                 // we have to clear and remove all elements in the queue
@@ -78,8 +78,12 @@ namespace sqsgenerator {
             else {
                 // We do not rotate configurations
                 if (m_size >= m_maxSize) return false;
+                else {
+                    bool success = m_q.try_enqueue(item);
+                    if (success) m_size += 1;
+                    return success;
+                }
             }
-            return false;
         }
 
         size_t size() const {
@@ -87,7 +91,7 @@ namespace sqsgenerator {
         }
 
     private:
-        moodycamel::ConcurrentQueue<PairSQSResult> m_q;
+        moodycamel::ConcurrentQueue<T> m_q;
         std::atomic<size_t> m_size;
         std::atomic<double> m_bestObjective;
         std::mutex m_mutex_clear;
@@ -96,15 +100,19 @@ namespace sqsgenerator {
         void clearQueue() {
             std::cout << "clearQueue()" << std::endl;
             m_mutex_clear.lock();
-            // Only one threa can clear the queue, this is important for m_q.apporx_size() to accomodate
+            // Only one threa can clear the queue, this is important for m_q.size_approx() since the queue, needs
+            // be stabilized
             while(m_q.size_approx()) {
-                PairSQSResult item;
+                T item;
                 m_q.try_dequeue(item);
+                std::cout << "\tdequeue: " << item.objective << std::endl;
             }
             m_size = 0;
             m_mutex_clear.unlock();
         }
     };
+
+    typedef SQSResult<PairSROParameters> PairSQSResult;
 }
 
 
