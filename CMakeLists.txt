@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(sqsgenerator/core/include)
 
 add_subdirectory(test)
+add_subdirectory(sqsgenerator/core/python)
 
 add_executable(sqsgenerator.core
         sqsgenerator/core/include/types.h

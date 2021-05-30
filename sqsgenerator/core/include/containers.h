@@ -112,6 +112,9 @@ namespace sqsgenerator {
     };
 
     typedef SQSResult<PairSROParameters> PairSQSResult;
+    typedef SQSResult<TripletSROParameters> TripletSQSResult;
+    typedef SQSResultCollection<PairSQSResult> PairSQSIterationResult;
+    typedef SQSResultCollection<TripletSQSResult> TripletSQSIterationResult;
 }
 
 

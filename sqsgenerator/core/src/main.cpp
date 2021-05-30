@@ -26,9 +26,9 @@ int main(int argc, char *argv[]) {
 
    Configuration conf {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
    PairSROParameters params(boost::extents[nshells][nspecies][nspecies]);
-   SQSResult<PairSROParameters> result(0.0, 1, conf, params);
+   PairSQSResult result(0.0, 1, conf, params);
 
-   SQSResultCollection<SQSResult<PairSROParameters>> results(5);
+   PairSQSIterationResult results(5);
    size_t nthread = 8;
 
 
