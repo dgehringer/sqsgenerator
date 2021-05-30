@@ -38,8 +38,10 @@ namespace sqsgenerator {
         }
 
         SQSResult(const SQSResult &other) : objective(other.objective), rank(other.rank), configuration(other.configuration){
+
             boost::extentTo(parameters, other.parameters);
             parameters = other.parameters;
+            std::cout << "Copy Constructor = parameters(" << parameters.num_elements() << ")" << std::endl;
         };
 
         SQSResult& operator=(const SQSResult&& other) {
@@ -48,6 +50,7 @@ namespace sqsgenerator {
             boost::extentTo(parameters, other.parameters);
             parameters = std::move(other.parameters);
             configuration = std::move(other.configuration);
+            std::cout << "Move assignment = parameters(" << parameters.num_elements() << ")" << std::endl;
             return *this;
         }
 
@@ -63,9 +66,11 @@ namespace sqsgenerator {
         }
 
         bool addResult(const T &item) {
+
             if (item.objective > m_bestObjective) return false;
             else if (item.objective < m_bestObjective) {
                 // we have to clear and remove all elements in the queue
+                T copy = item;
                 clearQueue();
                 assert(m_q.size_approx() == 0);
                 bool success  = m_q.try_enqueue(item);

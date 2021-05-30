@@ -50,6 +50,7 @@ np::ndarray toShapedNumpyArray(const T *array) {
 }
 
 
+
 np::ndarray hello1() {
     size_t size = 125;
     double* data = (double *) malloc(size* sizeof(double));
@@ -59,10 +60,30 @@ np::ndarray hello1() {
     }
     return toShapedNumpyArray<double, 5, 5, 5>(data);
 }
+static Configuration conf {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
+static double data[3][3][3] {
+        {{0,1,2},
+        {3,4,5},
+        {6,7,8}},
+        {{9,10,11},
+         {12,13,14},
+         {15,16,17}},
+        {{18,19,20},
+         {21,22,23},
+         {24,25,26}}
+};
+static boost::multi_array_ref<double, 3> sro(&data[0][0][0], boost::extents[3][3][3]);
+static PairSQSResult result(0.0, 1, conf, sro);
 
+np::ndarray getData() {
+    return toShapedNumpyArray<double, 3,3,3>(result.parameters.data());
+}
 
 BOOST_PYTHON_MODULE(data) {
+    Py_Initialize();
     np::initialize();
+
     boost::python::def("hello", hello1);
+    boost::python::def("get_data", getData);
  //boost::python::class_<PairSQSResult>("PairSQSResult", boost::python::init<double, uint64_t, Configuration, PairSROParameters>());
 }

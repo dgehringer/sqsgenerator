@@ -23,9 +23,11 @@ int main(int argc, char *argv[]) {
     using namespace sqsgenerator;
 
     size_t nshells {7}, nspecies {2};
+    std::vector<double> data {0,1,1,0,0,2,2,0,0,3,3,0,0,4,4,0,0,5,5,0,0,6,6,0,0,7,7,0};
 
    Configuration conf {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
    PairSROParameters params(boost::extents[nshells][nspecies][nspecies]);
+   params.assign(data.begin(), data.end());
    PairSQSResult result(0.0, 1, conf, params);
 
    PairSQSIterationResult results(5);
