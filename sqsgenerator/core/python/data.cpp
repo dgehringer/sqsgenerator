@@ -29,9 +29,8 @@ np::ndarray toFlatNumpyArray(const T *array, size_t num_elements) {
                          p::object());
 }
 
-template<typename T, size_t... Sizes>
-np::ndarray toShapedNumpyArray(const T *array) {
-    std::vector<size_t> shape {Sizes...};
+template<typename T>
+np::ndarray toShapedNumpyArray(const T *array, const std::vector<size_t> &shape) {
     std::vector<size_t> strides;
     for (size_t i = 1; i < shape.size(); i++) {
         size_t nelem {1};
@@ -49,17 +48,30 @@ np::ndarray toShapedNumpyArray(const T *array) {
                          p::object());
 }
 
-
-
-np::ndarray hello1() {
-    size_t size = 125;
-    double* data = (double *) malloc(size* sizeof(double));
-    size_t cnt = 0;
-    for (int i = 0; i < size; i++) {
-        data[i] = static_cast<double>(i);
-    }
-    return toShapedNumpyArray<double, 5, 5, 5>(data);
+template<typename T, size_t...Shape>
+np::ndarray toShapedNumpyArray(const T* array) {
+    std::vector<size_t> shape {Shape...};
+    return toShapedNumpyArray<T>(array, shape);
 }
+
+
+
+class PairSQSResultPythonWrapper : public PairSQSResult {
+
+    public:
+        PairSQSResultPythonWrapper(const PairSQSResult &other) : PairSQSResult(other){}
+
+        np::ndarray getConfiguration() {
+            std::vector<size_t> shape {configuration.size()};
+            return toShapedNumpyArray<Species>(configuration.data(), shape);
+        }
+
+    np::ndarray getParameters() {
+        std::vector<size_t> shape {parameters.shape(), parameters.shape()+parameters.num_dimensions()};
+        return toShapedNumpyArray<double>(parameters.data(), shape);
+    }
+    };
+
 static Configuration conf {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
 static double data[3][3][3] {
         {{0,1,2},
@@ -74,16 +86,32 @@ static double data[3][3][3] {
 };
 static boost::multi_array_ref<double, 3> sro(&data[0][0][0], boost::extents[3][3][3]);
 static PairSQSResult result(0.0, 1, conf, sro);
+static PairSQSResultPythonWrapper instance(result);
 
-np::ndarray getData() {
-    return toShapedNumpyArray<double, 3,3,3>(result.parameters.data());
+// https://stackoverflow.com/questions/49692157/boost-python-return-python-object-which-references-to-existing-c-objects
+template <typename T>
+inline p::object wrapExistingInPythonObject(T ptr) {
+    typename p::reference_existing_object::apply<T>::type converter;
+    auto converted = converter(ptr);
+    p::handle handle(converted);
+    return p::object(handle);
 }
+
+p::object getData() {
+    return wrapExistingInPythonObject<PairSQSResultPythonWrapper&>(instance);
+}
+
+
 
 BOOST_PYTHON_MODULE(data) {
     Py_Initialize();
     np::initialize();
 
-    boost::python::def("hello", hello1);
-    boost::python::def("get_data", getData);
+    p::class_<PairSQSResultPythonWrapper>("PairSQSResult", p::no_init)
+            .def_readonly("objective", &PairSQSResultPythonWrapper::objective)
+            .def_readonly("rank", &PairSQSResultPythonWrapper::rank)
+            .def_readonly("configuration", &PairSQSResultPythonWrapper::getConfiguration)
+            .def_readonly("parameters", &PairSQSResultPythonWrapper::getParameters);
+    p::def("get_data", getData);
  //boost::python::class_<PairSQSResult>("PairSQSResult", boost::python::init<double, uint64_t, Configuration, PairSROParameters>());
 }
