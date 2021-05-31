@@ -14,11 +14,11 @@ namespace sqsgenerator {
         Configuration conf_first_2 {0,1};
         Configuration conf_last_2 {1,0};
 
-        Configuration conf_first_16{0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
-        Configuration conf_last_16{1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0};
+        Configuration conf_first_16 {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
+        Configuration conf_last_16 {1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0};
 
-        Configuration conf_last_24{2,2,2,2,2,2,2,2, 1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0};
-        Configuration conf_first_24{0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2};
+        Configuration conf_last_24 {2,2,2,2,2,2,2,2, 1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0};
+        Configuration conf_first_24 {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2};
 
         Configuration conf_diff_20 {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19};
         Configuration conf_same_20 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};

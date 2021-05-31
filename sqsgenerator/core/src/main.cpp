@@ -43,11 +43,15 @@ int main(int argc, char *argv[]) {
            bool res = results.addResult(result);
            std::cout << i << ": " << results.bestObjective()<< ", " << objective << ", "  << "res" << std::endl;
        }
+       results.addResult(result);
+       //results.addResult(result);
    });
 
 
-   generator.join();
-    std::cout << results.size() << std::endl;
+    generator.join();
+    results.collect();
+    assert(results.bestObjective() == 1.0/10.0);
+    std::cout << results.bestObjective() << ", " <<  results.resultSize() << std::endl;
 }
 //
 

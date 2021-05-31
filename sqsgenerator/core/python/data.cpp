@@ -4,6 +4,7 @@
 
 #include "containers.h"
 #include "helpers.h"
+#include "container_wrappers.h"
 #include <boost/multi_array.hpp>
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
@@ -18,25 +19,68 @@ namespace sqsgenerator {
 
     namespace python {
 
+        void IndexError() { PyErr_SetString(PyExc_IndexError, "Index out of range"); }
 
-        class PairSQSResultPythonWrapper : public PairSQSResult {
+        template<typename T>
+        class SQSResultPythonWrapper {
+        private:
+            const SQSResult<T>& m_handle;
 
         public:
-            PairSQSResultPythonWrapper(const PairSQSResult &other) : PairSQSResult(other) {}
 
-            np::ndarray getConfiguration() {
-                std::vector<size_t> shape{configuration.size()};
-                return helpers::toShapedNumpyArray<Species>(configuration.data(), shape);
+            SQSResultPythonWrapper(const SQSResult<T> &other) : m_handle(other) {
             }
 
-            np::ndarray getParameters() {
-                std::vector<size_t> shape{parameters.shape(), parameters.shape() + parameters.num_dimensions()};
-                return helpers::toShapedNumpyArray<double>(parameters.data(), shape);
+            double objective(){
+                return m_handle.objective;
+            }
+
+            uint64_t rank() {
+                return m_handle.rank;
+            }
+
+            np::ndarray configuration() {
+                std::vector<size_t> shape{m_handle.configuration.size()};
+                return helpers::toShapedNumpyArray<Species>(m_handle.configuration.data(), shape);
+            }
+
+            np::ndarray parameters() {
+                std::vector<size_t> shape{m_handle.parameters.shape(), m_handle.parameters.shape() + m_handle.parameters.num_dimensions()};
+                return helpers::toShapedNumpyArray<double>(m_handle.parameters.data(), shape);
             }
         };
+
+        template<class T>
+        struct std_item
+        {
+            typedef typename T::value_type V;
+            static V& get(T const& x, int i)
+            {
+                if( i<0 ) i+=x.size();
+                if( i>=0 && i<x.size() ) return x[i];
+                IndexError();
+            }
+            static void set(T const& x, int i, V const& v)
+            {
+                if( i<0 ) i+=x.size();
+                if( i>=0 && i<x.size() ) x[i]=v;
+                else IndexError();
+            }
+            static void del(T const& x, int i)
+            {
+                if( i<0 ) i+=x.size();
+                if( i>=0 && i<x.size() ) x.erase(i);
+                else IndexError();
+            }
+            static void add(T const& x, V const& v)
+            {
+                x.push_back(v);
+            }
+        };
+
     }
 }
-typedef sqsgenerator::python::PairSQSResultPythonWrapper PairSQSResultWrapper;
+
 static Configuration conf {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
 static double data[3][3][3] {
         {{0,1,2},
@@ -51,24 +95,58 @@ static double data[3][3][3] {
 };
 static boost::multi_array_ref<double, 3> sro(&data[0][0][0], boost::extents[3][3][3]);
 static PairSQSResult result(0.0, 1, conf, sro);
-static sqsgenerator::python::PairSQSResultPythonWrapper instance(result);
+typedef sqsgenerator::python::SQSResultPythonWrapper<PairSROParameters> PairSQSResultPythonWrapper;
+
+
+typedef std::vector<PairSQSResultPythonWrapper> PairSQSResultCollectionPythonWrapper;
+static PairSQSIterationResult queue(20);
+static PairSQSResultCollectionPythonWrapper results;
+static bool resultsInitialized = false;
 
 
 py::object getData() {
-    return helpers::wrapExistingInPythonObject<PairSQSResultWrapper&>(instance);
+    if (!resultsInitialized) {
+        for (int i = 0; i < 20; ++i) {
+            result.rank = i;
+            queue.addResult(result);
+        }
+        std::cout << "Collecting queue" << std::endl;
+        queue.collect();
+        for (auto &r : queue.results()) results.push_back(PairSQSResultPythonWrapper(r));
+        resultsInitialized = true;
+    }
+    return helpers::wrapExistingInPythonObject<PairSQSResultCollectionPythonWrapper&>(results);
 }
-
 
 
 BOOST_PYTHON_MODULE(data) {
     Py_Initialize();
     np::initialize();
 
-    py::class_<PairSQSResultWrapper>("PairSQSResult", py::no_init)
-            .def_readonly("objective", &PairSQSResultWrapper::objective)
-            .def_readonly("rank", &PairSQSResultWrapper::rank)
-            .def_readonly("configuration", &PairSQSResultWrapper::getConfiguration)
-            .def_readonly("parameters", &PairSQSResultWrapper::getParameters);
+    py::class_<PairSQSResultPythonWrapper>("PairSQSResult", py::no_init)
+            .def_readonly("objective", &PairSQSResultPythonWrapper::objective)
+            .def_readonly("rank", &PairSQSResultPythonWrapper::rank)
+            .def_readonly("configuration", &PairSQSResultPythonWrapper::configuration)
+            .def_readonly("parameters", &PairSQSResultPythonWrapper::parameters);
+
+    py::class_<PairSQSResultCollectionPythonWrapper>("PairSQSResultCollection")
+            .def("__len__", &PairSQSResultCollectionPythonWrapper::size)
+            .def("__getitem__", &helpers::std_item<PairSQSResultCollectionPythonWrapper>::get,
+                 py::return_value_policy<py::copy_non_const_reference>())
+            .def("__iter__", py::iterator<PairSQSResultCollectionPythonWrapper>());
     py::def("get_data", getData);
+/*
+    py::class_<PairSQSResultCollectionPythonWrapper>("PairSQSResultCollection", py::no_init)
+            .def("__len__", &Geometry::size)
+            .def("clear", &Geometry::clear)
+            .def("append", &std_item<Geometry>::add,
+                 with_custodian_and_ward<1,2>()) // to let container keep value
+            .def("__getitem__", &std_item<Geometry>::get,
+                 return_value_policy<copy_non_const_reference>())
+            .def("__setitem__", &std_item<Geometry>::set,
+                 with_custodian_and_ward<1,2>()) // to let container keep value
+            .def("__delitem__", &std_item<Geometry>::del)*/
+            //.def_readonly("first", py::range<py::return_value_policy<py::copy_non_const_reference>>(&PairSQSResultCollectionPythonWrapper::begin, &PairSQSResultCollectionPythonWrapper::end));
+    //py::def("get_data", getData);
 
 }
