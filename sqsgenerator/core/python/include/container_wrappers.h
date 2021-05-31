@@ -39,6 +39,13 @@ namespace sqsgenerator {
                     else IndexError();
                 }
 
+                static int index(T & x, V & v)
+                {
+                    int i {0};
+                    for(typename T::const_iterator it=x.begin; it!=x.end(); ++it,++i)
+                        if( *it == v ) return i;
+                    return -1;
+                }
 
                 static void add(T & x, V & v)
                 {
@@ -48,55 +55,56 @@ namespace sqsgenerator {
             };
 
 
+
             template<typename T>
             struct map_item
             {
                 typedef typename T::key_type K;
                 typedef typename T::mapped_type V;
                 typedef typename T::const_iterator It;
-                static V& get(T const& x, K const& i)
+                static V& get(T &x, K & i)
                 {
                     if( x.find(i) != x.end() ) return x[i];
                     KeyError();
                 }
-                static void set(T const& x, K const& i, V const& v)
+                static void set(T & x, K & i, V & v)
                 {
                     x[i]=v; // use map autocreation feature
                 }
-                static void del(T const& x, K const& i)
+                static void del(T & x, K & i)
                 {
                     if( x.find(i) != x.end() ) x.erase(i);
                     else KeyError();
                 }
 
-                static bool in(T const& x, K const& i)
+                static bool in(T & x, K & i)
                 {
                     return x.find(i) != x.end();
                 }
 
-                static py::list keys(T const& x)
+                static py::list keys(T & x)
                 {
                     py::list t;
                     for(It it=x.begin; it!=x.end(); ++it)
                         t.append(it->first);
                     return t;
                 }
-                static py::list values(T const& x)
+                static py::list values(T & x)
                 {
                     py::list t;
                     for(It it=x.begin; it!=x.end(); ++it)
                         t.append(it->second);
                     return t;
                 }
-                static py::list items(T const& x)
+                static py::list items(T & x)
                 {
                     py::list t;
                     for(It it=x.begin; it!=x.end(); ++it)
-                        t.append(make_tuple(it->first,it->second));
+                        t.append(py::make_tuple(it->first,it->second));
                     return t;
                 }
 
-                static int index(T const& x, K const& k)
+                static int index(T & x, K & k)
                 {
                     int i=0;
                     for(typename T::const_iterator it=x.begin; it!=x.end(); ++it,++i)

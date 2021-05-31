@@ -50,34 +50,13 @@ namespace sqsgenerator {
             }
         };
 
-        template<class T>
-        struct std_item
-        {
-            typedef typename T::value_type V;
-            static V& get(T const& x, int i)
-            {
-                if( i<0 ) i+=x.size();
-                if( i>=0 && i<x.size() ) return x[i];
-                IndexError();
-            }
-            static void set(T const& x, int i, V const& v)
-            {
-                if( i<0 ) i+=x.size();
-                if( i>=0 && i<x.size() ) x[i]=v;
-                else IndexError();
-            }
-            static void del(T const& x, int i)
-            {
-                if( i<0 ) i+=x.size();
-                if( i>=0 && i<x.size() ) x.erase(i);
-                else IndexError();
-            }
-            static void add(T const& x, V const& v)
-            {
-                x.push_back(v);
-            }
-        };
+        template<typename T>
+        using SQSResultCollectionPythonWrapper = std::vector<SQSResultPythonWrapper<T>>;
 
+        typedef SQSResultPythonWrapper<PairSROParameters> PairSQSResultPythonWrapper;
+        typedef SQSResultPythonWrapper<TripletSROParameters> TripletSQSResultPythonWrapper;
+        typedef SQSResultCollectionPythonWrapper<PairSROParameters> PairSQSResultCollectionPythonWrapper;
+        typedef SQSResultCollectionPythonWrapper<TripletSROParameters> TripletSQSResultCollectionPythonWrapper;
     }
 }
 
@@ -93,12 +72,10 @@ static double data[3][3][3] {
          {21,22,23},
          {24,25,26}}
 };
+
+using namespace sqsgenerator::python;
 static boost::multi_array_ref<double, 3> sro(&data[0][0][0], boost::extents[3][3][3]);
 static PairSQSResult result(0.0, 1, conf, sro);
-typedef sqsgenerator::python::SQSResultPythonWrapper<PairSROParameters> PairSQSResultPythonWrapper;
-
-
-typedef std::vector<PairSQSResultPythonWrapper> PairSQSResultCollectionPythonWrapper;
 static PairSQSIterationResult queue(20);
 static PairSQSResultCollectionPythonWrapper results;
 static bool resultsInitialized = false;
@@ -115,6 +92,7 @@ py::object getData() {
         for (auto &r : queue.results()) results.push_back(PairSQSResultPythonWrapper(r));
         resultsInitialized = true;
     }
+
     return helpers::wrapExistingInPythonObject<PairSQSResultCollectionPythonWrapper&>(results);
 }
 
@@ -135,18 +113,5 @@ BOOST_PYTHON_MODULE(data) {
                  py::return_value_policy<py::copy_non_const_reference>())
             .def("__iter__", py::iterator<PairSQSResultCollectionPythonWrapper>());
     py::def("get_data", getData);
-/*
-    py::class_<PairSQSResultCollectionPythonWrapper>("PairSQSResultCollection", py::no_init)
-            .def("__len__", &Geometry::size)
-            .def("clear", &Geometry::clear)
-            .def("append", &std_item<Geometry>::add,
-                 with_custodian_and_ward<1,2>()) // to let container keep value
-            .def("__getitem__", &std_item<Geometry>::get,
-                 return_value_policy<copy_non_const_reference>())
-            .def("__setitem__", &std_item<Geometry>::set,
-                 with_custodian_and_ward<1,2>()) // to let container keep value
-            .def("__delitem__", &std_item<Geometry>::del)*/
-            //.def_readonly("first", py::range<py::return_value_policy<py::copy_non_const_reference>>(&PairSQSResultCollectionPythonWrapper::begin, &PairSQSResultCollectionPythonWrapper::end));
-    //py::def("get_data", getData);
 
 }
