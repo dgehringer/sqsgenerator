@@ -6,8 +6,6 @@ set(SQSGENERATOR_INC_DIR ../sqsgenerator/core/include)
 find_package(GTest REQUIRED)
 set(CMAKE_CXX_COMPILER g++)
 
-
-
 include_directories(${SQSGENERATOR_INC_DIR})
 include_directories(include)
 
