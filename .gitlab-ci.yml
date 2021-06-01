@@ -34,6 +34,7 @@ build-all:
 
 
 test-core-rank:
+  needs: ["build-all"]
   stage: test
   tags:
     - test
