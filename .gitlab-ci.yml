@@ -31,12 +31,3 @@ build-all:
     - build
   script:
     - cmake --build ${SQSGENERATOR_BUILD_DIR}
-
-
-test-core-rank:
-  needs: ["build-all"]
-  stage: test
-  tags:
-    - test
-  script:
-    - ./build/test/sqsgenerator.core.test.rank
