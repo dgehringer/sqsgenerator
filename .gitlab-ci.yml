@@ -20,7 +20,9 @@ before_script:
   - echo "[BUILD] | Creating build directory"
   - mkdir ${SQSGENERATOR_BUILD_DIR}
   - echo "[BUILD] | Preparing cmake files"
-  - cmake -S . -B build
+  - cd ${SQSGENERATOR_BUILD_DIR}
+  - cmake ..
+  - cd ..
 
 
 build-core:
