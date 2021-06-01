@@ -6,6 +6,8 @@
 #include <rank.h>
 #include <types.h>
 
+using namespace sqsgenerator::utils;
+
 namespace sqsgenerator {
 
     class RankTestFixture : public ::testing::Test {
@@ -52,7 +54,7 @@ namespace sqsgenerator {
         ASSERT_EQ(total_permutations(conf_last_16), 12870);
         ASSERT_EQ(total_permutations(conf_first_24), 9465511770);
         ASSERT_EQ(total_permutations(conf_last_24), 9465511770);
-        ASSERT_EQ(total_permutations(conf_diff_20), mpz_class{2432902008176640000});
+        ASSERT_EQ(total_permutations(conf_diff_20), cpp_int {2432902008176640000});
         ASSERT_EQ(total_permutations(conf_same_20), 1);
     }
 
@@ -68,17 +70,15 @@ namespace sqsgenerator {
 
         for (const Configuration  &conf : first_permutations) {
             size_t num_species = unique_species(conf).size();
-            ASSERT_EQ(rank_permutation_std(conf, num_species), 1);
-            ASSERT_EQ(rank_permutation_gmp(conf, num_species), mpz_class {1});
+            ASSERT_EQ(rank_permutation(conf, num_species), 1);
         }
     }
 
     TEST_F(RankTestFixture, TestRankPermutationLast) {
         for (const Configuration  &conf : last_permutations) {
             size_t num_species = unique_species(conf).size();
-            mpz_class total_perms = total_permutations(conf);
-            ASSERT_EQ(rank_permutation_std(conf, num_species), total_perms.get_ui());
-            ASSERT_EQ(rank_permutation_gmp(conf, num_species), total_perms);
+            cpp_int total_perms = total_permutations(conf);
+            ASSERT_EQ(rank_permutation(conf, num_species), total_perms);
         }
     }
 
@@ -94,52 +94,33 @@ namespace sqsgenerator {
     TEST_F(RankTestFixture, TestUnrankPermutationFirst) {
         for (const Configuration &conf : first_permutations) {
             Configuration conf_copy {conf};
-            unrank_permutation_gmp(conf_copy, configuration_histogram(conf_copy), total_permutations(conf_copy), mpz_class{1});
+            unrank_permutation(conf_copy, configuration_histogram(conf_copy), total_permutations(conf_copy), cpp_int {1});
             ASSERT_EQ(conf_copy, conf);
-            uint64_t total_perms_std = total_permutations(conf_copy).get_ui();
-            unrank_permutation_std(conf_copy, configuration_histogram(conf_copy), total_perms_std, 1);
-            ASSERT_EQ(conf_copy, conf);
-            ASSERT_EQ(rank_permutation_gmp(conf_copy, unique_species(conf_copy).size()), mpz_class {1});
-            ASSERT_EQ(rank_permutation_std(conf_copy, unique_species(conf_copy).size()), 1);
+            ASSERT_EQ(rank_permutation(conf_copy, unique_species(conf_copy).size()), cpp_int {1});
         }
     }
 
     TEST_F(RankTestFixture, TestUnrankPermutationLast) {
         for (const Configuration &conf : last_permutations) {
             Configuration conf_copy {conf};
-            unrank_permutation_gmp(conf_copy, configuration_histogram(conf_copy), total_permutations(conf_copy), total_permutations(conf_copy));
+            unrank_permutation(conf_copy, configuration_histogram(conf_copy), total_permutations(conf_copy), total_permutations(conf_copy));
             ASSERT_EQ(conf_copy, conf);
-            uint64_t total_perms_std = total_permutations(conf_copy).get_ui();
-            unrank_permutation_std(conf_copy, configuration_histogram(conf_copy), total_perms_std, total_perms_std);
-            ASSERT_EQ(conf_copy, conf);
-            ASSERT_EQ(rank_permutation_gmp(conf_copy, unique_species(conf_copy).size()), total_permutations(conf_copy));
-            ASSERT_EQ(rank_permutation_std(conf_copy, unique_species(conf_copy).size()), total_perms_std);
+            ASSERT_EQ(rank_permutation(conf_copy, unique_species(conf_copy).size()), total_permutations(conf_copy));
         }
     }
 
     TEST_F(RankTestFixture, TestUnrankPermutationAllStd) {
-        uint64_t total_perms {total_permutations(conf_first_16).get_ui()};
+        cpp_int total_perms {total_permutations(conf_first_16)};
         Configuration local_conf {conf_first_16};
         auto hist {configuration_histogram(conf_first_16)};
         size_t nspecies {unique_species(conf_first_16).size()};
 
         for (uint64_t i = 1; i <= total_perms; i++) {
-            unrank_permutation_std(local_conf, hist, total_perms, i);
-            ASSERT_EQ(rank_permutation_std(local_conf, nspecies), i);
+            unrank_permutation(local_conf, hist, total_perms, i);
+            ASSERT_EQ(rank_permutation(local_conf, nspecies), i);
         }
     }
 
-    TEST_F(RankTestFixture, TestUnrankPermutationAllGmp) {
-        mpz_class total_perms {total_permutations(conf_first_16)};
-        Configuration local_conf {conf_first_16};
-        auto hist {configuration_histogram(conf_first_16)};
-        size_t nspecies {unique_species(conf_first_16).size()};
-
-        for (uint64_t i = 1; i <= total_perms; i++) {
-            unrank_permutation_gmp(local_conf, hist, total_perms, mpz_class {i});
-            ASSERT_EQ(rank_permutation_gmp(local_conf, nspecies), mpz_class {i});
-        }
-    }
 
 }
 
