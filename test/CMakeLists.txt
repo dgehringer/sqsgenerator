@@ -3,7 +3,7 @@ project(sqsgenerator.core.test)
 set(SQSGENERATOR_SRC_DIR ../sqsgenerator/core/src)
 set(SQSGENERATOR_INC_DIR ../sqsgenerator/core/include)
 
-find_package(GTest)
+find_package(GTest REQUIRED)
 set(CMAKE_CXX_COMPILER g++)
 
 
