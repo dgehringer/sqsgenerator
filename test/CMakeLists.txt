@@ -12,11 +12,12 @@ include_directories(${SQSGENERATOR_INC_DIR})
 include_directories(include)
 
 include(GoogleTest)
+enable_testing()
 add_executable(sqsgenerator.core.test.rank
         core/src/test_rank.cpp
         ${SQSGENERATOR_SRC_DIR}/rank.cpp)
 
-target_link_libraries(sqsgenerator.core.test.rank GTest::gtest GTest::gtest_main pthread)
+target_link_libraries(sqsgenerator.core.test.rank gtest gtest_main pthread)
 
 
 gtest_add_tests(TARGET      sqsgenerator.core.test.rank
