@@ -12,12 +12,10 @@ before_script:
   - dpkg -l libgtest-dev
   - echo "[BUILD] | Checking boost"
   - dpkg -l libboost-python-dev
-  - dpkg -l libboost-python-dev
+  - dpkg -l libboost-numpy-dev
+  - dpkg -l libboost-system-dev
   - echo "[BUILD] | Checking cmake"
   - dpkg -l cmake
-  - echo "[BUILD] | Checking gmp"
-  - dpkg -l libgmp-dev
-  - dpkg -l libgmp-dev
   - echo "[BUILD] | Creating build directory"
   - mkdir ${SQSGENERATOR_BUILD_DIR}
   - echo "[BUILD] | Preparing cmake files"
