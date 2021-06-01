@@ -1,0 +1,21 @@
+
+image: frolvlad/alpine-gxx
+
+variables:
+  SQSGENERATOR_BUILD_DIR: build
+
+stages:
+  - build
+
+before_script:
+  - echo "[BUILD] | Installing boost"
+  - apk add --no-cache boost
+  - echo "[BUILD] | Installing cmake"
+  - apk add --no-cache cmake
+  - echo "[BUILD] | Installing gmp"
+  - apk add --no-cache cmake
+
+build-core:
+  stage: build
+  script:
+    - echo "BUILD core"
