@@ -8,32 +8,28 @@ stages:
   - build
   - test
 
-before_script:
-  - echo "[BUILD] | Checking gtest"
-  - dpkg -l libgtest-dev
-  - echo "[BUILD] | Checking boost"
-  - dpkg -l libboost-python-dev
-  - dpkg -l libboost-numpy-dev
-  - dpkg -l libboost-system-dev
-  - echo "[BUILD] | Checking cmake"
-  - dpkg -l cmake
-  - echo "[BUILD] | Creating build directory"
-  - mkdir ${SQSGENERATOR_BUILD_DIR}
-  - echo "[BUILD] | Preparing cmake files"
-  - cd ${SQSGENERATOR_BUILD_DIR}
-  - cmake ..
-  - cd ..
-
 
 build-all:
+  before_script:
+    - echo "[BUILD] | Checking gtest"
+    - dpkg -l libgtest-dev
+    - echo "[BUILD] | Checking boost"
+    - dpkg -l libboost-python-dev
+    - dpkg -l libboost-numpy-dev
+    - dpkg -l libboost-system-dev
+    - echo "[BUILD] | Checking cmake"
+    - dpkg -l cmake
+    - echo "[BUILD] | Creating build directory"
+    - mkdir ${SQSGENERATOR_BUILD_DIR}
+    - echo "[BUILD] | Preparing cmake files"
+    - cd ${SQSGENERATOR_BUILD_DIR}
+    - cmake ..
+    - cd ..
   stage: build
-  variables:
-    TARGET_NAME: sqsgenerator.core
   tags:
     - core
     - build
   script:
-    - echo "[BUILD] | [TARGET=${TARGET_NAME}]"
     - cmake --build ${SQSGENERATOR_BUILD_DIR}
 
 
@@ -41,3 +37,5 @@ test-core-rank:
   stage: test
   tags:
     - test
+  script:
+    - ./build/test/sqsgenerator.core.test.rank
