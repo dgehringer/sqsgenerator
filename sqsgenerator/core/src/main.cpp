@@ -3,13 +3,11 @@
 
 #include <iostream>
 #include <thread>
-#include <types.h>
 #include <vector>
-#include <algorithm>
-#include <rank.h>
+#include "types.h"
 #include "containers.h"
 
-void print_conf(const Configuration &conf) {
+void print_conf(const sqsgenerator::Configuration &conf) {
     std::cout << "[";
     for (auto s: conf)
     {

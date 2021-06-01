@@ -6,17 +6,18 @@
 #define SQSGENERATOR_CONTAINERS_H
 
 #include <iostream>
-#include <types.h>
-#include <gmpxx.h>
-#include <stdint.h>
-#include <rank.h>
 #include <atomic>
 #include <limits>
 #include <thread>
 #include <mutex>
 #include <type_traits>
+#include "types.h"
+#include "rank.h"
 #include "utils.h"
 #include "moodycamel/concurrentqueue.h"
+#include <boost/multiprecision/cpp_int.hpp>
+
+using namespace sqsgenerator::utils;
 
 namespace sqsgenerator {
 
@@ -25,16 +26,16 @@ namespace sqsgenerator {
 
     public:
         double objective;
-        uint64_t rank;
+        cpp_int rank;
         T parameters;
         Configuration configuration;
         SQSResult() {}
-        SQSResult(double objective, uint64_t rank, const Configuration conf, const T params) : objective(objective), rank(rank), configuration(conf), parameters(params) {
+        SQSResult(double objective, cpp_int rank, const Configuration conf, const T params) : objective(objective), rank(rank), configuration(conf), parameters(params) {
             std::cout << "SQSResult.ctor (default) = parameters(" << parameters.num_elements() << ")" << std::endl;
         }
         SQSResult(double objective, const Configuration conf, const T parameters) : objective(objective), configuration(conf), parameters(parameters) {
             auto nspecies = unique_species(conf).size();
-            rank = rank_permutation_std(conf, nspecies);
+            rank = rank_permutation(conf, nspecies);
         }
 
         SQSResult(const SQSResult &other) : objective(other.objective), rank(other.rank), configuration(other.configuration){

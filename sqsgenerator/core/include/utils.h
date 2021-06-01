@@ -12,4 +12,16 @@ namespace boost{
         ma.resize(otherShape);
     }
 }
+
+namespace sqsgenerator {
+    namespace utils {
+
+        template<typename R, typename P>
+        inline R factorial(P p) {
+            R r {1}, c {1};
+            for (; c <= p; c += 1 ) r *= c;
+            return r;
+        }
+    }
+}
 #endif //SQSGENERATOR_UTILS_H
