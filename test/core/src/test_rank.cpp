@@ -110,11 +110,10 @@ namespace sqsgenerator {
     }
 
     TEST_F(RankTestFixture, TestUnrankPermutationAllStd) {
-        cpp_int total_perms {total_permutations(conf_first_16)};
         Configuration local_conf {conf_first_16};
         auto hist {configuration_histogram(conf_first_16)};
         size_t nspecies {unique_species(conf_first_16).size()};
-
+        auto total_perms = total_permutations(conf_first_16);
         for (uint64_t i = 1; i <= total_perms; i++) {
             unrank_permutation(local_conf, hist, total_perms, i);
             ASSERT_EQ(rank_permutation(local_conf, nspecies), i);

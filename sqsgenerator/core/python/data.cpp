@@ -35,7 +35,7 @@ namespace sqsgenerator {
                 return m_handle.objective;
             }
 
-            uint64_t rank() {
+            cpp_int rank() {
                 return m_handle.rank;
             }
 
@@ -60,6 +60,8 @@ namespace sqsgenerator {
     }
 }
 
+using namespace sqsgenerator;
+
 static Configuration conf {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
 static double data[3][3][3] {
         {{0,1,2},
@@ -74,6 +76,7 @@ static double data[3][3][3] {
 };
 
 using namespace sqsgenerator::python;
+
 static boost::multi_array_ref<double, 3> sro(&data[0][0][0], boost::extents[3][3][3]);
 static PairSQSResult result(0.0, 1, conf, sro);
 static PairSQSIterationResult queue(20);

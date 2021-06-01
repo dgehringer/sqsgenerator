@@ -6,6 +6,7 @@ variables:
 
 stages:
   - build
+  - test
 
 before_script:
   - echo "[BUILD] | Checking gtest"
@@ -19,8 +20,7 @@ before_script:
   - echo "[BUILD] | Creating build directory"
   - mkdir ${SQSGENERATOR_BUILD_DIR}
   - echo "[BUILD] | Preparing cmake files"
-  - cd ${SQSGENERATOR_BUILD_DIR}
-  - cmake ..
+  - cmake -S . -B ${SQSGENERATOR_BUILD_DIR}
 
 
 build-core:
@@ -32,4 +32,26 @@ build-core:
     - build
   script:
     - echo "[BUILD] | [TARGET=${TARGET_NAME}]"
-    - make ${TARGET_NAME}
+    - cmake --build ${SQSGENERATOR_BUILD_DIR} --target ${TARGET_NAME}
+
+build-core-test-rank:
+  stage: build
+  variables:
+    TARGET_NAME: sqsgenerator.core.test.rank
+  tags:
+    - core
+    - build
+  script:
+    - echo "[BUILD] | [TARGET=${TARGET_NAME}]"
+    - cmake --build ${SQSGENERATOR_BUILD_DIR} --target ${TARGET_NAME}
+
+build-python-data:
+  stage: build
+  variables:
+    TARGET_NAME: data
+  tags:
+    - python
+    - build
+  script:
+    - echo "[BUILD] | [TARGET=${TARGET_NAME}]"
+    - cmake --build ${SQSGENERATOR_BUILD_DIR} --target ${TARGET_NAME}
