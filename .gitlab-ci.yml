@@ -25,7 +25,7 @@ before_script:
   - cd ..
 
 
-build-core:
+build-all:
   stage: build
   variables:
     TARGET_NAME: sqsgenerator.core
@@ -34,26 +34,10 @@ build-core:
     - build
   script:
     - echo "[BUILD] | [TARGET=${TARGET_NAME}]"
-    - cmake --build ${SQSGENERATOR_BUILD_DIR} --target ${TARGET_NAME}
+    - cmake --build ${SQSGENERATOR_BUILD_DIR}
 
-build-core-test-rank:
-  stage: build
-  variables:
-    TARGET_NAME: sqsgenerator.core.test.rank
-  tags:
-    - core
-    - build
-  script:
-    - echo "[BUILD] | [TARGET=${TARGET_NAME}]"
-    - cmake --build ${SQSGENERATOR_BUILD_DIR} --target ${TARGET_NAME}
 
-build-python-data:
-  stage: build
-  variables:
-    TARGET_NAME: data
+test-core-rank:
+  stage: test
   tags:
-    - python
-    - build
-  script:
-    - echo "[BUILD] | [TARGET=${TARGET_NAME}]"
-    - cmake --build ${SQSGENERATOR_BUILD_DIR} --target ${TARGET_NAME}
+    - test
