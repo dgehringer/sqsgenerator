@@ -17,5 +17,8 @@ before_script:
 
 build-core:
   stage: build
+  tags:
+    - core
+    - build
   script:
     - echo "BUILD core"
