@@ -5,17 +5,53 @@
 #ifndef SQSGENERATOR_HELPERS_H
 #define SQSGENERATOR_HELPERS_H
 
+
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 
 namespace py = boost::python;
 namespace np = boost::python::numpy;
 
-namespace sqsgenerator {
+namespace sqsgenerator::python::helpers {
 
-    namespace python {
+            struct Cpp_int_to_python_num {
+                static PyObject* convert(const cpp_int& number) {
+                    std::ostringstream oss;
+                    oss << std::hex << number;
+                    return PyLong_FromString(oss.str().c_str(), nullptr, 16);
+                }
+            };
 
-        namespace helpers {
+            struct Cpp_int_from_python_num {
+
+                Cpp_int_from_python_num()
+                {
+                    py::converter::registry::push_back(
+                            &convertible,
+                            &construct,
+                            py::type_id<cpp_int>());
+                }
+
+                static void* convertible(PyObject *obj_ptr) {
+                    return PyNumber_Check(obj_ptr) ? obj_ptr : nullptr;
+                }
+
+                static void construct(PyObject *obj_ptr, boost::python::converter::rvalue_from_python_stage1_data* data) {
+                    py::handle<> handle(py::borrowed(obj_ptr));
+                    typedef py::converter::rvalue_from_python_storage<cpp_int> storage_type;
+                    void* storage = reinterpret_cast<storage_type*>(data)->storage.bytes;
+                    Py_ssize_t size = 0;
+                    PyObject* tmp = PyNumber_ToBase(obj_ptr, 16);
+                    const char* c_str_ptr = PyUnicode_AsUTF8AndSize(tmp, &size);
+                    std::string s(c_str_ptr, size);
+                    if (tmp == nullptr) boost::python::throw_error_already_set();
+
+                    new (storage) cpp_int (s);
+                    Py_DECREF(tmp);
+                    data->convertible = storage;
+                }
+            };
+
             template<typename T>
             np::ndarray toFlatNumpyArray(const T *array, size_t num_elements) {
                 return np::from_data(array,
@@ -60,7 +96,4 @@ namespace sqsgenerator {
                 return py::object(handle);
             }
         }
-    }
-
-}
 #endif //SQSGENERATOR_HELPERS_H

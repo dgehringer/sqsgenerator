@@ -5,9 +5,10 @@
 #include "containers.h"
 #include "helpers.h"
 #include "container_wrappers.h"
-#include <boost/multi_array.hpp>
 #include <boost/python.hpp>
+#include <boost/multi_array.hpp>
 #include <boost/python/numpy.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 
 
 namespace py = boost::python;
@@ -15,11 +16,8 @@ namespace np = boost::python::numpy;
 namespace helpers = sqsgenerator::python::helpers;
 
 
-namespace sqsgenerator {
+namespace sqsgenerator::python {
 
-    namespace python {
-
-        void IndexError() { PyErr_SetString(PyExc_IndexError, "Index out of range"); }
 
         template<typename T>
         class SQSResultPythonWrapper {
@@ -28,7 +26,7 @@ namespace sqsgenerator {
 
         public:
 
-            SQSResultPythonWrapper(const SQSResult<T> &other) : m_handle(other) {
+            explicit SQSResultPythonWrapper(const SQSResult<T> &other) : m_handle(other) {
             }
 
             double objective(){
@@ -58,7 +56,6 @@ namespace sqsgenerator {
         typedef SQSResultCollectionPythonWrapper<PairSROParameters> PairSQSResultCollectionPythonWrapper;
         typedef SQSResultCollectionPythonWrapper<TripletSROParameters> TripletSQSResultCollectionPythonWrapper;
     }
-}
 
 using namespace sqsgenerator;
 
@@ -85,9 +82,10 @@ static bool resultsInitialized = false;
 
 
 py::object getData() {
+    cpp_int huge_int = {1000000000000000000};
     if (!resultsInitialized) {
         for (int i = 0; i < 20; ++i) {
-            result.rank = i;
+            result.rank = i*huge_int ;
             queue.addResult(result);
         }
         std::cout << "Collecting queue" << std::endl;
@@ -98,12 +96,17 @@ py::object getData() {
 
     return helpers::wrapExistingInPythonObject<PairSQSResultCollectionPythonWrapper&>(results);
 }
+void initializeConverters()
+{
+    py::to_python_converter<cpp_int, helpers::Cpp_int_to_python_num>();
+    helpers::Cpp_int_from_python_num();
+}
 
 
 BOOST_PYTHON_MODULE(data) {
     Py_Initialize();
     np::initialize();
-
+    initializeConverters();
     py::class_<PairSQSResultPythonWrapper>("PairSQSResult", py::no_init)
             .def_readonly("objective", &PairSQSResultPythonWrapper::objective)
             .def_readonly("rank", &PairSQSResultPythonWrapper::rank)
