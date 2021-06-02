@@ -11,10 +11,7 @@ include_directories(include)
 
 include(GoogleTest)
 enable_testing()
-add_executable(sqsgenerator.core.test.rank
-        core/src/test_rank.cpp
-        ${SQSGENERATOR_SRC_DIR}/rank.cpp)
-
+add_executable(sqsgenerator.core.test.rank core/src/test_rank.cpp ${SQSGENERATOR_SRC_DIR}/rank.cpp)
 target_link_libraries(sqsgenerator.core.test.rank gtest gtest_main pthread)
 
 
@@ -22,3 +19,9 @@ gtest_add_tests(TARGET      sqsgenerator.core.test.rank
                 TEST_SUFFIX .noArgs
                 TEST_LIST   noArgsTests)
 
+
+add_executable(sqsgenerator.core.test.atomistics core/src/test_atomistics.cpp ${SQSGENERATOR_SRC_DIR}/atomistics.cpp)
+target_link_libraries(sqsgenerator.core.test.atomistics gtest gtest_main pthread)
+gtest_add_tests(TARGET      sqsgenerator.core.test.atomistics
+                TEST_SUFFIX .noArgs
+                TEST_LIST   noArgsTests)

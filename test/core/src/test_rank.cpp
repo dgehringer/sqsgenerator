@@ -2,13 +2,13 @@
 // Created by dominik on 27.05.21.
 //
 
+#include "rank.h"
+#include "types.h"
 #include <gtest/gtest.h>
-#include <rank.h>
-#include <types.h>
 
 using namespace sqsgenerator::utils;
 
-namespace sqsgenerator {
+namespace sqsgenerator::test {
 
     class RankTestFixture : public ::testing::Test {
     protected:

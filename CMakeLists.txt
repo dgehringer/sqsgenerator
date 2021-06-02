@@ -27,7 +27,7 @@ add_executable(sqsgenerator.core
         sqsgenerator/core/src/containers.cpp
         sqsgenerator/core/include/containers.h
         sqsgenerator/core/include/utils.h
-        sqsgenerator/core/src/main.cpp)
+        sqsgenerator/core/src/main.cpp sqsgenerator/core/src/atomistics.cpp sqsgenerator/core/include/atomistics.h)
 
 
 target_link_libraries(sqsgenerator.core pthread ${Boost_LIBRARIES})

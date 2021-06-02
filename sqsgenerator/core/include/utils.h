@@ -13,8 +13,7 @@ namespace boost{
     }
 }
 
-namespace sqsgenerator {
-    namespace utils {
+namespace sqsgenerator::utils {
 
         template<typename R, typename P>
         inline R factorial(P p) {
@@ -22,6 +21,11 @@ namespace sqsgenerator {
             for (; c <= p; c += 1 ) r *= c;
             return r;
         }
-    }
+
+        template<typename T>
+        T identity(T &t) {
+            return t;
+        }
 }
+
 #endif //SQSGENERATOR_UTILS_H
