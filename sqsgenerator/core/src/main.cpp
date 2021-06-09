@@ -57,8 +57,8 @@ int main(int argc, char *argv[]) {
     SQSResult result(0.0, 1, conf, data);
     matrix<double, row_major, std::vector<double>> A(7, 4, data);
     print_matrix(A);
-    print_array(result.getParameters<2>(shape[nshells][nspecies*nspecies]), nshells, nspecies*nspecies);
-
+    auto  array = result.get_parameters<2>(Shape<2>{7,4});
+    print_array(array, nshells, nspecies*nspecies);
     SQSResultCollection<double> results(5);
     size_t nthread = 8;
 
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
             //result.rank = rank;
             //result.objective = objective;
             //bool res = results.addResult(result);
-            std::cout << i << ": " << results.bestObjective() << ", " << objective << std::endl;
+            std::cout << i << ": " << results.get_best_objective() << ", " << objective << std::endl;
         }
         //results.addResult(result);
         //results.addResult(result);
@@ -79,8 +79,8 @@ int main(int argc, char *argv[]) {
 
     generator.join();
     results.collect();
-    assert(results.bestObjective() == 1.0 / 10.0);
-    std::cout << results.bestObjective() << ", " << results.resultSize() << std::endl;
+    assert(results.get_best_objective() == 1.0 / 10.0);
+    std::cout << results.get_best_objective() << ", " << results.resultSize() << std::endl;
 }
 //
 

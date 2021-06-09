@@ -4,7 +4,6 @@
 
 #ifndef SQSGENERATOR_TYPES_H
 #define SQSGENERATOR_TYPES_H
-
 #include <vector>
 #include <stdint.h>
 #include <boost/multi_array.hpp>
@@ -15,9 +14,9 @@ namespace sqsgenerator {
     typedef boost::multi_array<double, 3> PairSROParameters;
     typedef boost::multi_array<double, 6> TripletSROParameters;
     typedef std::vector<double> ParameterStorage;
-    namespace {
-        boost::multi_array_types::extent_gen shape;
-    }
+
+    template<size_t NDims>
+    using Shape = std::array<size_t, NDims>;
 
 }
 #endif //SQSGENERATOR_TYPES_H

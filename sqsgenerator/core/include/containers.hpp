@@ -40,11 +40,13 @@ namespace sqsgenerator {
         SQSResult& operator=(const SQSResult& other) = default;
         SQSResult& operator=(const SQSResult&& other);
 
-        double getObjective() const;
-        const Configuration& getConfiguration() const;
+        double get_objective() const;
+        const Configuration& get_configuration() const;
 
         template<size_t NDims>
-        boost::const_multi_array_ref<double, NDims> getParameters(const boost::detail::multi_array::extent_gen<NDims> &shape) const;
+        boost::const_multi_array_ref<double, NDims> get_parameters(const Shape<NDims> shape) const{
+            return boost::const_multi_array_ref<double, NDims>(m_storage.data(), shape);
+        }
     };
 
     template<typename T>
@@ -65,8 +67,8 @@ namespace sqsgenerator {
     public:
         SQSResultCollection(int maxSize):
                 m_size(0),
-                m_maxSize(maxSize),
-                m_bestObjective(std::numeric_limits<double>::max()),
+                m_max_size(maxSize),
+                m_best_objective(std::numeric_limits<double>::max()),
                 m_q(maxSize > 0 ? static_cast<size_t>(maxSize) : 6 * moodycamel::ConcurrentQueueDefaultTraits::BLOCK_SIZE),
                 m_r() {}
 
@@ -74,35 +76,35 @@ namespace sqsgenerator {
 
         SQSResultCollection(const SQSResultCollection&& other) :
                 m_size(std::move(other.m_size)),
-                m_maxSize(std::move(other.m_maxSize)),
-                m_bestObjective(std::move(other.m_bestObjective)),
+                m_max_size(std::move(other.m_max_size)),
+                m_best_objective(std::move(other.m_best_objective)),
                 m_q(std::move(other.m_q)),
                 m_r(std::move(other.m_r)){
             std::cout << "SQSResultCollection.ctor (move)" << std::endl;
         }
 
-        double bestObjective() const {
-            return m_bestObjective;
+        double get_best_objective() const {
+            return m_best_objective;
         }
 
-        bool addResult(const T &item) {
-            std::cout << "SQSResultCollection.addResult()" << std::endl;
-            if (item.objective > m_bestObjective) return false;
-            else if (item.objective < m_bestObjective) {
+        bool add_result(const T &item) {
+            std::cout << "SQSResultCollection.add_result()" << std::endl;
+            if (item.objective > m_best_objective) return false;
+            else if (item.objective < m_best_objective) {
                 // we have to clear and remove all elements in the queue
                 T copy = item;
-                clearQueue();
+                clear_queue();
                 assert(m_q.size_approx() == 0);
                 bool success  = m_q.try_enqueue(item);
                 if (success) {
                     m_size += 1;
-                    m_bestObjective = item.objective;
+                    m_best_objective = item.objective;
                 }
                 return success;
             }
             else {
                 // We do not rotate configurations
-                if (m_size >= m_maxSize) return false;
+                if (m_size >= m_max_size) return false;
                 else {
                     bool success = m_q.try_enqueue(item);
                     if (success) m_size += 1;
@@ -140,13 +142,13 @@ namespace sqsgenerator {
     private:
         moodycamel::ConcurrentQueue<T> m_q;
         std::atomic<size_t> m_size;
-        std::atomic<double> m_bestObjective;
+        std::atomic<double> m_best_objective;
         std::mutex m_mutex_clear;
         std::vector<T> m_r;
-        int m_maxSize;
+        int m_max_size;
 
-        void clearQueue() {
-            std::cout << "SQSResultCollection.clearQueue()" << std::endl;
+        void clear_queue() {
+            std::cout << "SQSResultCollection.clear_queue()" << std::endl;
             m_mutex_clear.lock();
             // Only one thread can clear the queue, this is important for m_q.size_approx() since the queue, needs
             // be stabilized

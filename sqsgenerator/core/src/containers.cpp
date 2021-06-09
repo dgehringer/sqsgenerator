@@ -51,14 +51,15 @@ namespace sqsgenerator {
         return *this;
     }
 
-    const Configuration& SQSResult::getConfiguration() const {
+    const Configuration& SQSResult::get_configuration() const {
         return m_configuration;
     }
+    /*
     template<size_t NDims>
-    boost::const_multi_array_ref<double, NDims> SQSResult::getParameters(const boost::detail::multi_array::extent_gen<NDims> &shape) const
+    boost::const_multi_array_ref<double, NDims> SQSResult::getParameters(const boost::detail::multi_array::extent_gen<NDims> &shp) const
     {
-        return boost::multi_array_ref(m_storage.data(), shape);
-    }
+
+    }*/
 
 
 }
