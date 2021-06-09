@@ -14,6 +14,10 @@ namespace sqsgenerator {
     typedef std::vector<Species> Configuration;
     typedef boost::multi_array<double, 3> PairSROParameters;
     typedef boost::multi_array<double, 6> TripletSROParameters;
+    typedef std::vector<double> ParameterStorage;
+    namespace {
+        boost::multi_array_types::extent_gen shape;
+    }
 
 }
 #endif //SQSGENERATOR_TYPES_H

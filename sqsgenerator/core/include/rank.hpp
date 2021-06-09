@@ -5,7 +5,7 @@
 #ifndef SQSGENERATOR_RANK_H
 #define SQSGENERATOR_RANK_H
 
-#include "types.h"
+#include "types.hpp"
 #include <boost/multiprecision/cpp_int.hpp>
 
 using namespace boost::multiprecision;

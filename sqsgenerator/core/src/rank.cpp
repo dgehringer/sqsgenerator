@@ -1,9 +1,9 @@
 //
 // Created by dominik on 21.05.21.
 //
-#include "rank.h"
-#include "types.h"
-#include "utils.h"
+#include "rank.hpp"
+#include "types.hpp"
+#include "utils.hpp"
 #include <algorithm>
 
 

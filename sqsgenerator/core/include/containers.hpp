@@ -7,13 +7,14 @@
 
 #include <iostream>
 #include <atomic>
+#include <vector>
 #include <limits>
 #include <thread>
 #include <mutex>
 #include <type_traits>
-#include "types.h"
-#include "rank.h"
-#include "utils.h"
+#include "types.hpp"
+#include "rank.hpp"
+#include "utils.hpp"
 #include "moodycamel/concurrentqueue.h"
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -21,48 +22,29 @@ using namespace sqsgenerator::utils;
 
 namespace sqsgenerator {
 
-    template<typename T>
     class SQSResult {
-
+    private:
+        double m_objective;
+        cpp_int m_rank;
+        Configuration m_configuration;
+        ParameterStorage m_storage;
     public:
-        double objective;
-        cpp_int rank;
-        T parameters;
-        Configuration configuration;
-        SQSResult() {}
-        SQSResult(double objective, cpp_int rank, const Configuration conf, const T params) : objective(objective), rank(rank), configuration(conf), parameters(params) {
-            std::cout << "SQSResult.ctor (default) = parameters(" << parameters.num_elements() << ")" << std::endl;
-        }
-        SQSResult(double objective, const Configuration conf, const T parameters) : objective(objective), configuration(conf), parameters(parameters) {
-            auto nspecies = unique_species(conf).size();
-            rank = rank_permutation(conf, nspecies);
-        }
 
-        SQSResult(const SQSResult &other) : objective(other.objective), rank(other.rank), configuration(other.configuration){
-            boost::extentTo(parameters, other.parameters);
-            parameters = other.parameters;
-            std::cout << "SQSResult.ctor (copy) = parameters(" << parameters.num_elements() << ")" << std::endl;
-        };
-
-        SQSResult(const SQSResult &&other) : objective(other.objective), rank(other.rank), configuration(other.configuration.size()){
-            boost::extentTo(parameters, other.parameters);
-            configuration = std::move(other.configuration);
-            parameters = std::move(other.parameters);
-            std::cout << "SQSResult.ctor (move) = (" << parameters.num_elements() << ", " << other.parameters.num_elements() << ")" << std::endl;
-        };
+        SQSResult();
+        SQSResult(double objective, cpp_int rank, const Configuration conf, const ParameterStorage params);
+        SQSResult(double objective, const Configuration conf, const ParameterStorage parameters);
+        //TODO: we could write: SQSResult(const SQSResult &other) = default; here
+        SQSResult(const SQSResult &other);
+        SQSResult(const SQSResult &&other);
 
         SQSResult& operator=(const SQSResult& other) = default;
+        SQSResult& operator=(const SQSResult&& other);
 
-        SQSResult& operator=(const SQSResult&& other) {
-            rank = other.rank;
-            objective = other.objective;
-            boost::extentTo(parameters, other.parameters);
-            parameters = std::move(other.parameters);
-            configuration = std::move(other.configuration);
-            std::cout << "Move assignment = parameters(" << parameters.num_elements() << ")" << std::endl;
-            return *this;
-        }
+        double getObjective() const;
+        const Configuration& getConfiguration() const;
 
+        template<size_t NDims>
+        boost::const_multi_array_ref<double, NDims> getParameters(const boost::detail::multi_array::extent_gen<NDims> &shape) const;
     };
 
     template<typename T>
@@ -177,10 +159,6 @@ namespace sqsgenerator {
         }
     };
 
-    typedef SQSResult<PairSROParameters> PairSQSResult;
-    typedef SQSResult<TripletSROParameters> TripletSQSResult;
-    typedef SQSResultCollection<PairSQSResult> PairSQSIterationResult;
-    typedef SQSResultCollection<TripletSQSResult> TripletSQSIterationResult;
 }
 
 

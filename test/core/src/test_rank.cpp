@@ -2,8 +2,8 @@
 // Created by dominik on 27.05.21.
 //
 
-#include "rank.h"
-#include "types.h"
+#include "rank.hpp"
+#include "types.hpp"
 #include <gtest/gtest.h>
 
 using namespace sqsgenerator::utils;

@@ -2,7 +2,7 @@
 // Created by dominik on 30.05.21.
 //
 
-#include "containers.h"
+#include "containers.hpp"
 #include "helpers.h"
 #include "container_wrappers.h"
 #include <boost/python.hpp>
@@ -96,6 +96,8 @@ py::object getData() {
 
     return helpers::wrapExistingInPythonObject<PairSQSResultCollectionPythonWrapper&>(results);
 }
+
+
 void initializeConverters()
 {
     py::to_python_converter<cpp_int, helpers::Cpp_int_to_python_num>();

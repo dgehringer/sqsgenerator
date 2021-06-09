@@ -5,7 +5,7 @@
 #ifndef SQSGENERATOR_ATOMISTICS_H
 #define SQSGENERATOR_ATOMISTICS_H
 
-#include "types.h"
+#include "types.hpp"
 #include <map>
 #include <vector>
 #include <string>

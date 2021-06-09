@@ -2,8 +2,8 @@
 // Created by dominik on 02.06.21.
 //
 
-#include "types.h"
-#include "atomistics.h"
+#include "types.hpp"
+#include "atomistics.hpp"
 #include <gtest/gtest.h>
 
 using namespace sqsgenerator::utils::atomistics;

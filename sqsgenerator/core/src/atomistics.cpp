@@ -2,8 +2,8 @@
 // Created by dominik on 02.06.21.
 //
 #include <iostream>
-#include "atomistics.h"
-#include "utils.h"
+#include "atomistics.hpp"
+#include "utils.hpp"
 
 #define COMPARE_FIELD(f) (f == other.f)
 
