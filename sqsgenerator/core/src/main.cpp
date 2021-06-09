@@ -57,9 +57,9 @@ int main(int argc, char *argv[]) {
     SQSResult result(0.0, 1, conf, data);
     matrix<double, row_major, std::vector<double>> A(7, 4, data);
     print_matrix(A);
-    auto  array = result.get_parameters<2>(Shape<2>{7,4});
+    auto  array = result.parameters<2>(Shape<2>{7,4});
     print_array(array, nshells, nspecies*nspecies);
-    SQSResultCollection<double> results(5);
+    SQSResultCollection results(5);
     size_t nthread = 8;
 
 
@@ -67,10 +67,14 @@ int main(int argc, char *argv[]) {
         for (size_t i = 1; i < 11; i++) {
             double objective = 1.0 / i;
             uint64_t rank = i;
+            std::cout << " --------- LOOP ----------" << std::endl;
+            SQSResult result {objective, i, conf, data};
             //result.rank = rank;
             //result.objective = objective;
-            //bool res = results.addResult(result);
-            std::cout << i << ": " << results.get_best_objective() << ", " << objective << std::endl;
+            std::cout << " --------- ADDING----------" << std::endl;
+            bool res = results.add_result(result);
+
+            std::cout << i << ": " << results.best_objective() << ", " << objective << std::endl;
         }
         //results.addResult(result);
         //results.addResult(result);
@@ -79,8 +83,8 @@ int main(int argc, char *argv[]) {
 
     generator.join();
     results.collect();
-    assert(results.get_best_objective() == 1.0 / 10.0);
-    std::cout << results.get_best_objective() << ", " << results.resultSize() << std::endl;
+    assert(results.best_objective() == 1.0 / 10.0);
+    std::cout << results.best_objective() << ", " << results.result_size() << std::endl;
 }
 //
 
