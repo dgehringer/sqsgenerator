@@ -14,7 +14,11 @@ include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Python3_LIBRARY_DIRS})
 
-add_library(data SHARED data.cpp include/helpers.h)
+add_library(data SHARED
+        data.cpp
+        ../src/rank.cpp
+        ../src/containers.cpp
+        )
 set_target_properties(data PROPERTIES SUFFIX .so)
 set_target_properties(data PROPERTIES PREFIX "")
 target_link_libraries(data pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})

@@ -28,6 +28,7 @@ namespace sqsgenerator {
         cpp_int m_rank;
         Configuration m_configuration;
         ParameterStorage m_storage;
+
     public:
 
         SQSResult();
@@ -38,11 +39,12 @@ namespace sqsgenerator {
         SQSResult(SQSResult &&other) noexcept;
 
         SQSResult& operator=(const SQSResult& other) = default;
-        SQSResult& operator=(const SQSResult&& other) noexcept;
+        SQSResult& operator=(SQSResult&& other) noexcept;
 
-        double objective() const;
-        const Configuration& configuration() const;
-        cpp_int rank() const;
+        [[nodiscard]] double objective() const;
+        [[nodiscard]] const Configuration& configuration() const;
+        [[nodiscard]] cpp_int rank() const;
+        [[nodiscard]] const ParameterStorage& storage() const;
         template<size_t NDims>
         boost::const_multi_array_ref<double, NDims> parameters(const Shape<NDims> shape) const{
             return boost::const_multi_array_ref<double, NDims>(m_storage.data(), shape);

@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 
     std::thread generator([&]() {
         for (size_t i = 1; i < 11; i++) {
-            double objective = 1.0 / i;
+            double objective {1.0 / (double)i};
             uint64_t rank = i;
             std::cout << " --------- LOOP ----------" << std::endl;
             SQSResult result {objective, i, conf, data};

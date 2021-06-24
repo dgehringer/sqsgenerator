@@ -18,43 +18,40 @@ namespace helpers = sqsgenerator::python::helpers;
 
 namespace sqsgenerator::python {
 
-
-        template<typename T>
         class SQSResultPythonWrapper {
+
+
         private:
-            const SQSResult<T>& m_handle;
+            const SQSResult& m_handle;
 
         public:
 
-            explicit SQSResultPythonWrapper(const SQSResult<T> &other) : m_handle(other) {
+            explicit SQSResultPythonWrapper(const SQSResult &other) : m_handle(other) {
             }
 
             double objective(){
-                return m_handle.objective;
+                return m_handle.objective();
             }
 
             cpp_int rank() {
-                return m_handle.rank;
+                return m_handle.rank();
             }
 
             np::ndarray configuration() {
-                std::vector<size_t> shape{m_handle.configuration.size()};
-                return helpers::toShapedNumpyArray<Species>(m_handle.configuration.data(), shape);
+                return helpers::toShapedNumpyArray<Species>(
+                        m_handle.configuration().data(),
+                        std::vector<size_t>{m_handle.configuration().size()}
+                        );
             }
 
-            np::ndarray parameters() {
-                std::vector<size_t> shape{m_handle.parameters.shape(), m_handle.parameters.shape() + m_handle.parameters.num_dimensions()};
-                return helpers::toShapedNumpyArray<double>(m_handle.parameters.data(), shape);
+            np::ndarray parameters(py::tuple const &shape) {
+                   return helpers::toShapedNumpyArray<double>(
+                           m_handle.storage().data(),
+                           std::vector<size_t>  {m_handle.storage().size()}).reshape(shape);
             }
         };
 
-        template<typename T>
-        using SQSResultCollectionPythonWrapper = std::vector<SQSResultPythonWrapper<T>>;
-
-        typedef SQSResultPythonWrapper<PairSROParameters> PairSQSResultPythonWrapper;
-        typedef SQSResultPythonWrapper<TripletSROParameters> TripletSQSResultPythonWrapper;
-        typedef SQSResultCollectionPythonWrapper<PairSROParameters> PairSQSResultCollectionPythonWrapper;
-        typedef SQSResultCollectionPythonWrapper<TripletSROParameters> TripletSQSResultCollectionPythonWrapper;
+        typedef std::vector<SQSResultPythonWrapper> SQSResultCollectionPythonWrapper;
     }
 
 using namespace sqsgenerator;
@@ -74,27 +71,26 @@ static double data[3][3][3] {
 
 using namespace sqsgenerator::python;
 
-static boost::multi_array_ref<double, 3> sro(&data[0][0][0], boost::extents[3][3][3]);
-static PairSQSResult result(0.0, 1, conf, sro);
-static PairSQSIterationResult queue(20);
-static PairSQSResultCollectionPythonWrapper results;
+static ParameterStorage sro_vec {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
+static SQSResultCollection queue(20);
+static SQSResultCollectionPythonWrapper results;
 static bool resultsInitialized = false;
 
 
 py::object getData() {
     cpp_int huge_int = {1000000000000000000};
     if (!resultsInitialized) {
-        for (int i = 0; i < 20; ++i) {
-            result.rank = i*huge_int ;
-            queue.addResult(result);
+        for (size_t i = 0; i < 20; ++i) {
+            SQSResult lresult( static_cast<double>(1),  i*huge_int, conf, sro_vec);
+            queue.add_result(lresult);
         }
         std::cout << "Collecting queue" << std::endl;
         queue.collect();
-        for (auto &r : queue.results()) results.push_back(PairSQSResultPythonWrapper(r));
+        for (auto &r : queue.results()) results.push_back(SQSResultPythonWrapper(r));
         resultsInitialized = true;
     }
 
-    return helpers::wrapExistingInPythonObject<PairSQSResultCollectionPythonWrapper&>(results);
+    return helpers::wrapExistingInPythonObject<SQSResultCollectionPythonWrapper&>(results);
 }
 
 
@@ -109,17 +105,17 @@ BOOST_PYTHON_MODULE(data) {
     Py_Initialize();
     np::initialize();
     initializeConverters();
-    py::class_<PairSQSResultPythonWrapper>("PairSQSResult", py::no_init)
-            .def_readonly("objective", &PairSQSResultPythonWrapper::objective)
-            .def_readonly("rank", &PairSQSResultPythonWrapper::rank)
-            .def_readonly("configuration", &PairSQSResultPythonWrapper::configuration)
-            .def_readonly("parameters", &PairSQSResultPythonWrapper::parameters);
+    py::class_<SQSResultPythonWrapper>("PairSQSResult", py::no_init)
+            .def_readonly("objective", &SQSResultPythonWrapper::objective)
+            .def_readonly("rank", &SQSResultPythonWrapper::rank)
+            .def_readonly("configuration", &SQSResultPythonWrapper::configuration)
+            .def("parameters", &SQSResultPythonWrapper::parameters);
 
-    py::class_<PairSQSResultCollectionPythonWrapper>("PairSQSResultCollection")
-            .def("__len__", &PairSQSResultCollectionPythonWrapper::size)
-            .def("__getitem__", &helpers::std_item<PairSQSResultCollectionPythonWrapper>::get,
+    py::class_<SQSResultCollectionPythonWrapper>("PairSQSResultCollection")
+            .def("__len__", &SQSResultCollectionPythonWrapper::size)
+            .def("__getitem__", &helpers::std_item<SQSResultCollectionPythonWrapper>::get,
                  py::return_value_policy<py::copy_non_const_reference>())
-            .def("__iter__", py::iterator<PairSQSResultCollectionPythonWrapper>());
+            .def("__iter__", py::iterator<SQSResultCollectionPythonWrapper>());
     py::def("get_data", getData);
 
 }

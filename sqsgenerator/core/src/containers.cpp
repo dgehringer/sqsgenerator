@@ -35,16 +35,16 @@ namespace sqsgenerator {
 
     // Move constructor
     SQSResult::SQSResult(SQSResult &&other) noexcept :
-        m_objective(std::move(other.m_objective)),
+        m_objective(other.m_objective),
         m_rank(std::move(other.m_rank)),
         m_configuration(std::move(other.m_configuration)),
         m_storage(std::move(other.m_storage)) {
         std::cout << "SQSResult.ctor (move) = (" << m_storage.size() << ")" << std::endl;
     };
 
-    SQSResult &SQSResult::operator=(const SQSResult &&other) noexcept {
+    SQSResult& SQSResult::operator=(SQSResult&& other) noexcept  {
         m_rank = std::move(other.m_rank);
-        m_objective = std::move(other.m_objective);
+        m_objective = other.m_objective;
         m_configuration = std::move(other.m_configuration);
         m_storage = std::move(other.m_storage);
         std::cout << "Move assignment = parameters(" << m_storage.size() << ")" << std::endl;
@@ -63,6 +63,9 @@ namespace sqsgenerator {
         return m_configuration;
     }
 
+    const ParameterStorage &SQSResult::storage() const {
+        return m_storage;
+    }
 
 
     SQSResultCollection::SQSResultCollection(int maxSize):
@@ -75,7 +78,7 @@ namespace sqsgenerator {
 
     SQSResultCollection::SQSResultCollection(SQSResultCollection&& other) noexcept :
             m_size(other.m_size.load()),
-            m_max_size(std::move(other.m_max_size)),
+            m_max_size(other.m_max_size),
             m_best_objective(other.m_best_objective.load()),
             m_r(std::move(other.m_r)),
             m_q(std::move(other.m_q))
