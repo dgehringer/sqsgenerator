@@ -6,6 +6,8 @@
 #include <vector>
 #include "types.hpp"
 #include "containers.hpp"
+#include "structure_utils.hpp"
+#include <boost/multi_array.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/storage.hpp>
 
@@ -32,7 +34,8 @@ void print_array(const boost::const_multi_array_ref<double,2> &mat, size_t rows,
     std::cout << "]" << std::endl;
 }
 
-void print_matrix(const matrix<double> &mat) {
+template<typename T>
+void print_matrix1(const matrix<T> &mat) {
     std::cout << "[";
     for (size_t i = 0; i < mat.size1(); i++) {
         std::cout << "[";
@@ -45,6 +48,7 @@ void print_matrix(const matrix<double> &mat) {
     std::cout << "]" << std::endl;
 }
 
+
 int main(int argc, char *argv[]) {
     (void) argc, (void) argv;
     using namespace sqsgenerator;
@@ -56,7 +60,6 @@ int main(int argc, char *argv[]) {
     Configuration conf{0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
     SQSResult result(0.0, 1, conf, data);
     matrix<double, row_major, std::vector<double>> A(7, 4, data);
-    print_matrix(A);
     auto  array = result.parameters<2>(Shape<2>{7,4});
     print_array(array, nshells, nspecies*nspecies);
     SQSResultCollection results(5);
@@ -85,6 +88,12 @@ int main(int argc, char *argv[]) {
     results.collect();
     assert(results.best_objective() == 1.0 / 10.0);
     std::cout << results.best_objective() << ", " << results.result_size() << std::endl;
+    std::cout << "==============================" << std::endl;
+
+    std::vector<double> lattice {4.05, 0.0, 0.0, 0.0, 4.05, 0.0, 0.0, 0.0, 8.1};
+    std::vector<double> coords {0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.5, 0.0, 0.5, 0.0, 0.5, 0.5};
+
+    calculate_distance_matrix(lattice, coords, true);
 }
 //
 
