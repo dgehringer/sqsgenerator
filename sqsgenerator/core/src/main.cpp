@@ -48,6 +48,10 @@ void print_matrix1(const matrix<T> &mat) {
     std::cout << "]" << std::endl;
 }
 
+template<typename T>
+T n2(T x, T y, T z) {
+    return std::sqrt(x*x+y*y+z*z);
+}
 
 int main(int argc, char *argv[]) {
     (void) argc, (void) argv;
@@ -90,10 +94,16 @@ int main(int argc, char *argv[]) {
     std::cout << results.best_objective() << ", " << results.result_size() << std::endl;
     std::cout << "==============================" << std::endl;
 
-    std::vector<double> lattice {4.05, 0.0, 0.0, 0.0, 4.05, 0.0, 0.0, 0.0, 8.1};
+    std::vector<double> lattice {4, 0.0, 0.0, 0.0, 4, 0.0, 0.0, 0.0, 8};
     std::vector<double> coords {0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.5, 0.0, 0.5, 0.0, 0.5, 0.5};
 
-    calculate_distance_matrix(lattice, coords, true);
+    auto dvec (calculate_distance_matrix(lattice, coords, true));
+    std::cout << dvec.shape()[0] << ", " << dvec.shape()[1] << ", " << dvec.shape()[2] <<  "\n";
+    for (int i = 0; i < coords.size()/3; i++) {
+        for (int j = 0; j < coords.size()/3; j++) {
+            std::cout << "[" <<i << ", " << j <<"] = " << n2(dvec[i][j][0], dvec[i][j][1], dvec[i][j][2]) << "\n";
+        }
+    }
 }
 //
 
