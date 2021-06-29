@@ -7,8 +7,8 @@
 #include <algorithm>
 
 
-namespace sqsgenerator {
-    namespace utils {
+namespace sqsgenerator::utils {
+
         const Configuration unique_species(Configuration conf) {
             // it is intended that we do not pass in by-reference since we want to have a copy of the configuration
             Configuration::iterator it;
@@ -89,4 +89,3 @@ namespace sqsgenerator {
         }
 
     }
-}

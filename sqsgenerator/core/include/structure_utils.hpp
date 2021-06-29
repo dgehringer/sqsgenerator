@@ -10,6 +10,7 @@
 #include <vector>
 #include <assert.h>
 #include <limits>
+#include <algorithm>
 #include <boost/multi_array.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/storage.hpp>
@@ -18,35 +19,11 @@
 using namespace boost;
 using namespace boost::numeric::ublas;
 
-template<typename T>
-void print_matrix(const matrix<T> &mat) {
-    std::cout << "[";
-    for (size_t i = 0; i < mat.size1(); i++) {
-        std::cout << "[";
-        for (size_t j = 0; j < mat.size2() - 1; j++) {
-            std::cout << mat(i, j) << ", ";
-        }
-        std::cout << mat(i, mat.size2() - 1) << "]";
-        if (i < mat.size1() - 1) std::cout << std::endl;
-    }
-    std::cout << "]" << std::endl;
-}
 
-template<typename T>
-void print_matrix_row(const matrix_row<matrix<T>> &mat) {
-    std::cout << "[";
-    for (size_t i = 0; i < mat.size()-1; i++) {
-
-            std::cout << mat(i) << ", ";
-    }
-    std::cout<< mat(mat.size()-1) << "]" << std::endl;
-}
-
-namespace sqsgenerator {
-    namespace utils {
+namespace sqsgenerator::utils {
 
         template<typename T>
-        multi_array<T, 3> calculate_distance_matrix(const matrix<T> &lattice, const matrix<T> &coords,  bool frac_coords = false){
+        multi_array<T, 3> pbc_shortest_vectors(const matrix<T> &lattice, const matrix<T> &coords, bool frac_coords = false){
             const matrix<T> cart_coords(frac_coords ? prod(coords, lattice): coords);
             auto num_atoms {coords.size1()};
             auto a {row(lattice, 0)};
@@ -66,7 +43,8 @@ namespace sqsgenerator {
                         for (auto &j: axis) {
                             for (auto &k: axis) {
                                 auto t = i * a + j * b + k * c;
-                                auto diff = p1 - (t + p2);
+                                //auto diff = p1 - (t + p2);
+                                auto diff = (t + p2) - p1;
                                 T image_norm {norm_2(diff)};
                                 if (image_norm < norm) {
                                     norm = image_norm;
@@ -85,15 +63,69 @@ namespace sqsgenerator {
         }
 
         template<typename T>
-        multi_array<T, 3> calculate_distance_matrix(const std::vector<T> &lattice, const std::vector<T> &coords,  bool frac_coords = false){
+        multi_array<T, 3> pbc_shortest_vectors(const std::vector<T> &lattice, const std::vector<T> &coords,  bool frac_coords = false){
             assert(lattice.size() == 9);
             assert(coords.size() % 3 == 0);
-            return calculate_distance_matrix(matrix_from_vector(3, 3, lattice), matrix_from_vector(coords.size() /3, 3, coords), frac_coords);
+            return pbc_shortest_vectors(matrix_from_vector(3, 3, lattice),
+                                        matrix_from_vector(coords.size() / 3, 3, coords), frac_coords);
+        }
+
+        template<typename T>
+        multi_array<T, 2> distance_matrix(const multi_array<T, 3> &vecs){
+            std::vector<size_t> shape(shape_from_multi_array<T,3>(vecs));
+            size_t num_atoms = shape[0];
+            multi_array<T, 2> d2(boost::extents[num_atoms][num_atoms]);
+            for (size_t i = 0; i < num_atoms; i++) {
+                for (size_t j = i; j < num_atoms; j++) {
+                    T norm = std::sqrt(
+                            vecs[i][j][0]*vecs[i][j][0] +
+                            vecs[i][j][1]*vecs[i][j][1] +
+                            vecs[i][j][2]*vecs[i][j][2]);
+                    d2[i][j] = norm;
+                    d2[j][i] = norm;
+                }
+            }
+            return d2;
+        }
+
+        template<typename T>
+        multi_array<T, 2> distance_matrix(const matrix<T> &lattice, const matrix<T> &coords, bool frac_coords = false){
+            return distance_matrix(pbc_shortest_vectors(lattice, coords, frac_coords));
         }
 
 
 
+        template<typename T>
+        multi_array<int, 2> shell_matrix(const multi_array<T, 2> &distance_matrix, uint8_t prec = 5) {
+            std::vector<size_t> shape(shape_from_multi_array<T,2>(distance_matrix));
+            size_t num_atoms = shape[0];
+            multi_array<T, 2> rounded(boost::extents[num_atoms][num_atoms]);
+            multi_array<int, 2> shells(boost::extents[num_atoms][num_atoms]);
+
+            for (size_t i = 0; i < num_atoms; i++) {
+                for (size_t j = i; j < num_atoms; j++) {
+                    T rounded_distance = round_nplaces(distance_matrix[i][j], prec);
+                    rounded[i][j] = rounded_distance;
+                    rounded[j][i] = rounded_distance;
+                }
+            }
+
+            std::vector<T> unique (rounded.data(), rounded.data() + rounded.num_elements());
+            std::sort( unique.begin(), unique.end() );
+            unique.erase( std::unique( unique.begin(), unique.end() ), unique.end() );
+
+            for (size_t i = 0; i < num_atoms; i++) {
+                for (size_t j = i; j < num_atoms; j++) {
+                    int shell {get_index(unique, rounded[i][j])};
+                    if (shell < 0) throw std::runtime_error("A shell was detected which I am not aware of");
+                    shells[i][j] = shell;
+                    shells[j][i] = shell;
+                }
+            }
+
+            return shells;
+        }
+
     }
-}
 
 #endif //SQSGENERATOR_STRUCTURE_UTILS_H

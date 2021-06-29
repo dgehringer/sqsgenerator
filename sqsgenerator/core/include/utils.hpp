@@ -6,9 +6,11 @@
 #define SQSGENERATOR_UTILS_H
 
 #include <stdexcept>
+#include <boost/multi_array.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/storage.hpp>
 
+using namespace boost;
 using namespace boost::numeric::ublas;
 
 namespace boost{
@@ -30,8 +32,27 @@ namespace boost{
     }
 
     template <typename T>
-    matrix<T> matrix_from_multi_array(const_multi_array_ref<T, 2> &ref) {
+    matrix<T> matrix_from_multi_array(multi_array<T, 2> &ref) {
+        std::vector<size_t> shape(ref.shape(), ref.shape()+2);
+        matrix<T> result(shape[0], shape[1]);
+        for (size_t i = 0; i < shape[0]; i++) {
+            for (size_t j = 0; j < shape[1]; j++) {
+                result(i,j) = ref[i][j];
+            }
+        }
+        return result;
+    }
 
+    template<typename T, size_t NDims>
+    std::vector<size_t> shape_from_multi_array(const multi_array<T, NDims> &a) {
+        return std::vector<size_t>(a.shape(), a.shape() + NDims);
+    }
+
+    template<typename T>
+    int get_index(std::vector<T> v, T el)
+    {
+        auto it = std::find(v.begin(), v.end(), el);
+        return  it != v.end() ? it - v.begin() : -1;
     }
 }
 
@@ -47,6 +68,13 @@ namespace sqsgenerator::utils {
         template<typename T>
         T identity(T &t) {
             return t;
+        }
+
+        template<typename T>
+        T round_nplaces(T value, uint8_t to)
+        {
+            T places = std::pow(10.0, to);
+            return std::round(value * places) / places;
         }
 }
 

@@ -1,6 +1,5 @@
 //
 // Created by dominik on 21.05.21.
-
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -104,6 +103,8 @@ int main(int argc, char *argv[]) {
             std::cout << "[" <<i << ", " << j <<"] = " << n2(dvec[i][j][0], dvec[i][j][1], dvec[i][j][2]) << "\n";
         }
     }
+
+
 }
 //
 
