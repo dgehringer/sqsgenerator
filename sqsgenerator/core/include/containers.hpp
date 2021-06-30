@@ -46,7 +46,7 @@ namespace sqsgenerator {
         [[nodiscard]] cpp_int rank() const;
         [[nodiscard]] const ParameterStorage& storage() const;
         template<size_t NDims>
-        boost::const_multi_array_ref<double, NDims> parameters(const Shape<NDims> shape) const{
+        boost::const_multi_array_ref<double, NDims> parameters(const Shape<NDims> shape) const {
             return boost::const_multi_array_ref<double, NDims>(m_storage.data(), shape);
         }
     };

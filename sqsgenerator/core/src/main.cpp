@@ -5,7 +5,7 @@
 #include <vector>
 #include "types.hpp"
 #include "containers.hpp"
-#include "structure_utils.hpp"
+#include "sqs.hpp"
 #include <boost/multi_array.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/storage.hpp>
@@ -93,6 +93,11 @@ int main(int argc, char *argv[]) {
     std::cout << results.best_objective() << ", " << results.result_size() << std::endl;
     std::cout << "==============================" << std::endl;
 
+    multi_array<double, 3> sro_params(boost::extents[nshells][nspecies][nspecies]);
+    sro_params.assign(data.begin(), data.end());
+
+    multi_array_ref<double, 3> sro_params_ref(sro_params.data(), boost::extents[nshells][nspecies][nspecies]);
+    count_pairs<multi_array_ref<double, 3>>(conf, sro_params_ref);
 }
 //
 
