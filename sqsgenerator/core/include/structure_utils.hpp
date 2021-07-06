@@ -43,14 +43,13 @@ namespace sqsgenerator::utils {
                         for (auto &j: axis) {
                             for (auto &k: axis) {
                                 auto t = i * a + j * b + k * c;
-                                //auto diff = p1 - (t + p2);
-                                auto diff = (t + p2) - p1;
+                                auto diff = p1 - (t + p2);
                                 T image_norm {norm_2(diff)};
                                 if (image_norm < norm) {
                                     norm = image_norm;
                                     for (size_t dim = 0; dim < 3; dim++) {
                                         vecs[pi1][pi2][dim] = diff(dim);
-                                        vecs[pi2][pi1][dim] = diff(dim);
+                                        vecs[pi2][pi1][dim] = -diff(dim);
                                     }
                                 }
                             }

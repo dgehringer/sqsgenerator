@@ -129,10 +129,10 @@ namespace sqsgenerator::test {
     public:
         void SetUp() {
             // code here will execute just before the test ensues
-            std::cout << "StructureUtilsTestFixture::SetUp(): " << std::filesystem::current_path() << std::endl;
+            // std::cout << "StructureUtilsTestFixture::SetUp(): " << std::filesystem::current_path() << std::endl;
             get_all("resources", ".data");
             for (auto &p : get_all("resources", ".data")) {
-                std::cout << "StructureUtilsTestFixture::SetUp(): Found test case: " << p << std::endl;
+                // std::cout << "StructureUtilsTestFixture::SetUp(): Found test case: " << p << std::endl;
                 test_cases.emplace_back(read_test_data(p));
             }
         };
