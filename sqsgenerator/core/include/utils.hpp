@@ -43,10 +43,11 @@ namespace boost{
         return result;
     }
 
-    template<typename T, size_t NDims>
-    std::vector<size_t> shape_from_multi_array(const multi_array<T, NDims> &a) {
-        return std::vector<size_t>(a.shape(), a.shape() + NDims);
+    template<typename MultiArray>
+    std::vector<typename MultiArray::index> shape_from_multi_array(const MultiArray &a) {
+        return std::vector<typename MultiArray::index>(a.shape(), a.shape() + a.num_dimensions());
     }
+
 
     template<typename T>
     int get_index(std::vector<T> v, T el)

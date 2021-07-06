@@ -69,13 +69,15 @@ namespace sqsgenerator::utils {
                                         matrix_from_vector(coords.size() / 3, 3, coords), frac_coords);
         }
 
-        template<typename T>
-        multi_array<T, 2> distance_matrix(const multi_array<T, 3> &vecs){
-            std::vector<size_t> shape(shape_from_multi_array<T,3>(vecs));
-            size_t num_atoms = shape[0];
+        template<typename MultiArray>
+        multi_array<typename MultiArray::element, 2> distance_matrix(const MultiArray &vecs){
+            typedef typename MultiArray::index index_t;
+            typedef typename MultiArray::element T;
+            auto shape(shape_from_multi_array(vecs));
+            auto num_atoms = shape[0];
             multi_array<T, 2> d2(boost::extents[num_atoms][num_atoms]);
-            for (size_t i = 0; i < num_atoms; i++) {
-                for (size_t j = i; j < num_atoms; j++) {
+            for (index_t i = 0; i < num_atoms; i++) {
+                for (index_t j = i; j < num_atoms; j++) {
                     T norm = std::sqrt(
                             vecs[i][j][0]*vecs[i][j][0] +
                             vecs[i][j][1]*vecs[i][j][1] +
@@ -87,15 +89,17 @@ namespace sqsgenerator::utils {
             return d2;
         }
 
-        template<typename T>
-        multi_array<int, 2> shell_matrix(const multi_array<T, 2> &distance_matrix, uint8_t prec = 5) {
-            std::vector<size_t> shape(shape_from_multi_array<T,2>(distance_matrix));
-            size_t num_atoms = shape[0];
+        template<typename MultiArray>
+        PairShellMatrix shell_matrix(const MultiArray &distance_matrix, uint8_t prec = 5) {
+            typedef typename MultiArray::index index_t;
+            typedef typename MultiArray::element T;
+            auto shape(shape_from_multi_array(distance_matrix));
+            auto num_atoms = shape[0];
             multi_array<T, 2> rounded(boost::extents[num_atoms][num_atoms]);
-            multi_array<int, 2> shells(boost::extents[num_atoms][num_atoms]);
+            multi_array<Shell, 2> shells(boost::extents[num_atoms][num_atoms]);
 
-            for (size_t i = 0; i < num_atoms; i++) {
-                for (size_t j = i; j < num_atoms; j++) {
+            for (index_t i = 0; i < num_atoms; i++) {
+                for (index_t j = i; j < num_atoms; j++) {
                     T rounded_distance = round_nplaces(distance_matrix[i][j], prec);
                     rounded[i][j] = rounded_distance;
                     rounded[j][i] = rounded_distance;
@@ -106,16 +110,36 @@ namespace sqsgenerator::utils {
             std::sort( unique.begin(), unique.end() );
             unique.erase( std::unique( unique.begin(), unique.end() ), unique.end() );
 
-            for (size_t i = 0; i < num_atoms; i++) {
-                for (size_t j = i; j < num_atoms; j++) {
+            for (index_t i = 0; i < num_atoms; i++) {
+                for (index_t j = i; j < num_atoms; j++) {
                     int shell {get_index(unique, rounded[i][j])};
                     if (shell < 0) throw std::runtime_error("A shell was detected which I am not aware of");
-                    shells[i][j] = shell;
-                    shells[j][i] = shell;
+                    shells[i][j] = static_cast<Shell>(shell);
+                    shells[j][i] = static_cast<Shell>(shell);;
                 }
             }
 
             return shells;
+        }
+
+        std::vector<AtomPair> create_pair_list(const PairShellMatrix &shell_matrix, const std::map<Shell, double> &weights) {
+            typedef PairShellMatrix::index index_t;
+            size_t nshells {weights.size()};
+            std::vector<Shell> shells(nshells);
+            std::map<Shell, size_t> shell_index_map;
+            // Copy the shells into a new vector
+            for(const auto &shell : weights) shells.push_back(shell.first);
+            // Create an shell-index map
+            for(size_t i = 0; i < shells.size(); i++)  shell_index_map.emplace(std::make_pair(shells[i], i));
+            auto shape = shape_from_multi_array(shell_matrix);
+
+            assert(shape.size() == 2);
+
+            for (index_t i = 0; i < shape[0]; i++) {
+                for (index_t j = i+1; i < shape[1]; j++) {
+                    Shell shell {shell_matrix[i][j]};
+                }
+            }
         }
 
     }

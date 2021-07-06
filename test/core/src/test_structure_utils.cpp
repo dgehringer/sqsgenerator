@@ -145,8 +145,8 @@ namespace sqsgenerator::test {
 
     };
 
-    template<typename T, size_t NDims>
-    void assert_multi_array_equal(const multi_array<T, NDims> &a, const multi_array<T, NDims> &b) {
+    template<typename MultiArrayA, typename MultiArrayB>
+    void assert_multi_array_equal(const MultiArrayA &a, const MultiArrayB &b) {
         ASSERT_EQ(a.num_elements(), b.num_elements());
         for (size_t i = 0; i < a.num_elements(); ++i) {
 
@@ -166,10 +166,12 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(StructureUtilsTestFixture, TestDistanceMatrix) {
+        typedef multi_array<double, 3> pbc_mat;
         for (TestCaseData &test_case : test_cases) {
             matrix<double> lattice (matrix_from_multi_array<double>(test_case.lattice));
             matrix<double> fcoords (matrix_from_multi_array<double>(test_case.fcoords));
-            auto d2 = sqsgenerator::utils::distance_matrix(lattice, fcoords, true);
+            auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
+            auto d2 = sqsgenerator::utils::distance_matrix(pbc_vecs);
             for (size_t i = 0; i < 2; i++)  ASSERT_EQ(d2.shape()[i], test_case.vecs.shape()[i]);
             assert_multi_array_equal(d2, test_case.distances);
             auto d2_external = sqsgenerator::utils::distance_matrix(test_case.vecs);
@@ -181,7 +183,8 @@ namespace sqsgenerator::test {
         for (TestCaseData &test_case : test_cases) {
             matrix<double> lattice (matrix_from_multi_array<double>(test_case.lattice));
             matrix<double> fcoords (matrix_from_multi_array<double>(test_case.fcoords));
-            auto d2 = sqsgenerator::utils::distance_matrix(lattice, fcoords, true);
+            auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
+            auto d2 = sqsgenerator::utils::distance_matrix(pbc_vecs);
             auto shells = sqsgenerator::utils::shell_matrix(d2);
             for (size_t i = 0; i < 2; i++)  ASSERT_EQ(shells.shape()[i], test_case.shells.shape()[i]);
             assert_multi_array_equal(shells, test_case.shells);
