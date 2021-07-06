@@ -88,13 +88,6 @@ namespace sqsgenerator::utils {
         }
 
         template<typename T>
-        multi_array<T, 2> distance_matrix(const matrix<T> &lattice, const matrix<T> &coords, bool frac_coords = false){
-            return distance_matrix(pbc_shortest_vectors(lattice, coords, frac_coords));
-        }
-
-
-
-        template<typename T>
         multi_array<int, 2> shell_matrix(const multi_array<T, 2> &distance_matrix, uint8_t prec = 5) {
             std::vector<size_t> shape(shape_from_multi_array<T,2>(distance_matrix));
             size_t num_atoms = shape[0];
