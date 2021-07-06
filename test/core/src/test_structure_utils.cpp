@@ -1,6 +1,7 @@
 //
 // Created by dominik on 29.06.21.
 //
+#include "types.hpp"
 #include "utils.hpp"
 #include "structure_utils.hpp"
 #include <cassert>
@@ -180,6 +181,7 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(StructureUtilsTestFixture, TestShellMatrix) {
+        typedef PairShellMatrix::index index_t;
         for (TestCaseData &test_case : test_cases) {
             matrix<double> lattice (matrix_from_multi_array<double>(test_case.lattice));
             matrix<double> fcoords (matrix_from_multi_array<double>(test_case.fcoords));
@@ -190,6 +192,57 @@ namespace sqsgenerator::test {
             assert_multi_array_equal(shells, test_case.shells);
             auto shells_external = sqsgenerator::utils::shell_matrix(test_case.distances);
             assert_multi_array_equal(shells, shells_external);
+
+            // Make sure the main diagonal is zero
+            for (index_t i = 0; i < fcoords.size1(); i++) {
+                ASSERT_EQ(shells[i][i], 0);
+            }
+            // Ensure the matrix is symmetric
+            for (index_t i = 0; i < fcoords.size1(); i++) {
+                for (index_t j = i+1; j < fcoords.size1(); j++)
+                    ASSERT_EQ(shells[i][j], shells[j][i]);
+            }
+        }
+    }
+
+    TEST_F(StructureUtilsTestFixture, TestCreatePairList) {
+        typedef PairShellMatrix::index index_t;
+        for (TestCaseData &test_case : test_cases) {
+            matrix<double> lattice (matrix_from_multi_array<double>(test_case.lattice));
+            matrix<double> fcoords (matrix_from_multi_array<double>(test_case.fcoords));
+            std::map<Shell, size_t> counts;
+            std::map<Shell, double> all_weights;
+            auto natoms {fcoords.size1()};
+            auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
+            auto d2 = sqsgenerator::utils::distance_matrix(pbc_vecs);
+            PairShellMatrix shells = sqsgenerator::utils::shell_matrix(d2, 2);
+            Shell max_shell = *std::max_element(shells.origin(), shells.origin()+shells.num_elements());
+            for (auto i = 1; i <= max_shell; i++) {
+                counts.insert(std::make_pair(i, 0));
+                all_weights.insert(std::make_pair(i, 0.0));
+            }
+            // If all shells are present, the list length must be the number of pairs in the structure
+            ASSERT_EQ(create_pair_list(shells, all_weights).size(), natoms*(natoms-1)/2);
+            for (index_t i = 0; i < natoms; i++) {
+                for (index_t j = i+1; j < natoms; j++) {
+                    counts[shells[i][j]]++;
+                }
+            }
+
+            // If theres only one shell it must be exactly the number of pairs in the corresponding shell
+            for (auto i = 1; i <= max_shell; i++) {
+                auto num_pairs = create_pair_list(shells, {{i, 0.0}}).size();
+                auto should_be = counts[i];
+                ASSERT_EQ(num_pairs, should_be);
+            }
+            // Same must be true for any combination of two shells
+            for (auto i = 1; i <= max_shell; i++) {
+                for (auto j = i+1; j <= max_shell; j++) {
+                    auto num_pairs = create_pair_list(shells, {{i, 0.0}, {j, 0.0}}).size();
+                    auto should_be = counts[i]+counts[j];
+                    ASSERT_EQ(num_pairs, should_be);
+                }
+            }
         }
     }
 }

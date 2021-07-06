@@ -23,7 +23,7 @@ namespace sqsgenerator {
     using Shape = std::array<size_t, NDims>;
     typedef boost::multi_array<Shell, 2> PairShellMatrix;
     // The array consists of {size_t i, size_t j, size_t shell, size_t shell_index}
-    typedef std::array<size_t, 4> AtomPair;
+    typedef std::array<PairShellMatrix::index, 4> AtomPair;
 
 }
 #endif //SQSGENERATOR_TYPES_H

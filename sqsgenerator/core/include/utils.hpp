@@ -31,21 +31,24 @@ namespace boost{
         return matrix<T>(m, n, storage);
     }
 
-    template <typename T>
-    matrix<T> matrix_from_multi_array(multi_array<T, 2> &ref) {
-        std::vector<size_t> shape(ref.shape(), ref.shape()+2);
-        matrix<T> result(shape[0], shape[1]);
-        for (size_t i = 0; i < shape[0]; i++) {
-            for (size_t j = 0; j < shape[1]; j++) {
-                result(i,j) = ref[i][j];
-            }
-        }
-        return result;
-    }
 
     template<typename MultiArray>
     std::vector<typename MultiArray::index> shape_from_multi_array(const MultiArray &a) {
         return std::vector<typename MultiArray::index>(a.shape(), a.shape() + a.num_dimensions());
+    }
+
+
+    template <typename T>
+    matrix<T> matrix_from_multi_array(multi_array<T, 2> &ref) {
+        typedef typename multi_array<T, 2>::index index_t;
+        auto shape = shape_from_multi_array(ref);
+        matrix<T> result(shape[0], shape[1]);
+        for (index_t i = 0; i < shape[0]; i++) {
+            for (index_t j = 0; j < shape[1]; j++) {
+                result(i,j) = ref[i][j];
+            }
+        }
+        return result;
     }
 
 
@@ -55,6 +58,7 @@ namespace boost{
         auto it = std::find(v.begin(), v.end(), el);
         return  it != v.end() ? it - v.begin() : -1;
     }
+
 }
 
 namespace sqsgenerator::utils {

@@ -126,20 +126,24 @@ namespace sqsgenerator::utils {
             typedef PairShellMatrix::index index_t;
             size_t nshells {weights.size()};
             std::vector<Shell> shells(nshells);
-            std::map<Shell, size_t> shell_index_map;
+            std::vector<AtomPair> pair_list;
+            std::map<Shell, index_t> shell_index_map;
             // Copy the shells into a new vector
             for(const auto &shell : weights) shells.push_back(shell.first);
             // Create an shell-index map
-            for(size_t i = 0; i < shells.size(); i++)  shell_index_map.emplace(std::make_pair(shells[i], i));
+            for(index_t i = 0; i < shells.size(); i++)  shell_index_map.emplace(std::make_pair(shells[i], i));
             auto shape = shape_from_multi_array(shell_matrix);
 
             assert(shape.size() == 2);
-
             for (index_t i = 0; i < shape[0]; i++) {
-                for (index_t j = i+1; i < shape[1]; j++) {
-                    Shell shell {shell_matrix[i][j]};
+                for (index_t j = i+1; j < shape[1]; j++) {
+                    Shell shell = shell_matrix[i][j];
+                    if ( shell_index_map.find(shell) != shell_index_map.end() )
+                        pair_list.push_back(AtomPair {i, j, shell, shell_index_map[shell]});
                 }
             }
+
+            return pair_list;
         }
 
     }
