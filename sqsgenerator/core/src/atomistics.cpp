@@ -1,9 +1,11 @@
 //
 // Created by dominik on 02.06.21.
 //
-#include <iostream>
-#include "atomistics.hpp"
 #include "utils.hpp"
+#include "atomistics.hpp"
+#include "structure_utils.hpp"
+#include <iostream>
+
 
 #define COMPARE_FIELD(f) (f == other.f)
 
@@ -132,16 +134,16 @@ namespace sqsgenerator::utils::atomistics {
 
     std::map<std::string, Species> Atoms::m_symbolMap(std::forward<std::map<std::string, Species>>(make_symbol_map()));
 
-    Atom Atoms::fromZ(Species Z) {
-        if (Z < 1) {
-            throw std::invalid_argument("Z must be at least 1");
+    Atom Atoms::from_z(Species Z) {
+        if (Z < 0) {
+            throw std::invalid_argument("Z must be at least 0");
         } else if (Z - 1 > Atoms::m_elements.size()) {
             throw std::invalid_argument("No elements known with Z=" + std::to_string(Z));
         }
-        return Atoms::m_elements[Z - 1];
+        return Atoms::m_elements[Z];
     }
 
-    Atom Atoms::fromSymbol(const std::string &symbol) {
+    Atom Atoms::from_symbol(const std::string &symbol) {
         if (!Atoms::m_symbolMap.count(symbol)) {
             throw std::invalid_argument("No elements known with \"" + symbol + "\"");
         }
@@ -149,15 +151,15 @@ namespace sqsgenerator::utils::atomistics {
         return Atoms::m_elements[index];
     }
 
-    std::vector<Atom> Atoms::fromZ(const std::vector<Species> &numbers) {
+    std::vector<Atom> Atoms::from_z(const std::vector<Species> &numbers) {
         std::vector<Atom> result;
-        for (const auto &num: numbers) result.push_back(Atoms::fromZ(num));
+        for (const auto &num: numbers) result.push_back(Atoms::from_z(num));
         return result;
     }
 
-    std::vector<Atom> Atoms::fromSymbol(const std::vector<std::string> &symbols) {
+    std::vector<Atom> Atoms::from_symbol(const std::vector<std::string> &symbols) {
         std::vector<Atom> result;
-        for (const auto &num: symbols) result.push_back(Atoms::fromSymbol(num));
+        for (const auto &num: symbols) result.push_back(Atoms::from_symbol(num));
         return result;
     }
 
@@ -166,23 +168,35 @@ namespace sqsgenerator::utils::atomistics {
             m_lattice(lattice),
             m_frac_coords(frac_coords),
             m_species(species),
-            m_pbc(pbc) {}
+            m_pbc(pbc),
+            m_prec(5) {
+        auto natoms {species.size()};
+        m_pbc_vecs.resize(boost::extents[natoms][natoms][3]);
+        m_pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(boost::matrix_from_multi_array(m_lattice),
+                                                               boost::matrix_from_multi_array(m_frac_coords),
+                                                               true);
+        m_distance_matrix.resize(boost::extents[natoms][natoms]);
+        m_distance_matrix = sqsgenerator::utils::distance_matrix(m_pbc_vecs);
+
+        m_shell_matrix.resize(boost::extents[natoms][natoms]);
+        m_shell_matrix = sqsgenerator::utils::shell_matrix(m_distance_matrix, m_prec);
+    }
 
     Structure::Structure(array_2d_t lattice, array_2d_t frac_coords,
                          std::vector<std::string> species, std::array<bool, 3> pbc) :
-            Structure(lattice, frac_coords, Atoms::fromSymbol(species), pbc) {}
+            Structure(lattice, frac_coords, Atoms::from_symbol(species), pbc) {}
 
     Structure::Structure(array_2d_t lattice, array_2d_t frac_coords,
                          std::vector<Species> species,
                          std::array<bool, 3> pbc) :
-            Structure(lattice, frac_coords, Atoms::fromZ(species), pbc) {}
+            Structure(lattice, frac_coords, Atoms::from_z(species), pbc) {}
 
     const_array_2d_ref_t Structure::lattice() const {
-        return const_array_2d_ref_t(m_lattice.data(), shape_from_multi_array(m_lattice));
+        return boost::make_array_ref<const_array_2d_ref_t>(m_lattice);
     }
 
     const_array_2d_ref_t Structure::frac_coords() const {
-        return const_array_2d_ref_t(m_frac_coords.data(), shape_from_multi_array(m_frac_coords));
+        return boost::make_array_ref<const_array_2d_ref_t>(m_frac_coords);
     }
 
     std::array<bool, 3> Structure::pbc() const {
@@ -191,6 +205,22 @@ namespace sqsgenerator::utils::atomistics {
 
     const std::vector<Atom>& Structure::species() const {
         return m_species;
+    }
+
+    const_array_3d_ref_t Structure::distance_vecs() const {
+        return boost::make_array_ref<const_array_3d_ref_t>(m_pbc_vecs);
+    }
+
+    const_array_2d_ref_t Structure::distance_matrix() const {
+        return boost::make_array_ref<const_array_2d_ref_t>(m_distance_matrix);
+    }
+
+    const_pair_shell_matrix_ref Structure::shell_matrix(uint8_t prec) {
+        if (prec != m_prec) {
+            m_prec = prec;
+            m_shell_matrix = sqsgenerator::utils::shell_matrix(m_distance_matrix, m_prec);
+        }
+        return boost::make_array_ref<const_pair_shell_matrix_ref>(m_shell_matrix);
     }
 
 }

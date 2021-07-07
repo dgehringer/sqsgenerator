@@ -2,8 +2,8 @@
 // Created by dominik on 30.05.21.
 //
 
-#ifndef SQSGENERATOR_HELPERS_H
-#define SQSGENERATOR_HELPERS_H
+#ifndef SQSGENERATOR_HELPERS_HPP
+#define SQSGENERATOR_HELPERS_HPP
 
 #include "utils.hpp"
 #include <boost/python.hpp>
@@ -65,7 +65,6 @@ namespace sqsgenerator::python::helpers {
     }
 
 
-
     template<typename T, size_t NDims>
     boost::multi_array<T, NDims> ndarray_to_multi_array(np::ndarray &array) {
         assert(array.get_nd() == NDims);
@@ -77,12 +76,15 @@ namespace sqsgenerator::python::helpers {
                 );
     }
 
+    // this snippet is an adapted version of:
+    // https://stackoverflow.com/questions/28410697/c-convert-vector-to-tuple
     template <typename T, std::size_t... Indices>
     auto vector_to_py_tuple_helper(const std::vector<T>& v, std::index_sequence<Indices...>) {
         return py::make_tuple(v[Indices]...);
     }
 
-
+    // this snippet is an adapted version of:
+    // https://stackoverflow.com/questions/28410697/c-convert-vector-to-tuple
     template <std::size_t N, typename T>
     auto vector_to_py_tuple(const std::vector<T>& v) {
         assert(v.size() >= N);
@@ -96,7 +98,7 @@ namespace sqsgenerator::python::helpers {
         return to_flat_numpy_array(array.data(), array.num_elements()).reshape(shape);
     }
 
-
+    // this snippet is taken from:
     // https://stackoverflow.com/questions/49692157/boost-python-return-python-object-which-references-to-existing-c-objects
     template<typename T>
     inline py::object warp_in_existing_python_object(T obj) {
@@ -125,4 +127,4 @@ namespace sqsgenerator::python::helpers {
         return list;
     }
 }
-#endif //SQSGENERATOR_HELPERS_H
+#endif //SQSGENERATOR_HELPERS_HPP

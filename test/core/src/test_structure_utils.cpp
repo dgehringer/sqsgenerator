@@ -158,8 +158,8 @@ namespace sqsgenerator::test {
 
     TEST_F(StructureUtilsTestFixture, TestPbcVectors) {
         for (TestCaseData &test_case : test_cases) {
-            matrix<double> lattice (matrix_from_multi_array<double>(test_case.lattice));
-            matrix<double> fcoords (matrix_from_multi_array<double>(test_case.fcoords));
+            matrix<double> lattice (matrix_from_multi_array(test_case.lattice));
+            matrix<double> fcoords (matrix_from_multi_array(test_case.fcoords));
             auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
             for (size_t i = 0; i < 3; i++) ASSERT_EQ(pbc_vecs.shape()[i], test_case.vecs.shape()[i]);
             assert_multi_array_equal(pbc_vecs, test_case.vecs);
@@ -169,8 +169,8 @@ namespace sqsgenerator::test {
     TEST_F(StructureUtilsTestFixture, TestDistanceMatrix) {
         typedef multi_array<double, 3> pbc_mat;
         for (TestCaseData &test_case : test_cases) {
-            matrix<double> lattice (matrix_from_multi_array<double>(test_case.lattice));
-            matrix<double> fcoords (matrix_from_multi_array<double>(test_case.fcoords));
+            matrix<double> lattice (matrix_from_multi_array(test_case.lattice));
+            matrix<double> fcoords (matrix_from_multi_array(test_case.fcoords));
             auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
             auto d2 = sqsgenerator::utils::distance_matrix(pbc_vecs);
             for (size_t i = 0; i < 2; i++)  ASSERT_EQ(d2.shape()[i], test_case.vecs.shape()[i]);
@@ -181,10 +181,10 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(StructureUtilsTestFixture, TestShellMatrix) {
-        typedef PairShellMatrix::index index_t;
+        typedef pair_shell_matrix::index index_t;
         for (TestCaseData &test_case : test_cases) {
-            matrix<double> lattice (matrix_from_multi_array<double>(test_case.lattice));
-            matrix<double> fcoords (matrix_from_multi_array<double>(test_case.fcoords));
+            matrix<double> lattice (matrix_from_multi_array(test_case.lattice));
+            matrix<double> fcoords (matrix_from_multi_array(test_case.fcoords));
             auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
             auto d2 = sqsgenerator::utils::distance_matrix(pbc_vecs);
             auto shells = sqsgenerator::utils::shell_matrix(d2);
@@ -206,16 +206,16 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(StructureUtilsTestFixture, TestCreatePairListSizes) {
-        typedef PairShellMatrix::index index_t;
+        typedef pair_shell_matrix::index index_t;
         for (TestCaseData &test_case : test_cases) {
-            matrix<double> lattice (matrix_from_multi_array<double>(test_case.lattice));
-            matrix<double> fcoords (matrix_from_multi_array<double>(test_case.fcoords));
+            matrix<double> lattice (matrix_from_multi_array(test_case.lattice));
+            matrix<double> fcoords (matrix_from_multi_array(test_case.fcoords));
             std::map<Shell, size_t> counts;
             std::map<Shell, double> all_weights;
             auto natoms {fcoords.size1()};
             auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
             auto d2 = sqsgenerator::utils::distance_matrix(pbc_vecs);
-            PairShellMatrix shells = sqsgenerator::utils::shell_matrix(d2, 2);
+            pair_shell_matrix shells = sqsgenerator::utils::shell_matrix(d2, 2);
             Shell max_shell = *std::max_element(shells.origin(), shells.origin()+shells.num_elements());
             for (auto i = 1; i <= max_shell; i++) {
                 counts.insert(std::make_pair(i, 0));

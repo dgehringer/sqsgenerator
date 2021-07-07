@@ -2,9 +2,9 @@
 // Created by dominik on 02.06.21.
 //
 
-#ifndef SQSGENERATOR_ATOMISTICS_H
-#define SQSGENERATOR_ATOMISTICS_H
-
+#ifndef SQSGENERATOR_ATOMISTICS_HPP
+#define SQSGENERATOR_ATOMISTICS_HPP
+#include "utils.hpp"
 #include "types.hpp"
 #include <map>
 #include <vector>
@@ -24,11 +24,9 @@ namespace sqsgenerator::utils::atomistics {
         const double atomic_radius;
         const double mass;
         const double en;
-
     };
 
     class Atoms {
-
 
     private:
         const static std::vector<Atom> m_elements;
@@ -45,19 +43,23 @@ namespace sqsgenerator::utils::atomistics {
     public:
         //TODO: Ask how to make m_elements private while be able to initialize m_symbolMap;
 
-        static Atom fromZ(Species Z);
-        static Atom fromSymbol(const std::string &symbol);
-        static std::vector<Atom> fromZ(const std::vector<Species> &numbers);
-        static std::vector<Atom> fromSymbol(const std::vector<std::string> &symbols);
+        static Atom from_z(Species Z);
+        static Atom from_symbol(const std::string &symbol);
+        static std::vector<Atom> from_z(const std::vector<Species> &numbers);
+        static std::vector<Atom> from_symbol(const std::vector<std::string> &symbols);
     };
 
 
     class Structure {
     private:
-        std::vector<Atom> m_species;
+        uint8_t m_prec;
         array_2d_t m_lattice;
         array_2d_t m_frac_coords;
+        array_2d_t m_distance_matrix;
+        array_3d_t m_pbc_vecs;
         std::array<bool, 3> m_pbc;
+        std::vector<Atom> m_species;
+        pair_shell_matrix m_shell_matrix;
 
     public:
         Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc);
@@ -68,8 +70,12 @@ namespace sqsgenerator::utils::atomistics {
         const_array_2d_ref_t frac_coords() const;
         std::array<bool, 3> pbc() const;
         const std::vector<Atom>& species() const;
+        const_array_3d_ref_t distance_vecs() const;
+        const_array_2d_ref_t distance_matrix() const;
+        const_pair_shell_matrix_ref shell_matrix(uint8_t prec);
+
     };
 }
 
 
-#endif //SQSGENERATOR_ATOMISTICS_H
+#endif //SQSGENERATOR_ATOMISTICS_HPP

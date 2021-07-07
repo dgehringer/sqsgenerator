@@ -67,11 +67,12 @@ namespace sqsgenerator::python {
                            m_handle.storage().data(),
                            m_handle.storage().size()).reshape(shape);
             }
+
         };
 
         class StructurePythonWrapper {
         private:
-            const atomistics::Structure m_handle;
+            atomistics::Structure m_handle;
         public:
             StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols)
             : m_handle(
@@ -92,6 +93,23 @@ namespace sqsgenerator::python {
 
             py::list species() {
                 return helpers::vector_to_list(m_handle.species());
+            }
+
+            py::tuple pbc() {
+                auto pbc {m_handle.pbc()};
+                return py::make_tuple(pbc[0], pbc[1], pbc[2]);
+            }
+
+            np::ndarray distance_vecs() {
+                return helpers::multi_array_to_ndarray<const_array_3d_ref_t , 3>(m_handle.distance_vecs());
+            }
+
+            np::ndarray distance_matrix() {
+                return helpers::multi_array_to_ndarray<const_array_2d_ref_t , 2>(m_handle.distance_matrix());
+            }
+
+            np::ndarray shell_matrix(uint8_t prec = 5) {
+                return helpers::multi_array_to_ndarray<const_pair_shell_matrix_ref, 2>(m_handle.shell_matrix(prec));
             }
 
         };
@@ -172,7 +190,11 @@ BOOST_PYTHON_MODULE(data) {
     py::class_<StructurePythonWrapper>("Structure", py::init<np::ndarray, np::ndarray, py::object>())
             .def_readonly("lattice", &StructurePythonWrapper::lattice)
             .def_readonly("species", &StructurePythonWrapper::species)
-            .def_readonly("frac_coords", &StructurePythonWrapper::frac_coords);
+            .def_readonly("frac_coords", &StructurePythonWrapper::frac_coords)
+            .def_readonly("distance_vecs", &StructurePythonWrapper::distance_vecs)
+            .def_readonly("distance_matrix", &StructurePythonWrapper::distance_matrix)
+            .def("shell_matrix", &StructurePythonWrapper::shell_matrix)
+            .def_readonly("pbc", &StructurePythonWrapper::pbc);
 
     py::class_<SQSResultCollectionPythonWrapper>("PairSQSResultCollection")
             .def("__len__", &SQSResultCollectionPythonWrapper::size)

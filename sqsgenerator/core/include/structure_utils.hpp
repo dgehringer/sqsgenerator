@@ -89,14 +89,31 @@ namespace sqsgenerator::utils {
             return d2;
         }
 
-        template<typename MultiArray>
-        PairShellMatrix shell_matrix(const MultiArray &distance_matrix, uint8_t prec = 5) {
+    template<typename MultiArray>
+    void print_array(MultiArray mat) {
+        auto shape {shape_from_multi_array(mat)};
+        auto rows {shape[0]}, cols {shape[1]};
+        std::cout << "[";
+        for (size_t i = 0; i < rows; i++) {
+            std::cout << "[";
+            for (size_t j = 0; j < cols - 1; j++) {
+                std::cout << mat[i][j] << ", ";
+            }
+            std::cout << mat[i][cols- 1] << "]";
+            if (i < rows - 1) std::cout << std::endl;
+        }
+        std::cout << "]" << std::endl;
+    }
+
+
+    template<typename MultiArray>
+        pair_shell_matrix shell_matrix(const MultiArray &distance_matrix, uint8_t prec = 5) {
             typedef typename MultiArray::index index_t;
             typedef typename MultiArray::element T;
             auto shape(shape_from_multi_array(distance_matrix));
             auto num_atoms = shape[0];
             multi_array<T, 2> rounded(boost::extents[num_atoms][num_atoms]);
-            multi_array<Shell, 2> shells(boost::extents[num_atoms][num_atoms]);
+            pair_shell_matrix shells(boost::extents[num_atoms][num_atoms]);
 
             for (index_t i = 0; i < num_atoms; i++) {
                 for (index_t j = i; j < num_atoms; j++) {
@@ -115,16 +132,14 @@ namespace sqsgenerator::utils {
                     int shell {get_index(unique, rounded[i][j])};
                     if (shell < 0) throw std::runtime_error("A shell was detected which I am not aware of");
                     shells[i][j] = static_cast<Shell>(shell);
-                    shells[j][i] = static_cast<Shell>(shell);;
+                    shells[j][i] = static_cast<Shell>(shell);
                 }
             }
-
             return shells;
         }
 
-        std::map<Shell, PairShellMatrix::index> shell_index_map(const std::map<Shell, double> &weights) {
-
-            typedef PairShellMatrix::index index_t;
+        std::map<Shell, pair_shell_matrix::index> shell_index_map(const std::map<Shell, double> &weights) {
+            typedef pair_shell_matrix::index index_t;
             size_t nshells {weights.size()};
             std::vector<Shell> shells;
             std::map<Shell, index_t> shell_indices;
@@ -135,8 +150,8 @@ namespace sqsgenerator::utils {
             return shell_indices;
         }
 
-        std::vector<AtomPair> create_pair_list(const PairShellMatrix &shell_matrix, const std::map<Shell, double> &weights) {
-            typedef PairShellMatrix::index index_t;
+        std::vector<AtomPair> create_pair_list(const pair_shell_matrix &shell_matrix, const std::map<Shell, double> &weights) {
+            typedef pair_shell_matrix::index index_t;
             std::vector<AtomPair> pair_list;
             auto shell_indices (shell_index_map(weights));
             auto shape = shape_from_multi_array(shell_matrix);

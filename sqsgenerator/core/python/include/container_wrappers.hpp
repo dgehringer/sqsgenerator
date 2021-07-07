@@ -2,8 +2,8 @@
 // Created by dominik on 31.05.21.
 //
 
-#ifndef SQSGENERATOR_CONTAINER_WRAPPERS_H
-#define SQSGENERATOR_CONTAINER_WRAPPERS_H
+#ifndef SQSGENERATOR_CONTAINER_WRAPPERS_HPP
+#define SQSGENERATOR_CONTAINER_WRAPPERS_HPP
 
 #include <boost/python.hpp>
 
@@ -16,6 +16,8 @@ namespace sqsgenerator::python::helpers {
 
     void IndexError() { PyErr_SetString(PyExc_IndexError, "Index out of range"); }
 
+    // the following structs are adapted versions from:
+    // https://wiki.python.org/moin/boost.python/StlContainers
     template<typename T>
     struct std_item {
         typedef typename T::value_type V;
@@ -108,4 +110,4 @@ namespace sqsgenerator::python::helpers {
 }
 
 
-#endif //SQSGENERATOR_CONTAINER_WRAPPERS_H
+#endif //SQSGENERATOR_CONTAINER_WRAPPERS_HPP

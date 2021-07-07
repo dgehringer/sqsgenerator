@@ -2,8 +2,8 @@
 // Created by dominik on 29.05.21.
 //
 
-#ifndef SQSGENERATOR_UTILS_H
-#define SQSGENERATOR_UTILS_H
+#ifndef SQSGENERATOR_UTILS_HPP
+#define SQSGENERATOR_UTILS_HPP
 
 #include <stdexcept>
 #include <boost/multi_array.hpp>
@@ -32,17 +32,23 @@ namespace boost{
     }
 
 
+
     template<typename MultiArray>
     std::vector<typename MultiArray::size_type> shape_from_multi_array(const MultiArray &a) {
         return std::vector<typename MultiArray::size_type>(a.shape(), a.shape() + a.num_dimensions());
     }
 
+    template<typename MultiArrayRef, typename MultiArray>
+    MultiArrayRef make_array_ref(MultiArray &array) {
+        return MultiArrayRef(array.data(), shape_from_multi_array<MultiArray>(array));
+    }
 
-    template <typename T>
-    matrix<T> matrix_from_multi_array(multi_array<T, 2> &ref) {
-        typedef typename multi_array<T, 2>::index index_t;
+
+    template <typename MultiArray>
+    matrix<typename MultiArray::element> matrix_from_multi_array(MultiArray &ref) {
+        typedef typename MultiArray::index index_t;
         auto shape = shape_from_multi_array(ref);
-        matrix<T> result(shape[0], shape[1]);
+        matrix<typename MultiArray::element> result(shape[0], shape[1]);
         for (index_t i = 0; i < shape[0]; i++) {
             for (index_t j = 0; j < shape[1]; j++) {
                 result(i,j) = ref[i][j];
@@ -83,4 +89,4 @@ namespace sqsgenerator::utils {
         }
 }
 
-#endif //SQSGENERATOR_UTILS_H
+#endif //SQSGENERATOR_UTILS_HPP
