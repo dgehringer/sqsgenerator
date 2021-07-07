@@ -2,8 +2,8 @@
 // Created by dominik on 25.06.21.
 //
 
-#ifndef SQSGENERATOR_STRUCTURE_UTILS_H
-#define SQSGENERATOR_STRUCTURE_UTILS_H
+#ifndef SQSGENERATOR_STRUCTURE_UTILS_HPP
+#define SQSGENERATOR_STRUCTURE_UTILS_HPP
 
 #include "utils.hpp"
 #include "types.hpp"
@@ -168,4 +168,4 @@ namespace sqsgenerator::utils {
 
     }
 
-#endif //SQSGENERATOR_STRUCTURE_UTILS_H
+#endif //SQSGENERATOR_STRUCTURE_UTILS_HPP

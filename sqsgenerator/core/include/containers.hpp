@@ -2,8 +2,8 @@
 // Created by dominik on 28.05.21.
 //
 
-#ifndef SQSGENERATOR_CONTAINERS_H
-#define SQSGENERATOR_CONTAINERS_H
+#ifndef SQSGENERATOR_CONTAINERS_HPP
+#define SQSGENERATOR_CONTAINERS_HPP
 
 #include <iostream>
 #include <atomic>
@@ -94,4 +94,4 @@ namespace sqsgenerator {
 }
 
 
-#endif //SQSGENERATOR_CONTAINERS_H
+#endif //SQSGENERATOR_CONTAINERS_HPP

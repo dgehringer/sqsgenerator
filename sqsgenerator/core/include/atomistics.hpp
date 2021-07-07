@@ -49,7 +49,6 @@ namespace sqsgenerator::utils::atomistics {
         static std::vector<Atom> from_symbol(const std::vector<std::string> &symbols);
     };
 
-
     class Structure {
     private:
         uint8_t m_prec;
@@ -73,7 +72,6 @@ namespace sqsgenerator::utils::atomistics {
         const_array_3d_ref_t distance_vecs() const;
         const_array_2d_ref_t distance_matrix() const;
         const_pair_shell_matrix_ref shell_matrix(uint8_t prec);
-
     };
 }
 

@@ -2,8 +2,8 @@
 // Created by dominik on 21.05.21.
 //
 
-#ifndef SQSGENERATOR_TYPES_H
-#define SQSGENERATOR_TYPES_H
+#ifndef SQSGENERATOR_TYPES_HPP
+#define SQSGENERATOR_TYPES_HPP
 #include <vector>
 #include <map>
 #include <array>
@@ -33,4 +33,4 @@ namespace sqsgenerator {
     typedef std::array<pair_shell_matrix::index, 4> AtomPair;
 
 }
-#endif //SQSGENERATOR_TYPES_H
+#endif //SQSGENERATOR_TYPES_HPP

@@ -2,8 +2,8 @@
 // Created by dominik on 30.06.21.
 //
 
-#ifndef SQSGENERATOR_SQS_H
-#define SQSGENERATOR_SQS_H
+#ifndef SQSGENERATOR_SQS_HPP
+#define SQSGENERATOR_SQS_HPP
 
 #include "types.hpp"
 #include "utils.hpp"
@@ -36,4 +36,4 @@ namespace sqsgenerator {
     }
 }
 
-#endif //SQSGENERATOR_SQS_H
+#endif //SQSGENERATOR_SQS_HPP
