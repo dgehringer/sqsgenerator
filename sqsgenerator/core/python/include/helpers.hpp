@@ -64,30 +64,6 @@ namespace sqsgenerator::python::helpers {
                              py::object());
     }
 
-    template<typename T>
-    np::ndarray to_shaped_numpy_array(const T *array, const std::vector<size_t> &shape) {
-        std::vector<size_t> strides;
-        for (size_t i = 1; i < shape.size(); i++) {
-            size_t nelem{1};
-            for (size_t j = 0; j < i; j++) nelem *= shape[j];
-            strides.push_back(nelem);
-        }
-        std::reverse(strides.begin(), strides.end());
-        strides.push_back(1);
-        std::transform(strides.begin(), strides.end(), strides.begin(),
-                       std::bind1st(std::multiplies<size_t>(), sizeof(T)));
-        return np::from_data(array,
-                             np::dtype::get_builtin<T>(),
-                             shape,
-                             strides,
-                             py::object());
-    }
-
-    template<typename T, size_t...Shape>
-    np::ndarray to_shaped_numpy_array(const T *array) {
-        std::vector<size_t> shape{Shape...};
-        return to_shaped_numpy_array<T>(array, shape);
-    }
 
 
     template<typename T, size_t NDims>
@@ -96,17 +72,28 @@ namespace sqsgenerator::python::helpers {
         std::vector<size_t> shape(array.get_shape(), array.get_shape()+array.get_nd());
         return boost::multi_array<T, NDims>(
                 boost::multi_array_ref<T, NDims>(
-                        reinterpret_cast<T*>(array.astype(np::dtype::get_builtin<T>()).get_data()), shape
+                        reinterpret_cast<T*>(array.get_data()), shape
                         )
                 );
     }
 
-    template<typename MultiArray>
+    template <typename T, std::size_t... Indices>
+    auto vector_to_py_tuple_helper(const std::vector<T>& v, std::index_sequence<Indices...>) {
+        return py::make_tuple(v[Indices]...);
+    }
+
+
+    template <std::size_t N, typename T>
+    auto vector_to_py_tuple(const std::vector<T>& v) {
+        assert(v.size() >= N);
+        return vector_to_py_tuple_helper(v, std::make_index_sequence<N>());
+    }
+
+    template<typename MultiArray, size_t NumDims>
     np::ndarray multi_array_to_ndarray(const MultiArray &array){
         typedef typename MultiArray::element T;
-        auto shape {shape_from_multi_array(array)};
-        return to_shaped_numpy_array(array.data(), shape);
-
+        auto shape {vector_to_py_tuple<NumDims, typename MultiArray::size_type>(shape_from_multi_array(array))};
+        return to_flat_numpy_array(array.data(), array.num_elements()).reshape(shape);
     }
 
 

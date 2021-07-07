@@ -18,7 +18,10 @@ namespace helpers = sqsgenerator::python::helpers;
 namespace atomistics = sqsgenerator::utils::atomistics;
 
 
-void print_array(const multi_array<double,2> &mat, size_t rows, size_t cols) {
+template<typename MultiArray>
+void print_array(MultiArray mat) {
+    auto shape {shape_from_multi_array(mat)};
+    auto rows {shape[0]}, cols {shape[1]};
     std::cout << "[";
     for (size_t i = 0; i < rows; i++) {
         std::cout << "[";
@@ -53,16 +56,16 @@ namespace sqsgenerator::python {
             }
 
             np::ndarray configuration() {
-                return helpers::to_shaped_numpy_array<Species>(
+                return helpers::to_flat_numpy_array<Species>(
                         m_handle.configuration().data(),
-                        {m_handle.configuration().size()}
+                        m_handle.configuration().size()
                         );
             }
 
             np::ndarray parameters(py::tuple const &shape) {
-                   return helpers::to_shaped_numpy_array<double>(
+                   return helpers::to_flat_numpy_array<double>(
                            m_handle.storage().data(),
-                           {m_handle.storage().size()}).reshape(shape);
+                           m_handle.storage().size()).reshape(shape);
             }
         };
 
@@ -76,14 +79,15 @@ namespace sqsgenerator::python {
                             helpers::ndarray_to_multi_array<double,2>(frac_coords),
                        helpers::list_to_vector<std::string>(symbols),
                                {true,true, true})
-            {}
+            {
+            }
 
             np::ndarray lattice() {
-                return helpers::multi_array_to_ndarray(m_handle.lattice());
+                return helpers::multi_array_to_ndarray<const_array_2d_ref_t,2>(m_handle.lattice());
             }
 
             np::ndarray frac_coords() {
-                return helpers::multi_array_to_ndarray(m_handle.frac_coords());
+                return helpers::multi_array_to_ndarray<const_array_2d_ref_t,2>(m_handle.frac_coords());
             }
 
             py::list species() {

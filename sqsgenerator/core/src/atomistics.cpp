@@ -146,7 +146,7 @@ namespace sqsgenerator::utils::atomistics {
             throw std::invalid_argument("No elements known with \"" + symbol + "\"");
         }
         size_t index = {Atoms::m_symbolMap.at(symbol)};
-        return Atoms::m_elements[index - 1];
+        return Atoms::m_elements[index];
     }
 
     std::vector<Atom> Atoms::fromZ(const std::vector<Species> &numbers) {
