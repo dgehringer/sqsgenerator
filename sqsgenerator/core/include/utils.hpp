@@ -33,8 +33,8 @@ namespace boost{
 
 
     template<typename MultiArray>
-    std::vector<typename MultiArray::index> shape_from_multi_array(const MultiArray &a) {
-        return std::vector<typename MultiArray::index>(a.shape(), a.shape() + a.num_dimensions());
+    std::vector<typename MultiArray::size_type> shape_from_multi_array(const MultiArray &a) {
+        return std::vector<typename MultiArray::size_type>(a.shape(), a.shape() + a.num_dimensions());
     }
 
 

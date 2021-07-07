@@ -74,9 +74,22 @@ namespace sqsgenerator::python {
             : m_handle(
                     helpers::ndarray_to_multi_array<double, 2>(lattice),
                             helpers::ndarray_to_multi_array<double,2>(frac_coords),
-                       helpers::py_list_to_std_vector<std::string>(symbols),
+                       helpers::list_to_vector<std::string>(symbols),
                                {true,true, true})
             {}
+
+            np::ndarray lattice() {
+                return helpers::multi_array_to_ndarray(m_handle.lattice());
+            }
+
+            np::ndarray frac_coords() {
+                return helpers::multi_array_to_ndarray(m_handle.frac_coords());
+            }
+
+            py::list species() {
+                return helpers::vector_to_list(m_handle.species());
+            }
+
         };
 
 
@@ -152,7 +165,10 @@ BOOST_PYTHON_MODULE(data) {
             .def_readonly("atomic_radius", &atomistics::Atom::atomic_radius)
             .def_readonly("mass", &atomistics::Atom::mass);
 
-    py::class_<StructurePythonWrapper>("Structure", py::init<np::ndarray, np::ndarray, py::object>());
+    py::class_<StructurePythonWrapper>("Structure", py::init<np::ndarray, np::ndarray, py::object>())
+            .def_readonly("lattice", &StructurePythonWrapper::lattice)
+            .def_readonly("species", &StructurePythonWrapper::species)
+            .def_readonly("frac_coords", &StructurePythonWrapper::frac_coords);
 
     py::class_<SQSResultCollectionPythonWrapper>("PairSQSResultCollection")
             .def("__len__", &SQSResultCollectionPythonWrapper::size)
