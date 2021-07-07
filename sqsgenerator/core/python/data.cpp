@@ -17,6 +17,20 @@ namespace np = boost::python::numpy;
 namespace helpers = sqsgenerator::python::helpers;
 namespace atomistics = sqsgenerator::utils::atomistics;
 
+
+void print_array(const multi_array<double,2> &mat, size_t rows, size_t cols) {
+    std::cout << "[";
+    for (size_t i = 0; i < rows; i++) {
+        std::cout << "[";
+        for (size_t j = 0; j < cols - 1; j++) {
+            std::cout << mat[i][j] << ", ";
+        }
+        std::cout << mat[i][cols- 1] << "]";
+        if (i < rows - 1) std::cout << std::endl;
+    }
+    std::cout << "]" << std::endl;
+}
+
 namespace sqsgenerator::python {
 
         class SQSResultPythonWrapper {
@@ -52,6 +66,20 @@ namespace sqsgenerator::python {
             }
         };
 
+        class StructurePythonWrapper {
+        private:
+            const atomistics::Structure m_handle;
+        public:
+            StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols)
+            : m_handle(
+                    helpers::ndarray_to_multi_array<double, 2>(lattice),
+                            helpers::ndarray_to_multi_array<double,2>(frac_coords),
+                       helpers::py_list_to_std_vector<std::string>(symbols),
+                               {true,true, true})
+            {}
+        };
+
+
         typedef std::vector<SQSResultPythonWrapper> SQSResultCollectionPythonWrapper;
     }
 
@@ -79,7 +107,7 @@ static SQSResultCollectionPythonWrapper results;
 static bool resultsInitialized = false;
 
 
-py::object getData() {
+py::object get_data() {
     cpp_int huge_int = {1000000000000000000};
     if (!resultsInitialized) {
         for (size_t i = 0; i < 20; ++i) {
@@ -96,28 +124,41 @@ py::object getData() {
 }
 
 
-void initializeConverters()
+void initialize_converters()
 {
     py::to_python_converter<cpp_int, helpers::Cpp_int_to_python_num>();
     helpers::Cpp_int_from_python_num();
 }
 
 
+
 BOOST_PYTHON_MODULE(data) {
     Py_Initialize();
     np::initialize();
-    initializeConverters();
+    initialize_converters();
+
+
     py::class_<SQSResultPythonWrapper>("PairSQSResult", py::no_init)
             .def_readonly("objective", &SQSResultPythonWrapper::objective)
             .def_readonly("rank", &SQSResultPythonWrapper::rank)
             .def_readonly("configuration", &SQSResultPythonWrapper::configuration)
             .def("parameters", &SQSResultPythonWrapper::parameters);
 
+
+    py::class_<atomistics::Atom>("Atom", py::no_init)
+            .def_readonly("Z", &atomistics::Atom::Z)
+            .def_readonly("name", &atomistics::Atom::name)
+            .def_readonly("symbol", &atomistics::Atom::symbol)
+            .def_readonly("atomic_radius", &atomistics::Atom::atomic_radius)
+            .def_readonly("mass", &atomistics::Atom::mass);
+
+    py::class_<StructurePythonWrapper>("Structure", py::init<np::ndarray, np::ndarray, py::object>());
+
     py::class_<SQSResultCollectionPythonWrapper>("PairSQSResultCollection")
             .def("__len__", &SQSResultCollectionPythonWrapper::size)
             .def("__getitem__", &helpers::std_item<SQSResultCollectionPythonWrapper>::get,
                  py::return_value_policy<py::copy_non_const_reference>())
             .def("__iter__", py::iterator<SQSResultCollectionPythonWrapper>());
-    py::def("get_data", getData);
+    py::def("get_data", get_data);
 
 }

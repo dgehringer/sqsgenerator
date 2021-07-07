@@ -7,10 +7,13 @@
 
 #define COMPARE_FIELD(f) (f == other.f)
 
+using namespace boost;
+
 namespace sqsgenerator::utils::atomistics {
 
     const std::vector<Atom> Atoms::m_elements
             {
+                    {0,   "Vacancy",       "0",   "",                       0.0,      0.0,      0.0},
                     {1,   "Hydrogen",      "H",   "1s1",                    53.0000,  1.0080,   2.2000},
                     {2,   "Helium",        "He",  "1s2",                    31.0000,  4.0026,   0.0000},
                     {3,   "Lithium",       "Li",  "[He] 2s1",               167.0000, 6.9400,   0.9800},
@@ -127,12 +130,12 @@ namespace sqsgenerator::utils::atomistics {
                     {114, "Flerovium",     "Fl",  "[Rn] 5f14 6d10 7s2 7p2", 0.0000,   289.0000, 0.0000},
             };
 
-    std::map<std::string , Species> Atoms::m_symbolMap(std::forward<std::map<std::string , Species>>(makeSymbolMap()));
+    std::map<std::string, Species> Atoms::m_symbolMap(std::forward<std::map<std::string, Species>>(make_symbol_map()));
 
     Atom Atoms::fromZ(Species Z) {
         if (Z < 1) {
             throw std::invalid_argument("Z must be at least 1");
-        } else if (Z - 1> Atoms::m_elements.size()) {
+        } else if (Z - 1 > Atoms::m_elements.size()) {
             throw std::invalid_argument("No elements known with Z=" + std::to_string(Z));
         }
         return Atoms::m_elements[Z - 1];
@@ -143,19 +146,51 @@ namespace sqsgenerator::utils::atomistics {
             throw std::invalid_argument("No elements known with \"" + symbol + "\"");
         }
         size_t index = {Atoms::m_symbolMap.at(symbol)};
-        return Atoms::m_elements[index -1];
+        return Atoms::m_elements[index - 1];
     }
 
     std::vector<Atom> Atoms::fromZ(const std::vector<Species> &numbers) {
         std::vector<Atom> result;
-        for (const auto& num: numbers) result.push_back(Atoms::fromZ(num));
+        for (const auto &num: numbers) result.push_back(Atoms::fromZ(num));
         return result;
     }
 
     std::vector<Atom> Atoms::fromSymbol(const std::vector<std::string> &symbols) {
         std::vector<Atom> result;
-        for (const auto& num: symbols) result.push_back(Atoms::fromSymbol(num));
+        for (const auto &num: symbols) result.push_back(Atoms::fromSymbol(num));
         return result;
+    }
+
+    Structure::Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Atom> species,
+                         std::array<bool, 3> pbc) :
+            m_lattice(lattice),
+            m_frac_coords(frac_coords),
+            m_species(species),
+            m_pbc(pbc) {}
+
+    Structure::Structure(array_2d_t lattice, array_2d_t frac_coords,
+                         std::vector<std::string> species, std::array<bool, 3> pbc) :
+            Structure(lattice, frac_coords, Atoms::fromSymbol(species), pbc) {}
+
+    Structure::Structure(array_2d_t lattice, array_2d_t frac_coords,
+                         std::vector<Species> species,
+                         std::array<bool, 3> pbc) :
+            Structure(lattice, frac_coords, Atoms::fromZ(species), pbc) {}
+
+    const_array_2d_ref_t Structure::lattice() const {
+        return const_array_2d_ref_t(m_lattice.data(), shape_from_multi_array(m_lattice));
+    }
+
+    const_array_2d_ref_t Structure::frac_coords() const {
+        return const_array_2d_ref_t(m_frac_coords.data(), shape_from_multi_array(m_frac_coords));
+    }
+
+    std::array<bool, 3> Structure::pbc() const {
+        return m_pbc;
+    }
+
+    const std::vector<Atom>& Structure::species() const {
+        return m_species;
     }
 
 }

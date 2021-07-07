@@ -15,6 +15,8 @@
 namespace sqsgenerator {
     typedef uint8_t Species;
     typedef uint8_t Shell;
+    typedef boost::multi_array<double, 2> array_2d_t;
+    typedef boost::const_multi_array_ref<double, 2> const_array_2d_ref_t;
     typedef std::vector<Species> Configuration;
     typedef boost::multi_array<double, 3> PairSROParameters;
     typedef boost::multi_array<double, 6> TripletSROParameters;

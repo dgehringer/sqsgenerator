@@ -51,10 +51,23 @@ namespace sqsgenerator::utils::atomistics {
         static std::vector<Atom> fromSymbol(const std::vector<std::string> &symbols);
     };
 
+
     class Structure {
     private:
         std::vector<Atom> m_species;
+        array_2d_t m_lattice;
+        array_2d_t m_frac_coords;
+        std::array<bool, 3> m_pbc;
 
+    public:
+        Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc);
+        Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<std::string> species, std::array<bool, 3> pbc);
+        Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Species> species, std::array<bool, 3> pbc);
+
+        const_array_2d_ref_t lattice() const;
+        const_array_2d_ref_t frac_coords() const;
+        std::array<bool, 3> pbc() const;
+        const std::vector<Atom>& species() const;
     };
 }
 

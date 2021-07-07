@@ -18,6 +18,7 @@ add_library(data SHARED
         data.cpp
         ../src/rank.cpp
         ../src/containers.cpp
+        ../src/atomistics.cpp
         )
 set_target_properties(data PROPERTIES SUFFIX .so)
 set_target_properties(data PROPERTIES PREFIX "")

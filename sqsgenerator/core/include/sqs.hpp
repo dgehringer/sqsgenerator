@@ -24,7 +24,7 @@ namespace sqsgenerator {
         T increment {static_cast<T>(1.0)};
         index_t nshells{shape[0]}, nspecies{shape[1]};
         Species si, sj;
-        // clear the boolean array
+        // clear the bond count array -> set it to zero
         if (clear) std::fill(bonds.data(), bonds.data() + bonds.num_elements(), 0.0);
         for (const AtomPair &pair : pair_list) {
             auto [i, j, _, shell_index] = pair;
