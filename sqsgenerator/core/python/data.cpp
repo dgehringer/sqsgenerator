@@ -2,9 +2,10 @@
 // Created by dominik on 30.05.21.
 //
 
+#include "helpers.hpp"
+#include "atomistics.hpp"
 #include "containers.hpp"
-#include "helpers.h"
-#include "container_wrappers.h"
+#include "container_wrappers.hpp"
 #include <boost/python.hpp>
 #include <boost/multi_array.hpp>
 #include <boost/python/numpy.hpp>
@@ -14,7 +15,7 @@
 namespace py = boost::python;
 namespace np = boost::python::numpy;
 namespace helpers = sqsgenerator::python::helpers;
-
+namespace atomistics = sqsgenerator::utils::atomistics;
 
 namespace sqsgenerator::python {
 
@@ -38,16 +39,16 @@ namespace sqsgenerator::python {
             }
 
             np::ndarray configuration() {
-                return helpers::toShapedNumpyArray<Species>(
+                return helpers::to_shaped_numpy_array<Species>(
                         m_handle.configuration().data(),
-                        std::vector<size_t>{m_handle.configuration().size()}
+                        {m_handle.configuration().size()}
                         );
             }
 
             np::ndarray parameters(py::tuple const &shape) {
-                   return helpers::toShapedNumpyArray<double>(
+                   return helpers::to_shaped_numpy_array<double>(
                            m_handle.storage().data(),
-                           std::vector<size_t>  {m_handle.storage().size()}).reshape(shape);
+                           {m_handle.storage().size()}).reshape(shape);
             }
         };
 
@@ -71,6 +72,7 @@ static double data[3][3][3] {
 
 using namespace sqsgenerator::python;
 
+
 static ParameterStorage sro_vec {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
 static SQSResultCollection queue(20);
 static SQSResultCollectionPythonWrapper results;
@@ -90,7 +92,7 @@ py::object getData() {
         resultsInitialized = true;
     }
 
-    return helpers::wrapExistingInPythonObject<SQSResultCollectionPythonWrapper&>(results);
+    return helpers::warp_in_existing_python_object<SQSResultCollectionPythonWrapper&>(results);
 }
 
 

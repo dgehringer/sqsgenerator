@@ -8,9 +8,12 @@
 
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 
 namespace py = boost::python;
 namespace np = boost::python::numpy;
+
+using namespace boost::multiprecision;
 
 namespace sqsgenerator::python::helpers {
 
@@ -53,7 +56,7 @@ namespace sqsgenerator::python::helpers {
             };
 
             template<typename T>
-            np::ndarray toFlatNumpyArray(const T *array, size_t num_elements) {
+            np::ndarray to_flat_numpy_array(const T *array, size_t num_elements) {
                 return np::from_data(array,
                                      np::dtype::get_builtin<T>(),
                                      py::make_tuple(num_elements),
@@ -62,7 +65,7 @@ namespace sqsgenerator::python::helpers {
             }
 
             template<typename T>
-            np::ndarray toShapedNumpyArray(const T *array, const std::vector<size_t> &shape) {
+            np::ndarray to_shaped_numpy_array(const T *array, const std::vector<size_t> &shape) {
                 std::vector<size_t> strides;
                 for (size_t i = 1; i < shape.size(); i++) {
                     size_t nelem{1};
@@ -82,14 +85,14 @@ namespace sqsgenerator::python::helpers {
             }
 
             template<typename T, size_t...Shape>
-            np::ndarray toShapedNumpyArray(const T *array) {
+            np::ndarray to_shaped_numpy_array(const T *array) {
                 std::vector<size_t> shape{Shape...};
-                return toShapedNumpyArray<T>(array, shape);
+                return to_shaped_numpy_array<T>(array, shape);
             }
 
             // https://stackoverflow.com/questions/49692157/boost-python-return-python-object-which-references-to-existing-c-objects
             template<typename T>
-            inline py::object wrapExistingInPythonObject(T obj) {
+            inline py::object warp_in_existing_python_object(T obj) {
                 typename py::reference_existing_object::apply<T>::type converter;
                 auto converted = converter(obj);
                 py::handle handle(converted);

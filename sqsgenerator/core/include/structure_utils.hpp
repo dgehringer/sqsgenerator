@@ -122,27 +122,32 @@ namespace sqsgenerator::utils {
             return shells;
         }
 
-        std::vector<AtomPair> create_pair_list(const PairShellMatrix &shell_matrix, const std::map<Shell, double> &weights) {
+        std::map<Shell, PairShellMatrix::index> shell_index_map(const std::map<Shell, double> &weights) {
+
             typedef PairShellMatrix::index index_t;
             size_t nshells {weights.size()};
-            std::vector<Shell> shells(nshells);
-            std::vector<AtomPair> pair_list;
-            std::map<Shell, index_t> shell_index_map;
+            std::vector<Shell> shells;
+            std::map<Shell, index_t> shell_indices;
             // Copy the shells into a new vector
             for(const auto &shell : weights) shells.push_back(shell.first);
-            // Create an shell-index map
-            for(index_t i = 0; i < shells.size(); i++)  shell_index_map.emplace(std::make_pair(shells[i], i));
-            auto shape = shape_from_multi_array(shell_matrix);
+            // Create the shell-index map, using a simple enumeration
+            for(index_t i = 0; i < nshells; i++)  shell_indices.emplace(std::make_pair(shells[i], i));
+            return shell_indices;
+        }
 
+        std::vector<AtomPair> create_pair_list(const PairShellMatrix &shell_matrix, const std::map<Shell, double> &weights) {
+            typedef PairShellMatrix::index index_t;
+            std::vector<AtomPair> pair_list;
+            auto shell_indices (shell_index_map(weights));
+            auto shape = shape_from_multi_array(shell_matrix);
             assert(shape.size() == 2);
             for (index_t i = 0; i < shape[0]; i++) {
                 for (index_t j = i+1; j < shape[1]; j++) {
                     Shell shell = shell_matrix[i][j];
-                    if ( shell_index_map.find(shell) != shell_index_map.end() )
-                        pair_list.push_back(AtomPair {i, j, shell, shell_index_map[shell]});
+                    if ( shell_indices.find(shell) != shell_indices.end() )
+                        pair_list.push_back(AtomPair {i, j, shell, shell_indices[shell]});
                 }
             }
-
             return pair_list;
         }
 

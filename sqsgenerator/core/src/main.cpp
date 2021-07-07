@@ -97,7 +97,10 @@ int main(int argc, char *argv[]) {
     sro_params.assign(data.begin(), data.end());
 
     multi_array_ref<double, 3> sro_params_ref(sro_params.data(), boost::extents[nshells][nspecies][nspecies]);
-    count_pairs<multi_array_ref<double, 3>>(conf, sro_params_ref);
+
+    std::fill(sro_params_ref.data(), sro_params_ref.data() + sro_params_ref.num_elements(), 1);
+    std::cout << sro_params_ref[0][0][0] << "\n";
+
 }
 //
 

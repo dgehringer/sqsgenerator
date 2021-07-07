@@ -205,7 +205,7 @@ namespace sqsgenerator::test {
         }
     }
 
-    TEST_F(StructureUtilsTestFixture, TestCreatePairList) {
+    TEST_F(StructureUtilsTestFixture, TestCreatePairListSizes) {
         typedef PairShellMatrix::index index_t;
         for (TestCaseData &test_case : test_cases) {
             matrix<double> lattice (matrix_from_multi_array<double>(test_case.lattice));

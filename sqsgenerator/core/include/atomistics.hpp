@@ -9,6 +9,9 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <boost/multi_array.hpp>
+
+using namespace boost;
 
 namespace sqsgenerator::utils::atomistics {
 
@@ -17,8 +20,8 @@ namespace sqsgenerator::utils::atomistics {
         const Species Z;
         const std::string name;
         const std::string symbol;
-        const std::string electronicConfiguration;
-        const double atomicRadius;
+        const std::string electronic_configuration;
+        const double atomic_radius;
         const double mass;
         const double en;
 
@@ -31,10 +34,10 @@ namespace sqsgenerator::utils::atomistics {
         const static std::vector<Atom> m_elements;
 
 
-        static std::map<std::string , Species> makeSymbolMap() {
-            static std::map<std::string, Species> symbolMap;
-            for( const auto &atom : Atoms::m_elements)  symbolMap.emplace(atom.symbol, atom.Z);
-            return symbolMap;
+        static std::map<std::string , Species> make_symbol_map() {
+            static std::map<std::string, Species> symbol_map;
+            for( const auto &atom : Atoms::m_elements)  symbol_map.emplace(atom.symbol, atom.Z);
+            return symbol_map;
         }
 
         static std::map<std::string , Species> m_symbolMap;
@@ -46,6 +49,12 @@ namespace sqsgenerator::utils::atomistics {
         static Atom fromSymbol(const std::string &symbol);
         static std::vector<Atom> fromZ(const std::vector<Species> &numbers);
         static std::vector<Atom> fromSymbol(const std::vector<std::string> &symbols);
+    };
+
+    class Structure {
+    private:
+        std::vector<Atom> m_species;
+
     };
 }
 
