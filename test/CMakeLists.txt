@@ -32,7 +32,7 @@ gtest_add_tests(TARGET      sqsgenerator.core.test.atomistics
                 TEST_LIST   noArgsTests)
 
 add_executable(sqsgenerator.core.test.structure_utils core/src/test_structure_utils.cpp)
-target_link_libraries(sqsgenerator.core.test.structure_utils gtest gtest_main pthread)
+target_link_libraries(sqsgenerator.core.test.structure_utils gtest gtest_main pthread stdc++fs)
 add_custom_command(TARGET sqsgenerator.core.test.structure_utils POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/test/resources $<TARGET_FILE_DIR:sqsgenerator.core.test.structure_utils>/resources)
