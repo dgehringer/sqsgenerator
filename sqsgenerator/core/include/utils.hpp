@@ -5,6 +5,7 @@
 #ifndef SQSGENERATOR_UTILS_HPP
 #define SQSGENERATOR_UTILS_HPP
 
+#include "types.hpp"
 #include <stdexcept>
 #include <boost/multi_array.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
@@ -58,13 +59,6 @@ namespace boost{
     }
 
 
-    template<typename T>
-    int get_index(std::vector<T> v, T el)
-    {
-        auto it = std::find(v.begin(), v.end(), el);
-        return  it != v.end() ? it - v.begin() : -1;
-    }
-
 }
 
 namespace sqsgenerator::utils {
@@ -87,6 +81,19 @@ namespace sqsgenerator::utils {
             T places = std::pow(10.0, to);
             return std::round(value * places) / places;
         }
-}
+
+        template<typename T>
+        int get_index(std::vector<T> v, T el)
+        {
+            auto it = std::find(v.begin(), v.end(), el);
+            return  it != v.end() ? it - v.begin() : -1;
+        }
+
+        configuration_t unique_species(configuration_t conf);
+        std::vector<size_t> configuration_histogram(const configuration_t &conf);
+        std::tuple<configuration_t, configuration_t> pack_configuration(const configuration_t &configuration);
+        configuration_t unpack_configuration(const configuration_t &indices, const configuration_t &packed);
+};
+
 
 #endif //SQSGENERATOR_UTILS_HPP

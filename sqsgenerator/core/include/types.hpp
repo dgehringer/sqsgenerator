@@ -24,8 +24,10 @@ namespace sqsgenerator {
     typedef boost::multi_array<double, 3> array_3d_t;
     typedef boost::const_multi_array_ref<double, 2> const_array_2d_ref_t;
     typedef boost::const_multi_array_ref<double, 3> const_array_3d_ref_t;
+    typedef boost::multi_array_ref<double, 3> array_3d_ref_t;
     typedef std::vector<species_t> configuration_t;
-    typedef std::vector<double> ParameterStorage;
+    typedef std::vector<double> parameter_storage_t;
+    typedef std::map<shell_t, double> pair_shell_weights_t;
     template<size_t NDims>
     using Shape = std::array<size_t, NDims>;
 

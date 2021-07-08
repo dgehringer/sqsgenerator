@@ -112,6 +112,10 @@ namespace sqsgenerator::python {
                 return helpers::multi_array_to_ndarray<const_pair_shell_matrix_ref_t, 2>(m_handle.shell_matrix(prec));
             }
 
+            size_t num_atoms() {
+                return m_handle.num_atoms();
+            }
+
         };
 
 
@@ -136,7 +140,7 @@ static double data[3][3][3] {
 using namespace sqsgenerator::python;
 
 
-static ParameterStorage sro_vec {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
+static parameter_storage_t sro_vec {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
 static SQSResultCollection queue(20);
 static SQSResultCollectionPythonWrapper results;
 static bool resultsInitialized = false;
@@ -189,6 +193,7 @@ BOOST_PYTHON_MODULE(data) {
 
     py::class_<StructurePythonWrapper>("Structure", py::init<np::ndarray, np::ndarray, py::object>())
             .def_readonly("lattice", &StructurePythonWrapper::lattice)
+            .def_readonly("num_atoms", &StructurePythonWrapper::num_atoms)
             .def_readonly("species", &StructurePythonWrapper::species)
             .def_readonly("frac_coords", &StructurePythonWrapper::frac_coords)
             .def_readonly("distance_vecs", &StructurePythonWrapper::distance_vecs)

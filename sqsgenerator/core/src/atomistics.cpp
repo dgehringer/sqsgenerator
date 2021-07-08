@@ -2,7 +2,6 @@
 // Created by dominik on 02.06.21.
 //
 #include "utils.hpp"
-#include "rank.hpp"
 #include "atomistics.hpp"
 #include "structure_utils.hpp"
 #include <stdexcept>
@@ -246,19 +245,6 @@ namespace sqsgenerator::utils::atomistics {
         return conf;
     }
 
-    std::tuple<configuration_t, configuration_t> Structure::remapped_configuration() const {
-        auto config {configuration()};
-        auto unique_species {sqsgenerator::utils::unique_species(config)};
-        std::sort(unique_species.begin(), unique_species.end());
-        configuration_t remapped(config);
-
-        for (size_t i = 0; i < m_natoms; i++) {
-            int index {get_index(unique_species, config[i])};
-            if (index < 0) throw std::runtime_error("A species was detected which I am not aware of");
-            remapped[i] = index;
-        }
-        return std::make_tuple(unique_species, remapped);
-    }
 
     size_t Structure::num_atoms() const {
         return m_natoms;

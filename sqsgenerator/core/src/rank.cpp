@@ -2,29 +2,11 @@
 // Created by dominik on 21.05.21.
 //
 #include "rank.hpp"
-#include "types.hpp"
 #include "utils.hpp"
 #include <algorithm>
 
 
 namespace sqsgenerator::utils {
-
-        configuration_t unique_species(configuration_t conf) {
-            // it is intended that we do not pass in by-reference since we want to have a copy of the configuration
-            configuration_t::iterator it;
-            it = std::unique(conf.begin(), conf.end());
-            conf.resize(std::distance(conf.begin(), it));
-            return conf;
-        }
-
-        std::vector<size_t> configuration_histogram(const configuration_t &conf) {
-            auto uspcies = unique_species(conf);
-            std::vector<size_t> hist(uspcies.size());
-            for (int i = 0; i < uspcies.size(); i++) {
-                hist[i] = std::count(conf.begin(), conf.end(), uspcies[i]);
-            }
-            return hist;
-        }
 
         rank_t total_permutations(const configuration_t &conf) {
             auto permutations = factorial<rank_t, size_t>(conf.size());
@@ -60,11 +42,9 @@ namespace sqsgenerator::utils {
 
         void
         unrank_permutation(configuration_t &conf, std::vector<size_t> hist, rank_t total_permutations, rank_t rank) {
-
             if (rank > total_permutations) {
                 throw std::out_of_range("The rank is larger than the total number of permutations");
             }
-
             size_t k{0};
             size_t atoms = {conf.size()};
             size_t nspecies{hist.size()};

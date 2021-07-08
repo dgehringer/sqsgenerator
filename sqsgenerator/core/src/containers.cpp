@@ -4,19 +4,21 @@
 
 #include "containers.hpp"
 
+#include <utility>
+
 namespace sqsgenerator {
 
     SQSResult::SQSResult() {}
 
-    SQSResult::SQSResult(double objective, cpp_int rank, const configuration_t conf, const ParameterStorage params) :
+    SQSResult::SQSResult(double objective, cpp_int rank, const configuration_t conf, const parameter_storage_t params) :
         m_objective(objective),
-        m_rank(rank),
+        m_rank(std::move(rank)),
         m_configuration(conf),
         m_storage(params) {
         std::cout << "SQSResult.ctor (default) = parameters(" << params.size() << ")" << std::endl;
     }
 
-    SQSResult::SQSResult(double objective, const configuration_t conf, const ParameterStorage parameters) :
+    SQSResult::SQSResult(double objective, const configuration_t conf, const parameter_storage_t parameters) :
         m_objective(objective),
         m_configuration(conf),
         m_storage(parameters) {
@@ -51,7 +53,7 @@ namespace sqsgenerator {
         return *this;
     }
 
-    cpp_int SQSResult::rank() const {
+    rank_t SQSResult::rank() const {
         return m_rank;
     }
 
@@ -59,11 +61,11 @@ namespace sqsgenerator {
         return m_objective;
     }
 
-    const Configuration& SQSResult::configuration() const {
+    const configuration_t & SQSResult::configuration() const {
         return m_configuration;
     }
 
-    const ParameterStorage &SQSResult::storage() const {
+    const parameter_storage_t &SQSResult::storage() const {
         return m_storage;
     }
 

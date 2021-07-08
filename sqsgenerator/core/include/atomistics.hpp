@@ -6,7 +6,6 @@
 #define SQSGENERATOR_ATOMISTICS_HPP
 
 #include "types.hpp"
-#include "utils.hpp"
 #include <map>
 #include <queue>
 #include <vector>
@@ -76,8 +75,7 @@ namespace sqsgenerator::utils::atomistics {
         [[nodiscard]] const_array_3d_ref_t distance_vecs() const;
         [[nodiscard]] const_array_2d_ref_t distance_matrix() const;
         [[nodiscard]] std::vector<AtomPair> create_pair_list(const std::map<shell_t, double> &weights) const;
-        configuration_t configuration() const;
-        std::tuple<std::vector<species_t>, configuration_t> remapped_configuration() const;
+        [[nodiscard]] configuration_t configuration() const;
         const_pair_shell_matrix_ref_t shell_matrix(uint8_t prec);
 
     };

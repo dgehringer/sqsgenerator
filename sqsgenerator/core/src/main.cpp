@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 
 
     size_t nshells{7}, nspecies{2};
-    std::vector<double> data{0, 1, 1, 0, 0, 2, 2, 0, 0, 3, 3, 0, 0, 4, 4, 0, 0, 5, 5, 0, 0, 6, 6, 0, 0, 7, 7, 0};
+    /* std::vector<double> data{0, 1, 1, 0, 0, 2, 2, 0, 0, 3, 3, 0, 0, 4, 4, 0, 0, 5, 5, 0, 0, 6, 6, 0, 0, 7, 7, 0};
 
     configuration_t conf{0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
     SQSResult result(0.0, 1, conf, data);
@@ -99,7 +99,8 @@ int main(int argc, char *argv[]) {
     multi_array_ref<double, 3> sro_params_ref(sro_params.data(), boost::extents[nshells][nspecies][nspecies]);
 
     std::fill(sro_params_ref.data(), sro_params_ref.data() + sro_params_ref.num_elements(), 1);
-    std::cout << sro_params_ref[0][0][0] << "\n";
+    std::cout << sro_params_ref[0][0][0] << "\n";*/
+
 
 }
 //
