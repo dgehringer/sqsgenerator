@@ -4,9 +4,9 @@
 #include "types.hpp"
 #include "utils.hpp"
 #include "structure_utils.hpp"
+#include <cmath>
 #include <cassert>
 #include <stdexcept>
-#include <iostream>
 #include <fstream>
 #include <filesystem>
 #include <boost/multi_array.hpp>
@@ -102,11 +102,11 @@ namespace sqsgenerator::test {
 
     struct TestCaseData {
     public:
-        multi_array<double, 2> lattice;
-        multi_array<double, 2> fcoords;
-        multi_array<double, 2> distances;
-        multi_array<double, 3> vecs;
-        multi_array<int, 2> shells;
+        array_2d_t lattice;
+        array_2d_t fcoords;
+        array_2d_t distances;
+        array_3d_t vecs;
+        pair_shell_matrix shells;
     };
 
     TestCaseData read_test_data(std::string const &path) {
@@ -115,7 +115,7 @@ namespace sqsgenerator::test {
         auto lattice = read_array<double, 2>(fhandle, "lattice");
         auto fcoords = read_array<double, 2>(fhandle, "fcoords");
         auto d2 = read_array<double, 2>(fhandle, "distances");
-        auto shells = read_array<int, 2>(fhandle, "shells");
+        auto shells = read_array<Shell, 2>(fhandle, "shells");
         auto vecs = read_array<double, 3>(fhandle, "vecs");
 
         fhandle.close();
@@ -146,12 +146,22 @@ namespace sqsgenerator::test {
 
     };
 
-    template<typename MultiArrayA, typename MultiArrayB>
-    void assert_multi_array_equal(const MultiArrayA &a, const MultiArrayB &b) {
+    template<typename MultiArrayA>
+    void assert_multi_array_equal(const MultiArrayA &a, const MultiArrayA &b) {
+        typedef typename MultiArrayA::element T;
+
         ASSERT_EQ(a.num_elements(), b.num_elements());
         for (size_t i = 0; i < a.num_elements(); ++i) {
+            ASSERT_NEAR(std::abs<T>(a.data()[i]), std::abs<T>(b.data()[i]), 1.0e-5);
+            //EXPECT_NEAR(a.data()[i], b.data()[i], 1.0e-5);
+        }
+    }
 
-            ASSERT_NEAR(std::abs(a.data()[i]), std::abs(b.data()[i]), 1.0e-5);
+    template<>
+    void assert_multi_array_equal<pair_shell_matrix>(const pair_shell_matrix &a, const pair_shell_matrix &b) {
+        ASSERT_EQ(a.num_elements(), b.num_elements());
+        for (size_t i = 0; i < a.num_elements(); ++i) {
+            ASSERT_NEAR(std::abs<int>(a.data()[i]), std::abs<int>(b.data()[i]), 1.0e-5);
             //EXPECT_NEAR(a.data()[i], b.data()[i], 1.0e-5);
         }
     }
