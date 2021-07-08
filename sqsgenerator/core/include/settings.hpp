@@ -28,35 +28,35 @@ namespace sqsgenerator::utils {
         std::vector<AtomPair> m_pair_list;
 
     public:
-        const std::vector<AtomPair>& pair_list() const {
+        [[nodiscard]] const std::vector<AtomPair>& pair_list() const {
             return m_pair_list;
         }
 
-        const Structure &structure() const {
+        [[nodiscard]] const Structure &structure() const {
             return m_structure;
         }
 
-        size_t num_atoms() const {
+        [[nodiscard]] size_t num_atoms() const {
             return m_structure.num_atoms();
         }
 
-        int num_iterations() const {
+        [[nodiscard]] int num_iterations() const {
             return m_iterations;
         }
 
-        size_t num_species() const {
+        [[nodiscard]] size_t num_species() const {
             return m_configuration_packing_indices.size();
         }
 
-        size_t num_shells() const {
+        [[nodiscard]] size_t num_shells() const {
             return m_shell_weights.size();
         }
 
-        int num_output_configurations() const {
+        [[nodiscard]] int num_output_configurations() const {
             return m_noutput_configurations;
         }
 
-        double target_objective() const {
+        [[nodiscard]] double target_objective() const {
             return m_target_objective;
         }
 
@@ -71,6 +71,10 @@ namespace sqsgenerator::utils {
         template<size_t NDims>
         boost::const_multi_array_ref<double, NDims> parameter_weights(const Shape<NDims> shape) const {
             return boost::const_multi_array_ref<double, NDims>(m_parameter_weight_storage.data(), shape);
+        }
+
+        [[nodiscard]] const double* parameter_weights_raw() const {
+            return m_parameter_weight_storage.data();
         }
 
     };

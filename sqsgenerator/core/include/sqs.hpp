@@ -70,25 +70,21 @@ namespace sqsgenerator {
 
     void do_iterations(const IterationSettings<pair_shell_weights_t> &settings) {
         typedef array_3d_ref_t::index index_t;
-
+        typedef const double* const_double_ptr;
         double best_objective {std::numeric_limits<double>::max()};
-        double objective_local {best_objective};
         double target_objective {settings.target_objective()};
         int niterations {settings.num_iterations()};
-        index_t nspecies {static_cast<index_t>(settings.num_species())};
-        index_t nshells {static_cast<index_t>(settings.num_shells())};
-        index_t nparams {nspecies*nspecies*nshells};
-        parameter_storage_t parameters_storage_local(nparams);
-        array_3d_ref_t parameters_local(parameters_storage_local.data(), boost::extents[nshells][nspecies][nspecies]);
-
-        configuration_t configuration_local(settings.packed_configuraton());
-        const_array_2d_ref_t parameter_weights(settings.parameter_weights<2>({settings.num_species(), settings.num_species()}));
-
-
+        auto nspecies{settings.num_species()};
+        auto nshells {settings.num_shells()};
         const std::vector<AtomPair> &pair_list {settings.pair_list()};
         std::map<rank_t, SQSResult> results;
-        #pragma omp parallel default(none) shared(niterations, best_objective, results) firstprivate(nspecies, configuration_local, parameters_local, settings, target_objective, parameter_weights, objective_local)
+
+        #pragma omp parallel default(none) shared(boost::extents, settings, pair_list, best_objective, niterations) firstprivate(nshells, nspecies, target_objective)
         {
+            array_3d_t parameters_local(boost::extents[static_cast<index_t>(nshells)][static_cast<index_t>(nspecies)][static_cast<index_t>(nspecies)]);
+            configuration_t configuration_local(settings.packed_configuraton());
+            const_array_2d_ref_t parameter_weights (settings.parameter_weights<2>({nspecies, nspecies}));
+            double objective_local {best_objective};
 
             #pragma omp for schedule(dynamic)
             for (size_t i = 0; i < niterations; i++) {
