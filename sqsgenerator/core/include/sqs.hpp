@@ -7,10 +7,7 @@
 
 
 #include "types.hpp"
-#include "rank.hpp"
-#include "utils.hpp"
-#include "atomistics.hpp"
-#include "containers.hpp"
+#include "settings.hpp"
 #include <map>
 #include <limits>
 #include <omp.h>
@@ -56,9 +53,9 @@ namespace sqsgenerator {
             for (index_t j = 0; j < nspecies; j++) {
                 for (index_t k = i+1; k < nspecies; k++) {
                     T pair_weight {pair_weights[j][k]};
-                    T pair_sro {shell_weight * (1.0 - bonds[j][k]*pair_weight)};
-                    bonds[j][k] = pair_sro;
-                    bonds[k][j] = pair_sro;
+                    T pair_sro {shell_weight * (1.0 - bonds[i][j][k]*pair_weight)};
+                    bonds[i][j][k] = pair_sro;
+                    bonds[i][k][j] = pair_sro;
                     total_objective += pair_sro;
                 }
             }
@@ -70,28 +67,34 @@ namespace sqsgenerator {
 
     }
 
-    void do_iterations(const Structure &structure, int niterations, double objective, int noutput, const std::map<shell_t, double> &weights) {
+
+    void do_iterations(const IterationSettings<pair_shell_weights_t> &settings) {
         typedef array_3d_ref_t::index index_t;
+
         double best_objective {std::numeric_limits<double>::max()};
         double objective_local {best_objective};
-        configuration_t configuration_local, unique_species;
-        std::tie(unique_species, configuration_local) = structure.remapped_configuration();
-        index_t nspecies {static_cast<index_t>(unique_species.size())};
-        index_t nshells {static_cast<index_t>(weights.size())};
+        double target_objective {settings.target_objective()};
+        int niterations {settings.num_iterations()};
+        index_t nspecies {static_cast<index_t>(settings.num_species())};
+        index_t nshells {static_cast<index_t>(settings.num_shells())};
         index_t nparams {nspecies*nspecies*nshells};
         parameter_storage_t parameters_storage_local(nparams);
         array_3d_ref_t parameters_local(parameters_storage_local.data(), boost::extents[nshells][nspecies][nspecies]);
 
+        configuration_t configuration_local(settings.packed_configuraton());
+        const_array_2d_ref_t parameter_weights(settings.parameter_weights<2>({settings.num_species(), settings.num_species()}));
 
-        std::vector<AtomPair> pair_list {structure.create_pair_list(weights)};
+
+        const std::vector<AtomPair> &pair_list {settings.pair_list()};
         std::map<rank_t, SQSResult> results;
-        #pragma omp parallel default(none) shared(best_objective, results) firstprivate(niterations, objective_local, configuration_local, pair_list, parameters_local)
+        #pragma omp parallel default(none) shared(best_objective, results) firstprivate(niterations, objective_local, configuration_local, pair_list, parameters_local, parameter_weights, nspecies)
         {
 
             #pragma omp for schedule(dynamic)
             for (size_t i = 0; i < niterations; i++) {
                 next_permutation(configuration_local);
                 count_pairs(configuration_local, pair_list, parameters_local, true);
+                calculate_pair_objective(parameters_local, {1,2}, parameter_weights, nspecies);
                 // TODO: Implement Settings class
 
             }

@@ -16,7 +16,7 @@ using namespace boost::numeric::ublas;
 
 namespace boost{
     template<class MultiArray>
-    void extentTo(MultiArray & ma, const MultiArray & other){ //this function is adapted from
+    void extent_to(MultiArray & ma, const MultiArray & other){ //this function is adapted from
         auto& otherShape = reinterpret_cast<boost::array<size_t, MultiArray::dimensionality> const&>(*other.shape());
         ma.resize(otherShape);
     }
@@ -31,7 +31,6 @@ namespace boost{
         std::copy(v.begin(), v.end(), storage.begin());
         return matrix<T>(m, n, storage);
     }
-
 
 
     template<typename MultiArray>
