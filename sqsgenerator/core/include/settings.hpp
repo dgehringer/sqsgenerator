@@ -12,71 +12,40 @@ using namespace sqsgenerator::utils::atomistics;
 
 namespace sqsgenerator::utils {
 
-    template<typename ShellWeight>
     class IterationSettings {
 
     private:
-        int m_iterations;
+        int m_niterations;
         int m_noutput_configurations;
         size_t m_nspecies;
         double m_target_objective;
-        Structure m_structure;
+        Structure &m_structure;
         configuration_t m_configuration_packing_indices;
         configuration_t m_packed_configuration;
-        ShellWeight m_shell_weights;
-        std::vector<double> m_parameter_weight_storage;
+        pair_shell_weights_t m_shell_weights;
+        parameter_storage_t m_parameter_weight_storage;
         std::vector<AtomPair> m_pair_list;
 
     public:
-        [[nodiscard]] const std::vector<AtomPair>& pair_list() const {
-            return m_pair_list;
-        }
 
-        [[nodiscard]] const Structure &structure() const {
-            return m_structure;
-        }
+        IterationSettings(Structure &structure, double target_objective, parameter_storage_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations);
 
-        [[nodiscard]] size_t num_atoms() const {
-            return m_structure.num_atoms();
-        }
-
-        [[nodiscard]] int num_iterations() const {
-            return m_iterations;
-        }
-
-        [[nodiscard]] size_t num_species() const {
-            return m_configuration_packing_indices.size();
-        }
-
-        [[nodiscard]] size_t num_shells() const {
-            return m_shell_weights.size();
-        }
-
-        [[nodiscard]] int num_output_configurations() const {
-            return m_noutput_configurations;
-        }
-
-        [[nodiscard]] double target_objective() const {
-            return m_target_objective;
-        }
-
-        ShellWeight &shell_weights() const {
-            return m_shell_weights;
-        }
-
-        [[nodiscard]] configuration_t packed_configuraton() const {
-            return m_packed_configuration;
-        }
+        const_pair_shell_matrix_ref_t shell_matrix(uint_t prec);
+        [[nodiscard]] const std::vector<AtomPair>& pair_list() const;
+        [[nodiscard]] const Structure &structure() const;
+        [[nodiscard]] size_t num_atoms() const;
+        [[nodiscard]] int num_iterations() const;
+        [[nodiscard]] size_t num_species() const;
+        [[nodiscard]] size_t num_shells() const;
+        [[nodiscard]] int num_output_configurations() const;
+        [[nodiscard]] double target_objective() const;
+        pair_shell_weights_t &shell_weights() const;
+        [[nodiscard]] configuration_t packed_configuraton() const;
 
         template<size_t NDims>
         boost::const_multi_array_ref<double, NDims> parameter_weights(const Shape<NDims> shape) const {
             return boost::const_multi_array_ref<double, NDims>(m_parameter_weight_storage.data(), shape);
         }
-
-        [[nodiscard]] const double* parameter_weights_raw() const {
-            return m_parameter_weight_storage.data();
-        }
-
     };
 }
 
