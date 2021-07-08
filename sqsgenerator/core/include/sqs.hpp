@@ -87,14 +87,14 @@ namespace sqsgenerator {
 
         const std::vector<AtomPair> &pair_list {settings.pair_list()};
         std::map<rank_t, SQSResult> results;
-        #pragma omp parallel default(none) shared(best_objective, results) firstprivate(niterations, objective_local, configuration_local, pair_list, parameters_local, parameter_weights, nspecies)
+        #pragma omp parallel default(none) shared(niterations, best_objective, results) firstprivate(nspecies, configuration_local, parameters_local, settings, target_objective, parameter_weights, objective_local)
         {
 
             #pragma omp for schedule(dynamic)
             for (size_t i = 0; i < niterations; i++) {
                 next_permutation(configuration_local);
-                count_pairs(configuration_local, pair_list, parameters_local, true);
-                calculate_pair_objective(parameters_local, {1,2}, parameter_weights, nspecies);
+                count_pairs(configuration_local, settings.pair_list(), parameters_local, true);
+                objective_local = std::abs(target_objective - calculate_pair_objective(parameters_local, {1,2,3,4}, parameter_weights, nspecies));
                 // TODO: Implement Settings class
 
             }
