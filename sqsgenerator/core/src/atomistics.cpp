@@ -132,7 +132,7 @@ namespace sqsgenerator::utils::atomistics {
                     {114, "Flerovium",     "Fl",  "[Rn] 5f14 6d10 7s2 7p2", 0.0000,   289.0000, 0.0000},
             };
 
-    std::map<std::string, Species> Atoms::m_symbolMap(std::forward<std::map<std::string, Species>>(make_symbol_map()));
+    std::map<std::string, Species> Atoms::m_symbol_map(std::forward<std::map<std::string, Species>>(make_symbol_map()));
 
     Atom Atoms::from_z(Species Z) {
         if (Z < 0) {
@@ -144,10 +144,10 @@ namespace sqsgenerator::utils::atomistics {
     }
 
     Atom Atoms::from_symbol(const std::string &symbol) {
-        if (!Atoms::m_symbolMap.count(symbol)) {
+        if (!Atoms::m_symbol_map.count(symbol)) {
             throw std::invalid_argument("No elements known with \"" + symbol + "\"");
         }
-        size_t index = {Atoms::m_symbolMap.at(symbol)};
+        size_t index = {Atoms::m_symbol_map.at(symbol)};
         return Atoms::m_elements[index];
     }
 

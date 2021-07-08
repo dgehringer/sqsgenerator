@@ -32,37 +32,37 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(AtomisticsTestFixture, TestAtomFromZComplete) {
-        ASSERT_EQ(Atoms::fromZ(1).Z, 1);
-        ASSERT_EQ(Atoms::fromZ(1).symbol, "H");
-        ASSERT_EQ(Atoms::fromZ(1).name, "Hydrogen");
-        ASSERT_EQ(Atoms::fromZ(m_numSpecies).Z, m_numSpecies);
-        ASSERT_EQ(Atoms::fromZ(m_numSpecies).symbol, "Fl");
-        ASSERT_EQ(Atoms::fromZ(m_numSpecies).name, "Flerovium");
+        ASSERT_EQ(Atoms::from_z(1).Z, 1);
+        ASSERT_EQ(Atoms::from_z(1).symbol, "H");
+        ASSERT_EQ(Atoms::from_z(1).name, "Hydrogen");
+        ASSERT_EQ(Atoms::from_z(m_numSpecies).Z, m_numSpecies);
+        ASSERT_EQ(Atoms::from_z(m_numSpecies).symbol, "Fl");
+        ASSERT_EQ(Atoms::from_z(m_numSpecies).name, "Flerovium");
         for (const auto& spec: m_zNumbers) {
-            ASSERT_EQ(Atoms::fromZ(spec).Z, spec);
+            ASSERT_EQ(Atoms::from_z(spec).Z, spec);
         }
     }
 
-    TEST_F(AtomisticsTestFixture, TestAtomFromSymbolComplete) {
-        ASSERT_EQ(Atoms::fromSymbol("H").Z, 1);
-        ASSERT_EQ(Atoms::fromSymbol("H").symbol, "H");
-        ASSERT_EQ(Atoms::fromSymbol("H").name, "Hydrogen");
-        ASSERT_EQ(Atoms::fromSymbol("Fl").Z, m_numSpecies);
-        ASSERT_EQ(Atoms::fromSymbol("Fl").symbol, "Fl");
-        ASSERT_EQ(Atoms::fromSymbol("Fl").name, "Flerovium");
-        auto symbols = Atoms::fromZ(m_zNumbers);
+    TEST_F(AtomisticsTestFixture, TestAtomfrom_symbolComplete) {
+        ASSERT_EQ(Atoms::from_symbol("H").Z, 1);
+        ASSERT_EQ(Atoms::from_symbol("H").symbol, "H");
+        ASSERT_EQ(Atoms::from_symbol("H").name, "Hydrogen");
+        ASSERT_EQ(Atoms::from_symbol("Fl").Z, m_numSpecies);
+        ASSERT_EQ(Atoms::from_symbol("Fl").symbol, "Fl");
+        ASSERT_EQ(Atoms::from_symbol("Fl").name, "Flerovium");
+        auto symbols = Atoms::from_z(m_zNumbers);
         for (const auto& sym: symbols) {
-            ASSERT_EQ(sym.Z, Atoms::fromSymbol(sym.symbol).Z);
+            ASSERT_EQ(sym.Z, Atoms::from_symbol(sym.symbol).Z);
         }
     }
 
-    TEST_F(AtomisticsTestFixture, TestFromZAndFromSymbols) {
-        auto atoms = Atoms::fromZ(m_zNumbers);
+    TEST_F(AtomisticsTestFixture, TestFromZAndfrom_symbols) {
+        auto atoms = Atoms::from_z(m_zNumbers);
         std::vector<std::string> symbols;
         for (const auto& atom : atoms) symbols.push_back(atom.symbol);
         std::vector<std::string> empty;
         ASSERT_EQ(empty, symbols);
-        //vectorCompare(atoms, Atoms::fromSymbol(symbols));
+        //vectorCompare(atoms, Atoms::from_symbol(symbols));
     }
 
 

@@ -38,7 +38,7 @@ namespace sqsgenerator::utils::atomistics {
             return symbol_map;
         }
 
-        static std::map<std::string , Species> m_symbolMap;
+        static std::map<std::string , Species> m_symbol_map;
 
     public:
         //TODO: Ask how to make m_elements private while be able to initialize m_symbolMap;
