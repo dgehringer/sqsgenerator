@@ -12,18 +12,18 @@ namespace sqsgenerator::test {
 
     class RankTestFixture : public ::testing::Test {
     protected:
-        Configuration empty {};
-        Configuration conf_first_2 {0,1};
-        Configuration conf_last_2 {1,0};
+        configuration_t empty {};
+        configuration_t conf_first_2 {0,1};
+        configuration_t conf_last_2 {1,0};
 
-        Configuration conf_first_16 {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
-        Configuration conf_last_16 {1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0};
+        configuration_t conf_first_16 {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
+        configuration_t conf_last_16 {1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0};
 
-        Configuration conf_last_24 {2,2,2,2,2,2,2,2, 1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0};
-        Configuration conf_first_24 {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2};
+        configuration_t conf_last_24 {2,2,2,2,2,2,2,2, 1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0};
+        configuration_t conf_first_24 {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2};
 
-        Configuration conf_diff_20 {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19};
-        Configuration conf_same_20 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+        configuration_t conf_diff_20 {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19};
+        configuration_t conf_same_20 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
         std::vector<Configuration> first_permutations {
                 empty,
@@ -68,14 +68,14 @@ namespace sqsgenerator::test {
 
     TEST_F(RankTestFixture, TestRankPermutationFirst) {
 
-        for (const Configuration  &conf : first_permutations) {
+        for (const configuration_t  &conf : first_permutations) {
             size_t num_species = unique_species(conf).size();
             ASSERT_EQ(rank_permutation(conf, num_species), 1);
         }
     }
 
     TEST_F(RankTestFixture, TestRankPermutationLast) {
-        for (const Configuration  &conf : last_permutations) {
+        for (const configuration_t  &conf : last_permutations) {
             size_t num_species = unique_species(conf).size();
             cpp_int total_perms = total_permutations(conf);
             ASSERT_EQ(rank_permutation(conf, num_species), total_perms);
@@ -92,8 +92,8 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(RankTestFixture, TestUnrankPermutationFirst) {
-        for (const Configuration &conf : first_permutations) {
-            Configuration conf_copy {conf};
+        for (const configuration_t &conf : first_permutations) {
+            configuration_t conf_copy {conf};
             unrank_permutation(conf_copy, configuration_histogram(conf_copy), total_permutations(conf_copy), cpp_int {1});
             ASSERT_EQ(conf_copy, conf);
             ASSERT_EQ(rank_permutation(conf_copy, unique_species(conf_copy).size()), cpp_int {1});
@@ -101,8 +101,8 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(RankTestFixture, TestUnrankPermutationLast) {
-        for (const Configuration &conf : last_permutations) {
-            Configuration conf_copy {conf};
+        for (const configuration_t &conf : last_permutations) {
+            configuration_t conf_copy {conf};
             unrank_permutation(conf_copy, configuration_histogram(conf_copy), total_permutations(conf_copy), total_permutations(conf_copy));
             ASSERT_EQ(conf_copy, conf);
             ASSERT_EQ(rank_permutation(conf_copy, unique_species(conf_copy).size()), total_permutations(conf_copy));
@@ -110,7 +110,7 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(RankTestFixture, TestUnrankPermutationAllStd) {
-        Configuration local_conf {conf_first_16};
+        configuration_t local_conf {conf_first_16};
         auto hist {configuration_histogram(conf_first_16)};
         size_t nspecies {unique_species(conf_first_16).size()};
         auto total_perms = total_permutations(conf_first_16);

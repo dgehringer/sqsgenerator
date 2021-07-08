@@ -12,7 +12,7 @@
 
 using namespace boost::numeric::ublas;
 
-void print_conf(const sqsgenerator::Configuration &conf) {
+void print_conf(const sqsgenerator::configuration_t &conf) {
     std::cout << "[";
     for (auto s: conf) {
         std::cout << s << " ";
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     size_t nshells{7}, nspecies{2};
     std::vector<double> data{0, 1, 1, 0, 0, 2, 2, 0, 0, 3, 3, 0, 0, 4, 4, 0, 0, 5, 5, 0, 0, 6, 6, 0, 0, 7, 7, 0};
 
-    Configuration conf{0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
+    configuration_t conf{0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
     SQSResult result(0.0, 1, conf, data);
     matrix<double, row_major, std::vector<double>> A(7, 4, data);
     auto  array = result.parameters<2>(Shape<2>{7,4});

@@ -2,8 +2,10 @@
 // Created by dominik on 02.06.21.
 //
 #include "utils.hpp"
+#include "rank.hpp"
 #include "atomistics.hpp"
 #include "structure_utils.hpp"
+#include <stdexcept>
 #include <iostream>
 
 
@@ -132,9 +134,9 @@ namespace sqsgenerator::utils::atomistics {
                     {114, "Flerovium",     "Fl",  "[Rn] 5f14 6d10 7s2 7p2", 0.0000,   289.0000, 0.0000},
             };
 
-    std::map<std::string, Species> Atoms::m_symbol_map(std::forward<std::map<std::string, Species>>(make_symbol_map()));
+    std::map<std::string, species_t> Atoms::m_symbol_map(std::forward<std::map<std::string, species_t>>(make_symbol_map()));
 
-    Atom Atoms::from_z(Species Z) {
+    Atom Atoms::from_z(species_t Z) {
         if (Z < 0) {
             throw std::invalid_argument("Z must be at least 0");
         } else if (Z - 1 > Atoms::m_elements.size()) {
@@ -151,7 +153,7 @@ namespace sqsgenerator::utils::atomistics {
         return Atoms::m_elements[index];
     }
 
-    std::vector<Atom> Atoms::from_z(const std::vector<Species> &numbers) {
+    std::vector<Atom> Atoms::from_z(const std::vector<species_t> &numbers) {
         std::vector<Atom> result;
         for (const auto &num: numbers) result.push_back(Atoms::from_z(num));
         return result;
@@ -163,6 +165,7 @@ namespace sqsgenerator::utils::atomistics {
         return result;
     }
 
+
     Structure::Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Atom> species,
                          std::array<bool, 3> pbc) :
             m_lattice(lattice),
@@ -170,7 +173,16 @@ namespace sqsgenerator::utils::atomistics {
             m_species(species),
             m_pbc(pbc),
             m_prec(5) {
-        auto natoms {species.size()};
+        typedef array_2d_t::index index_t;
+        index_t natoms {static_cast<index_t>(species.size())};
+        auto frac_coords_shape {shape_from_multi_array(frac_coords)};
+        auto lattice_shape {shape_from_multi_array(lattice)};
+
+        // Make sure the number of atoms in the species vector match the number of fractional coordinates provided
+        if(frac_coords_shape[0] != natoms) throw std::invalid_argument("The number of fractional coords does not match the number of atoms. Expected: (" + std::to_string(natoms) + "x3) - Found: (" + std::to_string(frac_coords_shape[0]) + "x" + std::to_string(frac_coords_shape[1])+")" );
+        if(frac_coords_shape[1] != 3) throw std::invalid_argument("You have not supplied 3D fractional coordinates. Expected: (" + std::to_string(natoms) + "x3) - Found: (" + std::to_string(natoms) + "x" + std::to_string(frac_coords_shape[1])+")" );
+        if(lattice_shape[0] != 3 || lattice_shape[1] != 3) throw std::invalid_argument("A lattice must be specied by supplying a (3x3) matrix. Expected: (3x3) - Found: (" + std::to_string(lattice_shape[0]) + "x" + std::to_string(lattice_shape[1])+")");
+
         m_pbc_vecs.resize(boost::extents[natoms][natoms][3]);
         m_pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(boost::matrix_from_multi_array(m_lattice),
                                                                boost::matrix_from_multi_array(m_frac_coords),
@@ -180,6 +192,7 @@ namespace sqsgenerator::utils::atomistics {
 
         m_shell_matrix.resize(boost::extents[natoms][natoms]);
         m_shell_matrix = sqsgenerator::utils::shell_matrix(m_distance_matrix, m_prec);
+        m_natoms = natoms;
     }
 
     Structure::Structure(array_2d_t lattice, array_2d_t frac_coords,
@@ -187,7 +200,7 @@ namespace sqsgenerator::utils::atomistics {
             Structure(lattice, frac_coords, Atoms::from_symbol(species), pbc) {}
 
     Structure::Structure(array_2d_t lattice, array_2d_t frac_coords,
-                         std::vector<Species> species,
+                         std::vector<species_t> species,
                          std::array<bool, 3> pbc) :
             Structure(lattice, frac_coords, Atoms::from_z(species), pbc) {}
 
@@ -215,12 +228,40 @@ namespace sqsgenerator::utils::atomistics {
         return boost::make_array_ref<const_array_2d_ref_t>(m_distance_matrix);
     }
 
-    const_pair_shell_matrix_ref Structure::shell_matrix(uint8_t prec) {
+    const_pair_shell_matrix_ref_t Structure::shell_matrix(uint8_t prec) {
         if (prec != m_prec) {
             m_prec = prec;
             m_shell_matrix = sqsgenerator::utils::shell_matrix(m_distance_matrix, m_prec);
         }
-        return boost::make_array_ref<const_pair_shell_matrix_ref>(m_shell_matrix);
+        return boost::make_array_ref<const_pair_shell_matrix_ref_t>(m_shell_matrix);
+    }
+
+    std::vector<AtomPair> Structure::create_pair_list(const std::map<shell_t, double> &weights) const {
+        return sqsgenerator::utils::create_pair_list(m_shell_matrix, weights);
+    }
+
+    configuration_t Structure::configuration() const {
+        configuration_t conf;
+        for (auto &atom : m_species) conf.push_back(atom.Z);
+        return conf;
+    }
+
+    std::tuple<configuration_t, configuration_t> Structure::remapped_configuration() const {
+        auto config {configuration()};
+        auto unique_species {sqsgenerator::utils::unique_species(config)};
+        std::sort(unique_species.begin(), unique_species.end());
+        configuration_t remapped(config);
+
+        for (size_t i = 0; i < m_natoms; i++) {
+            int index {get_index(unique_species, config[i])};
+            if (index < 0) throw std::runtime_error("A species was detected which I am not aware of");
+            remapped[i] = index;
+        }
+        return std::make_tuple(unique_species, remapped);
+    }
+
+    size_t Structure::num_atoms() const {
+        return m_natoms;
     }
 
 }

@@ -8,7 +8,7 @@ namespace sqsgenerator {
 
     SQSResult::SQSResult() {}
 
-    SQSResult::SQSResult(double objective, cpp_int rank, const Configuration conf, const ParameterStorage params) :
+    SQSResult::SQSResult(double objective, cpp_int rank, const configuration_t conf, const ParameterStorage params) :
         m_objective(objective),
         m_rank(rank),
         m_configuration(conf),
@@ -16,7 +16,7 @@ namespace sqsgenerator {
         std::cout << "SQSResult.ctor (default) = parameters(" << params.size() << ")" << std::endl;
     }
 
-    SQSResult::SQSResult(double objective, const Configuration conf, const ParameterStorage parameters) :
+    SQSResult::SQSResult(double objective, const configuration_t conf, const ParameterStorage parameters) :
         m_objective(objective),
         m_configuration(conf),
         m_storage(parameters) {

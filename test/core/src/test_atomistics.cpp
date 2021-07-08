@@ -13,7 +13,7 @@ namespace sqsgenerator::test {
     class AtomisticsTestFixture : public ::testing::Test {
     protected:
         size_t m_numSpecies;
-        std::vector<Species> m_zNumbers;
+        std::vector<species_t> m_zNumbers;
 
         AtomisticsTestFixture() : m_numSpecies(114), m_zNumbers(m_numSpecies) {
             std::iota(m_zNumbers.begin(), m_zNumbers.end(), 1);

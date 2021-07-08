@@ -115,7 +115,7 @@ namespace sqsgenerator::test {
         auto lattice = read_array<double, 2>(fhandle, "lattice");
         auto fcoords = read_array<double, 2>(fhandle, "fcoords");
         auto d2 = read_array<double, 2>(fhandle, "distances");
-        auto shells = read_array<Shell, 2>(fhandle, "shells");
+        auto shells = read_array<shell_t, 2>(fhandle, "shells");
         auto vecs = read_array<double, 3>(fhandle, "vecs");
 
         fhandle.close();
@@ -220,13 +220,13 @@ namespace sqsgenerator::test {
         for (TestCaseData &test_case : test_cases) {
             matrix<double> lattice (matrix_from_multi_array(test_case.lattice));
             matrix<double> fcoords (matrix_from_multi_array(test_case.fcoords));
-            std::map<Shell, size_t> counts;
-            std::map<Shell, double> all_weights;
+            std::map<shell_t, size_t> counts;
+            std::map<shell_t, double> all_weights;
             auto natoms {fcoords.size1()};
             auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
             auto d2 = sqsgenerator::utils::distance_matrix(pbc_vecs);
             pair_shell_matrix shells = sqsgenerator::utils::shell_matrix(d2, 2);
-            Shell max_shell = *std::max_element(shells.origin(), shells.origin()+shells.num_elements());
+            shell_t max_shell = *std::max_element(shells.origin(), shells.origin()+shells.num_elements());
             for (auto i = 1; i <= max_shell; i++) {
                 counts.insert(std::make_pair(i, 0));
                 all_weights.insert(std::make_pair(i, 0.0));

@@ -9,15 +9,15 @@
 
 namespace sqsgenerator::utils {
 
-        const Configuration unique_species(Configuration conf) {
+        configuration_t unique_species(configuration_t conf) {
             // it is intended that we do not pass in by-reference since we want to have a copy of the configuration
-            Configuration::iterator it;
+            configuration_t::iterator it;
             it = std::unique(conf.begin(), conf.end());
             conf.resize(std::distance(conf.begin(), it));
             return conf;
         }
 
-        std::vector<size_t> configuration_histogram(const Configuration &conf) {
+        std::vector<size_t> configuration_histogram(const configuration_t &conf) {
             auto uspcies = unique_species(conf);
             std::vector<size_t> hist(uspcies.size());
             for (int i = 0; i < uspcies.size(); i++) {
@@ -26,19 +26,19 @@ namespace sqsgenerator::utils {
             return hist;
         }
 
-        cpp_int total_permutations(const Configuration &conf) {
-            cpp_int permutations = factorial<cpp_int, size_t>(conf.size());
+        rank_t total_permutations(const configuration_t &conf) {
+            auto permutations = factorial<rank_t, size_t>(conf.size());
             for (size_t &entry: configuration_histogram(conf)) {
-                permutations /= factorial<cpp_int, size_t>(entry);
+                permutations /= factorial<rank_t, size_t>(entry);
             }
             return permutations;
         }
 
-        cpp_int rank_permutation(const Configuration &conf, size_t nspecies) {
-            Species x;
-            cpp_int temp;
-            cpp_int suffix_permutations{1};
-            cpp_int rank{1};
+        rank_t rank_permutation(const configuration_t &conf, size_t nspecies) {
+            species_t x;
+            rank_t temp;
+            rank_t suffix_permutations{1};
+            rank_t rank{1};
             auto atoms = conf.size();
             std::vector<size_t> hist(nspecies, 0);
 
@@ -59,7 +59,7 @@ namespace sqsgenerator::utils {
         }
 
         void
-        unrank_permutation(Configuration &conf, std::vector<size_t> hist, cpp_int total_permutations, cpp_int rank) {
+        unrank_permutation(configuration_t &conf, std::vector<size_t> hist, rank_t total_permutations, rank_t rank) {
 
             if (rank > total_permutations) {
                 throw std::out_of_range("The rank is larger than the total number of permutations");
@@ -68,7 +68,7 @@ namespace sqsgenerator::utils {
             size_t k{0};
             size_t atoms = {conf.size()};
             size_t nspecies{hist.size()};
-            cpp_int suffix_count;
+            rank_t suffix_count;
 
             for (size_t i = 0; i < atoms; i++) {
                 for (size_t j = 0; j < nspecies; j++) {

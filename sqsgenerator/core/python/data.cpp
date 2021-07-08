@@ -56,7 +56,7 @@ namespace sqsgenerator::python {
             }
 
             np::ndarray configuration() {
-                return helpers::to_flat_numpy_array<Species>(
+                return helpers::to_flat_numpy_array<species_t>(
                         m_handle.configuration().data(),
                         m_handle.configuration().size()
                         );
@@ -109,7 +109,7 @@ namespace sqsgenerator::python {
             }
 
             np::ndarray shell_matrix(uint8_t prec = 5) {
-                return helpers::multi_array_to_ndarray<const_pair_shell_matrix_ref, 2>(m_handle.shell_matrix(prec));
+                return helpers::multi_array_to_ndarray<const_pair_shell_matrix_ref_t, 2>(m_handle.shell_matrix(prec));
             }
 
         };
@@ -120,7 +120,7 @@ namespace sqsgenerator::python {
 
 using namespace sqsgenerator;
 
-static Configuration conf {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
+static configuration_t conf {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
 static double data[3][3][3] {
         {{0,1,2},
         {3,4,5},

@@ -26,14 +26,14 @@ namespace sqsgenerator {
     private:
         double m_objective;
         cpp_int m_rank;
-        Configuration m_configuration;
+        configuration_t m_configuration;
         ParameterStorage m_storage;
 
     public:
 
         SQSResult();
-        SQSResult(double objective, cpp_int rank, const Configuration conf, const ParameterStorage params);
-        SQSResult(double objective, const Configuration conf, const ParameterStorage parameters);
+        SQSResult(double objective, cpp_int rank, configuration_t conf, ParameterStorage params);
+        SQSResult(double objective, configuration_t conf, ParameterStorage parameters);
         //TODO: we could write: SQSResult(const SQSResult &other) = default; here
         SQSResult(const SQSResult &other);
         SQSResult(SQSResult &&other) noexcept;

@@ -6,20 +6,15 @@
 #define SQSGENERATOR_RANK_H
 
 #include "types.hpp"
-#include <boost/multiprecision/cpp_int.hpp>
 
 using namespace boost::multiprecision;
 
-namespace sqsgenerator {
+namespace sqsgenerator::utils {
 
-    namespace utils {
-
-        cpp_int total_permutations(const Configuration &conf);
-        const Configuration unique_species(Configuration conf);
-        std::vector<size_t> configuration_histogram(const Configuration &conf);
-        cpp_int rank_permutation(const Configuration &conf, size_t nspecies);
-        void unrank_permutation(Configuration &conf, std::vector<size_t> hist, cpp_int total_permutations,  cpp_int rank);
+        rank_t total_permutations(const configuration_t &conf);
+        configuration_t unique_species(configuration_t conf);
+        std::vector<size_t> configuration_histogram(const configuration_t &conf);
+        rank_t rank_permutation(const configuration_t &conf, size_t nspecies);
+        void unrank_permutation(configuration_t &conf, std::vector<size_t> hist, rank_t total_permutations,  rank_t rank);
     }
-
-}
 #endif //SQSGENERATOR_RANK_H

@@ -49,7 +49,7 @@ AtomPairList calculate_pair_list(multi_array_ref<int, 2> &shells, size_t num_ato
     return result;
 }
 
-size_t loop_naive(const Configuration &configuration, multi_array_ref<int, 2> &shells, size_t num_loops = 10000) {
+size_t loop_naive(const configuration_t &configuration, multi_array_ref<int, 2> &shells, size_t num_loops = 10000) {
     uint8_t first_species, second_species;
     int pair_shell;
     size_t pair_counts {0};
@@ -69,7 +69,7 @@ size_t loop_naive(const Configuration &configuration, multi_array_ref<int, 2> &s
     return pair_counts;
 }
 
-size_t loop_vector(const Configuration &configuration, const AtomPairList &pairs, size_t num_loops = 10000) {
+size_t loop_vector(const configuration_t &configuration, const AtomPairList &pairs, size_t num_loops = 10000) {
     uint8_t first_species, second_species;
     size_t pair_counts {0};
     size_t i, j, shell;
@@ -95,7 +95,7 @@ void compare_loops(size_t num_atoms, size_t frac = 2, size_t num_loops = 10000, 
     AtomPairList pair_list(calculate_pair_list(shell_ref, num_atoms));
     assert(pair_list.size() == num_pairs);
 
-    Configuration conf(num_atoms);
+    configuration_t conf(num_atoms);
     std::iota(conf.begin(), conf.end(), 1);
 
     auto t0 = high_resolution_clock::now();
