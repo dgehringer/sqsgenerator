@@ -2,22 +2,29 @@
 // Created by dominik on 08.07.21.
 //
 
+#include "utils.hpp"
 #include "settings.hpp"
+
+
+#include <utility>
 
 namespace sqsgenerator::utils {
 
 
-    IterationSettings::IterationSettings(Structure &structure, double target_objective, parameter_storage_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations) :
+    IterationSettings::IterationSettings(Structure &structure, double target_objective, array_2d_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations) :
         m_structure(structure),
         m_niterations(iterations),
         m_noutput_configurations(output_configurations),
-        m_parameter_weight_storage(parameter_weights),
-        m_shell_weights(shell_weights),
-        m_target_objective(target_objective)
+        m_parameter_weights(parameter_weights),
+        m_shell_weights(std::move(shell_weights)),
+        m_target_objective(target_objective),
+        m_nspecies(unique_species(structure.configuration()).size())
         {
+            std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(structure.configuration());
+
         }
 
-    const_pair_shell_matrix_ref_t IterationSettings::shell_matrix(uint_t prec) {
+    const_pair_shell_matrix_ref_t IterationSettings::shell_matrix(uint8_t prec) {
         return m_structure.shell_matrix(prec);
     }
 
@@ -34,7 +41,7 @@ namespace sqsgenerator::utils {
     }
 
     [[nodiscard]] int IterationSettings::num_iterations() const {
-        return m_iterations;
+        return m_niterations;
     }
 
     [[nodiscard]] size_t IterationSettings::num_species() const {
@@ -53,12 +60,16 @@ namespace sqsgenerator::utils {
         return m_target_objective;
     }
 
-    pair_shell_weights_t& IterationSettings::shell_weights() const {
+    pair_shell_weights_t IterationSettings::shell_weights() const {
         return m_shell_weights;
     }
 
     [[nodiscard]] configuration_t IterationSettings::packed_configuraton() const {
         return m_packed_configuration;
+    }
+
+    [[nodiscard]] const_array_2d_ref_t IterationSettings::parameter_weights() const {
+        return boost::make_array_ref<const_array_2d_ref_t>(m_parameter_weights);
     }
 
 };

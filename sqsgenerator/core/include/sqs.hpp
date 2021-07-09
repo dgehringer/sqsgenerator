@@ -8,12 +8,17 @@
 
 #include "types.hpp"
 #include "settings.hpp"
+#include "containers.hpp"
 #include <map>
-#include <limits>
 #include <omp.h>
+#include <limits>
 #include <vector>
+#include <sstream>
 #include <cassert>
+#include <iostream>
 #include <algorithm>
+
+
 
 using namespace sqsgenerator::utils;
 using namespace sqsgenerator::utils::atomistics;
@@ -42,6 +47,38 @@ namespace sqsgenerator {
         }
     }
 
+    template<typename T>
+    std::string print_vector(std::vector<T> data) {
+
+        if (data.empty()) {
+            return "{}\n";
+        }
+        std::ostringstream ss;
+        ss << "{";
+        for (size_t i = 0; i < data.size() -1; i++) {
+            ss << data.at(i) << ", ";
+        }
+        ss << data[data.size()-1] << "}";
+        return ss.str();
+    }
+
+    std::string print_vector(configuration_t data) {
+
+        if (data.empty()) {
+            return "{}\n";
+        }
+        std::ostringstream ss;
+        ss << "{";
+        for (size_t i = 0; i < data.size() -1; i++) {
+            ss << static_cast<int>(data.at(i)) << ", ";
+        }
+        ss << static_cast<int>(data[data.size()-1]) << "}";
+        return ss.str();
+    }
+
+
+
+
     template<typename MultiArrayBonds, typename MultiArrayWeights>
     typename MultiArrayBonds::element calculate_pair_objective(MultiArrayBonds &bonds, const std::vector<typename MultiArrayBonds::element> &shell_weights, const MultiArrayWeights &pair_weights, size_t nspecies){
         typedef typename MultiArrayBonds::index index_t;
@@ -68,31 +105,46 @@ namespace sqsgenerator {
     }
 
 
-    void do_iterations(const IterationSettings<pair_shell_weights_t> &settings) {
+    void do_iterations(const IterationSettings &settings) {
         typedef array_3d_ref_t::index index_t;
-        typedef const double* const_double_ptr;
         double best_objective {std::numeric_limits<double>::max()};
         double target_objective {settings.target_objective()};
         int niterations {settings.num_iterations()};
         auto nspecies{settings.num_species()};
         auto nshells {settings.num_shells()};
-        const std::vector<AtomPair> &pair_list {settings.pair_list()};
+
         std::map<rank_t, SQSResult> results;
 
-        #pragma omp parallel default(none) shared(boost::extents, settings, pair_list, best_objective, niterations) firstprivate(nshells, nspecies, target_objective)
+        #pragma omp parallel default(none) shared(std::cout, boost::extents, settings, best_objective, niterations) firstprivate(nshells, nspecies, target_objective)
         {
+            // After creating a team of threads, unpack all the informations from the IterationSettings object
+            int thread_id {omp_get_thread_num()};
+            double objective_local {best_objective};
             array_3d_t parameters_local(boost::extents[static_cast<index_t>(nshells)][static_cast<index_t>(nspecies)][static_cast<index_t>(nspecies)]);
             configuration_t configuration_local(settings.packed_configuraton());
-            const_array_2d_ref_t parameter_weights (settings.parameter_weights<2>({nspecies, nspecies}));
-            double objective_local {best_objective};
+            const_array_2d_ref_t parameter_weights(settings.parameter_weights());
+            const std::vector<AtomPair> &pair_list {settings.pair_list()};
+            pair_shell_weights_t shell_weights(settings.shell_weights());
+            // convert the std::map (shell_weights) to a std::vector<double> in ascending order, sorted by the shell
+            std::vector<shell_t> shells;
+            std::vector<double> sorted_shell_weights;
+            for (const auto &weight: shell_weights) shells.push_back(weight.first);
+            std::sort(shells.begin(), shells.end());
+            for (const auto &shell: shells) sorted_shell_weights.push_back(shell_weights[shell]);
+            #pragma omp critical
+            std::cout << "[THREAD: " << thread_id << "] shell_weights = " << print_vector(sorted_shell_weights) << std::endl;
+            #pragma omp critical
+            std::cout << "[THREAD: " << thread_id << "] parameter_weights = " << print_vector(std::vector<double>(parameter_weights.data(), parameter_weights.data()+parameter_weights.num_elements())) << std::endl;
+            #pragma omp critical
+            std::cout << "[THREAD: " << thread_id << "] configuration = " << print_vector(configuration_local) << std::endl;
+
 
             #pragma omp for schedule(dynamic)
             for (size_t i = 0; i < niterations; i++) {
                 next_permutation(configuration_local);
                 count_pairs(configuration_local, settings.pair_list(), parameters_local, true);
-                objective_local = std::abs(target_objective - calculate_pair_objective(parameters_local, {1,2,3,4}, parameter_weights, nspecies));
+                objective_local = std::abs(target_objective - calculate_pair_objective(parameters_local, sorted_shell_weights, parameter_weights, nspecies));
                 // TODO: Implement Settings class
-
             }
 
         }

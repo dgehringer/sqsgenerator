@@ -8,9 +8,8 @@ namespace sqsgenerator::utils {
 
     configuration_t unique_species(configuration_t conf) {
         // it is intended that we do not pass in by-reference since we want to have a copy of the configuration
-        configuration_t::iterator it;
-        it = std::unique(conf.begin(), conf.end());
-        conf.resize(std::distance(conf.begin(), it));
+        std::sort( conf.begin(), conf.end() );
+        conf.erase( std::unique( conf.begin(), conf.end() ), conf.end() );
         return conf;
     }
 
@@ -24,10 +23,10 @@ namespace sqsgenerator::utils {
     }
 
     std::tuple<configuration_t, configuration_t> pack_configuration(const configuration_t &configuration) {
-        auto unique_spec{unique_species(configuration)};
+
+        auto unique_spec { unique_species(configuration) };
         std::sort(unique_spec.begin(), unique_spec.end());
         configuration_t remapped(configuration);
-
         for (size_t i = 0; i < configuration.size(); i++) {
             int index{get_index(unique_spec, configuration[i])};
             if (index < 0) throw std::runtime_error("A species was detected which I am not aware of");

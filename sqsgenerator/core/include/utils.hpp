@@ -57,6 +57,32 @@ namespace boost{
         return result;
     }
 
+    // Helper class to determine the full number of elements in the
+    // multi-dimensional array
+    template <std::size_t... vs> struct ArraySize;
+    template <std::size_t v, std::size_t... vs> struct ArraySize<v, vs...>
+    { static constexpr std::size_t size = v * ArraySize<vs...>::size; };
+    template <> struct ArraySize<>
+    { static constexpr std::size_t size = 1; };
+
+    // Creates your multi_array
+    template <typename T, int... dims>
+    boost::multi_array<T, sizeof...(dims)>
+    make_multi_array(std::initializer_list<T> l)
+    {
+        constexpr std::size_t asize = ArraySize<dims...>::size;
+        assert(l.size() == asize); // could be a static assert in C++14
+
+        // Dump data into a vector (because it has the right kind of ctor)
+        const std::vector<T> a(l);
+        // This can be used in a multi_array_ref ctor.
+        boost::const_multi_array_ref<T, sizeof...(dims)> mar(
+                &a[0],
+                std::array<int, sizeof...(dims)>{dims...});
+        // Finally, deep-copy it into the structure we can return.
+        return boost::multi_array<T, sizeof...(dims)>(mar);
+    }
+
 
 }
 

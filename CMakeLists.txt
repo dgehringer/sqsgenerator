@@ -42,6 +42,7 @@ add_executable(sqsgenerator.core
         sqsgenerator/core/include/atomistics.hpp
         sqsgenerator/core/include/structure_utils.hpp
         sqsgenerator/core/include/sqs.hpp
+        sqsgenerator/core/src/settings.cpp
         sqsgenerator/core/include/settings.hpp)
 
 

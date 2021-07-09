@@ -245,6 +245,11 @@ namespace sqsgenerator::utils::atomistics {
         return conf;
     }
 
+    std::vector<std::string> Structure::symbols() const {
+        std::vector<std::string> conf;
+        for (auto &atom : m_species) conf.push_back(atom.symbol);
+        return conf;
+    }
 
     size_t Structure::num_atoms() const {
         return m_natoms;

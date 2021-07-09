@@ -138,13 +138,15 @@ namespace sqsgenerator::utils {
             return shells;
         }
 
-        std::map<shell_t, pair_shell_matrix::index> shell_index_map(const std::map<shell_t, double> &weights) {
+        std::map<shell_t, pair_shell_matrix::index> shell_index_map(const pair_shell_weights_t &weights) {
             typedef pair_shell_matrix::index index_t;
             size_t nshells {weights.size()};
             std::vector<shell_t> shells;
             std::map<shell_t, index_t> shell_indices;
             // Copy the shells into a new vector
             for(const auto &shell : weights) shells.push_back(shell.first);
+            // We sort the shells so that they are in ascending order
+            std::sort(shells.begin(), shells.end());
             // Create the shell-index map, using a simple enumeration
             for(index_t i = 0; i < nshells; i++)  shell_indices.emplace(std::make_pair(shells[i], i));
             return shell_indices;

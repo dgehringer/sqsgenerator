@@ -76,6 +76,7 @@ namespace sqsgenerator::utils::atomistics {
         [[nodiscard]] const_array_2d_ref_t distance_matrix() const;
         [[nodiscard]] std::vector<AtomPair> create_pair_list(const std::map<shell_t, double> &weights) const;
         [[nodiscard]] configuration_t configuration() const;
+        [[nodiscard]] std::vector<std::string> symbols() const;
         const_pair_shell_matrix_ref_t shell_matrix(uint8_t prec);
 
     };
