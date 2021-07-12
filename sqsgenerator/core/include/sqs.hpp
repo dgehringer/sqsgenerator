@@ -26,13 +26,11 @@ using namespace sqsgenerator::utils::atomistics;
 
 namespace sqsgenerator {
 
-    template<typename MultiArray>
-    void count_pairs(const configuration_t &configuration, const std::vector<AtomPair> &pair_list, MultiArray &bonds, bool clear = false){
-        typedef typename MultiArray::index index_t;
-        typedef typename MultiArray::element T;
+    void count_pairs(const configuration_t &configuration, const std::vector<AtomPair> &pair_list, array_3d_t &bonds, bool clear = false){
+        typedef typename array_3d_t::index index_t;
         // the array "bonds" must have the following dimensions (nshells, nspecies, nspecies)
         // configuration is already the remapped configuration {H, H, He, He, Ne, Ne} -> {0, 0, 1, 1, 2, 2}
-        T increment {static_cast<T>(1.0)};
+        double increment {1.0};
         species_t si, sj;
         // clear the bond count array -> set it to zero
         if (clear) std::fill(bonds.data(), bonds.data() + bonds.num_elements(), 0.0);
@@ -45,19 +43,16 @@ namespace sqsgenerator {
         }
     }
 
-
-    template<typename MultiArrayBonds, typename MultiArrayWeights>
-    typename MultiArrayBonds::element calculate_pair_objective(MultiArrayBonds &bonds, const std::vector<typename MultiArrayBonds::element> &shell_weights, const MultiArrayWeights &pair_weights, size_t nspecies){
-        typedef typename MultiArrayBonds::index index_t;
-        typedef typename MultiArrayBonds::element T;
+    double calculate_pair_objective(array_3d_t &bonds, const_array_3d_ref_t &prefactors, const_array_2d_ref_t &pair_weights, const std::vector<double> &shell_weights, size_t nspecies){
+        typedef array_3d_t::index index_t;
+        double total_objective {0.0};
         auto nshells {shell_weights.size()};
-        T total_objective {0.0};
         for (index_t i = 0; i < nshells; i++) {
-            T shell_weight {shell_weights[i]};
+            double shell_weight {shell_weights[i]};
             for (index_t j = 0; j < nspecies; j++) {
                 for (index_t k = j; k < nspecies; k++) {
-                    T pair_weight {pair_weights[j][k]};
-                    T pair_sro {shell_weight * (1.0 - bonds[i][j][k]*pair_weight)};
+                    double pair_weight {pair_weights[j][k]};
+                    double pair_sro {shell_weight * (1.0 - bonds[i][j][k]*prefactors[i][j][k]*pair_weight)};
                     bonds[i][j][k] = pair_sro;
                     bonds[i][k][j] = pair_sro;
                     total_objective += std::abs(pair_sro);
@@ -89,14 +84,15 @@ namespace sqsgenerator {
             get_next_configuration_t get_next_configuration;
             // After creating a team of threads, unpack all the informations from the IterationSettings object
 
+            std::vector<shell_t> shells;
+            std::vector<double> sorted_shell_weights;
             double objective_local {best_objective};
             double best_objective_local {best_objective};
             array_3d_t parameters_local(boost::extents[static_cast<index_t>(nshells)][static_cast<index_t>(nspecies)][static_cast<index_t>(nspecies)]);
             configuration_t configuration_local(settings.packed_configuraton());
             const_array_2d_ref_t parameter_weights(settings.parameter_weights());
+            const_array_3d_ref_t parameter_prefactors(settings.parameter_prefactors());
             const std::vector<AtomPair> &pair_list {settings.pair_list()};
-            pair_shell_weights_t shell_weights(settings.shell_weights());
-
 
             switch (settings.mode()) {
                 case utils::iteration_mode::random:
@@ -109,37 +105,27 @@ namespace sqsgenerator {
                         std::srand(std::time(nullptr)*thread_id);
                         random_seed_local = std::rand()*thread_id;
                     }
-
                     get_next_configuration = [&random_seed_local](configuration_t &c) {
                         shuffle_configuration(c, &random_seed_local);
                         return true;
                     };
-
                     start_it = niterations / nthreads * thread_id;
                     end_it = start_it + niterations / nthreads;
                     end_it = (thread_id == nthreads - 1) ? niterations : end_it;
                 } break;
-
                 case utils::iteration_mode::systematic: {
-
                     get_next_configuration = next_permutation;
                     auto total = utils::total_permutations(configuration_local);
                     auto hist = utils::configuration_histogram(configuration_local);
-
                     start_it = total / nthreads * thread_id + 1;
                     end_it = start_it + total / nthreads + 1;
                     end_it = (thread_id == nthreads - 1) ? total : end_it;
-
                     unrank_permutation(configuration_local, hist, total, start_it);
                 } break;
             }
 
             // convert the std::map (shell_weights) to a std::vector<double> in ascending order, sorted by the shell
-            std::vector<shell_t> shells;
-            std::vector<double> sorted_shell_weights;
-            for (const auto &weight: shell_weights) shells.push_back(weight.first);
-            std::sort(shells.begin(), shells.end());
-            for (const auto &shell: shells) sorted_shell_weights.push_back(shell_weights[shell]);
+            std::tie(shells,sorted_shell_weights) = settings.shell_indices_and_weights();
             /*#pragma omp critical
             {
                 std::cout << "[THREAD: " << thread_id << "] total_permutations = " << total_permutations << std::endl;
@@ -155,10 +141,9 @@ namespace sqsgenerator {
 
 
             for (rank_t i = start_it; i < end_it; i++) {
-
                 get_next_configuration(configuration_local);
                 count_pairs(configuration_local, pair_list, parameters_local, true);
-                objective_local = std::abs(target_objective - calculate_pair_objective(parameters_local, sorted_shell_weights, parameter_weights, nspecies));
+                objective_local = std::abs(target_objective - calculate_pair_objective(parameters_local, parameter_prefactors, parameter_weights, sorted_shell_weights, nspecies));
                 /*#pragma omp critical
                 {
                     std::cout << "[THREAD: " << thread_id << "] loop = " << i << ", objective = " << objective_local << ", num_pairs = " << pair_list.size()
@@ -182,8 +167,10 @@ namespace sqsgenerator {
             } // for
 
         } // #pragma omp parallel
+        for (auto &r : results) {
+            std::cout << results.size() << " " << r.objective() << " " << r.rank() <<std::endl;
+        }
 
-        std::cout << results.size() << std::endl;
 
     }
 }
