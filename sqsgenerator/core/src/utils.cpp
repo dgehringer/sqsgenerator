@@ -40,4 +40,44 @@ namespace sqsgenerator::utils {
         for (auto &index: packed) unpacked.push_back(indices[index]);
         return unpacked;
     }
+
+
+    // Implementation of the whyash algorithm for generating relatively fast random numbers
+    // Seen on David Lamires blog: https://lemire.me/blog/2019/03/19/the-fastest-conventional-random-number-generator-that-can-pass-big-crush/
+    // Code taken from: https://github.com/lemire/testingRNG/blob/master/source/wyhash.h
+    static inline uint64_t wyhash64_stateless(uint64_t *seed) {
+        *seed += UINT64_C(0x60bee2bee120fc15);
+        __uint128_t tmp;
+        tmp = (__uint128_t)*seed * UINT64_C(0xa3b195354a39b70d);
+        uint64_t m1 = (tmp >> 64) ^ tmp;
+        tmp = (__uint128_t)m1 * UINT64_C(0x1b03738712fad5c9);
+        uint64_t m2 = (tmp >> 64) ^ tmp;
+        return m2;
+    }
+
+    // Implementation of a bounded random number without division and modulo-operator
+    // Seen on David Lamires blog: https://lemire.me/blog/2016/06/30/fast-random-shuffling/
+    // Code available on: https://github.com/lemire/Code-used-on-Daniel-Lemire-s-blog/blob/master/2016/06/29/shuffle.c
+    uint32_t random_bounded(uint32_t range, uint64_t *seed) {
+        uint64_t random32bit =  wyhash64_stateless(seed); //32-bit random number
+        auto multiresult = random32bit * range;
+        auto  leftover = (uint32_t) multiresult;
+        if(leftover < range ) {
+            auto threshold = -range % range ;
+            while (leftover < threshold) {
+                random32bit =  wyhash64_stateless(seed);
+                multiresult = random32bit * range;
+                leftover = (uint32_t) multiresult;
+            }
+        }
+        return multiresult >> 32;
+    }
+
+    // Simple Knuth-Fisher-Yates shuffle with random generator
+    void shuffle_configuration(configuration_t &configuration, uint64_t *seed) {
+        for (uint32_t i=configuration.size(); i > 1; i--) {
+            uint32_t p = random_bounded(i, seed); // number in [0,i)
+            std::swap(configuration[i-1], configuration[p]); // swap the values at i-1 and p
+        }
+    }
 }

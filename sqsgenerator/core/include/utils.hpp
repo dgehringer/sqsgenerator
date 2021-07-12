@@ -118,6 +118,10 @@ namespace sqsgenerator::utils {
         std::vector<size_t> configuration_histogram(const configuration_t &conf);
         std::tuple<configuration_t, configuration_t> pack_configuration(const configuration_t &configuration);
         configuration_t unpack_configuration(const configuration_t &indices, const configuration_t &packed);
+
+        // random number generator
+        uint32_t random_bounded(uint32_t range, uint64_t *seed);
+        void shuffle_configuration(configuration_t &configuration, uint64_t *seed);
 };
 
 

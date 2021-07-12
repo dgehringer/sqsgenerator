@@ -14,5 +14,6 @@ namespace sqsgenerator::utils {
         rank_t total_permutations(const configuration_t &conf);
         rank_t rank_permutation(const configuration_t &conf, size_t nspecies);
         void unrank_permutation(configuration_t &conf, std::vector<size_t> hist, rank_t total_permutations,  rank_t rank);
+        bool next_permutation(configuration_t &configuration);
     }
 #endif //SQSGENERATOR_RANK_H

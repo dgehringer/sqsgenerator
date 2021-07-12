@@ -68,4 +68,34 @@ namespace sqsgenerator::utils {
             }
         }
 
+        bool next_permutation(configuration_t &configuration) {
+            size_t natoms {configuration.size()};
+            size_t m, n, length;
+            int l {static_cast<int>(natoms - 1)}, k {static_cast<int>(natoms - 2)};
+            uint8_t temporary;
+
+            while (configuration[k] >= configuration[k + 1]) {
+                k -= 1;
+                if (k < 0) {
+                    return false;
+                }
+            }
+
+            while (configuration[k] >= configuration[l]) l -= 1;
+
+            temporary = configuration[k];
+            configuration[k] = configuration[l];
+            configuration[l] = temporary;
+
+            length = natoms - (k + 1);
+            for (size_t i = 0; i < length/2; i++) {
+                m = k + i + 1;
+                n = natoms - i - 1;
+                temporary = configuration[m];
+                configuration[m] = configuration[n];
+                configuration[n] = temporary;
+            }
+
+            return true;
+        }
     }
