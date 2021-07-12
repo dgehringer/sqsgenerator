@@ -15,7 +15,6 @@ namespace sqsgenerator {
         m_rank(std::move(rank)),
         m_configuration(conf),
         m_storage(params) {
-        std::cout << "SQSResult.ctor (default) = parameters(" << params.size() << ")" << std::endl;
     }
 
     SQSResult::SQSResult(double objective, const configuration_t conf, const parameter_storage_t parameters) :
@@ -32,7 +31,6 @@ namespace sqsgenerator {
         m_rank(other.m_rank),
         m_configuration(other.m_configuration),
         m_storage(other.m_storage) {
-        std::cout << "SQSResult.ctor (copy) = parameters(" << m_storage.size() << ")" << std::endl;
     };
 
     // Move constructor
@@ -41,7 +39,6 @@ namespace sqsgenerator {
         m_rank(std::move(other.m_rank)),
         m_configuration(std::move(other.m_configuration)),
         m_storage(std::move(other.m_storage)) {
-        std::cout << "SQSResult.ctor (move) = (" << m_storage.size() << ")" << std::endl;
     };
 
     SQSResult& SQSResult::operator=(SQSResult&& other) noexcept  {
@@ -49,7 +46,6 @@ namespace sqsgenerator {
         m_objective = other.m_objective;
         m_configuration = std::move(other.m_configuration);
         m_storage = std::move(other.m_storage);
-        std::cout << "Move assignment = parameters(" << m_storage.size() << ")" << std::endl;
         return *this;
     }
 

@@ -71,13 +71,13 @@ namespace sqsgenerator {
         //SQSResultCollection(const SQSResultCollection& other) = delete;
         SQSResultCollection(SQSResultCollection&& other) noexcept;
 
-        double best_objective() const;
+        [[nodiscard]] double best_objective() const;
         bool add_result(const SQSResult &item);
         void collect();
-        size_t size() const;
-        size_t queue_size() const;
-        size_t result_size() const;
-        const std::vector<SQSResult>& results() const;
+        [[nodiscard]] size_t size() const;
+        [[nodiscard]] size_t queue_size() const;
+        [[nodiscard]] size_t result_size() const;
+        [[nodiscard]] const std::vector<SQSResult>& results() const;
 
     private:
         moodycamel::ConcurrentQueue<SQSResult> m_q;

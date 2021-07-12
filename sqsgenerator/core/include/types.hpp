@@ -8,6 +8,7 @@
 #include <map>
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <boost/multi_array.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
@@ -28,6 +29,7 @@ namespace sqsgenerator {
     typedef std::vector<species_t> configuration_t;
     typedef std::vector<double> parameter_storage_t;
     typedef std::map<shell_t, double> pair_shell_weights_t;
+    using get_next_configuration_t = std::function<bool(configuration_t&)>;
     template<size_t NDims>
     using Shape = std::array<size_t, NDims>;
 

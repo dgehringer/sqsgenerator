@@ -4,32 +4,30 @@
 
 #include "utils.hpp"
 #include "settings.hpp"
-
-
 #include <utility>
 
 namespace sqsgenerator::utils {
 
 
-    IterationSettings::IterationSettings(Structure &structure, double target_objective, array_2d_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations) :
+    IterationSettings::IterationSettings(Structure &structure, double target_objective, array_2d_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, iteration_mode mode) :
         m_structure(structure),
         m_niterations(iterations),
         m_noutput_configurations(output_configurations),
         m_parameter_weights(parameter_weights),
         m_shell_weights(std::move(shell_weights)),
         m_target_objective(target_objective),
+        m_mode(mode),
         m_nspecies(unique_species(structure.configuration()).size())
         {
             std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(structure.configuration());
-
         }
 
     const_pair_shell_matrix_ref_t IterationSettings::shell_matrix(uint8_t prec) {
         return m_structure.shell_matrix(prec);
     }
 
-    [[nodiscard]] const std::vector<AtomPair>& IterationSettings::pair_list() const {
-        return m_pair_list;
+    [[nodiscard]] std::vector<AtomPair> IterationSettings::pair_list() const {
+        return m_structure.create_pair_list(m_shell_weights);
     }
 
     [[nodiscard]] const Structure& IterationSettings::structure() const {
@@ -45,7 +43,7 @@ namespace sqsgenerator::utils {
     }
 
     [[nodiscard]] size_t IterationSettings::num_species() const {
-        return m_configuration_packing_indices.size();
+        return m_nspecies;
     }
 
     [[nodiscard]] size_t IterationSettings::num_shells() const {
@@ -71,5 +69,10 @@ namespace sqsgenerator::utils {
     [[nodiscard]] const_array_2d_ref_t IterationSettings::parameter_weights() const {
         return boost::make_array_ref<const_array_2d_ref_t>(m_parameter_weights);
     }
+
+    iteration_mode IterationSettings::mode() const {
+        return m_mode;
+    }
+
 
 };

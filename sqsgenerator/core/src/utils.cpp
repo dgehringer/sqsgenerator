@@ -56,23 +56,12 @@ namespace sqsgenerator::utils {
     }
 
     // Implementation of a bounded random number without division and modulo-operator
-    // Seen on David Lamires blog: https://lemire.me/blog/2016/06/30/fast-random-shuffling/
-    // Code available on: https://github.com/lemire/Code-used-on-Daniel-Lemire-s-blog/blob/master/2016/06/29/shuffle.c
-    uint32_t random_bounded(uint32_t range, uint64_t *seed) {
-        uint64_t random32bit =  wyhash64_stateless(seed); //32-bit random number
-        auto multiresult = random32bit * range;
-        auto  leftover = (uint32_t) multiresult;
-        if(leftover < range ) {
-            auto threshold = -range % range ;
-            while (leftover < threshold) {
-                random32bit =  wyhash64_stateless(seed);
-                multiresult = random32bit * range;
-                leftover = (uint32_t) multiresult;
-            }
-        }
-        return multiresult >> 32;
+    // Seen on pcg-random.org blog: https://www.pcg-random.org/posts/bounded-rands.html
+     inline uint32_t random_bounded(uint32_t range, uint64_t *seed) {
+         uint32_t x = wyhash64_stateless(seed);
+         uint64_t m = uint64_t(x) * uint64_t(range);
+         return m >> 32;
     }
-
     // Simple Knuth-Fisher-Yates shuffle with random generator
     void shuffle_configuration(configuration_t &configuration, uint64_t *seed) {
         for (uint32_t i=configuration.size(); i > 1; i--) {

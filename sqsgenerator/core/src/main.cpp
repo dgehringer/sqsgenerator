@@ -2,6 +2,7 @@
 // Created by dominik on 21.05.21.
 #include "sqs.hpp"
 #include "utils.hpp"
+#include "rank.hpp"
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -12,6 +13,7 @@
 
 
 using namespace sqsgenerator;
+using namespace sqsgenerator::utils;
 using namespace boost::numeric::ublas;
 
 void print_conf(configuration_t conf, bool endl = true) {
@@ -98,7 +100,8 @@ int main(int argc, char *argv[]) {
            0.75, 0.75, 0.75
     });
 
-    std::vector<std::string> species { "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl" };
+    //std::vector<std::string> species { "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl" };
+    std::vector<std::string> species { "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Ne", "Ne", "Ne", "Ne", "Ar", "Ar", "Ar", "Ar" };
     std::array<bool, 3> pbc {true, true, true};
 
     Structure structure(lattice, frac_coords, species, pbc);
@@ -110,16 +113,23 @@ int main(int argc, char *argv[]) {
             {2, 0.5}
     };
 
-    array_2d_t pair_weights = boost::make_multi_array<double, 2, 2>({
+    /*array_2d_t pair_weights = boost::make_multi_array<double, 2, 2>({
         1.0, 1.0, 1.0, 1.0
+    });*/
+
+    array_2d_t pair_weights = boost::make_multi_array<double, 4, 4>({
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
     });
     auto conf (structure.configuration());
 
-    IterationSettings settings(structure, 0.0, pair_weights, shell_weights, 1000, 10);
+
+    IterationSettings settings(structure, 0.0, pair_weights, shell_weights, 100000, 10, iteration_mode::random);
+    auto initial_rank = rank_permutation(settings.packed_configuraton(), settings.num_species());
     std::cout << "[MAIN]: " << structure.num_atoms() << " - " << conf.size() << std::endl;
+    std::cout << "[MAIN]: rank = " << initial_rank  << std::endl;
     std::cout << "[MAIN]: configuration = "; print_conf(structure.configuration());
     std::cout << "[MAIN]: packed_config = "; print_conf(settings.packed_configuraton());
-
+    std::cout << "[MAIN]: num_pairs = " << settings.pair_list().size() << std::endl;
     do_iterations(settings);
 }
 //

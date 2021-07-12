@@ -11,6 +11,7 @@
 using namespace sqsgenerator::utils::atomistics;
 
 namespace sqsgenerator::utils {
+    enum iteration_mode { random = 0, systematic = 1};
 
     class IterationSettings {
 
@@ -25,12 +26,14 @@ namespace sqsgenerator::utils {
         pair_shell_weights_t m_shell_weights;
         array_2d_t m_parameter_weights;
         std::vector<AtomPair> m_pair_list;
+        iteration_mode m_mode;
 
     public:
 
-        IterationSettings(Structure &structure, double target_objective, array_2d_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations);
+
+        IterationSettings(Structure &structure, double target_objective, array_2d_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, iteration_mode mode = iteration_mode::random);
         const_pair_shell_matrix_ref_t shell_matrix(uint8_t prec);
-        [[nodiscard]] const std::vector<AtomPair>& pair_list() const;
+        [[nodiscard]] std::vector<AtomPair> pair_list() const;
         [[nodiscard]] const Structure &structure() const;
         [[nodiscard]] size_t num_atoms() const;
         [[nodiscard]] int num_iterations() const;
@@ -41,6 +44,9 @@ namespace sqsgenerator::utils {
         [[nodiscard]] pair_shell_weights_t shell_weights() const;
         [[nodiscard]] configuration_t packed_configuraton() const;
         [[nodiscard]] const_array_2d_ref_t parameter_weights() const;
+        [[nodiscard]] iteration_mode mode() const;
+
+
     };
 }
 
