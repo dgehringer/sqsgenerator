@@ -23,6 +23,7 @@ namespace sqsgenerator::utils {
 
             std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(structure.configuration());
             auto nshells {num_shells()};
+            auto natoms {num_atoms()};
 
             typedef array_3d_t::index index_t;
             m_parameter_prefactors.resize(boost::extents[nshells][m_nspecies][m_nspecies]);
@@ -30,7 +31,7 @@ namespace sqsgenerator::utils {
             std::map<shell_t, size_t> neighbor_count;
             for (const auto &shell: shells) neighbor_count.emplace(std::make_pair(shell, 0));
             auto shell_mat = shell_matrix();
-            for (const_pair_shell_matrix_ref_t::index i = 1; i < num_atoms(); i++) {
+            for (index_t i = 1; i < num_atoms(); i++) {
                 auto neighbor_shell {shell_mat[0][i]};
                 if (neighbor_count.count(neighbor_shell)) neighbor_count[neighbor_shell]++;
             }
@@ -38,16 +39,19 @@ namespace sqsgenerator::utils {
             for (index_t i = 0; i < nshells; i++) {
                 double M_i {static_cast<double>(neighbor_count[shells[i]])};
                 for (index_t a = 0; a < m_nspecies; a++) {
-                    double x_a {static_cast<double>(hist[a])/num_atoms()};
+                    double x_a {static_cast<double>(hist[a])/natoms};
                     for (index_t b = a; b < m_nspecies; b++) {
-                        double x_b {static_cast<double>(hist[b])/num_atoms()};
-                        double prefactor {1.0/(M_i*x_a*x_b)};
+                        double x_b {static_cast<double>(hist[b])/natoms};
+                        double prefactor {1.0/(M_i*x_a*x_b*natoms)};
                         m_parameter_prefactors[i][a][b] = prefactor;
                         m_parameter_prefactors[i][b][a] = prefactor;
                     }
                 }
             }
         }
+
+
+
 
     const_pair_shell_matrix_ref_t IterationSettings::shell_matrix() {
         return m_structure.shell_matrix(m_prec);
@@ -112,6 +116,10 @@ namespace sqsgenerator::utils {
 
     [[nodiscard]] const_array_3d_ref_t IterationSettings::parameter_prefactors() const {
         return boost::make_array_ref<const_array_3d_ref_t>(m_parameter_prefactors);
+    }
+
+    [[nodiscard]] configuration_t IterationSettings::unpack_configuration(const configuration_t &conf) const{
+        return utils::unpack_configuration(m_configuration_packing_indices, conf);
     }
 
 

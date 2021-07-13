@@ -46,6 +46,7 @@ namespace sqsgenerator::utils {
         [[nodiscard]] configuration_t packed_configuraton() const;
         [[nodiscard]] const_array_2d_ref_t parameter_weights() const;
         [[nodiscard]] const_array_3d_ref_t parameter_prefactors() const;
+        [[nodiscard]] configuration_t unpack_configuration(const configuration_t &conf) const;
         [[nodiscard]] std::tuple<std::vector<shell_t>, std::vector<double>> shell_indices_and_weights() const;
     };
 }

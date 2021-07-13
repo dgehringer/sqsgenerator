@@ -41,6 +41,8 @@ namespace sqsgenerator {
         SQSResult& operator=(const SQSResult& other) = default;
         SQSResult& operator=(SQSResult&& other) noexcept;
 
+        void set_rank(rank_t rank);
+        void set_configuration(configuration_t conf);
         [[nodiscard]] double objective() const;
         [[nodiscard]] const configuration_t& configuration() const;
         [[nodiscard]] rank_t rank() const;
@@ -51,44 +53,6 @@ namespace sqsgenerator {
         }
     };
 
-
-    class SQSResultCollection {
-        /*
-         * Intended use of SQSResultCollection
-         *
-         * ======== serial ========
-         * SQSResultCollection results(size);
-         * ======= parallel =======
-         * results.addResult(); # thread-safe
-         * double best = results.bestObjective(); # thread-safe
-         * ======== serial ========
-         * results.collect() # Gather the computed results from the MPMCQueue
-         *                   # thread-safe (but should not be called in a "parallel section"
-         */
-
-    public:
-        SQSResultCollection(int maxSize);
-        //SQSResultCollection(const SQSResultCollection& other) = delete;
-        SQSResultCollection(SQSResultCollection&& other) noexcept;
-
-        [[nodiscard]] double best_objective() const;
-        bool add_result(const SQSResult &item);
-        void collect();
-        [[nodiscard]] size_t size() const;
-        [[nodiscard]] size_t queue_size() const;
-        [[nodiscard]] size_t result_size() const;
-        [[nodiscard]] const std::vector<SQSResult>& results() const;
-
-    private:
-        moodycamel::ConcurrentQueue<SQSResult> m_q;
-        std::atomic<size_t> m_size;
-        std::atomic<double> m_best_objective;
-        std::mutex m_mutex_clear;
-        std::vector<SQSResult> m_r;
-        int m_max_size;
-
-        void clear_queue();
-    };
 
 
 }

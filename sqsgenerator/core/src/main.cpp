@@ -107,10 +107,10 @@ int main(int argc, char *argv[]) {
     Structure structure(lattice, frac_coords, species, pbc);
 
     pair_shell_weights_t shell_weights {
-            {4, 0.25},
+           // {4, 0.25},
             {1, 1.0},
-            {3, 0.33},
-            {2, 0.5}
+           // {3, 0.33},
+           {2, 0.5}
     };
 
     array_2d_t pair_weights = boost::make_multi_array<double, 2, 2>({
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
     auto conf (structure.configuration());
 
 
-    IterationSettings settings(structure, 0.0, pair_weights, shell_weights, 1000, 10, iteration_mode::random);
+    IterationSettings settings(structure, -1.0, pair_weights, shell_weights, 10000, 10, iteration_mode::systematic);
     auto initial_rank = rank_permutation(settings.packed_configuraton(), settings.num_species());
     std::cout << "[MAIN]: " << structure.num_atoms() << " - " << conf.size() << std::endl;
     std::cout << "[MAIN]: rank = " << initial_rank  << std::endl;

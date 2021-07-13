@@ -30,7 +30,7 @@ namespace sqsgenerator {
         typedef typename array_3d_t::index index_t;
         // the array "bonds" must have the following dimensions (nshells, nspecies, nspecies)
         // configuration is already the remapped configuration {H, H, He, He, Ne, Ne} -> {0, 0, 1, 1, 2, 2}
-        double increment {1.0};
+        double increment {2.000001};
         species_t si, sj;
         // clear the bond count array -> set it to zero
         if (clear) std::fill(bonds.data(), bonds.data() + bonds.num_elements(), 0.0);
@@ -38,8 +38,8 @@ namespace sqsgenerator {
             auto [i, j, _, shell_index] = pair;
             si = configuration[i];
             sj = configuration[j];
-            bonds[shell_index][si][sj] += increment;
-            if (si != sj) bonds[shell_index][sj][si] += increment;
+            bonds[shell_index][si][sj]++;
+            if (si != sj) bonds[shell_index][sj][si]++;
         }
     }
 
@@ -52,13 +52,14 @@ namespace sqsgenerator {
             for (index_t j = 0; j < nspecies; j++) {
                 for (index_t k = j; k < nspecies; k++) {
                     double pair_weight {pair_weights[j][k]};
-                    double pair_sro {shell_weight * (1.0 - bonds[i][j][k]*prefactors[i][j][k]*pair_weight)};
+                    double pair_sro { shell_weight*pair_weight*(1.0 - bonds[i][j][k]*prefactors[i][j][k])};
                     bonds[i][j][k] = pair_sro;
                     bonds[i][k][j] = pair_sro;
                     total_objective += std::abs(pair_sro);
                 }
             }
         }
+
         return total_objective;
     }
 
@@ -86,6 +87,7 @@ namespace sqsgenerator {
 
             std::vector<shell_t> shells;
             std::vector<double> sorted_shell_weights;
+            double objective_calculated;
             double objective_local {best_objective};
             double best_objective_local {best_objective};
             array_3d_t parameters_local(boost::extents[static_cast<index_t>(nshells)][static_cast<index_t>(nspecies)][static_cast<index_t>(nspecies)]);
@@ -143,7 +145,8 @@ namespace sqsgenerator {
             for (rank_t i = start_it; i < end_it; i++) {
                 get_next_configuration(configuration_local);
                 count_pairs(configuration_local, pair_list, parameters_local, true);
-                objective_local = std::abs(target_objective - calculate_pair_objective(parameters_local, parameter_prefactors, parameter_weights, sorted_shell_weights, nspecies));
+                objective_calculated = calculate_pair_objective(parameters_local, parameter_prefactors, parameter_weights, sorted_shell_weights, nspecies);
+                objective_local = std::abs(target_objective - objective_calculated);
                 /*#pragma omp critical
                 {
                     std::cout << "[THREAD: " << thread_id << "] loop = " << i << ", objective = " << objective_local << ", num_pairs = " << pair_list.size()
@@ -155,20 +158,28 @@ namespace sqsgenerator {
                     best_objective_local = best_objective;
                     if (objective_local <= best_objective_local) { // We are sure we have found the a new configuration
                         // if we are in random mode we have to check if the map contains the key already
-                        SQSResult result(objective_local, {-1}, configuration_local, parameter_storage_t(parameters_local.data(), parameters_local.data() + nparams));
+                        SQSResult result(objective_calculated, {-1}, configuration_local, parameter_storage_t(parameters_local.data(), parameters_local.data() + nparams));
                         #pragma omp critical
                         {
                             results.push_back(result);
+                            std::cout << "[THREAD: " << thread_id << "] Found new best_objective = " << best_objective  << ", best_objetive_local = " << best_objective_local << ", current_objective = " << objective_local << ", num_pairs = " << pair_list.size() << std::endl;
                         }
+                        // synchronize
                         #pragma omp atomic write
-                        best_objective = best_objective_local;
+                        best_objective = objective_local;
+                        best_objective_local = objective_local;
+
                     }
                 }
             } // for
 
         } // #pragma omp parallel
         for (auto &r : results) {
-            std::cout << results.size() << " " << r.objective() << " " << r.rank() <<std::endl;
+            r.set_rank(rank_permutation(r.configuration(), settings.num_species()));
+            r.set_configuration(settings.unpack_configuration(r.configuration()));
+            std::cout << results.size() << " " << r.objective() << " " << r.rank() << " { ";
+            for (const auto &sp: r.configuration()) std::cout << static_cast<int>(sp) << " ";
+            std::cout << "}" << std::endl;
         }
 
 
