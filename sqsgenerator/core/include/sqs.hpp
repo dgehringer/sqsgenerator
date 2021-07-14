@@ -29,10 +29,8 @@ using namespace sqsgenerator::utils::atomistics;
 namespace sqsgenerator {
 
     void count_pairs(const configuration_t &configuration, const std::vector<AtomPair> &pair_list, array_3d_t &bonds, bool clear = false){
-        typedef typename array_3d_t::index index_t;
         // the array "bonds" must have the following dimensions (nshells, nspecies, nspecies)
         // configuration is already the remapped configuration {H, H, He, He, Ne, Ne} -> {0, 0, 1, 1, 2, 2}
-        double increment {2.000001};
         species_t si, sj;
         // clear the bond count array -> set it to zero
         if (clear) std::fill(bonds.data(), bonds.data() + bonds.num_elements(), 0.0);
@@ -97,7 +95,7 @@ namespace sqsgenerator {
             const std::vector<AtomPair> &pair_list {settings.pair_list()};
 
             switch (settings.mode()) {
-                case utils::iteration_mode::random:
+                case iteration_mode::random:
                 {
                     // the random generators only need initialization in case we are in parallel mode
                     #pragma omp critical
@@ -115,7 +113,7 @@ namespace sqsgenerator {
                     end_it = start_it + niterations / nthreads;
                     end_it = (thread_id == nthreads - 1) ? niterations : end_it;
                 } break;
-                case utils::iteration_mode::systematic: {
+                case iteration_mode::systematic: {
                     get_next_configuration = next_permutation;
                     auto total = utils::total_permutations(configuration_local);
                     auto hist = utils::configuration_histogram(configuration_local);

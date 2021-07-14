@@ -8,8 +8,8 @@
 #include "utils.hpp"
 #include <map>
 #include <boost/python.hpp>
-#include <boost/python/numpy.hpp>
 #include <boost/multi_array.hpp>
+#include <boost/python/numpy.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
 namespace py = boost::python;

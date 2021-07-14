@@ -3,6 +3,7 @@
 //
 
 #include "data.hpp"
+#include "helpers.hpp"
 #include "container_wrappers.hpp"
 
 using namespace sqsgenerator;
