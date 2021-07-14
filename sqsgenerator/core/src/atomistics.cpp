@@ -191,7 +191,7 @@ namespace sqsgenerator::utils::atomistics {
 
         m_shell_matrix.resize(boost::extents[natoms][natoms]);
         m_shell_matrix = sqsgenerator::utils::shell_matrix(m_distance_matrix, m_prec);
-        m_natoms = natoms;
+        m_natoms = species.size();
     }
 
     Structure::Structure(array_2d_t lattice, array_2d_t frac_coords,
@@ -202,6 +202,7 @@ namespace sqsgenerator::utils::atomistics {
                          std::vector<species_t> species,
                          std::array<bool, 3> pbc) :
             Structure(lattice, frac_coords, Atoms::from_z(species), pbc) {}
+
 
     const_array_2d_ref_t Structure::lattice() const {
         return boost::make_array_ref<const_array_2d_ref_t>(m_lattice);

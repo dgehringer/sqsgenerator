@@ -52,9 +52,6 @@ namespace sqsgenerator {
             }
         }
 
-
-
-
     const_pair_shell_matrix_ref_t IterationSettings::shell_matrix() {
         return m_structure.shell_matrix(m_prec);
     }

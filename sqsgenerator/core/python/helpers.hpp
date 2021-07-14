@@ -115,7 +115,6 @@ namespace sqsgenerator::python::helpers {
                               py::stl_input_iterator<T>());
     }
 
-
     template<class T>
     inline
     py::list vector_to_list(std::vector<T> vector) {
@@ -139,6 +138,17 @@ namespace sqsgenerator::python::helpers {
             result.emplace(std::make_pair(key, val));
         }
         return result;
+    }
+
+    template <class K, class V>
+    inline
+    boost::python::dict map_to_dict(std::map<K, V> map) {
+        typename std::map<K, V>::iterator iter;
+        boost::python::dict dictionary;
+        for (iter = map.begin(); iter != map.end(); ++iter) {
+            dictionary[iter->first] = iter->second;
+        }
+        return dictionary;
     }
 }
 #endif //SQSGENERATOR_HELPERS_HPP

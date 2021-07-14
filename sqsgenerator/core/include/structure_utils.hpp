@@ -89,22 +89,6 @@ namespace sqsgenerator::utils {
             return d2;
         }
 
-    template<typename MultiArray>
-    void print_array(MultiArray mat) {
-        auto shape {shape_from_multi_array(mat)};
-        auto rows {shape[0]}, cols {shape[1]};
-        std::cout << "[";
-        for (size_t i = 0; i < rows; i++) {
-            std::cout << "[";
-            for (size_t j = 0; j < cols - 1; j++) {
-                std::cout << mat[i][j] << ", ";
-            }
-            std::cout << mat[i][cols- 1] << "]";
-            if (i < rows - 1) std::cout << std::endl;
-        }
-        std::cout << "]" << std::endl;
-    }
-
 
     template<typename MultiArray>
         pair_shell_matrix shell_matrix(const MultiArray &distance_matrix, uint8_t prec = 5) {

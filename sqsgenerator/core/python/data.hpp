@@ -8,6 +8,7 @@
 #include "result.hpp"
 #include "atomistics.hpp"
 #include <boost/python.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/python/numpy.hpp>
 
 namespace py = boost::python;
@@ -18,22 +19,24 @@ namespace sqsgenerator::python {
 
     class SQSResultPythonWrapper {
     private:
-        const SQSResult& m_handle;
+        std::shared_ptr<SQSResult> m_handle;
     public:
 
         explicit SQSResultPythonWrapper(const SQSResult &other);
+        SQSResultPythonWrapper(SQSResult &&other);
         double objective();
         rank_t rank();
         np::ndarray configuration();
         np::ndarray parameters(py::tuple const &shape);
-        const SQSResult& handle();
+        std::shared_ptr<SQSResult> handle();
     };
 
     class StructurePythonWrapper {
     private:
-        atomistics::Structure m_handle;
+        std::shared_ptr<atomistics::Structure> m_handle;
     public:
         StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols, py::tuple pbc);
+        StructurePythonWrapper(const StructurePythonWrapper &other) = default;
         np::ndarray lattice();
         np::ndarray frac_coords();
         py::list species();
@@ -42,7 +45,7 @@ namespace sqsgenerator::python {
         np::ndarray distance_matrix();
         np::ndarray shell_matrix(uint8_t prec = 5);
         size_t num_atoms();
-        atomistics::Structure& handle();
+        std::shared_ptr<atomistics::Structure> handle();
     };
 
     typedef std::vector<SQSResultPythonWrapper> SQSResultCollection;
