@@ -16,7 +16,7 @@ namespace sqsgenerator::utils {
     std::vector<size_t> configuration_histogram(const configuration_t &conf) {
         auto uspcies = unique_species(conf);
         std::vector<size_t> hist(uspcies.size());
-        for (int i = 0; i < uspcies.size(); i++) {
+        for (size_t i = 0; i < uspcies.size(); i++) {
             hist[i] = std::count(conf.begin(), conf.end(), uspcies[i]);
         }
         return hist;

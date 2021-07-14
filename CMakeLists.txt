@@ -36,22 +36,11 @@ add_subdirectory(sqsgenerator/core/python)
 
 add_executable(sqsgenerator.core
         sqsgenerator/core/src/main.cpp
-        sqsgenerator/core/include/types.hpp
-        sqsgenerator/core/include/rank.hpp
         sqsgenerator/core/src/rank.cpp
-        sqsgenerator/core/include/moodycamel/concurrentqueue.h
-        sqsgenerator/core/include/moodycamel/blockingconcurrentqueue.h
-        sqsgenerator/core/include/moodycamel/lightweightsemaphore.h
-        sqsgenerator/core/src/containers.cpp
-        sqsgenerator/core/include/containers.hpp
-        sqsgenerator/core/include/utils.hpp
         sqsgenerator/core/src/utils.cpp
         sqsgenerator/core/src/atomistics.cpp
-        sqsgenerator/core/include/atomistics.hpp
-        sqsgenerator/core/include/structure_utils.hpp
-        sqsgenerator/core/include/sqs.hpp
         sqsgenerator/core/src/settings.cpp
-        sqsgenerator/core/include/settings.hpp)
+        sqsgenerator/core/src/result.cpp)
 
 
 target_link_libraries(sqsgenerator.core pthread ${Boost_LIBRARIES})

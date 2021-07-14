@@ -17,7 +17,7 @@ link_directories(${Python3_LIBRARY_DIRS})
 add_library(data SHARED
         module_data.cpp
         ../src/rank.cpp
-        ../src/containers.cpp
+        ../src/result.cpp
         ../src/atomistics.cpp
         ../src/utils.cpp
         data.hpp

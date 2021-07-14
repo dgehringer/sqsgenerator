@@ -1,44 +1,43 @@
 //
-// Created by dominik on 28.05.21.
+// Created by dominik on 14.07.21.
 //
-
-#include "containers.hpp"
-
-#include <utility>
+#include "result.hpp"
+#include "utils.hpp"
+#include "rank.hpp"
 
 namespace sqsgenerator {
 
     SQSResult::SQSResult() {}
 
-    SQSResult::SQSResult(double objective, cpp_int rank, const configuration_t conf, const parameter_storage_t params) :
-        m_objective(objective),
-        m_rank(std::move(rank)),
-        m_configuration(conf),
-        m_storage(params) {
+    SQSResult::SQSResult(double objective, rank_t rank, const configuration_t conf, const parameter_storage_t params) :
+            m_objective(objective),
+            m_rank(std::move(rank)),
+            m_configuration(conf),
+            m_storage(params) {
     }
 
     SQSResult::SQSResult(double objective, const configuration_t conf, const parameter_storage_t parameters) :
-        m_objective(objective),
-        m_configuration(conf),
-        m_storage(parameters) {
-        auto nspecies = unique_species(conf).size();
-        m_rank = rank_permutation(conf, nspecies);
+            m_objective(objective),
+            m_configuration(conf),
+            m_storage(parameters) {
+        auto nspecies = sqsgenerator::utils::unique_species(conf).size();
+        m_rank = sqsgenerator::utils::rank_permutation(conf, nspecies);
     }
 
     //TODO: we could write: SQSResult(const SQSResult &other) = default; here
     SQSResult::SQSResult(const SQSResult &other) :
-        m_objective(other.m_objective),
-        m_rank(other.m_rank),
-        m_configuration(other.m_configuration),
-        m_storage(other.m_storage) {
+            m_objective(other.m_objective),
+            m_rank(other.m_rank),
+            m_configuration(other.m_configuration),
+            m_storage(other.m_storage) {
     };
 
     // Move constructor
     SQSResult::SQSResult(SQSResult &&other) noexcept :
-        m_objective(other.m_objective),
-        m_rank(std::move(other.m_rank)),
-        m_configuration(std::move(other.m_configuration)),
-        m_storage(std::move(other.m_storage)) {
+            m_objective(other.m_objective),
+            m_rank(std::move(other.m_rank)),
+            m_configuration(std::move(other.m_configuration)),
+            m_storage(std::move(other.m_storage)) {
     };
 
     SQSResult& SQSResult::operator=(SQSResult&& other) noexcept  {

@@ -7,7 +7,7 @@
 #include "types.hpp"
 #include "helpers.hpp"
 #include "atomistics.hpp"
-#include "containers.hpp"
+#include "result.hpp"
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 
