@@ -26,3 +26,18 @@ add_library(data SHARED
 set_target_properties(data PROPERTIES SUFFIX .so)
 set_target_properties(data PROPERTIES PREFIX "")
 target_link_libraries(data pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})
+
+
+add_library(iteration SHARED
+        module_iteration.cpp
+        ../src/rank.cpp
+        ../src/result.cpp
+        ../src/atomistics.cpp
+        ../src/settings.cpp
+        ../src/utils.cpp
+        iteration.cpp
+        data.cpp
+        )
+set_target_properties(iteration PROPERTIES SUFFIX .so)
+set_target_properties(iteration PROPERTIES PREFIX "")
+target_link_libraries(iteration pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})

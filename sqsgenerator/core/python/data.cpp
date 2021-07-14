@@ -2,6 +2,7 @@
 // Created by dominik on 14.07.21.
 //
 #include "data.hpp"
+#include "helpers.hpp"
 
 using namespace sqsgenerator::python;
 using namespace sqsgenerator;

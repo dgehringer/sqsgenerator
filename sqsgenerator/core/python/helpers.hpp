@@ -6,6 +6,7 @@
 #define SQSGENERATOR_HELPERS_HPP
 
 #include "utils.hpp"
+#include <map>
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 #include <boost/multi_array.hpp>
@@ -124,6 +125,20 @@ namespace sqsgenerator::python::helpers {
             list.append(*iter);
         }
         return list;
+    }
+
+    template<typename K, typename V>
+    inline
+    std::map<K,V> dict_to_map(py::dict d) {
+        std::map<K,V> result;
+        py::list keys = d.keys();
+        auto length {py::len(d)};
+        for (ssize_t i = 0; i < length ; i++) {
+            K key = py::extract<K>(keys[i]);
+            V val = py::extract<V>(d[key]);
+            result.emplace(std::make_pair(key, val));
+        }
+        return result;
     }
 }
 #endif //SQSGENERATOR_HELPERS_HPP

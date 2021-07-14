@@ -5,9 +5,8 @@
 #ifndef SQSGENERATOR_DATA_HPP
 #define SQSGENERATOR_DATA_HPP
 #include "types.hpp"
-#include "helpers.hpp"
-#include "atomistics.hpp"
 #include "result.hpp"
+#include "atomistics.hpp"
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 
@@ -24,7 +23,7 @@ namespace sqsgenerator::python {
 
         explicit SQSResultPythonWrapper(const SQSResult &other);
         double objective();
-        cpp_int rank();
+        rank_t rank();
         np::ndarray configuration();
         np::ndarray parameters(py::tuple const &shape);
         const SQSResult& handle();

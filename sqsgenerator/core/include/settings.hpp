@@ -10,7 +10,7 @@
 
 using namespace sqsgenerator::utils::atomistics;
 
-namespace sqsgenerator::utils {
+namespace sqsgenerator {
     enum iteration_mode { random = 0, systematic = 1};
 
     class IterationSettings {

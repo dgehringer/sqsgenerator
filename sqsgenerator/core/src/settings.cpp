@@ -6,7 +6,9 @@
 #include "settings.hpp"
 #include <utility>
 
-namespace sqsgenerator::utils {
+using namespace sqsgenerator::utils;
+
+namespace sqsgenerator {
 
 
     IterationSettings::IterationSettings(Structure &structure, double target_objective, array_2d_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, iteration_mode mode, uint8_t prec) :

@@ -14,8 +14,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 find_package(Boost REQUIRED COMPONENTS system python numpy)
-
-
 message([BOOST]:INCLUDE_DIRS: ${Boost_INCLUDE_DIRS})
 message([BOOST]:LIBRARIES: ${Boost_LIBRARIES})
 
@@ -27,6 +25,21 @@ if (OPENMP_FOUND)
     message([OPENMP]:COMPILER FLAGS: ${OpenMP_CXX_FLAGS})
     message([OPENMP]:LINKER FLAGS: ${OpenMP_EXE_LINKER_FLAGS})
 endif()
+
+execute_process(
+        COMMAND git rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# Get the latest commit hash
+execute_process(
+        COMMAND git rev-parse HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+message([REPO] ${GIT_COMMIT_HASH}@${GIT_BRANCH})
 
 include_directories(sqsgenerator/core/include)
 include_directories(${Boost_INCLUDE_DIRS})
