@@ -65,15 +65,14 @@ namespace sqsgenerator {
 
     void do_iterations(const IterationSettings &settings) {
         typedef array_3d_ref_t::index index_t;
+        typedef boost::circular_buffer<SQSResult> result_buffer_t;
         double best_objective {std::numeric_limits<double>::max()};
         double target_objective {settings.target_objective()};
         int niterations {settings.num_iterations()};
-        auto nspecies{settings.num_species()};
+        auto nspecies {settings.num_species()};
         auto nshells {settings.num_shells()};
         auto nparams {nspecies * nshells * nshells};
 
-
-        typedef boost::circular_buffer<SQSResult> result_buffer_t;
         result_buffer_t results(settings.num_output_configurations());
 
         omp_set_num_threads(1);
@@ -84,7 +83,6 @@ namespace sqsgenerator {
             uint64_t random_seed_local;
             get_next_configuration_t get_next_configuration;
             // After creating a team of threads, unpack all the informations from the IterationSettings object
-
             std::vector<shell_t> shells;
             std::vector<double> sorted_shell_weights;
             double objective_calculated;

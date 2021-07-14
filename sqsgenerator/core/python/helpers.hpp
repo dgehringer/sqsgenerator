@@ -93,7 +93,6 @@ namespace sqsgenerator::python::helpers {
 
     template<typename MultiArray, size_t NumDims>
     np::ndarray multi_array_to_ndarray(const MultiArray &array){
-        typedef typename MultiArray::element T;
         auto shape {vector_to_py_tuple<NumDims, typename MultiArray::size_type>(shape_from_multi_array(array))};
         return to_flat_numpy_array(array.data(), array.num_elements()).reshape(shape);
     }

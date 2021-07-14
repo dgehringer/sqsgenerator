@@ -15,10 +15,13 @@ include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Python3_LIBRARY_DIRS})
 
 add_library(data SHARED
-        data.cpp
+        module_data.cpp
         ../src/rank.cpp
         ../src/containers.cpp
         ../src/atomistics.cpp
+        ../src/utils.cpp
+        data.hpp
+        data.cpp
         )
 set_target_properties(data PROPERTIES SUFFIX .so)
 set_target_properties(data PROPERTIES PREFIX "")
