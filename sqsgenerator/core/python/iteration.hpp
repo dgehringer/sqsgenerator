@@ -23,6 +23,7 @@ namespace sqsgenerator::python {
 // IterationSettings(Structure &structure, double target_objective, array_2d_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, iteration_mode mode = iteration_mode::random, uint8_t prec = 5)
     public:
         IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, iteration_mode iteration_mode, uint8_t prec);
+        IterationSettingsPythonWrapper(const IterationSettingsPythonWrapper &other) = default;
         size_t num_atoms() const;
         size_t num_shells() const;
         int num_iterations() const;

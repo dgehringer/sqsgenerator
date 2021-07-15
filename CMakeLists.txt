@@ -11,7 +11,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native --fast-math" )
 
 find_package(Boost REQUIRED COMPONENTS system python numpy)
 message([BOOST]:INCLUDE_DIRS: ${Boost_INCLUDE_DIRS})

@@ -38,8 +38,10 @@ namespace boost{
         return std::vector<typename MultiArray::size_type>(a.shape(), a.shape() + a.num_dimensions());
     }
 
+    // TODO: Probably unused function -> Maybe we should remove it
+
     template<typename MultiArrayRef, typename MultiArray>
-    MultiArrayRef make_array_ref(MultiArray &array) {
+    [[maybe_unused]] MultiArrayRef make_array_ref(MultiArray &array) {
         return MultiArrayRef(array.data(), shape_from_multi_array<MultiArray>(array));
     }
 

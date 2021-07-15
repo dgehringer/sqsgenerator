@@ -6,6 +6,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <chrono>
 #include "types.hpp"
 #include <boost/multi_array.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
@@ -76,41 +77,55 @@ int main(int argc, char *argv[]) {
 
 
     array_2d_t lattice = boost::make_multi_array<double, 3, 3>({
-        8.10, 0.00, 0.00,
-        0.00, 8.10, 0.00,
-        0.00, 0.00, 8.10
+        0.0, 6.074999999999999, 6.074999999999999,
+        6.074999999999999, 0.0, 6.074999999999999,
+        6.074999999999999, 6.074999999999999, 0.0
     });
 
-    array_2d_t frac_coords = boost::make_multi_array<double, 16, 3>({
-           0.  , 0.  , 0.,
-           0.25, 0.25, 0.25,
-           0.  , 0.  , 0.5,
-           0.25, 0.25, 0.75,
-           0.  , 0.5 , 0.,
-           0.25, 0.75, 0.25,
-           0.  , 0.5 , 0.5,
-           0.25, 0.75, 0.75,
-           0.5 , 0.  , 0.,
-           0.75, 0.25, 0.25,
-           0.5 , 0.  , 0.5,
-           0.75, 0.25, 0.75,
-           0.5 , 0.5 , 0.,
-           0.75, 0.75, 0.25,
-           0.5 , 0.5 , 0.5,
-           0.75, 0.75, 0.75
+    array_2d_t frac_coords = boost::make_multi_array<double, 27, 3>({
+            0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+            0.00000000e+00, 0.00000000e+00, 3.33333333e-01,
+            0.00000000e+00, 0.00000000e+00, 6.66666667e-01,
+            0.00000000e+00, 3.33333333e-01, 0.00000000e+00,
+            7.31011045e-17, 3.33333333e-01, 3.33333333e-01,
+            0.00000000e+00, 3.33333333e-01, 6.66666667e-01,
+            0.00000000e+00, 6.66666667e-01, 0.00000000e+00,
+            0.00000000e+00, 6.66666667e-01, 3.33333333e-01,
+            1.46202209e-16, 6.66666667e-01, 6.66666667e-01,
+            3.33333333e-01, 0.00000000e+00, 0.00000000e+00,
+            3.33333333e-01, 7.31011045e-17, 3.33333333e-01,
+            3.33333333e-01, 0.00000000e+00, 6.66666667e-01,
+            3.33333333e-01, 3.33333333e-01, 0.00000000e+00,
+            3.33333333e-01, 3.33333333e-01, 3.33333333e-01,
+            3.33333333e-01, 3.33333333e-01, 6.66666667e-01,
+            3.33333333e-01, 6.66666667e-01, 0.00000000e+00,
+            3.33333333e-01, 6.66666667e-01, 3.33333333e-01,
+            3.33333333e-01, 6.66666667e-01, 6.66666667e-01,
+            6.66666667e-01, 0.00000000e+00, 0.00000000e+00,
+            6.66666667e-01, 0.00000000e+00, 3.33333333e-01,
+            6.66666667e-01, 1.46202209e-16, 6.66666667e-01,
+            6.66666667e-01, 3.33333333e-01, 0.00000000e+00,
+            6.66666667e-01, 3.33333333e-01, 3.33333333e-01,
+            6.66666667e-01, 3.33333333e-01, 6.66666667e-01,
+            6.66666667e-01, 6.66666667e-01, 0.00000000e+00,
+            6.66666667e-01, 6.66666667e-01, 3.33333333e-01,
+            6.66666667e-01, 6.66666667e-01, 6.66666667e-01
     });
 
-    std::vector<std::string> species { "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl" };
+    std::vector<std::string> species { "Al", "Al", "Al", "Al", "Al", "Al", "Al", "Al", "Al", "Al", "Al", "Al", "Al", "Ni", "Ni", "Ni", "Ni", "Ni", "Ni", "Ni", "Ni", "Ni", "Ni", "Ni", "Ni", "Ni", "Ni" };
     /*std::vector<std::string> species { "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Cs", "Cl", "Ne", "Ne", "Ne", "Ne", "Ne", "Ne", "Ne", "Ne" };*/
     std::array<bool, 3> pbc {true, true, true};
 
     Structure structure(lattice, frac_coords, species, pbc);
 
     pair_shell_weights_t shell_weights {
-           // {4, 0.25},
+           {4, 0.25},
+           {5, 0.2},
             {1, 1.0},
-           // {3, 0.33},
-           {2, 0.5}
+           {3, 0.33},
+           {2, 0.5},
+            {6, 1.0/6.0},
+            {7, 1.0/7.0}
     };
 
     array_2d_t pair_weights = boost::make_multi_array<double, 2, 2>({
@@ -122,15 +137,21 @@ int main(int argc, char *argv[]) {
     });*/
     auto conf (structure.configuration());
 
+    array_3d_t target_objective(boost::extents[shell_weights.size()][nspecies][nspecies]);
+    //std::fill(target_objective.begin(), target_objective.end(), 0.0);
 
-    IterationSettings settings(structure, -1.0, pair_weights, shell_weights, 10000, 10, iteration_mode::systematic);
+    auto niteration {40000};
+    IterationSettings settings(structure, target_objective, pair_weights, shell_weights, niteration, 10, iteration_mode::random);
     auto initial_rank = rank_permutation(settings.packed_configuraton(), settings.num_species());
     std::cout << "[MAIN]: " << structure.num_atoms() << " - " << conf.size() << std::endl;
     std::cout << "[MAIN]: rank = " << initial_rank  << std::endl;
     std::cout << "[MAIN]: configuration = "; print_conf(structure.configuration());
     std::cout << "[MAIN]: packed_config = "; print_conf(settings.packed_configuraton());
     std::cout << "[MAIN]: num_pairs = " << settings.pair_list().size() << std::endl;
+    std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
     do_iterations(settings);
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::cout << "Time difference = " << static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count())/niteration << "[µs]" << std::endl;
 }
 //
 

@@ -23,8 +23,7 @@ namespace sqsgenerator {
 
         SQSResult(double objective, configuration_t conf, parameter_storage_t parameters);
 
-        //TODO: we could write: SQSResult(const SQSResult &other) = default; here
-        SQSResult(const SQSResult &other);
+        SQSResult(const SQSResult &other) = default;
 
         SQSResult(SQSResult &&other) noexcept;
 

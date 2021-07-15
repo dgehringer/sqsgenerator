@@ -205,11 +205,11 @@ namespace sqsgenerator::utils::atomistics {
 
 
     const_array_2d_ref_t Structure::lattice() const {
-        return boost::make_array_ref<const_array_2d_ref_t>(m_lattice);
+        return m_lattice;
     }
 
     const_array_2d_ref_t Structure::frac_coords() const {
-        return boost::make_array_ref<const_array_2d_ref_t>(m_frac_coords);
+        return m_frac_coords;
     }
 
     std::array<bool, 3> Structure::pbc() const {
@@ -221,11 +221,11 @@ namespace sqsgenerator::utils::atomistics {
     }
 
     const_array_3d_ref_t Structure::distance_vecs() const {
-        return boost::make_array_ref<const_array_3d_ref_t>(m_pbc_vecs);
+        return m_pbc_vecs;
     }
 
     const_array_2d_ref_t Structure::distance_matrix() const {
-        return boost::make_array_ref<const_array_2d_ref_t>(m_distance_matrix);
+        return m_distance_matrix;
     }
 
     const_pair_shell_matrix_ref_t Structure::shell_matrix(uint8_t prec) {
@@ -233,7 +233,7 @@ namespace sqsgenerator::utils::atomistics {
             m_prec = prec;
             m_shell_matrix = sqsgenerator::utils::shell_matrix(m_distance_matrix, m_prec);
         }
-        return boost::make_array_ref<const_pair_shell_matrix_ref_t>(m_shell_matrix);
+        return m_shell_matrix;
     }
 
     std::vector<AtomPair> Structure::create_pair_list(const std::map<shell_t, double> &weights) const {

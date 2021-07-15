@@ -24,13 +24,6 @@ namespace sqsgenerator {
         m_rank = sqsgenerator::utils::rank_permutation(conf, nspecies);
     }
 
-    //TODO: we could write: SQSResult(const SQSResult &other) = default; here
-    SQSResult::SQSResult(const SQSResult &other) :
-            m_objective(other.m_objective),
-            m_rank(other.m_rank),
-            m_configuration(other.m_configuration),
-            m_storage(other.m_storage) {
-    };
 
     // Move constructor
     SQSResult::SQSResult(SQSResult &&other) noexcept :

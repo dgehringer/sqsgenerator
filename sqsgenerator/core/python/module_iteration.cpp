@@ -2,17 +2,20 @@
 // Created by dominik on 14.07.21.
 //
 #include "types.hpp"
+#include "sqs.hpp"
+#include "data.hpp"
 #include "iteration.hpp"
 #include <boost/python/suite/indexing/map_indexing_suite.hpp>
 
 using namespace sqsgenerator;
 using namespace sqsgenerator::python;
 
-char const* greet()
-{
-    return "hello, world";
+SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings) {
+    auto sqs_results = sqsgenerator::do_iterations(*settings.handle());
+    SQSResultCollection wrapped_results;
+    for (SQSResult &r : sqs_results) wrapped_results.push_back(SQSResultPythonWrapper(std::move(r)));
+    return wrapped_results;
 }
-
 
 
 BOOST_PYTHON_MODULE(iteration) {
@@ -38,4 +41,5 @@ BOOST_PYTHON_MODULE(iteration) {
                 .def_readonly("shell_weights", &IterationSettingsPythonWrapper::shell_weights)
                 .def_readonly("parameter_weights", &IterationSettingsPythonWrapper::parameter_weights);
 
+        py::def("pair_sqs_iteration", &pair_sqs_iteration);
 }
