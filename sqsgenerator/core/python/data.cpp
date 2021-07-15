@@ -40,19 +40,19 @@ std::shared_ptr<SQSResult> SQSResultPythonWrapper::handle() {
 
 StructurePythonWrapper::StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols, py::tuple pbc):
     m_handle(std::shared_ptr<atomistics::Structure>(new atomistics::Structure(
-            helpers::ndarray_to_multi_array<double, 2>(lattice),
-            helpers::ndarray_to_multi_array<double,2>(frac_coords),
+            helpers::ndarray_to_multi_array<const_array_2d_ref_t>(lattice),
+            helpers::ndarray_to_multi_array<const_array_2d_ref_t>(frac_coords),
             helpers::list_to_vector<std::string>(symbols),
     {py::extract<bool>(pbc[0]),py::extract<bool>(pbc[1]), py::extract<bool>(pbc[2])})))
 { }
 
 
 np::ndarray StructurePythonWrapper::lattice() {
-    return helpers::multi_array_to_ndarray<const_array_2d_ref_t,2>(m_handle->lattice());
+    return helpers::multi_array_to_ndarray(m_handle->lattice());
 }
 
 np::ndarray StructurePythonWrapper::frac_coords() {
-    return helpers::multi_array_to_ndarray<const_array_2d_ref_t,2>(m_handle->frac_coords());
+    return helpers::multi_array_to_ndarray(m_handle->frac_coords());
 }
 
 py::list StructurePythonWrapper::species() {
@@ -65,15 +65,15 @@ py::tuple StructurePythonWrapper::pbc() {
 }
 
 np::ndarray StructurePythonWrapper::distance_vecs() {
-    return helpers::multi_array_to_ndarray<const_array_3d_ref_t , 3>(m_handle->distance_vecs());
+    return helpers::multi_array_to_ndarray(m_handle->distance_vecs());
 }
 
 np::ndarray StructurePythonWrapper::distance_matrix() {
-    return helpers::multi_array_to_ndarray<const_array_2d_ref_t , 2>(m_handle->distance_matrix());
+    return helpers::multi_array_to_ndarray(m_handle->distance_matrix());
 }
 
 np::ndarray StructurePythonWrapper::shell_matrix(uint8_t prec) {
-    return helpers::multi_array_to_ndarray<const_pair_shell_matrix_ref_t, 2>(m_handle->shell_matrix(prec));
+    return helpers::multi_array_to_ndarray(m_handle->shell_matrix(prec));
 }
 
 size_t StructurePythonWrapper::num_atoms() {

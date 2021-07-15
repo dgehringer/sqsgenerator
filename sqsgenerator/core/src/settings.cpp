@@ -9,48 +9,67 @@
 using namespace sqsgenerator::utils;
 
 namespace sqsgenerator {
+/*        Structure &m_structure;
+        uint8_t m_prec;
+        int m_niterations;
+        int m_noutput_configurations;
+        size_t m_nspecies;
+        configuration_t m_configuration_packing_indices;
+        configuration_t m_packed_configuration;
+        pair_shell_weights_t m_shell_weights;
+        iteration_mode m_mode;
+        array_2d_t m_parameter_weights;
+        array_3d_t m_target_objective;
+        array_3d_t m_parameter_prefactors;*/
+
+    typedef array_3d_t::index index_t;
 
 
-    IterationSettings::IterationSettings(Structure &structure, double target_objective, array_2d_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, iteration_mode mode, uint8_t prec) :
-        m_mode(mode),
-        m_prec(prec),
+    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, iteration_mode mode, uint8_t prec) :
         m_structure(structure),
+        m_prec(prec),
         m_niterations(iterations),
-        m_target_objective(target_objective),
-        m_parameter_weights(parameter_weights),
-        m_shell_weights(std::move(shell_weights)),
         m_noutput_configurations(output_configurations),
-        m_nspecies(unique_species(structure.configuration()).size())
-        {
+        m_nspecies(unique_species(structure.configuration()).size()),
+        m_shell_weights(shell_weights),
+        m_mode(mode),
+        m_parameter_weights(parameter_weights),
+        m_target_objective(target_objective),
+        m_parameter_prefactors(boost::extents[static_cast<index_t>(shell_weights.size())][static_cast<index_t>(m_nspecies)][static_cast<index_t>(m_nspecies)])
+    {
+        std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(structure.configuration());
+        init_prefactors();
+    }
 
-            std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(structure.configuration());
-            auto nshells {num_shells()};
-            auto natoms {num_atoms()};
+    void IterationSettings::init_prefactors() {
+        auto nshells {static_cast<index_t>(num_shells())};
+        auto nspecies {static_cast<index_t>(num_species())};
+        auto natoms {static_cast<index_t>(num_atoms())};
+        auto natoms_d {static_cast<double>(num_atoms())};
 
-            typedef array_3d_t::index index_t;
-            m_parameter_prefactors.resize(boost::extents[nshells][m_nspecies][m_nspecies]);
-            std::vector<shell_t> shells = std::get<0>(shell_indices_and_weights());
-            std::map<shell_t, size_t> neighbor_count;
-            for (const auto &shell: shells) neighbor_count.emplace(std::make_pair(shell, 0));
-            auto shell_mat = shell_matrix();
-            for (index_t i = 1; i < num_atoms(); i++) {
-                auto neighbor_shell {shell_mat[0][i]};
-                if (neighbor_count.count(neighbor_shell)) neighbor_count[neighbor_shell]++;
-            }
-            auto hist = configuration_histogram(m_packed_configuration);
-            for (index_t i = 0; i < nshells; i++) {
-                double M_i {static_cast<double>(neighbor_count[shells[i]])};
-                for (index_t a = 0; a < m_nspecies; a++) {
-                    double x_a {static_cast<double>(hist[a])/natoms};
-                    for (index_t b = a; b < m_nspecies; b++) {
-                        double x_b {static_cast<double>(hist[b])/natoms};
-                        double prefactor {1.0/(M_i*x_a*x_b*natoms)};
-                        m_parameter_prefactors[i][a][b] = prefactor;
-                        m_parameter_prefactors[i][b][a] = prefactor;
-                    }
+        std::vector<shell_t> shells = std::get<0>(shell_indices_and_weights());
+        std::map<shell_t, size_t> neighbor_count;
+        for (const auto &shell: shells) neighbor_count.emplace(std::make_pair(shell, 0));
+        auto shell_mat = shell_matrix();
+        for (index_t i = 1; i < natoms; i++) {
+            auto neighbor_shell {shell_mat[0][i]};
+            if (neighbor_count.count(neighbor_shell)) neighbor_count[neighbor_shell]++;
+        }
+        auto hist = configuration_histogram(m_packed_configuration);
+        for (index_t i = 0; i < nshells; i++) {
+            double M_i {static_cast<double>(neighbor_count[shells[i]])};
+            for (index_t a = 0; a < nspecies; a++) {
+                double x_a {static_cast<double>(hist[a])/natoms_d};
+                for (index_t b = a; b < nspecies; b++) {
+                    double x_b {static_cast<double>(hist[b])/natoms_d};
+                    double prefactor {1.0/(M_i*x_a*x_b*natoms_d)};
+                    m_parameter_prefactors[i][a][b] = prefactor;
+                    m_parameter_prefactors[i][b][a] = prefactor;
                 }
             }
         }
+    }
+
 
     const_pair_shell_matrix_ref_t IterationSettings::shell_matrix() {
         return m_structure.shell_matrix(m_prec);
@@ -84,7 +103,7 @@ namespace sqsgenerator {
         return m_noutput_configurations;
     }
 
-    [[nodiscard]] double IterationSettings::target_objective() const {
+    [[nodiscard]] const_array_3d_ref_t IterationSettings::target_objective() const {
         return m_target_objective;
     }
 
@@ -97,7 +116,7 @@ namespace sqsgenerator {
     }
 
     [[nodiscard]] const_array_2d_ref_t IterationSettings::parameter_weights() const {
-        return boost::make_array_ref<const_array_2d_ref_t>(m_parameter_weights);
+        return m_parameter_weights;
     }
 
     iteration_mode IterationSettings::mode() const {
@@ -114,12 +133,13 @@ namespace sqsgenerator {
     }
 
     [[nodiscard]] const_array_3d_ref_t IterationSettings::parameter_prefactors() const {
-        return boost::make_array_ref<const_array_3d_ref_t>(m_parameter_prefactors);
+        return m_parameter_prefactors;
     }
 
     [[nodiscard]] configuration_t IterationSettings::unpack_configuration(const configuration_t &conf) const{
         return utils::unpack_configuration(m_configuration_packing_indices, conf);
     }
+
 
 
 };

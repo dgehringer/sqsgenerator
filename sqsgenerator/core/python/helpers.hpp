@@ -66,15 +66,13 @@ namespace sqsgenerator::python::helpers {
     }
 
 
-    template<typename T, size_t NDims>
-    boost::multi_array<T, NDims> ndarray_to_multi_array(np::ndarray &array) {
-        assert(array.get_nd() == NDims);
+    template<typename MultiArray>
+    MultiArray ndarray_to_multi_array(np::ndarray &array) {
+        auto NDims = MultiArray::dimensionality;
+        assert(array.get_nd() == static_cast<int>(NDims));
+        typedef typename MultiArray::element T;
         std::vector<size_t> shape(array.get_shape(), array.get_shape()+array.get_nd());
-        return boost::multi_array<T, NDims>(
-                boost::multi_array_ref<T, NDims>(
-                        reinterpret_cast<T*>(array.get_data()), shape
-                        )
-                );
+        return MultiArray(reinterpret_cast<T*>(array.get_data()), shape);
     }
 
     // this snippet is an adapted version of:
@@ -92,9 +90,9 @@ namespace sqsgenerator::python::helpers {
         return vector_to_py_tuple_helper(v, std::make_index_sequence<N>());
     }
 
-    template<typename MultiArray, size_t NumDims>
+    template<typename MultiArray>
     np::ndarray multi_array_to_ndarray(const MultiArray &array){
-        auto shape {vector_to_py_tuple<NumDims, typename MultiArray::size_type>(shape_from_multi_array(array))};
+        auto shape {vector_to_py_tuple<MultiArray::dimensionality, typename MultiArray::size_type>(shape_from_multi_array(array))};
         return to_flat_numpy_array(array.data(), array.num_elements()).reshape(shape);
     }
 

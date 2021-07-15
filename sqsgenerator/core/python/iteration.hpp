@@ -22,17 +22,17 @@ namespace sqsgenerator::python {
         std::shared_ptr<IterationSettings> m_handle;
 // IterationSettings(Structure &structure, double target_objective, array_2d_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, iteration_mode mode = iteration_mode::random, uint8_t prec = 5)
     public:
-        IterationSettingsPythonWrapper(StructurePythonWrapper structure, double target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, iteration_mode iteration_mode, uint8_t prec);
+        IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, iteration_mode iteration_mode, uint8_t prec);
         size_t num_atoms() const;
         size_t num_shells() const;
         int num_iterations() const;
         size_t num_species() const;
         iteration_mode mode() const;
-        double target_objective() const;
-        StructurePythonWrapper structure() const;
-        int num_output_configurations() const;
         py::dict shell_weights() const;
+        np::ndarray target_objective() const;
+        int num_output_configurations() const;
         np::ndarray parameter_weights() const;
+        StructurePythonWrapper structure() const;
         std::shared_ptr<IterationSettings> handle() const;
     };
 }

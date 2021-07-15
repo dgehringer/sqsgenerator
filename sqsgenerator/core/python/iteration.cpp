@@ -8,12 +8,12 @@
 namespace sqsgenerator::python {
 
 
-    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, double target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, iteration_mode iteration_mode, uint8_t prec):
+    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, iteration_mode iteration_mode, uint8_t prec):
     m_structure(structure),
     m_handle(new IterationSettings(
                 *structure.handle(),
-                target_objective,
-                helpers::ndarray_to_multi_array<double, 2>(parameter_weights),
+                helpers::ndarray_to_multi_array<const_array_3d_ref_t>(target_objective),
+                helpers::ndarray_to_multi_array<const_array_2d_ref_t>(parameter_weights),
                 helpers::dict_to_map<shell_t, double>(shell_weights),
                 iterations,
                 output_configurations,
@@ -41,8 +41,8 @@ namespace sqsgenerator::python {
         return m_handle->mode();
     }
 
-    double IterationSettingsPythonWrapper::target_objective() const {
-        return m_handle->target_objective();
+    np::ndarray IterationSettingsPythonWrapper::target_objective() const {
+        return helpers::multi_array_to_ndarray(m_handle->target_objective());
     }
 
     StructurePythonWrapper IterationSettingsPythonWrapper::structure() const {
@@ -58,7 +58,7 @@ namespace sqsgenerator::python {
     }
 
     np::ndarray IterationSettingsPythonWrapper::parameter_weights() const {
-        return helpers::multi_array_to_ndarray<const_array_2d_ref_t, 2>(m_handle->parameter_weights());
+        return helpers::multi_array_to_ndarray(m_handle->parameter_weights());
     }
 
     std::shared_ptr<IterationSettings> IterationSettingsPythonWrapper::handle() const {

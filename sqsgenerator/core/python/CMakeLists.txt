@@ -38,6 +38,8 @@ add_library(iteration SHARED
         ../src/settings.cpp
         ../src/utils.cpp
          )
+
+add_dependencies(iteration data)
 set_target_properties(iteration PROPERTIES SUFFIX .so)
 set_target_properties(iteration PROPERTIES PREFIX "")
 target_link_libraries(iteration pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})
