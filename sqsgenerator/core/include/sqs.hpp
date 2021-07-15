@@ -30,6 +30,7 @@ using namespace sqsgenerator::utils::atomistics;
 
 namespace sqsgenerator {
 
+    typedef size_t AtomicBond[4];
 
     void count_pairs(const configuration_t &configuration, const std::vector<AtomPair> &pair_list, array_3d_ref_t &bonds, bool clear = false){
         // the array "bonds" must have the following dimensions (nshells, nspecies, nspecies)
@@ -43,6 +44,21 @@ namespace sqsgenerator {
             sj = configuration[j];
             bonds[shell_index][si][sj]++;
             if (si != sj) bonds[shell_index][sj][si]++;
+        }
+    }
+
+    inline
+    void count_pairs_naive(const species_t *configuration, const size_t* pair_list, double *bonds, size_t num_pairs, size_t nshells, size_t nspecies, bool clear) {
+        species_t si, sj;
+        size_t parameters_per_shell {nspecies*nspecies};
+        const size_t *bond = pair_list;
+        if (clear) memset(bonds, 0, sizeof(double) * nshells * nspecies * nspecies);
+        for (size_t i = 0; i < num_pairs; i++) {
+            si = configuration[bond[0]];
+            sj = configuration[bond[1]];
+            bonds[bond[3]*parameters_per_shell + sj * nspecies + si]++;
+            if (si != sj) bonds[bond[3]*parameters_per_shell + si * nspecies + sj]++;
+            bond += 3;
         }
     }
 
@@ -68,6 +84,29 @@ namespace sqsgenerator {
         return total_objective;
     }
 
+    static void do_iterations_naive(const IterationSettings &settings) {
+        typedef boost::circular_buffer<SQSResult> result_buffer_t;
+        result_buffer_t results(settings.num_output_configurations());
+        auto pair_list(settings.pair_list());
+        auto npairs {pair_list.size()};
+
+        size_t row_size {3};
+        size_t* pair_list_ptr {static_cast<size_t*>(calloc(npairs * row_size, sizeof(size_t)))};
+        size_t* row_ptr {pair_list_ptr};
+        for (const AtomPair &pair : pair_list) {
+            auto[i, j, _, shell_index] = pair;
+            row_ptr[0] = i;
+            row_ptr[1] = j;
+            row_ptr[2] = shell_index;
+            row_ptr+=3;
+        }
+
+        for (size_t i = 0; i < npairs; i++) {
+            size_t *rptr = pair_list_ptr + row_size*i;
+            std::cout << static_cast<int>(i+1) << ": i=" << static_cast<int>(rptr[0]) << ", j=" << static_cast<int>(rptr[1]) << ", shell_index=" << static_cast<int>(rptr[2]) << std::endl;
+        }
+    }
+
     static std::vector<SQSResult> do_iterations(const IterationSettings &settings) {
         typedef boost::circular_buffer<SQSResult> result_buffer_t;
         double best_objective {std::numeric_limits<double>::max()};
@@ -78,7 +117,11 @@ namespace sqsgenerator {
         auto parameter_weights(settings.parameter_weights());
         auto parameter_prefactors(settings.parameter_prefactors());
         auto target_objective(settings.target_objective());
+        auto pair_list(settings.pair_list());
         result_buffer_t results(settings.num_output_configurations());
+
+        ///////////////////////////////////////////////////////////////////////
+
 
         omp_set_num_threads(1);
         #pragma omp parallel default(none) shared(std::cout, boost::extents, settings, best_objective, results) firstprivate(nparams, nshells, nspecies, niterations, parameter_prefactors, parameter_weights, target_objective)
