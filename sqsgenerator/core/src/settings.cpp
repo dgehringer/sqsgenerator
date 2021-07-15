@@ -4,6 +4,7 @@
 
 #include "utils.hpp"
 #include "settings.hpp"
+#include <stdexcept>
 #include <utility>
 
 using namespace sqsgenerator::utils;
@@ -31,14 +32,27 @@ namespace sqsgenerator {
         m_niterations(iterations),
         m_noutput_configurations(output_configurations),
         m_nspecies(unique_species(structure.configuration()).size()),
-        m_shell_weights(shell_weights),
         m_mode(mode),
         m_parameter_weights(parameter_weights),
         m_target_objective(target_objective),
         m_parameter_prefactors(boost::extents[static_cast<index_t>(shell_weights.size())][static_cast<index_t>(m_nspecies)][static_cast<index_t>(m_nspecies)])
     {
+        auto shell_m(shell_matrix());
+        auto num_elements {num_atoms()*num_atoms()};
+        std::set<shell_t> unique(shell_m.data(), shell_m.data() + num_elements);
+        m_available_shells = std::vector<shell_t>(unique.begin(), unique.end());
+        std::sort(m_available_shells.begin(), m_available_shells.end());
+        m_available_shells.erase(m_available_shells.begin());
+        for (const auto &s : m_available_shells) {
+            if (shell_weights.count(s)) m_shell_weights.emplace(std::make_pair(s, shell_weights.at(s)));
+        }
+        if (!m_shell_weights.size()) throw std::invalid_argument("None of the shells you have specified are available");
         std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(structure.configuration());
         init_prefactors();
+    }
+
+    [[nodiscard]] std::vector<shell_t> IterationSettings::available_shells() const {
+        return m_available_shells;
     }
 
     void IterationSettings::init_prefactors() {
@@ -140,6 +154,4 @@ namespace sqsgenerator {
         return utils::unpack_configuration(m_configuration_packing_indices, conf);
     }
 
-
-
-};
+}

@@ -28,6 +28,8 @@ namespace sqsgenerator {
         array_2d_t m_parameter_weights;
         array_3d_t m_target_objective;
         array_3d_t m_parameter_prefactors;
+        shell_t m_max_shell;
+        std::vector<shell_t> m_available_shells;
         void init_prefactors();
 
     public:
@@ -44,6 +46,7 @@ namespace sqsgenerator {
         [[nodiscard]] std::vector<AtomPair> pair_list() const;
         [[nodiscard]] pair_shell_weights_t shell_weights() const;
         [[nodiscard]] configuration_t packed_configuraton() const;
+        [[nodiscard]] std::vector<shell_t> available_shells() const;
         [[nodiscard]] const_array_2d_ref_t parameter_weights() const;
         [[nodiscard]] const_array_3d_ref_t target_objective() const;
         [[nodiscard]] const_array_3d_ref_t parameter_prefactors() const;

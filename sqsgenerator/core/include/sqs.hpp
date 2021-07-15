@@ -47,19 +47,32 @@ namespace sqsgenerator {
         }
     }
 
-    inline
-    void count_pairs_naive(const species_t *configuration, const size_t* pair_list, double *bonds, size_t num_pairs, size_t nshells, size_t nspecies, bool clear) {
+    void count_pairs_vector(const configuration_t &configuration, const std::vector<size_t> &pair_list, std::vector<double> &bonds, const std::vector<int> &reindexer, size_t nspecies, bool clear) {
         species_t si, sj;
-        size_t parameters_per_shell {nspecies*nspecies};
-        const size_t *bond = pair_list;
-        if (clear) memset(bonds, 0, sizeof(double) * nshells * nspecies * nspecies);
-        for (size_t i = 0; i < num_pairs; i++) {
-            si = configuration[bond[0]];
-            sj = configuration[bond[1]];
-            bonds[bond[3]*parameters_per_shell + sj * nspecies + si]++;
-            if (si != sj) bonds[bond[3]*parameters_per_shell + si * nspecies + sj]++;
-            bond += 3;
+        size_t row_size{3}, npars_reduced {(nspecies * (nspecies -1))/2 + nspecies}, offset;
+        int flat_index;
+        if (clear) std::fill(bonds.begin(), bonds.end(), 0.0);
+        for( auto it=pair_list.begin(); it != pair_list.end(); it+=row_size) {
+            si = configuration[*it];
+            sj = configuration[*(it+1)];
+            if (sj > si) std::swap(si, sj);
+            offset = sj * nspecies + si;
+            assert(offset < reindexer.size());
+            flat_index = reindexer[offset];
+            assert(flat_index >= 0 && flat_index < static_cast<int>(reindexer.size()));
+            bonds[*(it+2)*npars_reduced + flat_index]++;
         }
+    }
+
+    inline
+    double calculate_pair_objective_vector(parameter_storage_t &bonds, const parameter_storage_t &prefactors, const parameter_storage_t &parameter_weights, const parameter_storage_t &target_objectives) {
+        double total_objective {0.0};
+        size_t nparams {bonds.size()};
+        for (size_t i = 0; i < nparams; i++) {
+            bonds[i] = parameter_weights[i]*(1.0 - bonds[i]*prefactors[i]);
+            total_objective += std::abs(bonds[i] - target_objectives[i]);
+        }
+        return total_objective;
     }
 
 
@@ -84,26 +97,144 @@ namespace sqsgenerator {
         return total_objective;
     }
 
-    static void do_iterations_naive(const IterationSettings &settings) {
-        typedef boost::circular_buffer<SQSResult> result_buffer_t;
-        result_buffer_t results(settings.num_output_configurations());
-        auto pair_list(settings.pair_list());
-        auto npairs {pair_list.size()};
 
-        size_t row_size {3};
-        size_t* pair_list_ptr {static_cast<size_t*>(calloc(npairs * row_size, sizeof(size_t)))};
-        size_t* row_ptr {pair_list_ptr};
-        for (const AtomPair &pair : pair_list) {
-            auto[i, j, _, shell_index] = pair;
-            row_ptr[0] = i;
-            row_ptr[1] = j;
-            row_ptr[2] = shell_index;
-            row_ptr+=3;
+    std::vector<std::tuple<rank_t, rank_t>> compute_ranks(const IterationSettings &settings, int nthreads) {
+        rank_t start_it, end_it, total;
+        auto niterations {settings.num_iterations()};
+        std::vector<std::tuple<rank_t, rank_t>> ranks(nthreads);
+        total = (settings.mode() == random) ? niterations : utils::total_permutations(settings.packed_configuraton());
+        for (int thread_id = 0; thread_id < nthreads; thread_id++) {
+            start_it = total / nthreads * thread_id;
+            end_it = start_it + total / nthreads;
+            // permutation sequence indexing starts with one
+            if (settings.mode() == systematic) {start_it++; end_it++;}
+            end_it = (thread_id == nthreads - 1) ? total : end_it;
+            ranks[thread_id] = std::make_tuple(start_it, end_it);
         }
+        return ranks;
+    }
 
-        for (size_t i = 0; i < npairs; i++) {
-            size_t *rptr = pair_list_ptr + row_size*i;
-            std::cout << static_cast<int>(i+1) << ": i=" << static_cast<int>(rptr[0]) << ", j=" << static_cast<int>(rptr[1]) << ", shell_index=" << static_cast<int>(rptr[2]) << std::endl;
+    std::vector<size_t> convert_pair_list(const std::vector<AtomPair> &pair_list ){
+        std::vector<size_t> result;
+        for (const auto &pair : pair_list){
+            auto [i, j, _, shell_index] = pair;
+            result.push_back(i);
+            result.push_back(j);
+            result.push_back(shell_index);
+        }
+        return result;
+    }
+    template<typename T>
+    void print_conf(std::vector<T> conf, bool endl = true) {
+        std::cout << "{";
+        for (size_t i = 0; i < conf.size()-1; ++i) {
+            std::cout << conf[i] << ", ";
+        }
+        std::cout << conf.back() << "}";
+        if (endl) std::cout << std::endl;
+    }
+
+    std::vector<int> make_reduction_vector(const IterationSettings &settings) {
+        int nspecies {static_cast<int>(settings.num_species())};
+        std::vector<int> triu;
+        for (int i = 0; i < nspecies; i++) { for (int j = i; j < nspecies; j++) triu.push_back(i*nspecies+j); }
+        std::vector<int> indices(*std::max_element(triu.begin(), triu.end()) +1);
+        std::fill(indices.begin(), indices.end(), -1);
+        for (int i = 0; i < static_cast<int>(triu.size()); i++) indices[triu[i]] = i;
+        return indices;
+    }
+
+    std::tuple<size_t, parameter_storage_t, parameter_storage_t, parameter_storage_t> reduce_weights_matrices(const IterationSettings &settings, const std::vector<int> &reindexer) {
+        // We make use of the symmetry property of the weights
+        size_t nspecies {settings.num_shells()},
+            nshells{settings.num_shells()},
+            npars_per_shell_asym {(nspecies * (nspecies -1))/2 + nspecies}, // upper half of a symmetric matrix plus the main diagonal
+            reduced_size {nshells * npars_per_shell_asym},
+            full_size {nshells * nspecies * nspecies};
+        auto [_ , sorted_shell_weights] = settings.shell_indices_and_weights();
+        assert(sorted_shell_weights.size() == nshells);
+        auto target_objectives_full = settings.target_objective();
+        auto prefactors_full = settings.parameter_prefactors();
+        auto parameter_weights_full = settings.parameter_weights();
+        parameter_storage_t prefactors(reduced_size), parameter_weights(reduced_size), target_objectives(reduced_size);
+        size_t offset {0};
+        for (size_t shell = 0; shell < nshells; shell++) {
+            auto shell_weight {sorted_shell_weights[shell]};
+            for (size_t si = 0; si < nspecies; si++) {
+                for (size_t sj = si; sj < nspecies; sj++) {
+                    int flat_index {reindexer[si*nspecies+sj]};
+                    offset = shell*npars_per_shell_asym+flat_index;
+                    assert(flat_index >= 0 && flat_index < static_cast<int>(npars_per_shell_asym));
+                    prefactors[offset] = prefactors_full[shell][si][sj];
+                    target_objectives[offset] = target_objectives_full[shell][si][sj];
+                    parameter_weights[offset] = shell_weight*parameter_weights_full[si][sj];
+                }
+            }
+        }
+        return std::make_tuple(npars_per_shell_asym, prefactors, parameter_weights, target_objectives);
+    }
+
+    static void do_iterations_vector(const IterationSettings &settings) {
+        typedef boost::circular_buffer<SQSResult> result_buffer_t;
+        std::vector<std::tuple<rank_t, rank_t>> iteration_ranks;
+        parameter_storage_t prefactors, parameter_weights, target_objectives;
+        result_buffer_t results(settings.num_output_configurations());
+        std::vector<size_t> pair_list (convert_pair_list(settings.pair_list()));
+        std::vector<size_t> hist(utils::configuration_histogram(settings.packed_configuraton()));
+        rank_t nperms = utils::total_permutations(settings.packed_configuraton());
+        size_t nshells{settings.num_shells()}, nspecies {settings.num_shells()}, nparams {nshells*nspecies*nspecies}, reduced_size;
+        auto reindexer (make_reduction_vector(settings));
+        std::tie(reduced_size, prefactors, parameter_weights, target_objectives) = reduce_weights_matrices(settings, reindexer);
+
+
+        std::cout << "do_iterations_vector: " << nshells << " shells are actually used" << std::endl;
+
+
+
+
+        #pragma omp parallel default(none) shared(std::cout, boost::extents, settings, results, iteration_ranks, hist, nperms, pair_list, prefactors, parameter_weights, target_objectives, reindexer) firstprivate(nspecies, nshells, reduced_size)
+        {
+            double objective_local;
+            uint64_t random_seed_local;
+            get_next_configuration_t get_next_configuration;
+            int thread_id {omp_get_thread_num()}, nthreads {omp_get_num_threads()};
+            #pragma omp single
+            iteration_ranks = compute_ranks(settings, nthreads);
+            #pragma omp barrier
+            auto [start_it, end_it] = iteration_ranks[thread_id];
+
+
+            configuration_t configuration_local(settings.packed_configuraton());
+            parameter_storage_t parameters_local(reduced_size*nshells);
+
+            switch (settings.mode()) {
+                case iteration_mode::random:
+                {
+                    #pragma omp critical
+                    {
+                        // the random generators only need initialization in case we are in parallel mode
+                        // The call to srand is not guaranteed to be thread-safe and may cause a data-race
+                        // Each thread keeps it's own state of the whyhash random number generator
+                        std::srand(std::time(nullptr)*thread_id);
+                        random_seed_local = std::rand()*thread_id;
+                    }
+                    get_next_configuration = [&random_seed_local](configuration_t &c) {
+                        shuffle_configuration(c, &random_seed_local);
+                        return true;
+                    };
+                } break;
+                case iteration_mode::systematic: {
+                    get_next_configuration = next_permutation;
+                    unrank_permutation(configuration_local, hist, nperms, start_it);
+                } break;
+            }
+
+            for (rank_t i = start_it; i < end_it; i++) {
+                get_next_configuration(configuration_local);
+                count_pairs_vector(configuration_local, pair_list, parameters_local, reindexer, nspecies, true);
+                objective_local = calculate_pair_objective_vector(parameters_local, prefactors, parameter_weights, target_objectives);
+                std::cout << i << " | " << objective_local << std::endl;
+            }
         }
     }
 
@@ -123,7 +254,7 @@ namespace sqsgenerator {
         ///////////////////////////////////////////////////////////////////////
 
 
-        omp_set_num_threads(1);
+
         #pragma omp parallel default(none) shared(std::cout, boost::extents, settings, best_objective, results) firstprivate(nparams, nshells, nspecies, niterations, parameter_prefactors, parameter_weights, target_objective)
         {
             int thread_id {omp_get_thread_num()}, nthreads {omp_get_num_threads()};
@@ -175,18 +306,6 @@ namespace sqsgenerator {
 
             // convert the std::map (shell_weights) to a std::vector<double> in ascending order, sorted by the shell
             std::tie(shells,sorted_shell_weights) = settings.shell_indices_and_weights();
-            /*#pragma omp critical
-            {
-                std::cout << "[THREAD: " << thread_id << "] total_permutations = " << total_permutations << std::endl;
-                std::cout << "[THREAD: " << thread_id << "] num_iterations = " << niterations << std::endl;
-                std::cout << "[THREAD: " << thread_id << "] shell_weights = " << print_vector(sorted_shell_weights)
-                          << std::endl;
-                std::cout << "[THREAD: " << thread_id << "] parameter_weights = " << print_vector(
-                        std::vector<double>(parameter_weights.data(),
-                                            parameter_weights.data() + parameter_weights.num_elements())) << std::endl;
-                std::cout << "[THREAD: " << thread_id << "] configuration = " << print_vector(configuration_local)
-                          << std::endl;
-            }*/
 
             int nit {0};
             for (rank_t i = start_it; i < end_it; i++) {

@@ -108,13 +108,12 @@ namespace sqsgenerator::utils {
                 }
             }
 
-            std::set<T> second(rounded.data(), rounded.data() + rounded.num_elements());
             std::vector<T> unique (rounded.data(), rounded.data() + rounded.num_elements());
             std::sort( unique.begin(), unique.end() );
             unique.erase( std::unique( unique.begin(), unique.end() ), unique.end() );
 
             for (size_t i = 0; i < unique.size(); i++) {
-                std::cout << "SHELL " << static_cast<int>(i+1) << " = " << unique[i] << ", " << second.size() << std::endl;
+                std::cout << "SHELL " << static_cast<int>(i+1) << " = " << unique[i]  << std::endl;
             }
 
             for (index_t i = 0; i < num_atoms; i++) {

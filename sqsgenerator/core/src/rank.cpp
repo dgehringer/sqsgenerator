@@ -95,7 +95,6 @@ namespace sqsgenerator::utils {
                 configuration[m] = configuration[n];
                 configuration[n] = temporary;
             }
-
             return true;
         }
     }

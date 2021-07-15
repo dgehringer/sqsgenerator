@@ -31,6 +31,7 @@ namespace sqsgenerator {
     typedef std::vector<double> parameter_storage_t;
     typedef std::map<shell_t, double> pair_shell_weights_t;
     using get_next_configuration_t = std::function<bool(configuration_t&)>;
+    using get_next_configuration_ptr_t = std::function<bool(species_t*, size_t)>;
     template<size_t NDims>
     using Shape = std::array<size_t, NDims>;
 
