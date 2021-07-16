@@ -84,9 +84,19 @@ namespace sqsgenerator {
         return result;
     }
 
+    /**
+     * computes a index vector which maps each index of a (symmetric) matrix stored in a flat array into a the offset
+     * for a another flat arrray. Due to the symmertric property ($i \leq j$) we do not have to store all values.
+     *
+     * Let's consider a $N \times N$ matrix (E. g. 2 times 2). When storing it as an flat array the index can be
+     * computed by $i\cdot N  +j $. . In case of the $2 \times 2$ array
+     *
+     * @param settings iteration settings
+     * @return a vector storing the indices of for storing a symmetric matrix
+     */
     std::vector<int> make_reduction_vector(const IterationSettings &settings) {
-        int nspecies{static_cast<int>(settings.num_species())};
         std::vector<int> triu;
+        int nspecies{static_cast<int>(settings.num_species())};
         for (int i = 0; i < nspecies; i++) { for (int j = i; j < nspecies; j++) triu.push_back(i * nspecies + j); }
         std::vector<int> indices(*std::max_element(triu.begin(), triu.end()) + 1);
         std::fill(indices.begin(), indices.end(), -1);

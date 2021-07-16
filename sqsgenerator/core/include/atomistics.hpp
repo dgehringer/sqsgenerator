@@ -16,6 +16,9 @@ using namespace boost;
 
 namespace sqsgenerator::utils::atomistics {
 
+    /**
+     * Data class which holds some information of the periodic table. Can not be constructed.
+     */
     class Atom {
     public:
         const species_t Z;
@@ -30,9 +33,7 @@ namespace sqsgenerator::utils::atomistics {
     class Atoms {
 
     private:
-        const static std::vector<Atom> m_elements;
-
-
+        const static std::vector<Atom> m_elements; /** < the list of elements available */
         static std::map<std::string , species_t> make_symbol_map() {
             static std::map<std::string, species_t> symbol_map;
             for( const auto &atom : Atoms::m_elements)  symbol_map.emplace(atom.symbol, atom.Z);
@@ -42,11 +43,33 @@ namespace sqsgenerator::utils::atomistics {
         static std::map<std::string , species_t> m_symbol_map;
 
     public:
-        //TODO: Ask how to make m_elements private while be able to initialize m_symbol_map;
-
+        /**
+         * resolves the ordinal number of an atomic element and looks up the Atom object
+         * @param Z the ordinal number in the periodic table
+         * @return the atom object
+         */
         static Atom from_z(species_t Z);
+
+        /**
+         * resolves the symbol of an atomic element e. g. "Fe" and looks up the Atom object. The input argument is
+         * case sensitive
+         * @param symbol a string with the species symbol
+         * @return the Atom object
+         */
         static Atom from_symbol(const std::string &symbol);
+
+        /***
+         * Resolves a vector of ordinal number into a list of Atoms objects
+         * @param numbers vector of ordinal numbers
+         * @return vector of Atom objects
+         */
         static std::vector<Atom> from_z(const std::vector<species_t> &numbers);
+
+        /**
+         * Resolves a vector of species symbols into a list of Atoms objects
+         * @param symbols vector of symbols
+         * @return vector of Atom objects
+         */
         static std::vector<Atom> from_symbol(const std::vector<std::string> &symbols);
     };
 
