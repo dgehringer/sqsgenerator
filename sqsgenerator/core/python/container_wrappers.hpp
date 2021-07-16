@@ -23,8 +23,9 @@ namespace sqsgenerator::python::helpers {
         typedef typename T::value_type V;
 
         static V &get(T &x, int i) {
-            if (i < 0) i += x.size();
-            if (i >= 0 && i < x.size()) return x[i];
+            int vsize {static_cast<int>(x.size())};
+            if (i < 0) i += vsize;
+            if (i >= 0 && i < vsize) return x[i];
             else IndexError();
         }
 

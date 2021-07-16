@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
     std::cout << "[MAIN]: num_threads = " << omp_get_num_threads() << std::endl;
     std::cout << "[MAIN]: num_max_threads = " << omp_get_max_threads() << std::endl;
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-    do_iterations_vector(settings);
+    do_pair_iterations(settings);
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     std::cout << "Time difference = " << static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count())/niteration << " [µs]" << std::endl;
     auto f = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();

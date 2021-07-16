@@ -21,13 +21,14 @@ namespace sqsgenerator::utils {
             rank_t temp;
             rank_t suffix_permutations{1};
             rank_t rank{1};
+            int nspecies_i {static_cast<int>(nspecies)};
             auto atoms = conf.size();
             std::vector<size_t> hist(nspecies, 0);
 
             for (size_t i = 0; i < atoms; i++) {
                 x = conf[(atoms - 1) - i];
                 hist[x]++;
-                for (int j = 0; j < nspecies; j++) {
+                for (int j = 0; j < nspecies_i; j++) {
                     if (j < x) {
                         temp = suffix_permutations * hist[j];
                         temp /= hist[x];

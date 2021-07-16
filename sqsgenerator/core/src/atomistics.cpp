@@ -136,9 +136,7 @@ namespace sqsgenerator::utils::atomistics {
     std::map<std::string, species_t> Atoms::m_symbol_map(std::forward<std::map<std::string, species_t>>(make_symbol_map()));
 
     Atom Atoms::from_z(species_t Z) {
-        if (Z < 0) {
-            throw std::invalid_argument("Z must be at least 0");
-        } else if (Z - 1 > Atoms::m_elements.size()) {
+        if (static_cast<species_t>(Z - 1) > Atoms::m_elements.size()) {
             throw std::invalid_argument("No elements known with Z=" + std::to_string(Z));
         }
         return Atoms::m_elements[Z];
@@ -167,18 +165,19 @@ namespace sqsgenerator::utils::atomistics {
 
     Structure::Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Atom> species,
                          std::array<bool, 3> pbc) :
+            m_prec(5),
             m_lattice(lattice),
             m_frac_coords(frac_coords),
-            m_species(species),
             m_pbc(pbc),
-            m_prec(5) {
+            m_species(species)
+            {
         typedef array_2d_t::index index_t;
         index_t natoms {static_cast<index_t>(species.size())};
         auto frac_coords_shape {shape_from_multi_array(frac_coords)};
         auto lattice_shape {shape_from_multi_array(lattice)};
 
         // Make sure the number of atoms in the species vector match the number of fractional coordinates provided
-        if(frac_coords_shape[0] != natoms) throw std::invalid_argument("The number of fractional coords does not match the number of atoms. Expected: (" + std::to_string(natoms) + "x3) - Found: (" + std::to_string(frac_coords_shape[0]) + "x" + std::to_string(frac_coords_shape[1])+")" );
+        if(frac_coords_shape[0] != species.size()) throw std::invalid_argument("The number of fractional coords does not match the number of atoms. Expected: (" + std::to_string(natoms) + "x3) - Found: (" + std::to_string(frac_coords_shape[0]) + "x" + std::to_string(frac_coords_shape[1])+")" );
         if(frac_coords_shape[1] != 3) throw std::invalid_argument("You have not supplied 3D fractional coordinates. Expected: (" + std::to_string(natoms) + "x3) - Found: (" + std::to_string(natoms) + "x" + std::to_string(frac_coords_shape[1])+")" );
         if(lattice_shape[0] != 3 || lattice_shape[1] != 3) throw std::invalid_argument("A lattice must be specied by supplying a (3x3) matrix. Expected: (3x3) - Found: (" + std::to_string(lattice_shape[0]) + "x" + std::to_string(lattice_shape[1])+")");
 

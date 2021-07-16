@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native --fast-math" )
 
-find_package(Boost REQUIRED COMPONENTS system python numpy)
+find_package(Boost REQUIRED COMPONENTS system python numpy log)
 message([BOOST]:INCLUDE_DIRS: ${Boost_INCLUDE_DIRS})
 message([BOOST]:LIBRARIES: ${Boost_LIBRARIES})
 
@@ -49,10 +49,11 @@ add_subdirectory(sqsgenerator/core/python)
 
 add_executable(sqsgenerator.core
         sqsgenerator/core/src/main.cpp
+        sqsgenerator/core/src/settings.cpp
+        sqsgenerator/core/src/sqs.cpp
         sqsgenerator/core/src/rank.cpp
         sqsgenerator/core/src/utils.cpp
         sqsgenerator/core/src/atomistics.cpp
-        sqsgenerator/core/src/settings.cpp
         sqsgenerator/core/src/result.cpp)
 
 

@@ -11,7 +11,7 @@ using namespace sqsgenerator;
 using namespace sqsgenerator::python;
 
 SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings) {
-    auto sqs_results = sqsgenerator::do_iterations_vector(*settings.handle());
+    auto sqs_results = sqsgenerator::do_pair_iterations(*settings.handle());
     SQSResultCollection wrapped_results;
     for (SQSResult &r : sqs_results) wrapped_results.push_back(SQSResultPythonWrapper(std::move(r)));
     return wrapped_results;

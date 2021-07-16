@@ -25,7 +25,7 @@ namespace sqsgenerator::utils {
         template<typename T>
         multi_array<T, 3> pbc_shortest_vectors(const matrix<T> &lattice, const matrix<T> &coords, bool frac_coords = false){
             const matrix<T> cart_coords(frac_coords ? prod(coords, lattice): coords);
-            auto num_atoms {coords.size1()};
+            auto num_atoms {static_cast<index_t>(coords.size1())};
             auto a {row(lattice, 0)};
             auto b {row(lattice, 1)};
             auto c {row(lattice, 2)};
@@ -34,9 +34,9 @@ namespace sqsgenerator::utils {
             multi_array<T, 3> vecs(boost::extents[num_atoms][num_atoms][3]);
             // pi1 = position_index_1
             // pi2 = position_index_2
-            for (size_t pi1 = 0; pi1 < num_atoms; pi1++) {
+            for (index_t pi1 = 0; pi1 < num_atoms; pi1++) {
                 auto p1 {row(cart_coords, pi1)};
-                for (size_t pi2 = pi1+1; pi2 < num_atoms; pi2++) {
+                for (index_t pi2 = pi1+1; pi2 < num_atoms; pi2++) {
                     auto p2 {row(cart_coords, pi2)};
                     T norm {std::numeric_limits<T>::max()};
                     for (auto &i : axis) {
@@ -47,7 +47,7 @@ namespace sqsgenerator::utils {
                                 T image_norm {norm_2(diff)};
                                 if (image_norm < norm) {
                                     norm = image_norm;
-                                    for (size_t dim = 0; dim < 3; dim++) {
+                                    for (index_t dim = 0; dim < 3; dim++) {
                                         vecs[pi1][pi2][dim] = diff(dim);
                                         vecs[pi2][pi1][dim] = -diff(dim);
                                     }
@@ -74,7 +74,7 @@ namespace sqsgenerator::utils {
             typedef typename MultiArray::index index_t;
             typedef typename MultiArray::element T;
             auto shape(shape_from_multi_array(vecs));
-            auto num_atoms = shape[0];
+            auto num_atoms {static_cast<index_t>(shape[0])};
             multi_array<T, 2> d2(boost::extents[num_atoms][num_atoms]);
             for (index_t i = 0; i < num_atoms; i++) {
                 for (index_t j = i; j < num_atoms; j++) {
@@ -90,12 +90,12 @@ namespace sqsgenerator::utils {
         }
 
 
-    template<typename MultiArray>
+        template<typename MultiArray>
         pair_shell_matrix shell_matrix(const MultiArray &distance_matrix, uint8_t prec = 5) {
             typedef typename MultiArray::index index_t;
             typedef typename MultiArray::element T;
             auto shape(shape_from_multi_array(distance_matrix));
-            auto num_atoms = shape[0];
+            auto num_atoms {static_cast<index_t>(shape[0])};
             multi_array<T, 2> rounded(boost::extents[num_atoms][num_atoms]);
             pair_shell_matrix shells(boost::extents[num_atoms][num_atoms]);
 
@@ -104,17 +104,12 @@ namespace sqsgenerator::utils {
                     T rounded_distance = round_nplaces(distance_matrix[i][j], prec);
                     rounded[i][j] = rounded_distance;
                     rounded[j][i] = rounded_distance;
-                    if (rounded_distance == 4.05) std::cout << i << ":" << j << std::endl;
                 }
             }
 
             std::vector<T> unique (rounded.data(), rounded.data() + rounded.num_elements());
             std::sort( unique.begin(), unique.end() );
             unique.erase( std::unique( unique.begin(), unique.end() ), unique.end() );
-
-            for (size_t i = 0; i < unique.size(); i++) {
-                std::cout << "SHELL " << static_cast<int>(i+1) << " = " << unique[i]  << std::endl;
-            }
 
             for (index_t i = 0; i < num_atoms; i++) {
                 for (index_t j = i; j < num_atoms; j++) {
@@ -129,7 +124,7 @@ namespace sqsgenerator::utils {
 
         std::map<shell_t, pair_shell_matrix::index> shell_index_map(const pair_shell_weights_t &weights) {
             typedef pair_shell_matrix::index index_t;
-            size_t nshells {weights.size()};
+            index_t nshells {static_cast<index_t>(weights.size())};
             std::vector<shell_t> shells;
             std::map<shell_t, index_t> shell_indices;
             // Copy the shells into a new vector
@@ -146,9 +141,10 @@ namespace sqsgenerator::utils {
             std::vector<AtomPair> pair_list;
             auto shell_indices (shell_index_map(weights));
             auto shape = shape_from_multi_array(shell_matrix);
+            auto [sx, sy] = std::make_tuple(static_cast<index_t>(shape[0]), static_cast<index_t>(shape[1]));
             assert(shape.size() == 2);
-            for (index_t i = 0; i < shape[0]; i++) {
-                for (index_t j = i+1; j < shape[1]; j++) {
+            for (index_t i = 0; i < sx; i++) {
+                for (index_t j = i+1; j < sy; j++) {
                     shell_t shell = shell_matrix[i][j];
                     if ( shell_indices.find(shell) != shell_indices.end() )
                         pair_list.push_back(AtomPair {i, j, shell, shell_indices[shell]});

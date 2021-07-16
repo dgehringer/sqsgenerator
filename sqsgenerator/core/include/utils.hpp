@@ -50,9 +50,10 @@ namespace boost{
     matrix<typename MultiArray::element> matrix_from_multi_array(MultiArray &ref) {
         typedef typename MultiArray::index index_t;
         auto shape = shape_from_multi_array(ref);
-        matrix<typename MultiArray::element> result(shape[0], shape[1]);
-        for (index_t i = 0; i < shape[0]; i++) {
-            for (index_t j = 0; j < shape[1]; j++) {
+        auto [sx, sy] = std::make_tuple(static_cast<index_t>(shape[0]), static_cast<index_t>(shape[1]));
+        matrix<typename MultiArray::element> result(sx, sy);
+        for (index_t i = 0; i < sx; i++) {
+            for (index_t j = 0; j < sy; j++) {
                 result(i,j) = ref[i][j];
             }
         }
