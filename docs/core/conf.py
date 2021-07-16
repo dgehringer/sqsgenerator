@@ -1,0 +1,6 @@
+#...
+extensions = [ "breathe" ]
+#...
+
+# Breathe Configuration
+breathe_default_project = "sqsgenerator-core"

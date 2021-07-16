@@ -5,12 +5,33 @@
 #include "sqs.hpp"
 #include "data.hpp"
 #include "iteration.hpp"
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/utility/setup.hpp>
 #include <boost/python/suite/indexing/map_indexing_suite.hpp>
 
+namespace logging = boost::log;
 using namespace sqsgenerator;
 using namespace sqsgenerator::python;
 
+static bool log_initialized = false;
+
+void init_logging() {
+    if (! log_initialized) {
+        static const std::string COMMON_FMT("[%TimeStamp%][%Severity%]:%Message%");
+        boost::log::register_simple_formatter_factory<boost::log::trivial::severity_level, char>("Severity");
+        boost::log::add_console_log(
+                std::cout,
+                boost::log::keywords::format = COMMON_FMT,
+                boost::log::keywords::auto_flush = true
+        );
+        logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::trace);
+        log_initialized = true;
+    }
+}
+
 SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings) {
+    init_logging();
     auto sqs_results = sqsgenerator::do_pair_iterations(*settings.handle());
     SQSResultCollection wrapped_results;
     for (SQSResult &r : sqs_results) wrapped_results.push_back(SQSResultPythonWrapper(std::move(r)));

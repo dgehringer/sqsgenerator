@@ -37,8 +37,6 @@ namespace sqsgenerator {
 
         void set_storage(parameter_storage_t conf);
 
-        void set_storage(parameter_storage_t &&conf);
-
         [[nodiscard]] double objective() const;
 
         [[nodiscard]] const configuration_t &configuration() const;

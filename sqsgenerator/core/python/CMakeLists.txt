@@ -33,6 +33,7 @@ add_library(iteration SHARED
         data.cpp
         iteration.cpp
         ../src/rank.cpp
+        ../src/sqs.cpp
         ../src/result.cpp
         ../src/atomistics.cpp
         ../src/settings.cpp

@@ -6,6 +6,7 @@
 #define SQSGENERATOR_UTILS_HPP
 
 #include "types.hpp"
+#include <sstream>
 #include <stdexcept>
 #include <boost/multi_array.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
@@ -85,6 +86,26 @@ namespace boost{
         // Finally, deep-copy it into the structure we can return.
         return boost::multi_array<T, sizeof...(dims)>(mar);
     }
+
+    template<typename T1, typename T2, typename T1Cast = T1, typename T2Cast = T2>
+    std::string format_dict(std::vector<T1> keys, std::vector<T2> values) {
+        assert(keys.size() == values.size());
+        std::stringstream message;
+        message << "{";
+        for (size_t i = 0; i < keys.size()-1 ; i++) message << static_cast<T1Cast>(keys[i]) << ": " << static_cast<T2Cast>(values[i]) << ", ";
+        message << static_cast<T1Cast>(keys.back()) << ": " << static_cast<T2Cast>(values.back()) << "}";
+        return message.str();
+    }
+
+    template<typename T1, typename T1Cast = T1>
+    std::string format_vector(std::vector<T1> values) {
+        std::stringstream message;
+        message << "{";
+        for (auto it = values.begin(); it != values.end() - 1; ++it) message << static_cast<T1Cast>(*it) << ", ";
+        message << static_cast<T1Cast>(values.back()) << "}";
+        return message.str();
+    }
+
 
 
 }

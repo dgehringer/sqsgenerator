@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
+# Add the custom modules to module path
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+# by default we create a release build
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -13,10 +17,13 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native --fast-math" )
 
-find_package(Boost REQUIRED COMPONENTS system python numpy log)
+# There is an issue find FindBoost.cmake
+# https://gitlab.kitware.com/cmake/cmake/-/issues/20638: That's why log setup is added
+find_package(Boost REQUIRED COMPONENTS system python numpy log_setup log)
 message([BOOST]:INCLUDE_DIRS: ${Boost_INCLUDE_DIRS})
 message([BOOST]:LIBRARIES: ${Boost_LIBRARIES})
 
+# OpenMP flags
 find_package(OpenMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -41,6 +48,12 @@ execute_process(
 
 message([REPO] ${GIT_COMMIT_HASH}@${GIT_BRANCH})
 
+###########################
+### Documentation stuff ###
+###########################
+add_subdirectory(docs/core)
+
+######################################################
 include_directories(sqsgenerator/core/include)
 include_directories(${Boost_INCLUDE_DIRS})
 

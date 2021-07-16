@@ -4,7 +4,22 @@
 
 #include "sqs.hpp"
 
+#include <boost/log/trivial.hpp>
+
 namespace sqsgenerator {
+
+    void log_settings(const IterationSettings &settings) {
+        std::string mode = ((settings.mode() == random) ? "random" : "systematic");
+        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::mode = "  + mode;
+        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_atoms = " << settings.num_atoms();
+        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_species = " << settings.num_species();
+        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_shells = " << settings.num_shells();
+        auto [shells, weights] = settings.shell_indices_and_weights();
+        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::shell_weights = " + format_dict(shells, weights);
+        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_iterations = " << settings.num_iterations();
+        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_output_configurations = " << settings.num_output_configurations();
+        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_pairs = " << settings.pair_list().size();
+    }
 
     void count_pairs(const configuration_t &configuration, const std::vector<size_t> &pair_list,
                             std::vector<double> &bonds, const std::vector<int> &reindexer, size_t nspecies,
@@ -68,7 +83,6 @@ namespace sqsgenerator {
         }
         return result;
     }
-
 
     std::vector<int> make_reduction_vector(const IterationSettings &settings) {
         int nspecies{static_cast<int>(settings.num_species())};
@@ -141,6 +155,7 @@ namespace sqsgenerator {
     }
 
     std::vector<SQSResult> do_pair_iterations(const IterationSettings &settings) {
+        log_settings(settings);
         typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point_t;
         typedef boost::circular_buffer<SQSResult> result_buffer_t;
         double best_objective{std::numeric_limits<double>::max()};
@@ -151,16 +166,12 @@ namespace sqsgenerator {
         std::vector<size_t> pair_list(convert_pair_list(settings.pair_list()));
         std::vector<size_t> hist(utils::configuration_histogram(settings.packed_configuraton()));
         rank_t nperms = utils::total_permutations(settings.packed_configuraton());
-        size_t nshells{settings.num_shells()}, nspecies{settings.num_species()}, reduced_size;
+        size_t nshells{settings.num_shells()}, nspecies{settings.num_species()}, nparams {nshells * nspecies * nspecies}, reduced_size;
         auto reindexer(make_reduction_vector(settings));
         std::tie(reduced_size, prefactors, parameter_weights, target_objectives) = reduce_weights_matrices(settings,
                                                                                                            reindexer);
 
-
         auto[shells, shell_weights] = settings.shell_indices_and_weights();
-        std::cout << "do_iterations_vector: " << nshells << " shells are actually used" << std::endl;
-        for (size_t i = 0; i < nshells; i++)
-            std::cout << "do_iterations_vector: \t" << shells[i] << " : " << shell_weights[i] << std::endl;
 
         #pragma omp parallel default(none) shared(std::cout, boost::extents, settings, results, iteration_ranks, hist, nperms, pair_list, prefactors, parameter_weights, target_objectives, reindexer, best_objective, thread_timings) firstprivate(nspecies, nshells, reduced_size)
         {
@@ -190,8 +201,6 @@ namespace sqsgenerator {
                         // Each thread keeps it's own state of the whyhash random number generator
                         std::srand(std::time(nullptr) * (thread_id + 1));
                         random_seed_local = std::rand() * (thread_id + 1); // Otherwise thread 0 generator
-                        std::cout << "[THREAD: " << thread_id << "] random_seed_local = " << random_seed_local
-                                  << ", time = " << std::time(nullptr) << std::endl;
                     }
                     get_next_configuration = [&random_seed_local](configuration_t &c) {
                         shuffle_configuration(c, &random_seed_local);
@@ -230,10 +239,6 @@ namespace sqsgenerator {
             end_time = std::chrono::high_resolution_clock::now();
             thread_timings[thread_id] = std::chrono::duration_cast<std::chrono::microseconds>(
                     end_time - start_time).count();
-            #pragma omp critical
-            std::cout << "[THREAD: " << thread_id << "] finished = " << end_it - start_it << " loops ("
-                      << static_cast<double>(thread_timings[thread_id]) / (end_it - start_it).convert_to<long>()
-                      << " mcirosec/cycle)" << std::endl;
         } // pragma omp parallel
         std::unordered_set<rank_t> ranks;
         std::vector<SQSResult> final_results;
@@ -241,16 +246,11 @@ namespace sqsgenerator {
             rank_t rank = rank_permutation(r.configuration(), settings.num_species());
             r.set_rank(rank);
             r.set_configuration(settings.unpack_configuration(r.configuration()));
-
-            std::cout << results.size() << " " << r.objective() << " " << r.rank() << " { ";
-            for (const auto &sp: r.configuration()) std::cout << static_cast<int>(sp) << " ";
-            std::cout << "}" << std::endl;
-
+            r.set_storage(expand_matrix(r.storage(), settings, reindexer));
+            assert(r.storage().size() == nparams);
             if (settings.mode() == random && !ranks.insert(rank).second) continue;
             else final_results.push_back(std::move(r));
         }
-        std::cout << "I have found: " << results.size() << " structures, after checking there are "
-                  << final_results.size() << " configurations left" << std::endl;
         return final_results;
     }
 }

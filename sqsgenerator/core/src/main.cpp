@@ -9,13 +9,35 @@
 #include <chrono>
 #include "types.hpp"
 #include <boost/multi_array.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/utility/setup.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/storage.hpp>
 
-
+namespace logging = boost::log;
 using namespace sqsgenerator;
 using namespace sqsgenerator::utils;
 using namespace boost::numeric::ublas;
+
+
+static bool log_initialized = false;
+
+void init_logging() {
+    if (! log_initialized) {
+        static const std::string COMMON_FMT("[%TimeStamp%][%Severity%]: %Message%");
+        boost::log::register_simple_formatter_factory<boost::log::trivial::severity_level, char>("Severity");
+        boost::log::add_console_log(
+                std::clog,
+                boost::log::keywords::format = COMMON_FMT,
+                boost::log::keywords::auto_flush = true
+        );
+        boost::log::add_common_attributes();
+        logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::trace);
+        log_initialized = true;
+
+    }
+}
 
 void print_conf(configuration_t conf, bool endl = true) {
     std::cout << "{";
@@ -27,6 +49,7 @@ void print_conf(configuration_t conf, bool endl = true) {
 }
 
 int main(int argc, char *argv[]) {
+    init_logging();
     (void) argc, (void) argv;
     using namespace sqsgenerator;
 
@@ -129,7 +152,7 @@ int main(int argc, char *argv[]) {
         1.0, 2.0, 5.0, 2.0
     });
 
-    std::cout << "max_element = " << *std::max_element(pair_weights.data(), pair_weights.data()+4) << std::endl;
+
     /* array_2d_t pair_weights = boost::make_multi_array<double, 4, 4>({
         1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
     });*/
@@ -138,17 +161,10 @@ int main(int argc, char *argv[]) {
     array_3d_t target_objective(boost::extents[shell_weights.size()][nspecies][nspecies]);
     //std::fill(target_objective.begin(), target_objective.end(), 0.0);
 
-    auto niteration {10000000};
+    auto niteration {10000};
     //omp_set_num_threads(1);
     IterationSettings settings(structure, target_objective, pair_weights, shell_weights, niteration, 10, iteration_mode::random);
     auto initial_rank = rank_permutation(settings.packed_configuraton(), settings.num_species());
-    std::cout << "[MAIN]: " << structure.num_atoms() << " - " << conf.size() << std::endl;
-    std::cout << "[MAIN]: rank = " << initial_rank  << std::endl;
-    std::cout << "[MAIN]: configuration = "; print_conf(structure.configuration());
-    std::cout << "[MAIN]: packed_config = "; print_conf(settings.packed_configuraton());
-    std::cout << "[MAIN]: num_pairs = " << settings.pair_list().size() << std::endl;
-    std::cout << "[MAIN]: num_threads = " << omp_get_num_threads() << std::endl;
-    std::cout << "[MAIN]: num_max_threads = " << omp_get_max_threads() << std::endl;
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
     do_pair_iterations(settings);
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();

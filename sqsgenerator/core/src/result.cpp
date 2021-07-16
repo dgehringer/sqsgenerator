@@ -2,6 +2,8 @@
 // Created by dominik on 14.07.21.
 //
 #include "result.hpp"
+
+#include <utility>
 #include "utils.hpp"
 #include "rank.hpp"
 
@@ -69,7 +71,4 @@ namespace sqsgenerator {
         m_storage = std::move(conf);
     }
 
-    void SQSResult::set_storage(parameter_storage_t &&conf) {
-        m_storage = std::forward<parameter_storage_t>(conf);
-    }
 }
