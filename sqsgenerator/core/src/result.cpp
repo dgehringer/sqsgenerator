@@ -65,4 +65,11 @@ namespace sqsgenerator {
         m_configuration = std::move(conf);
     }
 
+    void SQSResult::set_storage(parameter_storage_t conf) {
+        m_storage = std::move(conf);
+    }
+
+    void SQSResult::set_storage(parameter_storage_t &&conf) {
+        m_storage = std::forward<parameter_storage_t>(conf);
+    }
 }
