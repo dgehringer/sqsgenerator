@@ -72,7 +72,7 @@ namespace sqsgenerator::python::helpers {
         typedef typename MultiArray::element T;
         assert(array.get_nd() == static_cast<int>(NDims));
         std::vector<size_t> shape(array.get_shape(), array.get_shape()+array.get_nd());
-        return MultiArray(reinterpret_cast<T*>(array), shape);
+        return MultiArray(reinterpret_cast<T*>(array.get_data()), shape);
     }
 
     // this snippet is an adapted version of:

@@ -142,8 +142,8 @@ namespace sqsgenerator::utils {
             };
 
             auto find_shell = [&distances, &is_close_tol] (T distance) {
-                int shell {-1};
-                if (is_close_tol(distance, 0.0)) shell = 0;
+                if (distance < 0 ) return -1;
+                if (is_close_tol(distance, 0.0)) return 0;
                 else {
                     for (size_t i = 0; i < distances.size() -1; i++) {
                         T lower_bound {distances[i]}, upper_bound {distances[i+1]};
