@@ -51,7 +51,7 @@ message([REPO] ${GIT_COMMIT_HASH}@${GIT_BRANCH})
 ###########################
 ### Documentation stuff ###
 ###########################
-add_subdirectory(docs/core)
+# add_subdirectory(docs/core)
 
 ######################################################
 include_directories(sqsgenerator/core/include)
