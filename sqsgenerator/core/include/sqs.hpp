@@ -7,10 +7,9 @@
 
 
 #include "types.hpp"
-#include "rank.hpp"
-#include "utils.hpp"
-#include "result.hpp"
 #include "settings.hpp"
+#include "rank.hpp"
+#include "result.hpp"
 #include <map>
 #include <omp.h>
 #include <limits>

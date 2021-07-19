@@ -1,8 +1,6 @@
 //
 // Created by dominik on 21.05.21.
 #include "sqs.hpp"
-#include "utils.hpp"
-#include "rank.hpp"
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -136,7 +134,6 @@ int main(int argc, char *argv[]) {
     std::array<bool, 3> pbc {true, true, true};
 
     Structure structure(lattice, frac_coords, species, pbc);
-    structure.shell_matrix(2);
 
     pair_shell_weights_t shell_weights {
            /*{4, 0.25},
@@ -163,7 +160,8 @@ int main(int argc, char *argv[]) {
 
     auto niteration {10000};
     //omp_set_num_threads(1);
-    IterationSettings settings(structure, target_objective, pair_weights, shell_weights, niteration, 10, iteration_mode::random);
+    IterationSettings settings(structure, target_objective, pair_weights, shell_weights, niteration, 10);
+    settings.shell_matrix();
     auto initial_rank = rank_permutation(settings.packed_configuraton(), settings.num_species());
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
     do_pair_iterations(settings);

@@ -1,8 +1,6 @@
 //
 // Created by dominik on 08.07.21.
 //
-
-#include "utils.hpp"
 #include "settings.hpp"
 #include <stdexcept>
 #include <utility>
@@ -25,17 +23,18 @@ namespace sqsgenerator {
 
     typedef array_3d_t::index index_t;
 
-
-    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, iteration_mode mode, uint8_t prec) :
+    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, const std::vector<double> &shell_distances, double atol, double rtol, iteration_mode mode) :
         m_structure(structure),
-        m_prec(prec),
+        m_atol(atol),
+        m_rtol(rtol),
         m_niterations(iterations),
         m_noutput_configurations(output_configurations),
         m_nspecies(unique_species(structure.configuration()).size()),
         m_mode(mode),
         m_parameter_weights(parameter_weights),
         m_target_objective(target_objective),
-        m_parameter_prefactors(boost::extents[static_cast<index_t>(shell_weights.size())][static_cast<index_t>(m_nspecies)][static_cast<index_t>(m_nspecies)])
+        m_parameter_prefactors(boost::extents[static_cast<index_t>(shell_weights.size())][static_cast<index_t>(m_nspecies)][static_cast<index_t>(m_nspecies)]),
+        m_shell_distances(shell_distances)
     {
         auto shell_m(shell_matrix());
         auto num_elements {num_atoms()*num_atoms()};
@@ -46,10 +45,16 @@ namespace sqsgenerator {
         for (const auto &s : m_available_shells) {
             if (shell_weights.count(s)) m_shell_weights.emplace(std::make_pair(s, shell_weights.at(s)));
         }
-        if (!m_shell_weights.size()) throw std::invalid_argument("None of the shells you have specified are available");
+        if (m_shell_weights.empty()) throw std::invalid_argument("None of the shells you have specified are available");
         std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(structure.configuration());
         init_prefactors();
     }
+
+    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, double atol, double rtol, iteration_mode mode) :
+            IterationSettings(structure, target_objective, parameter_weights, shell_weights, iterations, output_configurations,
+                              default_shell_distances(structure.distance_matrix(), atol, rtol), atol, rtol, mode)
+    { }
+
 
     [[nodiscard]] std::vector<shell_t> IterationSettings::available_shells() const {
         return m_available_shells;
@@ -84,13 +89,12 @@ namespace sqsgenerator {
         }
     }
 
-
-    const_pair_shell_matrix_ref_t IterationSettings::shell_matrix() {
-        return m_structure.shell_matrix(m_prec);
+    const_pair_shell_matrix_ref_t IterationSettings::shell_matrix() const {
+        return m_structure.shell_matrix(m_shell_distances, m_atol, m_rtol);
     }
 
     [[nodiscard]] std::vector<AtomPair> IterationSettings::pair_list() const {
-        return m_structure.create_pair_list(m_shell_weights);
+        return Structure::create_pair_list(shell_matrix(), m_shell_weights);
     }
 
     [[nodiscard]] const Structure& IterationSettings::structure() const {

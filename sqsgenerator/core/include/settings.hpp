@@ -17,7 +17,8 @@ namespace sqsgenerator {
 
     private:
         Structure &m_structure;
-        uint8_t m_prec;
+        double m_atol;
+        double m_rtol;
         int m_niterations;
         int m_noutput_configurations;
         size_t m_nspecies;
@@ -30,12 +31,14 @@ namespace sqsgenerator {
         array_3d_t m_parameter_prefactors;
         shell_t m_max_shell;
         std::vector<shell_t> m_available_shells;
+        std::vector<double> m_shell_distances;
         void init_prefactors();
 
     public:
 
-        IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, iteration_mode mode = iteration_mode::random, uint8_t prec = 5);
-        const_pair_shell_matrix_ref_t shell_matrix();
+        IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, const std::vector<double> &shell_distances, double atol=1.0e-5, double rtol=1.05e-8, iteration_mode mode = iteration_mode::random);
+        IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, double atol=1.0e-5, double rtol=1.05e-8, iteration_mode mode = iteration_mode::random);
+
         [[nodiscard]] size_t num_atoms() const;
         [[nodiscard]] size_t num_shells() const;
         [[nodiscard]] int num_iterations() const;
@@ -43,7 +46,6 @@ namespace sqsgenerator {
         [[nodiscard]] iteration_mode mode() const;
         [[nodiscard]] const Structure &structure() const;
         [[nodiscard]] int num_output_configurations() const;
-        [[nodiscard]] std::vector<AtomPair> pair_list() const;
         [[nodiscard]] pair_shell_weights_t shell_weights() const;
         [[nodiscard]] configuration_t packed_configuraton() const;
         [[nodiscard]] std::vector<shell_t> available_shells() const;
@@ -51,6 +53,8 @@ namespace sqsgenerator {
         [[nodiscard]] const_array_3d_ref_t target_objective() const;
         [[nodiscard]] const_array_3d_ref_t parameter_prefactors() const;
         [[nodiscard]] configuration_t unpack_configuration(const configuration_t &conf) const;
+        std::vector<AtomPair> pair_list() const;
+        const_pair_shell_matrix_ref_t shell_matrix() const;
         [[nodiscard]] std::tuple<std::vector<shell_t>, std::vector<double>> shell_indices_and_weights() const;
     };
 }

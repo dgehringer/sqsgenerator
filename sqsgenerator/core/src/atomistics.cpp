@@ -1,9 +1,7 @@
 //
 // Created by dominik on 02.06.21.
 //
-#include "utils.hpp"
 #include "atomistics.hpp"
-#include "structure_utils.hpp"
 #include <stdexcept>
 #include <iostream>
 
@@ -163,10 +161,8 @@ namespace sqsgenerator::utils::atomistics {
     }
 
 
-    Structure::Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Atom> species,
-                         std::array<bool, 3> pbc) :
-            m_prec(5),
-            m_lattice(lattice),
+    Structure::Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc)
+          : m_lattice(lattice),
             m_frac_coords(frac_coords),
             m_pbc(pbc),
             m_species(species)
@@ -187,9 +183,6 @@ namespace sqsgenerator::utils::atomistics {
                                                                true);
         m_distance_matrix.resize(boost::extents[natoms][natoms]);
         m_distance_matrix = sqsgenerator::utils::distance_matrix(m_pbc_vecs);
-
-        m_shell_matrix.resize(boost::extents[natoms][natoms]);
-        m_shell_matrix = sqsgenerator::utils::shell_matrix(m_distance_matrix, m_prec);
         m_natoms = species.size();
     }
 
@@ -227,17 +220,14 @@ namespace sqsgenerator::utils::atomistics {
         return m_distance_matrix;
     }
 
-    const_pair_shell_matrix_ref_t Structure::shell_matrix(uint8_t prec) {
-        if (prec != m_prec) {
-            m_prec = prec;
-            m_shell_matrix = sqsgenerator::utils::shell_matrix(m_distance_matrix, m_prec);
-        }
-        return m_shell_matrix;
+    const_pair_shell_matrix_ref_t Structure::shell_matrix(double atol, double rtol) const {
+        return shell_matrix(sqsgenerator::utils::default_shell_distances(m_distance_matrix, atol, rtol), atol, rtol);
     }
 
-    std::vector<AtomPair> Structure::create_pair_list(const std::map<shell_t, double> &weights) const {
-        return sqsgenerator::utils::create_pair_list(m_shell_matrix, weights);
+    const_pair_shell_matrix_ref_t Structure::shell_matrix(const std::vector<double> &shell_distances, double atol, double rtol) const {
+        return sqsgenerator::utils::shell_matrix(m_distance_matrix, shell_distances, atol, rtol);
     }
+
 
     configuration_t Structure::configuration() const {
         configuration_t conf;

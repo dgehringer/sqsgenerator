@@ -67,7 +67,7 @@ add_executable(sqsgenerator.core
         sqsgenerator/core/src/rank.cpp
         sqsgenerator/core/src/utils.cpp
         sqsgenerator/core/src/atomistics.cpp
-        sqsgenerator/core/src/result.cpp)
+        sqsgenerator/core/src/result.cpp sqsgenerator/core/src/structure_utils.cpp)
 
 
 target_link_libraries(sqsgenerator.core pthread ${Boost_LIBRARIES})

@@ -112,6 +112,12 @@ namespace boost{
 
 namespace sqsgenerator::utils {
 
+        template<typename T>
+        inline
+        bool is_close(T a, T b, T atol=1.0e-5, T rtol=1.0e-8) {
+            return std::abs(a - b) <= (atol + rtol * std::abs(b));
+        }
+
         template<typename R, typename P>
         inline R factorial(P p) {
             R r {1}, c {1};

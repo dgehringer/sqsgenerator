@@ -28,14 +28,17 @@ gtest_add_tests(TARGET      sqsgenerator.core.test.rank
 
 add_executable(sqsgenerator.core.test.atomistics
         core/src/test_atomistics.cpp
+        ${SQSGENERATOR_SRC_DIR}/structure_utils.cpp
         ${SQSGENERATOR_SRC_DIR}/atomistics.cpp)
 target_link_libraries(sqsgenerator.core.test.atomistics gtest gtest_main pthread)
 gtest_add_tests(TARGET      sqsgenerator.core.test.atomistics
                 TEST_SUFFIX .noArgs
                 TEST_LIST   noArgsTests)
 
-add_executable(sqsgenerator.core.test.structure_utils core/src/test_structure_utils.cpp)
-target_link_libraries(sqsgenerator.core.test.structure_utils gtest gtest_main pthread stdc++fs)
+add_executable(sqsgenerator.core.test.structure_utils
+        core/src/test_structure_utils.cpp
+        ${SQSGENERATOR_SRC_DIR}/structure_utils.cpp)
+target_link_libraries(sqsgenerator.core.test.structure_utils gtest gtest_main pthread stdc++fs ${Boost_LIBRARIES})
 add_custom_command(TARGET sqsgenerator.core.test.structure_utils POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/test/resources $<TARGET_FILE_DIR:sqsgenerator.core.test.structure_utils>/resources)

@@ -3,7 +3,6 @@
 //
 
 #include "sqs.hpp"
-
 #include <boost/log/trivial.hpp>
 
 namespace sqsgenerator {

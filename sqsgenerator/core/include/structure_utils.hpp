@@ -5,13 +5,14 @@
 #ifndef SQSGENERATOR_STRUCTURE_UTILS_HPP
 #define SQSGENERATOR_STRUCTURE_UTILS_HPP
 
-#include "utils.hpp"
+
 #include "types.hpp"
+#include "utils.hpp"
 #include <vector>
-#include <assert.h>
 #include <limits>
 #include <algorithm>
 #include <boost/multi_array.hpp>
+#include <boost/log/trivial.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/storage.hpp>
 #include <boost/numeric/ublas/matrix_proxy.hpp>
@@ -89,32 +90,76 @@ namespace sqsgenerator::utils {
             return d2;
         }
 
-
         template<typename MultiArray>
-        pair_shell_matrix shell_matrix(const MultiArray &distance_matrix, uint8_t prec = 5) {
+        std::vector<typename MultiArray::element> default_shell_distances(const MultiArray &distance_matrix, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
             typedef typename MultiArray::index index_t;
             typedef typename MultiArray::element T;
             auto shape(shape_from_multi_array(distance_matrix));
             auto num_atoms {static_cast<index_t>(shape[0])};
             multi_array<T, 2> rounded(boost::extents[num_atoms][num_atoms]);
-            pair_shell_matrix shells(boost::extents[num_atoms][num_atoms]);
+            std::map<T, std::vector<T>> shell_dists;
+
+            auto is_close_tol = [=] (T a, T b) {
+                return is_close(a, b, atol, rtol);
+            };
+
+            std::function<std::tuple<bool, T>(T)> is_shell_border_nearby = [&] (T distance) {
+                for (const auto &found_dist : shell_dists) {if (is_close_tol(distance, found_dist.first)) return std::make_tuple(true, found_dist.first); }
+                return std::make_tuple(false, -1.0);
+            };
+
 
             for (index_t i = 0; i < num_atoms; i++) {
                 for (index_t j = i; j < num_atoms; j++) {
-                    T rounded_distance = round_nplaces(distance_matrix[i][j], prec);
-                    rounded[i][j] = rounded_distance;
-                    rounded[j][i] = rounded_distance;
+                    T distance {distance_matrix[i][j]};
+                    auto [has_shell_nearby, shell_dist] = is_shell_border_nearby(distance);
+                    if (has_shell_nearby) shell_dists[shell_dist].push_back(distance);
+                    else shell_dists[distance].push_back(distance);
                 }
             }
 
-            std::vector<T> unique (rounded.data(), rounded.data() + rounded.num_elements());
-            std::sort( unique.begin(), unique.end() );
-            unique.erase( std::unique( unique.begin(), unique.end() ), unique.end() );
+            std::vector<T> result;
+            for (const auto &pair : shell_dists) result.push_back(*std::max_element(pair.second.begin(), pair.second.end()));
+            std::sort(result.begin(), result.end());
+
+            BOOST_LOG_TRIVIAL(info) << "structure_utils::default_shell_distances::num_distances  = " + std::to_string(result.size());
+            BOOST_LOG_TRIVIAL(info) << "structure_utils::default_shell_distances::distances  = " + format_vector(result);
+
+            return result;
+        }
+
+        template<typename MultiArray>
+        pair_shell_matrix shell_matrix(const MultiArray &distance_matrix, const std::vector<typename MultiArray::element> &distances, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
+
+            typedef typename MultiArray::index index_t;
+            typedef typename MultiArray::element T;
+            auto shape(shape_from_multi_array(distance_matrix));
+            auto num_atoms {static_cast<index_t>(shape[0])};
+            pair_shell_matrix shells(boost::extents[num_atoms][num_atoms]);
+
+            auto is_close_tol = [&atol, &rtol] (T a, T b) {
+                return is_close(a, b, atol, rtol);
+            };
+
+            auto find_shell = [&distances,  &atol, &rtol, &is_close_tol] (T distance) {
+                if (distance < 0 and not is_close_tol(distance, 0.0)) return -1;
+                else if (is_close_tol(distance, 0.0)) return 0;
+                else {
+                    for (size_t i = 0; i < distances.size(); i++) {
+                        T shell_dist {distances[i]};
+                        if (distance > shell_dist and not is_close_tol(distance, shell_dist)) return static_cast<int>(i + 1);
+                    }
+                }
+                return -1;
+            };
 
             for (index_t i = 0; i < num_atoms; i++) {
-                for (index_t j = i; j < num_atoms; j++) {
-                    int shell {get_index(unique, rounded[i][j])};
+                for (index_t j = i + 1; j < num_atoms; j++) {
+                    int shell {find_shell(distance_matrix[i][j])};
                     if (shell < 0) throw std::runtime_error("A shell was detected which I am not aware of");
+                    else if (shell == 0 and i != j) {
+                        BOOST_LOG_TRIVIAL(warning) << "Two atoms are nearly overlapping. Please check your structure";
+                    }
                     shells[i][j] = static_cast<shell_t>(shell);
                     shells[j][i] = static_cast<shell_t>(shell);
                 }
@@ -122,36 +167,9 @@ namespace sqsgenerator::utils {
             return shells;
         }
 
-        std::map<shell_t, pair_shell_matrix::index> shell_index_map(const pair_shell_weights_t &weights) {
-            typedef pair_shell_matrix::index index_t;
-            index_t nshells {static_cast<index_t>(weights.size())};
-            std::vector<shell_t> shells;
-            std::map<shell_t, index_t> shell_indices;
-            // Copy the shells into a new vector
-            for(const auto &shell : weights) shells.push_back(shell.first);
-            // We sort the shells so that they are in ascending order
-            std::sort(shells.begin(), shells.end());
-            // Create the shell-index map, using a simple enumeration
-            for(index_t i = 0; i < nshells; i++)  shell_indices.emplace(std::make_pair(shells[i], i));
-            return shell_indices;
-        }
+        std::map<shell_t, pair_shell_matrix::index> shell_index_map(const pair_shell_weights_t &weights);
 
-        std::vector<AtomPair> create_pair_list(const pair_shell_matrix &shell_matrix, const std::map<shell_t, double> &weights) {
-            typedef pair_shell_matrix::index index_t;
-            std::vector<AtomPair> pair_list;
-            auto shell_indices (shell_index_map(weights));
-            auto shape = shape_from_multi_array(shell_matrix);
-            auto [sx, sy] = std::make_tuple(static_cast<index_t>(shape[0]), static_cast<index_t>(shape[1]));
-            assert(shape.size() == 2);
-            for (index_t i = 0; i < sx; i++) {
-                for (index_t j = i+1; j < sy; j++) {
-                    shell_t shell = shell_matrix[i][j];
-                    if ( shell_indices.find(shell) != shell_indices.end() )
-                        pair_list.push_back(AtomPair {i, j, shell, shell_indices[shell]});
-                }
-            }
-            return pair_list;
-        }
+        std::vector<AtomPair> create_pair_list(const pair_shell_matrix &shell_matrix, const std::map<shell_t, double> &weights);
 
     }
 

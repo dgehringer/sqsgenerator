@@ -6,6 +6,7 @@
 #define SQSGENERATOR_ATOMISTICS_HPP
 
 #include "types.hpp"
+#include "structure_utils.hpp"
 #include <map>
 #include <queue>
 #include <vector>
@@ -80,7 +81,6 @@ namespace sqsgenerator::utils::atomistics {
 
     class Structure {
     private:
-        uint8_t m_prec;
         size_t m_natoms;
         array_2d_t m_lattice;
         array_2d_t m_frac_coords;
@@ -88,7 +88,6 @@ namespace sqsgenerator::utils::atomistics {
         array_3d_t m_pbc_vecs;
         std::array<bool, 3> m_pbc;
         std::vector<Atom> m_species;
-        pair_shell_matrix m_shell_matrix;
 
     public:
         Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc);
@@ -102,13 +101,16 @@ namespace sqsgenerator::utils::atomistics {
         [[nodiscard]] const std::vector<Atom>& species() const;
         [[nodiscard]] const_array_3d_ref_t distance_vecs() const;
         [[nodiscard]] const_array_2d_ref_t distance_matrix() const;
-        [[nodiscard]] std::vector<AtomPair> create_pair_list(const std::map<shell_t, double> &weights) const;
         [[nodiscard]] configuration_t configuration() const;
         [[nodiscard]] std::vector<std::string> symbols() const;
-        const_pair_shell_matrix_ref_t shell_matrix(uint8_t prec);
+        const_pair_shell_matrix_ref_t shell_matrix(double atol=1.0e-5, double rtol=1.0e-8) const;
+        const_pair_shell_matrix_ref_t shell_matrix(const std::vector<double> &shell_distances, double atol=1.0e-5, double rtol=1.0e-8) const;
+
+        static std::vector<AtomPair> create_pair_list(const_pair_shell_matrix_ref_t shell_matrix, const std::map<shell_t, double> &weights) {
+            return sqsgenerator::utils::create_pair_list(shell_matrix, weights);
+        }
 
     };
 }
-
 
 #endif //SQSGENERATOR_ATOMISTICS_HPP
