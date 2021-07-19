@@ -106,6 +106,25 @@ namespace boost{
         return message.str();
     }
 
+    template<typename MultiArray, typename T1 = typename MultiArray::element>
+    std::string format_matrix(MultiArray array) {
+        typedef typename MultiArray::index index_t;
+        auto shape_ = shape_from_multi_array(array);
+        std::vector<index_t> shape {static_cast<index_t>(shape_[0]), static_cast<index_t>(shape_[1]) };
+        std::stringstream message;
+        message << "[";
+        for (index_t i = 0; i < shape[0]; i++) {
+            message << "[";
+            for (index_t j = 0; j < shape[1]; j++) {
+                message << static_cast<T1>(array[i][j]);
+                if (j != shape[1] - 1) message << ", ";
+            }
+            message << "]";
+            if (i != shape[0] -1) message << std::endl;
+        }
+        return message.str();
+    }
+
 
 
 }

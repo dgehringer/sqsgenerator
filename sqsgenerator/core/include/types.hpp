@@ -23,6 +23,8 @@ namespace sqsgenerator {
     typedef boost::multi_array_ref<shell_t, 2> pair_shell_matrix_ref_t;
     typedef boost::multi_array<double, 2> array_2d_t;
     typedef boost::multi_array<double, 3> array_3d_t;
+    typedef boost::multi_array_ref<double, 2> array_2d_ref_t;
+    typedef boost::multi_array_ref<double, 3> array_3d_ref_t;
     typedef array_3d_t::index index_t;
     typedef boost::const_multi_array_ref<double, 2> const_array_2d_ref_t;
     typedef boost::const_multi_array_ref<double, 3> const_array_3d_ref_t;

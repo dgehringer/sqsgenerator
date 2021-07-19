@@ -1,6 +1,7 @@
 import io
 import sys
 import math
+import functools
 import itertools
 import numpy as np
 from pymatgen.io.vasp import Poscar
@@ -19,10 +20,13 @@ def write_array(stream, array: np.ndarray, name=None, fmt="{0:.8f}"):
 def nditer(A: np.ndarray):
     return itertools.product(*map(range, A.shape))
 
-ABS_TOL = 1.0e-5
+ABS_TOL = 1.0e-3
 REL_TOL = 1.0e-8
 
+isclose = functools.partial(math.isclose, rel_tol=REL_TOL, abs_tol=ABS_TOL)
+
 if __name__ == "__main__":
+
     try:
         _, name, poscar_path = sys.argv
     except ValueError:
@@ -37,7 +41,7 @@ if __name__ == "__main__":
     s = np.zeros_like(d2, dtype=int)
     heights = {0.0: []}
 
-    shell_border_nearby = lambda x: any(math.isclose(x, h, rel_tol=REL_TOL, abs_tol=ABS_TOL) for h in heights)
+    shell_border_nearby = lambda x: any(isclose(x, h) for h in heights)
     closest_shell = lambda x: min(heights.keys(), key=lambda h : abs(x -h))
 
     for i, j in nditer(d2):
@@ -48,13 +52,22 @@ if __name__ == "__main__":
 
     shell_dists = [max(heights[k]) for k in sorted(heights.keys())]
 
-    print(shell_dists)
+    print(len(shell_dists), shell_dists)
+
+    def find_shell(d):
+        for i, (lower, upper) in enumerate(zip(shell_dists[:-1], shell_dists[1:])):
+            if ((isclose(d, lower) or lower < d) and (isclose(d, upper) or upper > d)): return i + 1
+        return len(shell_dists)
+
     for i, j in nditer(d2):
         d = d2[i ,j]
-        actual_shell = min(shell_dists, key=lambda x: abs(x-d))
-        assert abs(actual_shell - d) <= 2.0*ABS_TOL
-        s[i,j] = shell_dists.index(actual_shell) + 1
+        actual_shell = find_shell(d)
+        s[i,j] = actual_shell
         if i == j: s[i, j] = 0
+
+    np.set_printoptions(2)
+    print(d2)
+    print(s)
 
 
     with open(f"{name}.test.data", "w") as stream:

@@ -44,7 +44,7 @@ StructurePythonWrapper::StructurePythonWrapper(np::ndarray lattice, np::ndarray 
             helpers::ndarray_to_multi_array<const_array_2d_ref_t>(frac_coords),
             helpers::list_to_vector<std::string>(symbols),
     {py::extract<bool>(pbc[0]),py::extract<bool>(pbc[1]), py::extract<bool>(pbc[2])})))
-{ }
+{}
 
 
 np::ndarray StructurePythonWrapper::lattice() {
@@ -52,6 +52,7 @@ np::ndarray StructurePythonWrapper::lattice() {
 }
 
 np::ndarray StructurePythonWrapper::frac_coords() {
+
     return helpers::multi_array_to_ndarray(m_handle->frac_coords());
 }
 

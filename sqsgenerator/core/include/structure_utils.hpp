@@ -141,25 +141,27 @@ namespace sqsgenerator::utils {
                 return is_close(a, b, atol, rtol);
             };
 
-            auto find_shell = [&distances,  &atol, &rtol, &is_close_tol] (T distance) {
-                if (distance < 0 and not is_close_tol(distance, 0.0)) return -1;
-                else if (is_close_tol(distance, 0.0)) return 0;
+            auto find_shell = [&distances, &is_close_tol] (T distance) {
+                int shell {-1};
+                if (is_close_tol(distance, 0.0)) shell = 0;
                 else {
-                    for (size_t i = 0; i < distances.size(); i++) {
-                        T shell_dist {distances[i]};
-                        if (distance > shell_dist and not is_close_tol(distance, shell_dist)) return static_cast<int>(i + 1);
+                    for (size_t i = 0; i < distances.size() -1; i++) {
+                        T lower_bound {distances[i]}, upper_bound {distances[i+1]};
+                        if ((is_close_tol(distance, lower_bound) or lower_bound < distance) and (is_close_tol(distance, upper_bound) or upper_bound > distance)) {
+                            return static_cast<int>(i+1);
+                        }
                     }
                 }
-                return -1;
+                return static_cast<int>(distances.size());
             };
 
             for (index_t i = 0; i < num_atoms; i++) {
                 for (index_t j = i + 1; j < num_atoms; j++) {
                     int shell {find_shell(distance_matrix[i][j])};
-                    std::cout << "(" << i << ", " << j << "d = " << distance_matrix[i][j] <<") = " << shell << std::endl;
+                    //std::cout << "(" << i << ", " << j << ", d = " << distance_matrix[i][j] <<") = " << shell << std::endl;
                     if (shell < 0) throw std::runtime_error("A shell was detected which I am not aware of");
                     else if (shell == 0 and i != j) {
-                        BOOST_LOG_TRIVIAL(warning) << "Atoms " + std::to_string(i) + " and " + std::to_string(j) + " are overlapping!";
+                        BOOST_LOG_TRIVIAL(warning) << "Atoms " + std::to_string(i) + " and " + std::to_string(j) + " are overlapping! (distance = " + std::to_string(distance_matrix[i][j])<< ", shell = " << shell <<")!";
                     }
                     shells[i][j] = static_cast<shell_t>(shell);
                     shells[j][i] = static_cast<shell_t>(shell);

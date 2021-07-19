@@ -161,7 +161,8 @@ namespace sqsgenerator::test {
     void assert_multi_array_equal<pair_shell_matrix>(const pair_shell_matrix &a, const pair_shell_matrix &b) {
         ASSERT_EQ(a.num_elements(), b.num_elements());
         for (size_t i = 0; i < a.num_elements(); ++i) {
-            ASSERT_NEAR(std::abs<int>(a.data()[i]), std::abs<int>(b.data()[i]), 1.0e-5);
+            //ASSERT_NEAR(std::abs<int>(a.data()[i]), std::abs<int>(b.data()[i]), 1.0e-5);
+            EXPECT_NEAR(std::abs<int>(a.data()[i]), std::abs<int>(b.data()[i]), 1.0e-5);
             //EXPECT_NEAR(a.data()[i], b.data()[i], 1.0e-5);
         }
     }
@@ -197,21 +198,30 @@ namespace sqsgenerator::test {
             matrix<double> fcoords (matrix_from_multi_array(test_case.fcoords));
             auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
             auto d2 = sqsgenerator::utils::distance_matrix(pbc_vecs);
-            auto distances = sqsgenerator::utils::default_shell_distances(d2);
-            auto shells = sqsgenerator::utils::shell_matrix(d2, distances);
+            auto distances = sqsgenerator::utils::default_shell_distances(d2, 1.0e-3);
+            auto shells = sqsgenerator::utils::shell_matrix(d2, distances, 1.0e-3);
+            auto natoms {static_cast<index_t>(fcoords.size1())};
             for (size_t i = 0; i < 2; i++)  ASSERT_EQ(shells.shape()[i], test_case.shells.shape()[i]);
-            //assert_multi_array_equal(shells, test_case.shells);
+            assert_multi_array_equal(shells, test_case.shells);
+            /*for (index_t i = 0; i < natoms; i++) {
+                for (index_t j = i+1; j < natoms; j++) {
+                    if (shells[i][j] != test_case.shells[i][j]) {
+                        std::cout << "Different shell (" << i << ", " << j << ") = (" << static_cast<int>(shells[i][j]) << " != " << static_cast<int>(test_case.shells[i][j]) << ") = (" << d2[i][j] << ", " << distances[shells[i][j]] << ")" << std::endl;
+                    } else {
+                        ASSERT_EQ(shells[i][j], test_case.shells[i][j]);
+                    }
+                }
+            }*/
             auto shells_external = sqsgenerator::utils::shell_matrix(test_case.distances, distances);
             assert_multi_array_equal(shells, shells_external);
-
             std::cout << format_vector(distances);
             // Make sure the main diagonal is zero
-            for (index_t i = 0; i < fcoords.size1(); i++) {
+            for (index_t i = 0; i < natoms; i++) {
                 ASSERT_EQ(shells[i][i], 0);
             }
             // Ensure the matrix is symmetric
-            for (index_t i = 0; i < fcoords.size1(); i++) {
-                for (index_t j = i+1; j < fcoords.size1(); j++)
+            for (index_t i = 0; i < natoms; i++) {
+                for (index_t j = i+1; j < natoms; j++)
                     ASSERT_EQ(shells[i][j], shells[j][i]);
             }
         }
@@ -241,7 +251,6 @@ namespace sqsgenerator::test {
                     counts[shells[i][j]]++;
                 }
             }
-
             // If theres only one shell it must be exactly the number of pairs in the corresponding shell
             for (auto i = 1; i <= max_shell; i++) {
                 auto num_pairs = create_pair_list(shells, {{i, 0.0}}).size();
