@@ -8,7 +8,7 @@
 namespace sqsgenerator::python {
 
 
-    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, iteration_mode iteration_mode, uint8_t prec):
+    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, iteration_mode iteration_mode):
     m_structure(structure),
     m_handle(new IterationSettings(
                 *structure.handle(),
@@ -17,9 +17,39 @@ namespace sqsgenerator::python {
                 helpers::dict_to_map<shell_t, double>(shell_weights),
                 iterations,
                 output_configurations,
-                iteration_mode,
-                prec
+                iteration_mode
             )) {}
+
+    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, double atol, double rtol, iteration_mode iteration_mode) :
+    m_structure(structure),
+    m_handle(new IterationSettings(
+            *structure.handle(),
+            helpers::ndarray_to_multi_array<const_array_3d_ref_t>(target_objective),
+            helpers::ndarray_to_multi_array<const_array_2d_ref_t>(parameter_weights),
+            helpers::dict_to_map<shell_t, double>(shell_weights),
+            iterations,
+            output_configurations,
+            atol,
+            rtol,
+            iteration_mode
+    )) {}
+
+    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, py::list distances, double atol, double rtol, iteration_mode iteration_mode) :
+    m_structure(structure),
+    m_handle(new IterationSettings(
+            *structure.handle(),
+            helpers::ndarray_to_multi_array<const_array_3d_ref_t>(target_objective),
+            helpers::ndarray_to_multi_array<const_array_2d_ref_t>(parameter_weights),
+            helpers::dict_to_map<shell_t, double>(shell_weights),
+            iterations,
+            output_configurations,
+            helpers::list_to_vector<double>(distances),
+            atol,
+            rtol,
+            iteration_mode
+    )) {}
+
+
 
     size_t IterationSettingsPythonWrapper::num_atoms() const {
         return m_handle->num_atoms();

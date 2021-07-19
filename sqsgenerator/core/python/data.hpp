@@ -43,7 +43,8 @@ namespace sqsgenerator::python {
         py::tuple pbc();
         np::ndarray distance_vecs();
         np::ndarray distance_matrix();
-        np::ndarray shell_matrix(uint8_t prec = 5);
+        np::ndarray shell_matrix(double atol=1.0e-5, double rtol=1.0e-8);
+        np::ndarray shell_matrix(const py::list &distances, double atol=1.0e-5, double rtol=1.0e-8);
         size_t num_atoms();
         std::shared_ptr<atomistics::Structure> handle();
     };

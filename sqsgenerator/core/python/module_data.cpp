@@ -14,14 +14,11 @@ namespace helpers = sqsgenerator::python::helpers;
 namespace atomistics = sqsgenerator::utils::atomistics;
 
 
-
 void initialize_converters()
 {
     py::to_python_converter<cpp_int, helpers::Cpp_int_to_python_num>();
     helpers::Cpp_int_from_python_num();
 }
-
-
 
 BOOST_PYTHON_MODULE(data) {
     Py_Initialize();
@@ -50,7 +47,8 @@ BOOST_PYTHON_MODULE(data) {
             .def_readonly("frac_coords", &StructurePythonWrapper::frac_coords)
             .def_readonly("distance_vecs", &StructurePythonWrapper::distance_vecs)
             .def_readonly("distance_matrix", &StructurePythonWrapper::distance_matrix)
-            .def("shell_matrix", &StructurePythonWrapper::shell_matrix)
+            .def<np::ndarray(StructurePythonWrapper::*)(const py::list&, double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
+            .def<np::ndarray(StructurePythonWrapper::*)(double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
             .def_readonly("pbc", &StructurePythonWrapper::pbc);
 
     py::class_<SQSResultCollection>("SQSResultCollection")

@@ -20,6 +20,7 @@ add_library(data SHARED
         ../src/result.cpp
         ../src/atomistics.cpp
         ../src/utils.cpp
+        ../src/structure_utils.cpp
         data.hpp
         data.cpp
         )
@@ -38,6 +39,7 @@ add_library(iteration SHARED
         ../src/atomistics.cpp
         ../src/settings.cpp
         ../src/utils.cpp
+        ../src/structure_utils.cpp
          )
 
 add_dependencies(iteration data)

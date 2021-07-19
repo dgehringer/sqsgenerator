@@ -22,7 +22,9 @@ namespace sqsgenerator::python {
         std::shared_ptr<IterationSettings> m_handle;
 // IterationSettings(Structure &structure, double target_objective, array_2d_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, iteration_mode mode = iteration_mode::random, uint8_t prec = 5)
     public:
-        IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, iteration_mode iteration_mode, uint8_t prec);
+        IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, iteration_mode iteration_mode);
+        IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, double atol, double rtol, iteration_mode iteration_mode);
+        IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, py::list distances, double atol, double rtol, iteration_mode iteration_mode);
         IterationSettingsPythonWrapper(const IterationSettingsPythonWrapper &other) = default;
         size_t num_atoms() const;
         size_t num_shells() const;
