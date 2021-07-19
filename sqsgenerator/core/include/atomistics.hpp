@@ -1,6 +1,6 @@
-//
-// Created by dominik on 02.06.21.
-//
+/**
+ * @file atomistics.hpp
+ */
 
 #ifndef SQSGENERATOR_ATOMISTICS_HPP
 #define SQSGENERATOR_ATOMISTICS_HPP
@@ -17,19 +17,24 @@ using namespace boost;
 namespace sqsgenerator::utils::atomistics {
 
     /**
-     * Data class which holds some information of the periodic table. Can not be constructed.
+     * Data class which holds some information of the periodic table. To construct instances, the static utility
+     * functions of `Atoms`.
      */
     class Atom {
     public:
-        const species_t Z;
-        const std::string name;
-        const std::string symbol;
-        const std::string electronic_configuration;
-        const double atomic_radius;
-        const double mass;
-        const double en;
+        const species_t Z; /**< The ordinal number of the element in the periodic table */
+        const std::string name; /**< The full english name of the element. E. g. "Iron" */
+        const std::string symbol; /**< The two character symbol of an element. E.g "Fe" for iron */
+        const std::string electronic_configuration; /**< The electronic configuration as a string */
+        const double atomic_radius; /**< Atomic radius in pm */
+        const double mass; /**< The mass of the atoms in atomic units */
+        const double en; /**< Electronegativity */
     };
 
+    /**
+     * Utility class, exposing public constructors for the `Atom` class
+     * @see Atom
+     */
     class Atoms {
 
     private:
@@ -50,6 +55,13 @@ namespace sqsgenerator::utils::atomistics {
          */
         static Atom from_z(species_t Z);
 
+        /***
+         * Resolves a vector of ordinal number into a list of Atoms objects
+         * @param numbers vector of ordinal numbers
+         * @return vector of Atom objects
+         */
+        static std::vector<Atom> from_z(const std::vector<species_t> &numbers);
+
         /**
          * resolves the symbol of an atomic element e. g. "Fe" and looks up the Atom object. The input argument is
          * case sensitive
@@ -57,13 +69,6 @@ namespace sqsgenerator::utils::atomistics {
          * @return the Atom object
          */
         static Atom from_symbol(const std::string &symbol);
-
-        /***
-         * Resolves a vector of ordinal number into a list of Atoms objects
-         * @param numbers vector of ordinal numbers
-         * @return vector of Atom objects
-         */
-        static std::vector<Atom> from_z(const std::vector<species_t> &numbers);
 
         /**
          * Resolves a vector of species symbols into a list of Atoms objects

@@ -86,10 +86,10 @@ namespace sqsgenerator {
 
     /**
      * computes a index vector which maps each index of a (symmetric) matrix stored in a flat array into a the offset
-     * for a another flat arrray. Due to the symmertric property ($i \leq j$) we do not have to store all values.
+     * for a another flat arrray. Due to the symmertric property (\f$i \leq j\f$) we do not have to store all values.
      *
-     * Let's consider a $N \times N$ matrix (E. g. 2 times 2). When storing it as an flat array the index can be
-     * computed by $i\cdot N  +j $. . In case of the $2 \times 2$ array
+     * Let's consider a \f$N \times N\f$ matrix (E. g. 2 times 2). When storing it as an flat array the index can be
+     * computed by \f$i\cdot N  +j \f$. . In case of the \f$2 \times 2\f$ array
      *
      * @param settings iteration settings
      * @return a vector storing the indices of for storing a symmetric matrix
