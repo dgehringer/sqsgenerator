@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 project(sqsgenerator)
-# set(CMAKE_CXX_COMPILER /usr/bin/g++)
+set(USE_MPI ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -22,15 +22,32 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -march=native -mtune=native -ftree-vectorize" )
 find_package(Boost REQUIRED COMPONENTS system python numpy log_setup log)
 message([BOOST]:INCLUDE_DIRS: ${Boost_INCLUDE_DIRS})
 message([BOOST]:LIBRARIES: ${Boost_LIBRARIES})
+include_directories(${Boost_INCLUDE_DIRS})
+set(CMAKE_CXX_LIBRARIES ${Boost_LIBRARIES})
 
 # OpenMP flags
 find_package(OpenMP)
 if (OPENMP_FOUND)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-    message([OPENMP]:COMPILER FLAGS: ${OpenMP_CXX_FLAGS})
-    message([OPENMP]:LINKER FLAGS: ${OpenMP_EXE_LINKER_FLAGS})
+    set (CMAKE_CXX_LIBRARIES "${CMAKE_CXX_LIBRARIES} ${OpenMP_CXX_LIBRARIES}")
+    message ([OPENMP]:COMPILER FLAGS: ${OpenMP_CXX_FLAGS})
+    message ([OPENMP]:LIBRARIES: ${OpenMP_CXX_LIBRARIES})
+endif()
+
+
+if (USE_MPI)
+    find_package(MPI)
+    if (MPI_FOUND)
+        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_CXX_COMPILE_OPTIONS} -DUSE_MPI")
+        set (CMAKE_CXX_LIBRARIES "${CMAKE_CXX_LIBRARIES} ${MPI_CXX_LIBRARIES}")
+        message([MPI]:VERSION: ${MPI_CXX_VERSION})
+        message([MPI]:COMPILER: ${MPI_CXX_COMPILER})
+        message([MPI]:COMPILER FLAGS: ${MPI_CXX_COMPILER_FLAGS})
+        message([MPI]:LIBRARIES: ${MPI_CXX_LIBRARIES})
+        set(CMAKE_CXX_COMPILER_OLD ${CMAKE_CXX_COMPILER})
+        message([MPI]:CHANGED_COMPILER: " from \"" ${CMAKE_CXX_COMPILER_OLD} "\" to \"" ${MPI_CXX_COMPILER} "\"")
+        include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+    endif()
 endif()
 
 execute_process(
@@ -45,8 +62,7 @@ execute_process(
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_COMMIT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-message([REPO] ${GIT_COMMIT_HASH}@${GIT_BRANCH})
+message([REPO]: ${GIT_COMMIT_HASH}@${GIT_BRANCH})
 
 ###########################
 ### Documentation stuff ###
@@ -60,6 +76,14 @@ include_directories(${Boost_INCLUDE_DIRS})
 add_subdirectory(test)
 add_subdirectory(sqsgenerator/core/python)
 
+if (MPI_FOUND)
+    set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
+endif()
+
+message("[CMAKE_CXX_COMPILER]: " ${CMAKE_CXX_COMPILER})
+message("[CMAKE_CXX_FLAGS]: " ${CMAKE_CXX_FLAGS})
+message("[CMAKE_CXX_LIBRARIES]: " ${CMAKE_CXX_LIBRARIES})
+
 add_executable(sqsgenerator.core
         sqsgenerator/core/src/main.cpp
         sqsgenerator/core/src/settings.cpp
@@ -70,4 +94,8 @@ add_executable(sqsgenerator.core
         sqsgenerator/core/src/result.cpp
         sqsgenerator/core/src/structure_utils.cpp)
 
-target_link_libraries(sqsgenerator.core pthread ${Boost_LIBRARIES})
+
+target_link_libraries(sqsgenerator.core ${Boost_LIBRARIES})
+if (USE_MPI)
+    target_link_libraries(sqsgenerator.core ${MPI_CXX_LIBRARIES})
+endif()

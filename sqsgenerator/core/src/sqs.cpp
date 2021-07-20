@@ -3,21 +3,31 @@
 //
 
 #include "sqs.hpp"
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
+#if defined(USE_MPI)
+#include <mpi.h>
+#define TAG_REDIST 1
+#endif
+#include <chrono>
+#include <unordered_set>
+#include <boost/circular_buffer.hpp>
 #include <boost/log/trivial.hpp>
 
 namespace sqsgenerator {
 
     void log_settings(const IterationSettings &settings) {
         std::string mode = ((settings.mode() == random) ? "random" : "systematic");
-        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::mode = "  + mode;
-        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_atoms = " << settings.num_atoms();
-        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_species = " << settings.num_species();
-        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_shells = " << settings.num_shells();
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::mode = "  + mode;
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_atoms = " << settings.num_atoms();
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_species = " << settings.num_species();
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_shells = " << settings.num_shells();
         auto [shells, weights] = settings.shell_indices_and_weights();
-        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::shell_weights = " + format_dict(shells, weights);
-        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_iterations = " << settings.num_iterations();
-        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_output_configurations = " << settings.num_output_configurations();
-        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_pairs = " << settings.pair_list().size();
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::shell_weights = " + format_dict(shells, weights);
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_iterations = " << settings.num_iterations();
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_output_configurations = " << settings.num_output_configurations();
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_pairs = " << settings.pair_list().size();
     }
 
     void count_pairs(const configuration_t &configuration, const std::vector<size_t> &pair_list,
@@ -53,22 +63,33 @@ namespace sqsgenerator {
         return total_objective;
     }
 
-    std::vector<std::tuple<rank_t, rank_t>> compute_ranks(const IterationSettings &settings, int nthreads) {
+    std::vector<std::tuple<int, int, rank_t, rank_t>> compute_ranks(const IterationSettings &settings, const std::map<int, int> &threads_per_rank) {
         rank_t start_it, end_it, total;
+        auto nthreads = std::accumulate(threads_per_rank.begin(), threads_per_rank.end(), 0, [](int current_sum, const std::pair<int, int> &threads){
+            return current_sum + threads.second;
+        });
         auto niterations{settings.num_iterations()};
-        std::vector<std::tuple<rank_t, rank_t>> ranks(nthreads);
+        auto num_mpi_ranks {static_cast<int>(threads_per_rank.size())};
+        auto thread_count {0};
+        std::vector<std::tuple<int, int, rank_t, rank_t>> ranks(nthreads);
         total = (settings.mode() == random) ? niterations : utils::total_permutations(settings.packed_configuraton());
-        for (int thread_id = 0; thread_id < nthreads; thread_id++) {
-            start_it = total / nthreads * thread_id;
-            end_it = start_it + total / nthreads;
-            // permutation sequence indexing starts with one
-            if (settings.mode() == systematic) {
-                start_it++;
-                end_it++;
+        for (int mpi_rank = 0; mpi_rank < num_mpi_ranks; mpi_rank++) {
+            auto  threads_in_mpi_rank = threads_per_rank.at(mpi_rank);
+
+            for (int local_thread_id = 0; local_thread_id < threads_in_mpi_rank; local_thread_id++) {
+                start_it = total / nthreads * thread_count;
+                end_it = start_it + total / nthreads;
+                // permutation sequence indexing starts with one
+                if (settings.mode() == systematic) {
+                    start_it++;
+                    end_it++;
+                }
+                end_it = (thread_count == nthreads - 1) ? total : end_it;
+                ranks[thread_count] = std::make_tuple(mpi_rank, local_thread_id, start_it, end_it);
+                thread_count++;
             }
-            end_it = (thread_id == nthreads - 1) ? total : end_it;
-            ranks[thread_id] = std::make_tuple(start_it, end_it);
         }
+        assert(thread_count == nthreads);
         return ranks;
     }
 
@@ -164,11 +185,38 @@ namespace sqsgenerator {
     }
 
     std::vector<SQSResult> do_pair_iterations(const IterationSettings &settings) {
-        log_settings(settings);
         typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point_t;
         typedef boost::circular_buffer<SQSResult> result_buffer_t;
+        int mpi_num_ranks, mpi_rank;
+#if defined(USE_MPI)
+
+        int mpi_init_err = MPI_Init(nullptr, nullptr);
+        if (mpi_init_err != 0 ) {
+            auto message = "MPI_Init exited with code: " + std::to_string(mpi_init_err);
+            BOOST_LOG_TRIVIAL(error) << message;
+            throw std::runtime_error(message);
+        }
+        MPI_Comm_size(MPI_COMM_WORLD, &mpi_num_ranks);
+        MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
+        if (mpi_rank == 0) {
+            BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::mpi::num_ranks = " + std::to_string(mpi_num_ranks);
+            // log_settings(settings);
+        }
+#else
+        mpi_num_ranks = 1;
+        mpi_rank = 0;
+        log_settings(settings);
+#endif
+        std::map<int, int> threads_per_rank;
+        for (int i = 0; i < 3; i++) threads_per_rank.emplace(std::make_pair(i, 3));
+        auto num_threads_per_rank = threads_per_rank[mpi_rank];
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" + std::to_string(mpi_rank) + "::num_threads = " + std::to_string(num_threads_per_rank);
+
+
+
         double best_objective{std::numeric_limits<double>::max()};
-        std::vector<std::tuple<rank_t, rank_t>> iteration_ranks;
+        std::vector<std::tuple<int, int, rank_t, rank_t>> iteration_ranks;
         std::vector<long> thread_timings;
         parameter_storage_t prefactors, parameter_weights, target_objectives;
         result_buffer_t results(settings.num_output_configurations());
@@ -180,23 +228,58 @@ namespace sqsgenerator {
         std::tie(reduced_size, prefactors, parameter_weights, target_objectives) = reduce_weights_matrices(settings,
                                                                                                            reindexer);
 
-        auto[shells, shell_weights] = settings.shell_indices_and_weights();
-
-        #pragma omp parallel default(none) shared(std::cout, boost::extents, settings, results, iteration_ranks, hist, nperms, pair_list, prefactors, parameter_weights, target_objectives, reindexer, best_objective, thread_timings) firstprivate(nspecies, nshells, reduced_size)
+        omp_set_num_threads(mpi_rank == 1 ? 2: 1 );
+        #pragma omp parallel default(none) shared(std::cout, std::cerr, boost::extents, settings, results, iteration_ranks, hist, nperms, pair_list, prefactors, parameter_weights, target_objectives, reindexer, best_objective, thread_timings, threads_per_rank, ompi_mpi_comm_world, ompi_mpi_int) firstprivate(nspecies, nshells, reduced_size, mpi_rank, mpi_num_ranks)
         {
             double objective_local;
             uint64_t random_seed_local;
             time_point_t start_time, end_time;
             double best_objective_local{best_objective};
             get_next_configuration_t get_next_configuration;
-            int thread_id{omp_get_thread_num()}, nthreads{omp_get_num_threads()};
+            int thread_id {omp_get_thread_num()}, nthreads {omp_get_num_threads()};
+            bool need_redistribution {nthreads != threads_per_rank[mpi_rank]};
+            // we have to synchronize the threads before we go on with initialization
+#if defined (USE_MPI)
+            MPI_Request req_redist[mpi_num_ranks - 1];
+#endif
             #pragma omp single
             {
-                iteration_ranks = compute_ranks(settings, nthreads);
-                thread_timings.resize(nthreads);
+                if (need_redistribution) {
+                    std::cerr << "do_pair_iterations::rank::" + std::to_string(mpi_rank) + ":: Requested " + std::to_string(threads_per_rank[mpi_rank]) + " threads but OpenMP scheduled only " + std::to_string(nthreads) << std::endl;
+                    threads_per_rank[mpi_rank] = nthreads;
+#if defined(USE_MPI)
+                    auto handle_count {0};
+                    for (int rank = 0; rank < mpi_num_ranks; rank++) {
+                        if (rank == mpi_rank) continue;
+                        MPI_Isend(&nthreads, 1, MPI_INT, rank, TAG_REDIST, MPI_COMM_WORLD, &req_redist[handle_count++]);
+                    }
+                    MPI_Barrier(MPI_COMM_WORLD);
+                    // Now lets check if there is a message there and we have to remap the iterations
+                    MPI_Request request;
+                    MPI_Status request_status;
+                    int have_message;
+                    int new_nthreads;
+                    int source_rank;
+                    MPI_Iprobe(MPI_ANY_SOURCE, TAG_REDIST, MPI_COMM_WORLD, &have_message, &request_status);
+                    while (have_message) {
+                        source_rank = request_status.MPI_SOURCE;
+                        MPI_Irecv(&new_nthreads, 1, MPI_INT, source_rank, TAG_REDIST, MPI_COMM_WORLD, &request);
+                        std::cout << "rank " << mpi_rank << " recieved message from rank " << request_status.MPI_SOURCE
+                                  << " message = " << new_nthreads << std::endl;
+                        MPI_Wait(&request, &request_status);
+                        MPI_Iprobe(MPI_ANY_SOURCE, TAG_REDIST, MPI_COMM_WORLD, &have_message, &request_status);
+                        threads_per_rank[source_rank] = new_nthreads;
+                    }
+
+                    for (int i = 0; i < mpi_num_ranks -1; i++) MPI_Wait(&req_redist[i], &request_status);
+                    MPI_Barrier(MPI_COMM_WORLD);
+                }
+#endif
+                iteration_ranks = compute_ranks(settings, threads_per_rank);
+
             }
             #pragma omp barrier
-            auto[start_it, end_it] = iteration_ranks[thread_id];
+            auto[rank_check, thread_id_check, start_it, end_it] = iteration_ranks[thread_id];
 
             configuration_t configuration_local(settings.packed_configuraton());
             parameter_storage_t parameters_local(reduced_size * nshells);
@@ -246,8 +329,8 @@ namespace sqsgenerator {
                 }
             } // for
             end_time = std::chrono::high_resolution_clock::now();
-            thread_timings[thread_id] = std::chrono::duration_cast<std::chrono::microseconds>(
-                    end_time - start_time).count();
+            /*thread_timings[thread_id] = std::chrono::duration_cast<std::chrono::microseconds>(
+                    end_time - start_time).count();*/
         } // pragma omp parallel
         std::unordered_set<rank_t> ranks;
         std::vector<SQSResult> final_results;
@@ -260,6 +343,9 @@ namespace sqsgenerator {
             if (settings.mode() == random && !ranks.insert(rank).second) continue;
             else final_results.push_back(std::move(r));
         }
+#if defined(USE_MPI)
+        MPI_Finalize();
+#endif
         return final_results;
     }
 }
