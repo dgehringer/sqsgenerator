@@ -63,7 +63,9 @@ BOOST_PYTHON_MODULE(iteration) {
                 .def_readonly("structure", &IterationSettingsPythonWrapper::structure)
                 .def_readonly("target_objective", &IterationSettingsPythonWrapper::target_objective)
                 .def_readonly("shell_weights", &IterationSettingsPythonWrapper::shell_weights)
-                .def_readonly("parameter_weights", &IterationSettingsPythonWrapper::parameter_weights);
+                .def_readonly("parameter_weights", &IterationSettingsPythonWrapper::parameter_weights)
+                .def_readonly("atol", &IterationSettingsPythonWrapper::atol)
+                .def_readonly("rtol", &IterationSettingsPythonWrapper::rtol);
 
         py::def("pair_sqs_iteration", &pair_sqs_iteration);
 }

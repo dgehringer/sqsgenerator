@@ -49,7 +49,13 @@ namespace sqsgenerator::python {
             iteration_mode
     )) {}
 
+    double IterationSettingsPythonWrapper::atol() const {
+        return m_handle->atol();
+    }
 
+    double IterationSettingsPythonWrapper::rtol() const {
+        return m_handle->rtol();
+    }
 
     size_t IterationSettingsPythonWrapper::num_atoms() const {
         return m_handle->num_atoms();

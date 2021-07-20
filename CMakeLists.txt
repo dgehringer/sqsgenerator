@@ -15,7 +15,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native --fast-math" )
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -march=native -mtune=native" )
 
 # There is an issue find FindBoost.cmake
 # https://gitlab.kitware.com/cmake/cmake/-/issues/20638: That's why log setup is added

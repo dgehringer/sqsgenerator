@@ -122,20 +122,20 @@ namespace sqsgenerator::utils {
             for (const auto &pair : shell_dists) result.push_back(*std::max_element(pair.second.begin(), pair.second.end()));
             std::sort(result.begin(), result.end());
 
-            BOOST_LOG_TRIVIAL(info) << "structure_utils::default_shell_distances::num_distances  = " + std::to_string(result.size());
-            BOOST_LOG_TRIVIAL(info) << "structure_utils::default_shell_distances::distances  = " + format_vector(result);
+            BOOST_LOG_TRIVIAL(debug) << "structure_utils::default_shell_distances::num_distances  = " + std::to_string(result.size());
+            BOOST_LOG_TRIVIAL(debug) << "structure_utils::default_shell_distances::distances  = " + format_vector(result);
 
             return result;
         }
 
         template<typename MultiArray>
-        pair_shell_matrix shell_matrix(const MultiArray &distance_matrix, const std::vector<typename MultiArray::element> &distances, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
-
+        pair_shell_matrix_t shell_matrix(const MultiArray &distance_matrix, const std::vector<typename MultiArray::element> &distances, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
+            BOOST_LOG_TRIVIAL(debug) << "structure_utils::shell_matrix::distances = " + format_vector(distances);
             typedef typename MultiArray::index index_t;
             typedef typename MultiArray::element T;
             auto shape(shape_from_multi_array(distance_matrix));
             auto num_atoms {static_cast<index_t>(shape[0])};
-            pair_shell_matrix shells(boost::extents[num_atoms][num_atoms]);
+            pair_shell_matrix_t shells(boost::extents[num_atoms][num_atoms]);
 
             auto is_close_tol = [&atol, &rtol] (T a, T b) {
                 return is_close(a, b, atol, rtol);
@@ -163,16 +163,18 @@ namespace sqsgenerator::utils {
                     else if (shell == 0 and i != j) {
                         BOOST_LOG_TRIVIAL(warning) << "Atoms " + std::to_string(i) + " and " + std::to_string(j) + " are overlapping! (distance = " + std::to_string(distance_matrix[i][j])<< ", shell = " << shell <<")!";
                     }
-                    shells[i][j] = static_cast<shell_t>(shell);
-                    shells[j][i] = static_cast<shell_t>(shell);
+                    shells[i][j] = shell;
+                    shells[j][i] = shell;
                 }
             }
+
+            BOOST_LOG_TRIVIAL(debug) << "structure_utils::shell_matrix::matrix = " + format_matrix(shells);
             return shells;
         }
 
-        std::map<shell_t, pair_shell_matrix::index> shell_index_map(const pair_shell_weights_t &weights);
+        std::map<shell_t, pair_shell_matrix_t::index> shell_index_map(const pair_shell_weights_t &weights);
 
-        std::vector<AtomPair> create_pair_list(const pair_shell_matrix &shell_matrix, const std::map<shell_t, double> &weights);
+        std::vector<AtomPair> create_pair_list(const pair_shell_matrix_t &shell_matrix, const std::map<shell_t, double> &weights);
 
     }
 

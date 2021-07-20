@@ -18,6 +18,8 @@ namespace sqsgenerator {
         BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_iterations = " << settings.num_iterations();
         BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_output_configurations = " << settings.num_output_configurations();
         BOOST_LOG_TRIVIAL(debug) << "iteration_settings::num_pairs = " << settings.pair_list().size();
+        BOOST_LOG_TRIVIAL(debug) << "iteration_settings::occupied_pairs_percentage = " << static_cast<double>(settings.pair_list().size())/static_cast<double>(settings.num_atoms()*(settings.num_atoms()-1)/2)*100.0 << " %";
+
     }
 
     void count_pairs(const configuration_t &configuration, const std::vector<size_t> &pair_list,
@@ -46,6 +48,7 @@ namespace sqsgenerator {
                                            const parameter_storage_t &target_objectives) {
         double total_objective{0.0};
         size_t nparams{bonds.size()};
+
         for (size_t i = 0; i < nparams; i++) {
             bonds[i] = parameter_weights[i] * (1.0 - bonds[i] * prefactors[i]);
             total_objective += std::abs(bonds[i] - target_objectives[i]);
@@ -249,6 +252,18 @@ namespace sqsgenerator {
             thread_timings[thread_id] = std::chrono::duration_cast<std::chrono::microseconds>(
                     end_time - start_time).count();
         } // pragma omp parallel
+
+        long total_time {0};
+        rank_t total_iterations = 0;
+        for (size_t i = 0; i < thread_timings.size(); i++) {
+            auto [start_rank, end_rank] = iteration_ranks[i];
+            total_time += thread_timings[i];
+            total_iterations += (end_rank - start_rank);
+            BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::thread::" << static_cast<int>(i) << "::average_time = " << static_cast<double>(thread_timings[i])/(long)(end_rank - start_rank);
+        }
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::thread::average_time = " << static_cast<double>(total_time)/(long)(total_iterations);
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::thread::average_time = " << static_cast<double>(total_time)/(long)(total_iterations*thread_timings.size());
+
         std::unordered_set<rank_t> ranks;
         std::vector<SQSResult> final_results;
         for (auto &r : results) {

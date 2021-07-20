@@ -34,11 +34,11 @@ namespace sqsgenerator {
         m_parameter_weights(parameter_weights),
         m_target_objective(target_objective),
         m_parameter_prefactors(boost::extents[static_cast<index_t>(shell_weights.size())][static_cast<index_t>(m_nspecies)][static_cast<index_t>(m_nspecies)]),
-        m_shell_distances(shell_distances)
+        m_shell_distances(shell_distances),
+        m_shell_matrix(m_structure.shell_matrix(m_shell_distances, m_atol, m_rtol))
     {
-        auto shell_m(shell_matrix());
         auto num_elements {num_atoms()*num_atoms()};
-        std::set<shell_t> unique(shell_m.data(), shell_m.data() + num_elements);
+        std::set<shell_t> unique(m_shell_matrix.data(), m_shell_matrix.data() + num_elements);
         m_available_shells = std::vector<shell_t>(unique.begin(), unique.end());
         std::sort(m_available_shells.begin(), m_available_shells.end());
         m_available_shells.erase(m_available_shells.begin());
@@ -90,7 +90,15 @@ namespace sqsgenerator {
     }
 
     const_pair_shell_matrix_ref_t IterationSettings::shell_matrix() const {
-        return m_structure.shell_matrix(m_shell_distances, m_atol, m_rtol);
+        return m_shell_matrix;
+    }
+
+    [[nodiscard]] double IterationSettings::atol() const {
+        return m_atol;
+    }
+
+    [[nodiscard]] double IterationSettings::rtol() const {
+        return m_rtol;
     }
 
     [[nodiscard]] std::vector<AtomPair> IterationSettings::pair_list() const {
