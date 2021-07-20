@@ -158,7 +158,6 @@ namespace sqsgenerator::utils {
             for (index_t i = 0; i < num_atoms; i++) {
                 for (index_t j = i + 1; j < num_atoms; j++) {
                     int shell {find_shell(distance_matrix[i][j])};
-                    //std::cout << "(" << i << ", " << j << ", d = " << distance_matrix[i][j] <<") = " << shell << std::endl;
                     if (shell < 0) throw std::runtime_error("A shell was detected which I am not aware of");
                     else if (shell == 0 and i != j) {
                         BOOST_LOG_TRIVIAL(warning) << "Atoms " + std::to_string(i) + " and " + std::to_string(j) + " are overlapping! (distance = " + std::to_string(distance_matrix[i][j])<< ", shell = " << shell <<")!";

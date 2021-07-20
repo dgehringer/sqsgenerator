@@ -15,7 +15,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native --fast-math" )
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -march=native -mtune=native -ftree-vectorize" )
 
 # There is an issue find FindBoost.cmake
 # https://gitlab.kitware.com/cmake/cmake/-/issues/20638: That's why log setup is added
@@ -67,7 +67,7 @@ add_executable(sqsgenerator.core
         sqsgenerator/core/src/rank.cpp
         sqsgenerator/core/src/utils.cpp
         sqsgenerator/core/src/atomistics.cpp
-        sqsgenerator/core/src/result.cpp sqsgenerator/core/src/structure_utils.cpp)
-
+        sqsgenerator/core/src/result.cpp
+        sqsgenerator/core/src/structure_utils.cpp)
 
 target_link_libraries(sqsgenerator.core pthread ${Boost_LIBRARIES})
