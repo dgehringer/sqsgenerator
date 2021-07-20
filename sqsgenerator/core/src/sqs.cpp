@@ -9,6 +9,9 @@
 #if defined(USE_MPI)
 #include <mpi.h>
 #define TAG_REDIST 1
+#define TAG_BETTER_OBJECTIVE 2
+#define TAG_COLLECT 3
+#define HEAD_RANK 0
 #endif
 #include <chrono>
 #include <unordered_set>
@@ -16,6 +19,8 @@
 #include <boost/log/trivial.hpp>
 
 namespace sqsgenerator {
+
+    typedef std::map<int, std::map<int, std::tuple<rank_t, rank_t>>> rank_iteration_map_t;
 
     void log_settings(const IterationSettings &settings) {
         std::string mode = ((settings.mode() == random) ? "random" : "systematic");
@@ -63,19 +68,21 @@ namespace sqsgenerator {
         return total_objective;
     }
 
-    std::vector<std::tuple<int, int, rank_t, rank_t>> compute_ranks(const IterationSettings &settings, const std::map<int, int> &threads_per_rank) {
+    rank_iteration_map_t compute_ranks(const IterationSettings &settings, const std::map<int, int> &threads_per_rank) {
         rank_t start_it, end_it, total;
         auto nthreads = std::accumulate(threads_per_rank.begin(), threads_per_rank.end(), 0, [](int current_sum, const std::pair<int, int> &threads){
             return current_sum + threads.second;
         });
+
+        auto thread_count {0};
+        rank_iteration_map_t rank_map;
         auto niterations{settings.num_iterations()};
         auto num_mpi_ranks {static_cast<int>(threads_per_rank.size())};
-        auto thread_count {0};
-        std::vector<std::tuple<int, int, rank_t, rank_t>> ranks(nthreads);
+
         total = (settings.mode() == random) ? niterations : utils::total_permutations(settings.packed_configuraton());
         for (int mpi_rank = 0; mpi_rank < num_mpi_ranks; mpi_rank++) {
             auto  threads_in_mpi_rank = threads_per_rank.at(mpi_rank);
-
+            std::map<int, std::tuple<rank_t, rank_t>> local_rank_map;
             for (int local_thread_id = 0; local_thread_id < threads_in_mpi_rank; local_thread_id++) {
                 start_it = total / nthreads * thread_count;
                 end_it = start_it + total / nthreads;
@@ -85,12 +92,13 @@ namespace sqsgenerator {
                     end_it++;
                 }
                 end_it = (thread_count == nthreads - 1) ? total : end_it;
-                ranks[thread_count] = std::make_tuple(mpi_rank, local_thread_id, start_it, end_it);
+                local_rank_map.emplace(std::make_pair(local_thread_id, std::make_tuple(start_it, end_it)));
                 thread_count++;
             }
+            rank_map.emplace(std::make_pair(mpi_rank, local_rank_map));
         }
         assert(thread_count == nthreads);
-        return ranks;
+        return rank_map;
     }
 
     std::vector<size_t> convert_pair_list(const std::vector<AtomPair> &pair_list) {
@@ -199,7 +207,7 @@ namespace sqsgenerator {
         MPI_Comm_size(MPI_COMM_WORLD, &mpi_num_ranks);
         MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-        if (mpi_rank == 0) {
+        if (mpi_rank == HEAD_RANK) {
             BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::mpi::num_ranks = " + std::to_string(mpi_num_ranks);
             // log_settings(settings);
         }
@@ -213,10 +221,8 @@ namespace sqsgenerator {
         auto num_threads_per_rank = threads_per_rank[mpi_rank];
         BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" + std::to_string(mpi_rank) + "::num_threads = " + std::to_string(num_threads_per_rank);
 
-
-
         double best_objective{std::numeric_limits<double>::max()};
-        std::vector<std::tuple<int, int, rank_t, rank_t>> iteration_ranks;
+        rank_iteration_map_t iteration_ranks;
         std::vector<long> thread_timings;
         parameter_storage_t prefactors, parameter_weights, target_objectives;
         result_buffer_t results(settings.num_output_configurations());
@@ -229,7 +235,7 @@ namespace sqsgenerator {
                                                                                                            reindexer);
 
         omp_set_num_threads(mpi_rank == 1 ? 2: 1 );
-        #pragma omp parallel default(none) shared(std::cout, std::cerr, boost::extents, settings, results, iteration_ranks, hist, nperms, pair_list, prefactors, parameter_weights, target_objectives, reindexer, best_objective, thread_timings, threads_per_rank, ompi_mpi_comm_world, ompi_mpi_int) firstprivate(nspecies, nshells, reduced_size, mpi_rank, mpi_num_ranks)
+        #pragma omp parallel default(none) shared(std::cout, std::cerr, boost::extents, settings, results, iteration_ranks, hist, nperms, pair_list, prefactors, parameter_weights, target_objectives, reindexer, best_objective, thread_timings, threads_per_rank, ompi_mpi_comm_world, ompi_mpi_int, ompi_mpi_double) firstprivate(nspecies, nshells, reduced_size, mpi_rank, mpi_num_ranks)
         {
             double objective_local;
             uint64_t random_seed_local;
@@ -264,11 +270,9 @@ namespace sqsgenerator {
                     while (have_message) {
                         source_rank = request_status.MPI_SOURCE;
                         MPI_Irecv(&new_nthreads, 1, MPI_INT, source_rank, TAG_REDIST, MPI_COMM_WORLD, &request);
-                        std::cout << "rank " << mpi_rank << " recieved message from rank " << request_status.MPI_SOURCE
-                                  << " message = " << new_nthreads << std::endl;
                         MPI_Wait(&request, &request_status);
-                        MPI_Iprobe(MPI_ANY_SOURCE, TAG_REDIST, MPI_COMM_WORLD, &have_message, &request_status);
                         threads_per_rank[source_rank] = new_nthreads;
+                        MPI_Iprobe(MPI_ANY_SOURCE, TAG_REDIST, MPI_COMM_WORLD, &have_message, &request_status);
                     }
 
                     for (int i = 0; i < mpi_num_ranks -1; i++) MPI_Wait(&req_redist[i], &request_status);
@@ -279,7 +283,9 @@ namespace sqsgenerator {
 
             }
             #pragma omp barrier
-            auto[rank_check, thread_id_check, start_it, end_it] = iteration_ranks[thread_id];
+            auto [start_it, end_it] = iteration_ranks[mpi_rank][thread_id];
+            #pragma omp critical
+            std::cout << "do_pair_iterations::rank::" << mpi_rank << "::" << thread_id << "::num_iterations = " << start_it << " - " << end_it << std::endl;
 
             configuration_t configuration_local(settings.packed_configuraton());
             parameter_storage_t parameters_local(reduced_size * nshells);
@@ -288,9 +294,10 @@ namespace sqsgenerator {
                 case iteration_mode::random: {
                     #pragma omp critical
                     {
-                        // the random generators only need initialization in case we are in parallel mode
-                        // The call to srand is not guaranteed to be thread-safe and may cause a data-race
-                        // Each thread keeps it's own state of the whyhash random number generator
+                        /* the random generators only need initialization in case we are in parallel mode
+                         * The call to srand is not guaranteed to be thread-safe and may cause a data-race
+                         * Each thread keeps it's own state of the whyhash random number generator
+                         */
                         std::srand(std::time(nullptr) * (thread_id + 1));
                         random_seed_local = std::rand() * (thread_id + 1); // Otherwise thread 0 generator
                     }
@@ -298,13 +305,11 @@ namespace sqsgenerator {
                         shuffle_configuration(c, &random_seed_local);
                         return true;
                     };
-                }
-                    break;
+                } break;
                 case iteration_mode::systematic: {
                     get_next_configuration = next_permutation;
                     unrank_permutation(configuration_local, hist, nperms, start_it);
-                }
-                    break;
+                } break;
             }
             start_time = std::chrono::high_resolution_clock::now();
             for (rank_t i = start_it; i < end_it; i++) {
@@ -313,6 +318,32 @@ namespace sqsgenerator {
                 objective_local = calculate_pair_objective(parameters_local, prefactors, parameter_weights,
                                                                   target_objectives);
                 if (objective_local <= best_objective_local) {
+
+#if defined(USE_MPI)
+                    /*
+                     * We check if one of the other processes has found a better objective. We check if any of the other
+                     * ranks has populated a better objective. Again we just need one thread to update the best_objective
+                     */
+                    #pragma omp single
+                    {
+                        MPI_Request request;
+                        MPI_Status request_status;
+                        int have_message;
+                        double global_best_objective;
+                        int source_rank;
+                        MPI_Iprobe(MPI_ANY_SOURCE, TAG_BETTER_OBJECTIVE, MPI_COMM_WORLD, &have_message, &request_status);
+                        while (have_message) {
+                            source_rank = request_status.MPI_SOURCE;
+                            MPI_Irecv(&global_best_objective, 1, MPI_DOUBLE, source_rank, TAG_BETTER_OBJECTIVE, MPI_COMM_WORLD, &request);
+                            MPI_Wait(&request, &request_status);
+
+                            if (global_best_objective < best_objective) best_objective = global_best_objective;
+                            else assert( best_objective >= global_best_objective);
+
+                            MPI_Iprobe(MPI_ANY_SOURCE, TAG_BETTER_OBJECTIVE, MPI_COMM_WORLD, &have_message, &request_status);
+                        }
+                    }
+#endif
                     // we do only an atomic read from the global shared variable in case the local one is already satisfied
                     #pragma omp atomic read
                     best_objective_local = best_objective;
@@ -321,10 +352,29 @@ namespace sqsgenerator {
                         SQSResult result(objective_local, {-1}, configuration_local, parameters_local);
                         #pragma omp critical
                         results.push_back(result);
-                        // synchronize writing to global best objective
-                        #pragma omp atomic write
-                        best_objective = objective_local;
-                        best_objective_local = objective_local;
+                        // synchronize writing to global best objective, only if the local one is really better
+                        if (objective_local < best_objective_local){
+                            #pragma omp atomic write
+                            best_objective = objective_local;
+                            best_objective_local = objective_local;
+#if defined(USE_MPI)
+                            /*
+                             * Notify the other processes that we have found. Just one of the threads is allowed to send the
+                             * messages. However we only do that rather expensive operation only in case the objective is
+                             * strictly smaller rather than <=
+                             */
+                            #pragma omp single
+                            {
+                                auto handle_count {0};
+                                MPI_Request req_notify[mpi_num_ranks - 1];
+                                for (int rank = 0; rank < mpi_num_ranks; rank++) {
+                                    if (rank == mpi_rank) continue;
+                                    MPI_Isend(&objective_local, 1, MPI_DOUBLE, rank, TAG_BETTER_OBJECTIVE, MPI_COMM_WORLD, &req_notify[handle_count++]);
+                                }
+                                // We do not wait for the request handles to finish
+                            }
+#endif
+                        }
                     }
                 }
             } // for
@@ -334,6 +384,7 @@ namespace sqsgenerator {
         } // pragma omp parallel
         std::unordered_set<rank_t> ranks;
         std::vector<SQSResult> final_results;
+        //std::copy(results.begin(), results.end(), final_results.begin());
         for (auto &r : results) {
             rank_t rank = rank_permutation(r.configuration(), settings.num_species());
             r.set_rank(rank);
@@ -343,7 +394,46 @@ namespace sqsgenerator {
             if (settings.mode() == random && !ranks.insert(rank).second) continue;
             else final_results.push_back(std::move(r));
         }
-#if defined(USE_MPI)
+
+#if defined (USE_MPI)
+        double buf_par[nparams], buf_obj;
+        species_t buf_conf[settings.num_atoms()];
+        int num_other_ranks {mpi_num_ranks - 1};
+        std::vector<int> num_sqs_results;
+        if (mpi_rank == HEAD_RANK)  num_sqs_results.resize(mpi_num_ranks);
+        int num_results {static_cast<int>(results.size())};
+
+        MPI_Gather(&num_results, 1, MPI_INT, num_sqs_results.data(), 1, MPI_INT, HEAD_RANK, MPI_COMM_WORLD);
+        if (mpi_rank == HEAD_RANK) {
+            auto other_rank_index {0};
+            for (int other_rank = 0; other_rank < mpi_num_ranks; other_rank++) {
+                if (other_rank == HEAD_RANK) continue;
+                int num_sqs_results_of_rank = num_sqs_results[other_rank];
+                for (int j = 0; j < num_sqs_results_of_rank; j++) {
+                    MPI_Status status;
+                    MPI_Recv(&buf_par[0], static_cast<int>(nparams), MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&buf_conf[0], static_cast<int>(settings.num_atoms()), MPI_UINT8_T, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&buf_obj,1, MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
+                    BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" + std::to_string(mpi_rank) + " = collected SQSResult #" + std::to_string(j) + " from rank " + std::to_string(other_rank);
+                    SQSResult collected(buf_obj, {-1}, configuration_t(&buf_conf[0], &buf_conf[0]+settings.num_atoms()), parameter_storage_t(&buf_par[0], &buf_par[0] + nparams));
+                    final_results.push_back(collected);
+                }
+            }
+            for (auto &r : results) final_results.push_back(std::move(r));
+        }
+        else {
+            for (auto &r : results) {
+                std::copy(r.storage().begin(), r.storage().end(), buf_par);
+                std::copy(r.configuration().begin(), r.configuration().end(), buf_conf);
+                buf_obj = r.objective();
+                MPI_Send(&buf_par[0], static_cast<int>(nparams), MPI_DOUBLE, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
+                MPI_Send(&buf_conf[0], static_cast<int>(settings.num_atoms()), MPI_UINT8_T, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
+                MPI_Send(&buf_obj, 1, MPI_DOUBLE, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
+            }
+        }
+
+#endif
+#if defined (USE_MPI)
         MPI_Finalize();
 #endif
         return final_results;

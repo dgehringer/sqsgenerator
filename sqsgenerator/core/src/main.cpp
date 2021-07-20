@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
     array_3d_t target_objective(boost::extents[shell_weights.size()][nspecies][nspecies]);
     //std::fill(target_objective.begin(), target_objective.end(), 0.0);
 
-    auto niteration {10000};
+    auto niteration {100000};
     //omp_set_num_threads(1);
     IterationSettings settings(structure, target_objective, pair_weights, shell_weights, niteration, 10);
     settings.shell_matrix();
