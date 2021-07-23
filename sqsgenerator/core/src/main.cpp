@@ -31,7 +31,7 @@ void init_logging() {
                 boost::log::keywords::auto_flush = true
         );
         boost::log::add_common_attributes();
-        logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::trace);
+        logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::debug);
         log_initialized = true;
 
     }
@@ -136,13 +136,13 @@ int main(int argc, char *argv[]) {
     Structure structure(lattice, frac_coords, species, pbc);
 
     pair_shell_weights_t shell_weights {
-           /*{4, 0.25},
-           {5, 0.2},*/
+            {4, 0.25},
+           {5, 0.2},
             {1, 1.0},
            {3, 0.33},
            {2, 0.5},
-        /*    {6, 1.0/6.0},
-            {7, 1.0/7.0}*/
+            {6, 1.0/6.0},
+            {7, 1.0/7.0}
     };
 
     array_2d_t pair_weights = boost::make_multi_array<double, 2, 2>({
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
     array_3d_t target_objective(boost::extents[shell_weights.size()][nspecies][nspecies]);
     //std::fill(target_objective.begin(), target_objective.end(), 0.0);
 
-    auto niteration {100000};
+    auto niteration {5000000};
     //omp_set_num_threads(1);
     IterationSettings settings(structure, target_objective, pair_weights, shell_weights, niteration, 10);
     settings.shell_matrix();
