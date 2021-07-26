@@ -94,8 +94,6 @@ add_executable(sqsgenerator.core
         sqsgenerator/core/src/result.cpp
         sqsgenerator/core/src/structure_utils.cpp)
 
-
-
 target_link_libraries(sqsgenerator.core ${Boost_LIBRARIES})
 if (USE_MPI)
     target_link_libraries(sqsgenerator.core ${MPI_CXX_LIBRARIES})

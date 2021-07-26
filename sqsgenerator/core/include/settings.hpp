@@ -32,18 +32,23 @@ namespace sqsgenerator {
         shell_t m_max_shell;
         std::vector<shell_t> m_available_shells;
         std::vector<double> m_shell_distances;
+        std::vector<int> m_threads_per_rank;
+        pair_shell_matrix_t m_shell_matrix;
         void init_prefactors();
 
     public:
 
-        IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, const std::vector<double> &shell_distances, double atol=1.0e-5, double rtol=1.05e-8, iteration_mode mode = iteration_mode::random);
-        IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, double atol=1.0e-5, double rtol=1.05e-8, iteration_mode mode = iteration_mode::random);
+        IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<double> shell_distances, std::vector<int> threads_per_rank, double atol=1.0e-5, double rtol=1.05e-8, iteration_mode mode = iteration_mode::random);
+        IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<int> threads_per_rank, double atol=1.0e-5, double rtol=1.05e-8, iteration_mode mode = iteration_mode::random);
 
+        [[nodiscard]] double atol() const;
+        [[nodiscard]] double rtol() const;
         [[nodiscard]] size_t num_atoms() const;
         [[nodiscard]] size_t num_shells() const;
         [[nodiscard]] int num_iterations() const;
         [[nodiscard]] size_t num_species() const;
         [[nodiscard]] iteration_mode mode() const;
+        [[nodiscard]] std::vector<int> threads_per_rank() const;
         [[nodiscard]] const Structure &structure() const;
         [[nodiscard]] int num_output_configurations() const;
         [[nodiscard]] pair_shell_weights_t shell_weights() const;

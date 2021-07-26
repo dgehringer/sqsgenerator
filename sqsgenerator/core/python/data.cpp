@@ -73,6 +73,7 @@ np::ndarray StructurePythonWrapper::distance_matrix() {
     return helpers::multi_array_to_ndarray(m_handle->distance_matrix());
 }
 
+/*
 np::ndarray StructurePythonWrapper::shell_matrix(double atol, double rtol) {
     return helpers::multi_array_to_ndarray(m_handle->shell_matrix(atol, rtol));
 }
@@ -80,6 +81,7 @@ np::ndarray StructurePythonWrapper::shell_matrix(double atol, double rtol) {
 np::ndarray StructurePythonWrapper::shell_matrix(const py::list &distances, double atol, double rtol) {
     return helpers::multi_array_to_ndarray(m_handle->shell_matrix(helpers::list_to_vector<double>(distances), atol, rtol));
 }
+*/
 
 size_t StructurePythonWrapper::num_atoms() {
     return m_handle->num_atoms();

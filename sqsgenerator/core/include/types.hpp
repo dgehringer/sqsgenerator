@@ -16,9 +16,9 @@
 
 namespace sqsgenerator {
     typedef uint8_t species_t;
-    typedef uint32_t shell_t;
+    typedef int shell_t;
     typedef boost::multiprecision::cpp_int rank_t;
-    typedef boost::multi_array<shell_t, 2> pair_shell_matrix;
+    typedef boost::multi_array<shell_t, 2> pair_shell_matrix_t;
     typedef boost::const_multi_array_ref<shell_t, 2> const_pair_shell_matrix_ref_t;
     typedef boost::multi_array_ref<shell_t, 2> pair_shell_matrix_ref_t;
     typedef boost::multi_array<double, 2> array_2d_t;
@@ -38,7 +38,7 @@ namespace sqsgenerator {
     using Shape = std::array<size_t, NDims>;
 
     // The array consists of {size_t i, size_t j, size_t shell, size_t shell_index}
-    typedef std::array<pair_shell_matrix::index, 4> AtomPair;
+    typedef std::array<pair_shell_matrix_t::index, 4> AtomPair;
 
 }
 #endif //SQSGENERATOR_TYPES_HPP

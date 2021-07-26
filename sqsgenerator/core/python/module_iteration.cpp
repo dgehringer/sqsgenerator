@@ -25,6 +25,7 @@ void init_logging() {
                 boost::log::keywords::format = COMMON_FMT,
                 boost::log::keywords::auto_flush = true
         );
+
         logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::trace);
         log_initialized = true;
     }
@@ -51,9 +52,9 @@ BOOST_PYTHON_MODULE(iteration) {
         py::class_<pair_shell_weights_t>("ShellWeights")
                 .def(py::map_indexing_suite<pair_shell_weights_t>());
         //StructurePythonWrapper wrapper, double target_objective, np::ndarray parameter_weights, pair_shell_weights_t shell_weights, int iterations, int output_configurations, int iteration_mode, uint8_t prec
-        py::class_<IterationSettingsPythonWrapper>("IterationSettings",py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, iteration_mode>())
-                .def(py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, double, double, iteration_mode>())
+        py::class_<IterationSettingsPythonWrapper>("IterationSettings",py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, py::list, iteration_mode>())
                 .def(py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, py::list, double, double, iteration_mode>())
+                .def(py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, py::list, py::list, double, double, iteration_mode>())
                 .def_readonly("num_atoms", &IterationSettingsPythonWrapper::num_atoms)
                 .def_readonly("num_shells", &IterationSettingsPythonWrapper::num_shells)
                 .def_readonly("num_iterations", &IterationSettingsPythonWrapper::num_iterations)
@@ -63,7 +64,9 @@ BOOST_PYTHON_MODULE(iteration) {
                 .def_readonly("structure", &IterationSettingsPythonWrapper::structure)
                 .def_readonly("target_objective", &IterationSettingsPythonWrapper::target_objective)
                 .def_readonly("shell_weights", &IterationSettingsPythonWrapper::shell_weights)
-                .def_readonly("parameter_weights", &IterationSettingsPythonWrapper::parameter_weights);
+                .def_readonly("parameter_weights", &IterationSettingsPythonWrapper::parameter_weights)
+                .def_readonly("atol", &IterationSettingsPythonWrapper::atol)
+                .def_readonly("rtol", &IterationSettingsPythonWrapper::rtol);
 
         py::def("pair_sqs_iteration", &pair_sqs_iteration);
 }

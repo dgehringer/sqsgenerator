@@ -67,11 +67,9 @@ namespace sqsgenerator {
         return total_objective;
     }
 
-    rank_iteration_map_t compute_ranks(const IterationSettings &settings, const std::map<int, int> &threads_per_rank) {
+    rank_iteration_map_t compute_ranks(const IterationSettings &settings, const std::vector<int> &threads_per_rank) {
         rank_t start_it, end_it, total;
-        auto nthreads = std::accumulate(threads_per_rank.begin(), threads_per_rank.end(), 0, [](int current_sum, const std::pair<int, int> &threads){
-            return current_sum + threads.second;
-        });
+        auto nthreads = std::accumulate(threads_per_rank.begin(), threads_per_rank.end(), 0);
 
         auto thread_count {0};
         rank_iteration_map_t rank_map;
@@ -79,7 +77,7 @@ namespace sqsgenerator {
         auto num_mpi_ranks {static_cast<int>(threads_per_rank.size())};
         total = (settings.mode() == random) ? niterations : utils::total_permutations(settings.packed_configuraton());
         for (int mpi_rank = 0; mpi_rank < num_mpi_ranks; mpi_rank++) {
-            auto  threads_in_mpi_rank = threads_per_rank.at(mpi_rank);
+            auto  threads_in_mpi_rank = threads_per_rank[mpi_rank];
             std::map<int, std::tuple<rank_t, rank_t>> local_rank_map;
             for (int local_thread_id = 0; local_thread_id < threads_in_mpi_rank; local_thread_id++) {
                 start_it = total / nthreads * thread_count;
@@ -193,19 +191,23 @@ namespace sqsgenerator {
     std::vector<SQSResult> do_pair_iterations(const IterationSettings &settings) {
         typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point_t;
         typedef boost::circular_buffer<SQSResult> result_buffer_t;
+        auto threads_per_rank {settings.threads_per_rank()};
         int mpi_num_ranks, mpi_rank;
 #if defined(USE_MPI)
-        int mpi_all_gather_err, mpi_thread_level_support_provided, mpi_thread_level_support_required {MPI_THREAD_SERIALIZED};
-        int mpi_init_err = MPI_Init_thread(nullptr, nullptr, mpi_thread_level_support_required, &mpi_thread_level_support_provided);
-        if (mpi_init_err != MPI_SUCCESS ) {
-            auto message = "MPI_Init exited with code: " + std::to_string(mpi_init_err);
-            BOOST_LOG_TRIVIAL(error) << message;
-            throw std::runtime_error(message);
+        int mpi_all_gather_err, mpi_initialized, mpi_thread_level_support_provided, mpi_thread_level_support_required {MPI_THREAD_SERIALIZED};
+        MPI_Initialized(&mpi_initialized);
+        if (!mpi_initialized) {
+            BOOST_LOG_TRIVIAL(info) << "do_pair_iterations:: MPI Runtime was not initialized. I'm going to do that!";
+            MPI_Init_thread(nullptr, nullptr, mpi_thread_level_support_required, &mpi_thread_level_support_provided);
         }
+        else MPI_Query_thread(&mpi_thread_level_support_provided);
+        if (mpi_thread_level_support_provided < mpi_thread_level_support_required) throw std::runtime_error("MPI threading level support is not fulfilling the requirements. I need at least 'MPI_THREAD_SERIALIZED'");
+
         MPI_Comm_size(MPI_COMM_WORLD, &mpi_num_ranks);
         MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
         if (mpi_rank == HEAD_RANK) {
+            if (static_cast<int>(settings.threads_per_rank().size()) != mpi_num_ranks) throw std::runtime_error("Number if ranks does not match the number of entries in the thread map");
             BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::mpi::num_ranks = " << mpi_num_ranks;
             log_settings(settings);
         }
@@ -214,10 +216,14 @@ namespace sqsgenerator {
         mpi_rank = 0;
         log_settings(settings);
 #endif
-        std::map<int, int> threads_per_rank;
-        for (int i = 0; i < 1; i++) threads_per_rank.emplace(std::make_pair(i, 8));
+        // In case a negative number is specified it should try to get as many threads as possible
+        if( threads_per_rank[mpi_rank] < 0) {
+            threads_per_rank[mpi_rank] = omp_get_max_threads();
+            BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::num_threads_requested::default = " << threads_per_rank[mpi_rank];
+
+        }
         auto num_threads_per_rank = threads_per_rank[mpi_rank];
-        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::num_threads = " << num_threads_per_rank;
+        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::num_threads_requested = " << num_threads_per_rank;
 
         double best_objective{std::numeric_limits<double>::max()};
         rank_iteration_map_t iteration_ranks;
@@ -431,12 +437,8 @@ namespace sqsgenerator {
                 MPI_Send(&buf_obj, 1, MPI_DOUBLE, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
             }
         }
-
+        if (!mpi_initialized) MPI_Finalize();
 #endif
-#if defined (USE_MPI)
-        MPI_Finalize();
-#endif
-        std::cout << "found: " << final_results.size() << std::endl;
         return final_results;
     }
 }

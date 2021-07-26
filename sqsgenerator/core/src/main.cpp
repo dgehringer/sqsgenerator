@@ -1,6 +1,7 @@
 //
 // Created by dominik on 21.05.21.
 #include "sqs.hpp"
+#include <mpi.h>
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -10,8 +11,6 @@
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/setup.hpp>
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/storage.hpp>
 
 namespace logging = boost::log;
 using namespace sqsgenerator;
@@ -160,11 +159,15 @@ int main(int argc, char *argv[]) {
 
     auto niteration {5000000};
     //omp_set_num_threads(1);
-    IterationSettings settings(structure, target_objective, pair_weights, shell_weights, niteration, 10);
+    IterationSettings settings(structure, target_objective, pair_weights, shell_weights, niteration, 10, {-1});
     settings.shell_matrix();
     auto initial_rank = rank_permutation(settings.packed_configuraton(), settings.num_species());
+
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+    int mpi_threading_support_level;
+    MPI_Init_thread(nullptr, nullptr, MPI_THREAD_SERIALIZED, &mpi_threading_support_level);
     do_pair_iterations(settings);
+    MPI_Finalize();
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     std::cout << "Time difference = " << static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count())/niteration << " [µs]" << std::endl;
     auto f = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
