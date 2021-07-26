@@ -345,7 +345,7 @@ namespace sqsgenerator {
                                 #pragma omp atomic write
                                 best_objective = global_best_objective;
                             }
-                            else assert( best_objective >= global_best_objective);
+                            // else assert( best_objective >= global_best_objective);
                             MPI_Iprobe(MPI_ANY_SOURCE, TAG_BETTER_OBJECTIVE, MPI_COMM_WORLD, &have_message, &request_status);
                         }
                     }
