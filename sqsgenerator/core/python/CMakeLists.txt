@@ -9,6 +9,12 @@ message([PYTHON]:INCLUDE_DIRS: ${Python3_INCLUDE_DIRS})
 message([PYTHON]:LIBRARY_DIRS: ${Python3_LIBRARY_DIRS})
 message([PYTHON]:LIBRARIES: ${Python3_LIBRARIES})
 
+if(USE_MPI)
+    if (MPI_FOUND)
+        set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
+    endif()
+endif()
+
 include_directories(../include include)
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
