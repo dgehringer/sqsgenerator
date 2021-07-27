@@ -47,9 +47,9 @@ namespace sqsgenerator {
             sj = configuration[*(it + 1)];
             if (sj > si) std::swap(si, sj);
             offset = sj * nspecies + si;
-            assert(offset < reindexer.size());
+            // assert(offset < reindexer.size());
             flat_index = reindexer[offset];
-            assert(flat_index >= 0 && flat_index < static_cast<int>(reindexer.size()));
+            // assert(flat_index >= 0 && flat_index < static_cast<int>(reindexer.size()));
             bonds[*(it + 2) * npars_reduced + flat_index]++;
         }
     }
