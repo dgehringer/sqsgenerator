@@ -1,120 +1,114 @@
-from distutils.core import setup
-from setuptools import find_packages
-from distutils.extension import Extension
-from Cython.Build import cythonize
-from os.path import join, dirname, basename, exists
-from os import mkdir
-from shutil import copytree, rmtree
-import numpy
 import os
+import sys
+import subprocess
+import platform
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
+from setuptools.command.install import install
 
-#Specify OpenMP capable compiler
-#os.environ['CC'] = '/usr/local/bin/clang-omp'
-
-#Directory of gmp.h
-#INCLUDE_DIRECTORIES = ['/usr/local/include']
-INCLUDE_DIRECTORIES = []
-
-#Specify gmp lib directory
-#LIB_DIRS = ['/usr/local/Cellar/gmp/6.1.2_1/lib', '/usr/local/opt/llvm/lib']
-LIB_DIRS = []
-
-################################################
-THIS_DIR = dirname(__file__)
-CORE_EXT_DIRECTORY = join('sqsgenerator', 'core')
-BUILD_DIRECTORY = join(THIS_DIR, CORE_EXT_DIRECTORY)
-EXTRA_LINK_ARGS = ['-L{ld}'.format(ld=libdir) for libdir in LIB_DIRS]+['-lgmp']
-EXTRA_COMPILE_ARGS = ['-std=c1x']
-INCLUDE_DIRS = [numpy.get_include(), join(BUILD_DIRECTORY, 'include')] + INCLUDE_DIRECTORIES
-
-with open(join(THIS_DIR, 'README.md'), encoding='utf-8') as file:
-    long_description = file.read()
+ENABLE_MPI = False
 
 
-#if exists(BUILD_DIRECTORY):
-#    rmtree(BUILD_DIRECTORY)
-
-#copytree(CORE_EXT_DIRECTORY, join(BUILD_DIRECTORY))
-#os.remove(join(BUILD_DIRECTORY, '__init__.py'))
 
 
-ext_modules = [
-    Extension(
-        name='sqsgenerator.core.base',
-        sources=[join(BUILD_DIRECTORY, 'base.pyx'),
-                 join(BUILD_DIRECTORY, 'src', 'utils.c'),
-                 join(BUILD_DIRECTORY, 'src', 'rank.c')],
-        extra_compile_args=EXTRA_COMPILE_ARGS,
-        extra_link_args=EXTRA_LINK_ARGS,
-        include_dirs=INCLUDE_DIRS
-    ),
-    Extension(
-        name='sqsgenerator.core.collection',
-        sources=[join(BUILD_DIRECTORY, 'collection.pyx'),
-                 join(BUILD_DIRECTORY, 'src', 'list.c'),
-                 join(BUILD_DIRECTORY, 'src', 'conf_list.c'),
-                 join(BUILD_DIRECTORY, 'src', 'conf_array.c'),
-                 join(BUILD_DIRECTORY, 'src', 'conf_collection.c'),
-                 join(BUILD_DIRECTORY, 'src', 'rank.c'),
-                 join(BUILD_DIRECTORY, 'src', 'utils.c')],
-        extra_compile_args=EXTRA_COMPILE_ARGS,
-        extra_link_args=EXTRA_LINK_ARGS,
-        include_dirs=INCLUDE_DIRS
-    ),
-    Extension(
-        name='sqsgenerator.core.sqs',
-        sources=[join(BUILD_DIRECTORY, 'sqs.pyx'),
-                 join(BUILD_DIRECTORY, 'src', 'utils.c'),
-                 join(BUILD_DIRECTORY, 'src', 'rank.c')
-                 ],
-        extra_compile_args=['-fopenmp'] + EXTRA_COMPILE_ARGS,
-        extra_link_args=['-fopenmp'] + EXTRA_LINK_ARGS,
-        include_dirs=INCLUDE_DIRS
-    ),
-Extension(
-        name='sqsgenerator.core.dosqs',
-        sources=[join(BUILD_DIRECTORY, 'dosqs.pyx'),
-                 join(BUILD_DIRECTORY, 'src', 'utils.c'),
-                 join(BUILD_DIRECTORY, 'src', 'rank.c')
-                 ],
-        extra_compile_args=['-fopenmp'] + EXTRA_COMPILE_ARGS,
-        extra_link_args=['-fopenmp'] + EXTRA_LINK_ARGS,
-        include_dirs=INCLUDE_DIRS
-    )
-]
+class CMakeExtension(Extension):
+    def __init__(self, name, target='', cmake_lists_dir='.', debug=False, verbose=False, **kwargs):
+        Extension.__init__(self, name, sources=[], **kwargs)
+        self.cmake_lists_dir = os.path.abspath(cmake_lists_dir)
+        self.debug = debug
+        self.target = target
+        self.verbose = verbose
 
 
-setup(
-        name='sqsgenerator',
-        version="0.1",
-        description='A simple command line Special Quasirandom Structure generator program in Python/Cython.',
-        long_description=long_description,
-        author='Dominik Noeger',
-        author_email='dominik-franz-josef.noeger@stud.unileoben.ac.at',
-        license='UNLICENSE',
-        classifiers=[
-            'Intended Audience :: Developers',
-            'Topic :: Utilities',
-            'License :: Public Domain',
-            'Natural Language :: English',
-            'Operating System :: OS Independent',
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.2',
-            'Programming Language :: Python :: 3.3',
-            'Programming Language :: Python :: 3.4',
-        ],
-        keywords='cli',
-        install_requires=['numpy', 'pymatgen', 'cython'],
-        ext_modules=cythonize(ext_modules),
-        packages=find_packages(),
-        include_dirs=[numpy.get_include()],
-        entry_points={
-                'console_scripts': [
-                    'sqsgenerator=sqsgenerator.cli:main',
+class cmake_build_ext(build_ext):
+    user_options = build_ext.user_options + [
+        ('with-mpi', None, 'Enables MPI Parallelization')
+    ]
+    def build_extensions(self):
+        # Ensure that CMake is present and working
+        try:
+            out = subprocess.check_output(['cmake', '--version'])
+        except OSError:
+            raise RuntimeError('Cannot find CMake executable')
+        cmake_initialized = False
+
+        for ext in self.extensions:
+
+            extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+            cfg = 'Debug' if ext.debug else 'Release'
+            opt_args = []
+            cmake_args = [
+                f'-DCMAKE_BUILD_TYPE={cfg}'
+                # Ask CMake to place the resulting library in the directory
+                # containing the extension
+                f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}'
+                # Other intermediate static libraries are placed in a
+                # temporary build directory instead
+                f'-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_{cfg.upper()}={self.build_temp}',
+                # Hint CMake to use the same Python executable that
+                # is launching the build, prevents possible mismatching if
+                # multiple versions of Python are installed
+                # '-DPython3_EXECUTABLE={}'.format(sys.executable),
+                # Add other project-specific CMake arguments if needed
+                # ...
+                f'-DUSE_MPI={"ON" if self.with_mpi else "OFF"}'
+            ]
+
+
+            # We can handle some platform-specific settings at our discretion
+            if platform.system() == 'Windows':
+                plat = ('x64' if platform.architecture()[0] == '64bit' else 'Win32')
+                cmake_args += [
+                    # These options are likely to be needed under Windows
+                    '-DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE',
+                    '-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir),
                 ]
-            }
-        # cmdclass = {'test': RunTests},
-)
+                # Assuming that Visual Studio and MinGW are supported compilers
+                if self.compiler.compiler_type == 'msvc':
+                    cmake_args += [
+                        '-DCMAKE_GENERATOR_PLATFORM=%s' % plat,
+                    ]
+                else:
+                    cmake_args += [
+                        '-G', 'MinGW Makefiles',
+                    ]
 
+            if sys.platform.startswith("darwin"):
+                # Cross-compile support for macOS - respect ARCHFLAGS if set
+                archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
+                if archs:
+                    cmake_args += ["-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))]
 
+            if not os.path.exists(self.build_temp):
+                os.makedirs(self.build_temp)
 
+            # Config
+            if not cmake_initialized:
+                subprocess.check_call(['cmake', ext.cmake_lists_dir] + cmake_args,
+                                  cwd=self.build_temp)
+                cmake_initialized = True
+
+            cmake_build_args = ['cmake', '--build', '.', '--config', cfg]
+            if ext.target: cmake_build_args += ['--target', ext.target]
+            if ext.verbose: cmake_build_args += ['--verbose']
+            subprocess.check_call(cmake_build_args, cwd=self.build_temp)
+
+    def initialize_options(self):
+        super(cmake_build_ext, self).initialize_options()
+        self.with_mpi = ENABLE_MPI
+
+    def finalize_options(self):
+        """finalize options"""
+        super(cmake_build_ext, self).finalize_options()
+
+    #def run(self):
+    #    super(cmake_build_ext, self).run()
+        
+setup(name = "sqsenerator",
+      version = "0.1",
+      ext_modules = [
+          CMakeExtension('sqsgenerator.core.data', 'data'),
+          CMakeExtension('sqsgenerator.core.iteration', 'iteration')
+      ],
+      cmdclass = {'build_ext': cmake_build_ext},
+      )

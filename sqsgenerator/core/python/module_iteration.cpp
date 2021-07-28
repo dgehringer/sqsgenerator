@@ -39,6 +39,14 @@ SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings, 
     return wrapped_results;
 }
 
+bool is_mpi_enabled() {
+#if defined (USE_MPI)
+    return true;
+#else
+    return false;
+#endif
+}
+
 
 
 BOOST_PYTHON_MODULE(iteration) {
@@ -78,4 +86,6 @@ BOOST_PYTHON_MODULE(iteration) {
                 .def_readonly("rtol", &IterationSettingsPythonWrapper::rtol);
 
         py::def("pair_sqs_iteration", &pair_sqs_iteration);
+        py::def("is_mpi_enabled", &is_mpi_enabled);
+
 }
