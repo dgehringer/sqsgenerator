@@ -31,7 +31,8 @@ void init_logging() {
     }
 }
 
-SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings) {
+SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings, boost::log::trivial::severity_level log_level = boost::log::trivial::info) {
+    logging::core::get()->set_filter(logging::trivial::severity >= log_level);
     auto sqs_results = sqsgenerator::do_pair_iterations(*settings.handle());
     SQSResultCollection wrapped_results;
     for (SQSResult &r : sqs_results) wrapped_results.push_back(SQSResultPythonWrapper(std::move(r)));
@@ -47,7 +48,15 @@ BOOST_PYTHON_MODULE(iteration) {
 
         py::enum_<iteration_mode>("IterationMode")
                 .value("random", sqsgenerator::random)
-                .value("systematic", systematic);
+                .value("systematic", sqsgenerator::systematic);
+
+        py::enum_<boost::log::trivial::severity_level>("BoostLogLevel")
+                .value("trace", boost::log::trivial::trace)
+                .value("debug", boost::log::trivial::debug)
+                .value("info", boost::log::trivial::info)
+                .value("warning", boost::log::trivial::warning)
+                .value("error", boost::log::trivial::error)
+                .value("fatal", boost::log::trivial::fatal);
 
         py::class_<pair_shell_weights_t>("ShellWeights")
                 .def(py::map_indexing_suite<pair_shell_weights_t>());

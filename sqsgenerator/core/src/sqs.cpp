@@ -21,15 +21,21 @@ namespace sqsgenerator {
 
     typedef std::map<int, std::map<int, std::tuple<rank_t, rank_t>>> rank_iteration_map_t;
 
+    std::string format_sqs_result(const sqsgenerator::SQSResult &result) {
+        std::stringstream message;
+        message << "{rank: " << result.rank() << ", objective: " << result.objective() << ", configuration: " << format_vector<sqsgenerator::species_t, int>(result.configuration()) << "}";
+        return message.str();
+    }
+
     void log_settings(const IterationSettings &settings) {
         std::string mode = ((settings.mode() == random) ? "random" : "systematic");
         BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::mode = "  + mode;
         BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_atoms = " << settings.num_atoms();
         BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_species = " << settings.num_species();
-        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_shells = " << settings.num_shells();
+        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::settings::num_shells = " << settings.num_shells();
         auto [shells, weights] = settings.shell_indices_and_weights();
-        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::shell_weights = " + format_dict(shells, weights);
-        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_iterations = " << settings.num_iterations();
+        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::settings::shell_weights = " + format_dict(shells, weights);
+        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::settings::num_iterations = " << settings.num_iterations();
         BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_output_configurations = " << settings.num_output_configurations();
         BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_pairs = " << settings.pair_list().size();
     }
@@ -47,9 +53,9 @@ namespace sqsgenerator {
             sj = configuration[*(it + 1)];
             if (sj > si) std::swap(si, sj);
             offset = sj * nspecies + si;
-            // assert(offset < reindexer.size());
+            assert(offset < reindexer.size());
             flat_index = reindexer[offset];
-            // assert(flat_index >= 0 && flat_index < static_cast<int>(reindexer.size()));
+            assert(flat_index >= 0 && flat_index < static_cast<int>(reindexer.size()));
             bonds[*(it + 2) * npars_reduced + flat_index]++;
         }
     }
@@ -166,7 +172,6 @@ namespace sqsgenerator {
                 npars_per_shell_asym{
                 (nspecies * (nspecies - 1)) / 2 + nspecies}, // upper half of a symmetric matrix plus the main diagonal
         npars_per_shell_sym{nspecies * nspecies}, // upper half of a symmetric matrix plus the main diagonal
-        reduced_size{nshells * npars_per_shell_asym},
                 full_size{nshells * nspecies * nspecies},
                 offset_compact,
                 offset_full;
@@ -302,8 +307,10 @@ namespace sqsgenerator {
                          * The call to srand is not guaranteed to be thread-safe and may cause a data-race
                          * Each thread keeps it's own state of the whyhash random number generator
                          */
-                        std::srand(std::time(nullptr) * (thread_id + 1));
-                        random_seed_local = std::rand() * (thread_id + 1); // Otherwise thread 0 generator
+                        auto current_time {std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count()};
+                        std::srand(current_time * (thread_id + 1));
+                        random_seed_local = std::rand() * (thread_id + 1);
+                        BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::random_seed = " << random_seed_local;
                     }
                     get_next_configuration = [&random_seed_local](configuration_t &c) {
                         shuffle_configuration(c, &random_seed_local);
@@ -389,19 +396,9 @@ namespace sqsgenerator {
             BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::avg_loop_time = " << static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count()) /(long)(end_it - start_it);
 
         } // pragma omp parallel
-        std::cout << "Rank #" << mpi_rank <<" finished parallell section " << std::endl;
-        std::unordered_set<rank_t> ranks;
-        std::vector<SQSResult> final_results, merge_results;
+        std::vector<SQSResult> tmp_results, final_results;
+        for (auto &r : results) tmp_results.push_back(std::move(r));
         //std::copy(results.begin(), results.end(), final_results.begin());
-        for (auto &r : results) {
-            rank_t rank = rank_permutation(r.configuration(), settings.num_species());
-            r.set_rank(rank);
-            r.set_configuration(settings.unpack_configuration(r.configuration()));
-            r.set_storage(expand_matrix(r.storage(), settings, reindexer));
-            assert(r.storage().size() == nparams);
-            if (settings.mode() == random && !ranks.insert(rank).second) continue;
-            else final_results.push_back(std::move(r));
-        }
 
 #if defined (USE_MPI)
         double buf_par[nparams], buf_obj;
@@ -420,15 +417,14 @@ namespace sqsgenerator {
                     MPI_Recv(&buf_par[0], static_cast<int>(nparams), MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
                     MPI_Recv(&buf_conf[0], static_cast<int>(settings.num_atoms()), MPI_UINT8_T, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
                     MPI_Recv(&buf_obj,1, MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
-                    BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << " = collected SQSResult #" << j << " from rank " << other_rank;
+                    BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::got_result::" << j << "::from::" << other_rank;
                     SQSResult collected(buf_obj, {-1}, configuration_t(&buf_conf[0], &buf_conf[0]+settings.num_atoms()), parameter_storage_t(&buf_par[0], &buf_par[0] + nparams));
-                    merge_results.push_back(collected);
+                    tmp_results.push_back(collected);
                 }
             }
-            for (auto &r : results) merge_results.push_back(std::move(r));
         }
         else {
-            for (auto &r : results) {
+            for (auto &r : tmp_results) {
                 std::copy(r.storage().begin(), r.storage().end(), buf_par);
                 std::copy(r.configuration().begin(), r.configuration().end(), buf_conf);
                 buf_obj = r.objective();
@@ -439,6 +435,22 @@ namespace sqsgenerator {
         }
         if (!mpi_initialized) MPI_Finalize();
 #endif
+        std::unordered_set<rank_t> ranks;
+        for (auto &r : tmp_results) {
+            rank_t rank = rank_permutation(r.configuration(), settings.num_species());
+            r.set_rank(rank);
+            r.set_configuration(settings.unpack_configuration(r.configuration()));
+            r.set_storage(expand_matrix(r.storage(), settings, reindexer));
+            assert(r.storage().size() == nparams);
+            BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::conf = " << format_sqs_result(r);
+            if (settings.mode() == random && !ranks.insert(rank).second) {
+                BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::duplicate_configuration = " << rank;
+                continue;
+            }
+            else final_results.push_back(std::move(r));
+        }
+        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::num_results = " << final_results.size();
+        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::num_tmp_results = " << tmp_results.size();
         return final_results;
     }
 }

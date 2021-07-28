@@ -106,6 +106,7 @@ namespace boost{
         return message.str();
     }
 
+
     template<typename MultiArray, typename T1 = typename MultiArray::element>
     std::string format_matrix(MultiArray array) {
         typedef typename MultiArray::index index_t;
