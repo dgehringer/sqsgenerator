@@ -55,19 +55,20 @@ rank_t total_permutations_structure(StructurePythonWrapper &s) {
 
 configuration_t make_rank_internal(const configuration_t &conf, rank_t &rank) {
     auto total_perms = total_permutations_internal(conf);
-    auto [_, packed_configuration] = sqsgenerator::utils::pack_configuration(conf);
+    auto [packaging_indices, packed_configuration] = sqsgenerator::utils::pack_configuration(conf);
     auto hist = utils::configuration_histogram(packed_configuration);
     configuration_t result(conf);
     utils::unrank_permutation(result, hist, total_perms, rank);
-    return result;
+    return utils::unpack_configuration(packaging_indices, result);
 }
 
-py::list make_rank_iterable(const py::object &iterable, rank_t &rank) {
-    return helpers::vector_to_list(make_rank_internal(helpers::list_to_vector<species_t>(iterable), rank));
+
+py::list make_rank_iterable(const py::object &iterable, rank_t rank) {
+    return helpers::vector_to_list(sqsgenerator::utils::atomistics::Atoms::z_to_symbol(make_rank_internal(sqsgenerator::utils::atomistics::Atoms::symbol_to_z(helpers::list_to_vector<std::string>(iterable)), rank)));
 }
 
-StructurePythonWrapper make_rank_structure(StructurePythonWrapper &s, rank_t &rank) {
-    return StructurePythonWrapper()
+StructurePythonWrapper make_rank_structure(StructurePythonWrapper &s, rank_t rank) {
+    return {s.handle()->lattice(), s.handle()->frac_coords(), make_rank_internal(s.handle()->configuration(), rank), s.handle()->pbc()};
 }
 
 BOOST_PYTHON_MODULE(utils) {
@@ -77,6 +78,9 @@ BOOST_PYTHON_MODULE(utils) {
 
     py::def("total_permutations", &total_permutations_iterable);
     py::def("total_permutations", &total_permutations_structure);
+
+    py::def("make_rank", &make_rank_iterable);
+    py::def("make_rank", &make_rank_structure);
 
     py::scope().attr("__version__") = py::make_tuple(VERSION_MAJOR, VERSION_MINOR, GIT_COMMIT_HASH, GIT_BRANCH);
 }
