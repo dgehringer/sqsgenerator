@@ -82,6 +82,7 @@ np::ndarray StructurePythonWrapper::shell_matrix(const py::list &distances, doub
     return helpers::multi_array_to_ndarray(m_handle->shell_matrix(helpers::list_to_vector<double>(distances), atol, rtol));
 }
 */
+
 size_t StructurePythonWrapper::num_atoms() {
     return m_handle->num_atoms();
 }

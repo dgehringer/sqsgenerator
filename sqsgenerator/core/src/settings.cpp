@@ -23,7 +23,7 @@ namespace sqsgenerator {
 
     typedef array_3d_t::index index_t;
 
-    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, const std::vector<double> &shell_distances, double atol, double rtol, iteration_mode mode) :
+    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<double> shell_distances, std::vector<int> threads_per_rank, double atol, double rtol, iteration_mode mode) :
         m_structure(structure),
         m_atol(atol),
         m_rtol(rtol),
@@ -35,10 +35,12 @@ namespace sqsgenerator {
         m_target_objective(target_objective),
         m_parameter_prefactors(boost::extents[static_cast<index_t>(shell_weights.size())][static_cast<index_t>(m_nspecies)][static_cast<index_t>(m_nspecies)]),
         m_shell_distances(shell_distances),
+        m_threads_per_rank(threads_per_rank),
         m_shell_matrix(m_structure.shell_matrix(m_shell_distances, m_atol, m_rtol))
     {
+        auto shell_m(shell_matrix());
         auto num_elements {num_atoms()*num_atoms()};
-        std::set<shell_t> unique(m_shell_matrix.data(), m_shell_matrix.data() + num_elements);
+        std::set<shell_t> unique(shell_m.data(), shell_m.data() + num_elements);
         m_available_shells = std::vector<shell_t>(unique.begin(), unique.end());
         std::sort(m_available_shells.begin(), m_available_shells.end());
         m_available_shells.erase(m_available_shells.begin());
@@ -50,14 +52,18 @@ namespace sqsgenerator {
         init_prefactors();
     }
 
-    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  const pair_shell_weights_t &shell_weights, int iterations, int output_configurations, double atol, double rtol, iteration_mode mode) :
+    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<int> threads_per_rank, double atol, double rtol, iteration_mode mode) :
             IterationSettings(structure, target_objective, parameter_weights, shell_weights, iterations, output_configurations,
-                              default_shell_distances(structure.distance_matrix(), atol, rtol), atol, rtol, mode)
+                              default_shell_distances(structure.distance_matrix(), atol, rtol), threads_per_rank, atol, rtol, mode)
     { }
 
 
     [[nodiscard]] std::vector<shell_t> IterationSettings::available_shells() const {
         return m_available_shells;
+    }
+
+    [[nodiscard]] std::vector<int> IterationSettings::threads_per_rank() const {
+        return m_threads_per_rank;
     }
 
     void IterationSettings::init_prefactors() {
@@ -91,14 +97,6 @@ namespace sqsgenerator {
 
     const_pair_shell_matrix_ref_t IterationSettings::shell_matrix() const {
         return m_shell_matrix;
-    }
-
-    [[nodiscard]] double IterationSettings::atol() const {
-        return m_atol;
-    }
-
-    [[nodiscard]] double IterationSettings::rtol() const {
-        return m_rtol;
     }
 
     [[nodiscard]] std::vector<AtomPair> IterationSettings::pair_list() const {
@@ -166,4 +164,11 @@ namespace sqsgenerator {
         return utils::unpack_configuration(m_configuration_packing_indices, conf);
     }
 
+    [[nodiscard]] double IterationSettings::atol() const {
+        return m_atol;
+    }
+
+    [[nodiscard]] double IterationSettings::rtol() const {
+        return m_rtol;
+    }
 }

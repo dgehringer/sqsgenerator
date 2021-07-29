@@ -6,8 +6,7 @@
 
 namespace sqsgenerator::utils {
 
-    std::map<shell_t, pair_shell_matrix_t::index> shell_index_map(const pair_shell_weights_t &weights) {
-        typedef pair_shell_matrix_t::index index_t;
+    std::map<shell_t, index_t> shell_index_map(const pair_shell_weights_t &weights) {
         index_t nshells{static_cast<index_t>(weights.size())};
         std::vector<shell_t> shells;
         std::map<shell_t, index_t> shell_indices;
@@ -28,7 +27,6 @@ namespace sqsgenerator::utils {
         auto shape = shape_from_multi_array(shell_matrix);
         auto[sx, sy] = std::make_tuple(static_cast<index_t>(shape[0]), static_cast<index_t>(shape[1]));
         assert(shape.size() == 2);
-
         for (index_t i = 0; i < sx; i++) {
             for (index_t j = i + 1; j < sy; j++) {
                 shell_t shell = shell_matrix[i][j];

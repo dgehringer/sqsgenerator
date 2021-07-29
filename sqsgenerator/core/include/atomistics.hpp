@@ -110,6 +110,7 @@ namespace sqsgenerator::utils::atomistics {
             return sqsgenerator::utils::create_pair_list(shell_matrix, weights);
         }
 
+
     };
 }
 

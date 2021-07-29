@@ -122,15 +122,15 @@ namespace sqsgenerator::utils {
             for (const auto &pair : shell_dists) result.push_back(*std::max_element(pair.second.begin(), pair.second.end()));
             std::sort(result.begin(), result.end());
 
-            BOOST_LOG_TRIVIAL(debug) << "structure_utils::default_shell_distances::num_distances  = " + std::to_string(result.size());
-            BOOST_LOG_TRIVIAL(debug) << "structure_utils::default_shell_distances::distances  = " + format_vector(result);
+            BOOST_LOG_TRIVIAL(info) << "structure_utils::default_shell_distances::num_distances  = " + std::to_string(result.size());
+            BOOST_LOG_TRIVIAL(info) << "structure_utils::default_shell_distances::distances  = " + format_vector(result);
 
             return result;
         }
 
         template<typename MultiArray>
         pair_shell_matrix_t shell_matrix(const MultiArray &distance_matrix, const std::vector<typename MultiArray::element> &distances, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
-            BOOST_LOG_TRIVIAL(debug) << "structure_utils::shell_matrix::distances = " + format_vector(distances);
+
             typedef typename MultiArray::index index_t;
             typedef typename MultiArray::element T;
             auto shape(shape_from_multi_array(distance_matrix));
@@ -166,12 +166,10 @@ namespace sqsgenerator::utils {
                     shells[j][i] = shell;
                 }
             }
-
-            BOOST_LOG_TRIVIAL(debug) << "structure_utils::shell_matrix::matrix = " + format_matrix(shells);
             return shells;
         }
 
-        std::map<shell_t, pair_shell_matrix_t::index> shell_index_map(const pair_shell_weights_t &weights);
+        std::map<shell_t, index_t> shell_index_map(const pair_shell_weights_t &weights);
 
         std::vector<AtomPair> create_pair_list(const pair_shell_matrix_t &shell_matrix, const std::map<shell_t, double> &weights);
 

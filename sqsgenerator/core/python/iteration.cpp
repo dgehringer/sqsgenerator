@@ -8,7 +8,7 @@
 namespace sqsgenerator::python {
 
 
-    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, iteration_mode iteration_mode):
+    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, py::list threads_per_rank, iteration_mode iteration_mode):
     m_structure(structure),
     m_handle(new IterationSettings(
                 *structure.handle(),
@@ -17,10 +17,11 @@ namespace sqsgenerator::python {
                 helpers::dict_to_map<shell_t, double>(shell_weights),
                 iterations,
                 output_configurations,
+                helpers::list_to_vector<int>(threads_per_rank),
                 iteration_mode
             )) {}
 
-    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, double atol, double rtol, iteration_mode iteration_mode) :
+    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, py::list threads_per_rank, double atol, double rtol, iteration_mode iteration_mode) :
     m_structure(structure),
     m_handle(new IterationSettings(
             *structure.handle(),
@@ -29,12 +30,13 @@ namespace sqsgenerator::python {
             helpers::dict_to_map<shell_t, double>(shell_weights),
             iterations,
             output_configurations,
+            helpers::list_to_vector<int>(threads_per_rank),
             atol,
             rtol,
             iteration_mode
     )) {}
 
-    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, py::list distances, double atol, double rtol, iteration_mode iteration_mode) :
+    IterationSettingsPythonWrapper::IterationSettingsPythonWrapper(StructurePythonWrapper structure, np::ndarray target_objective, np::ndarray parameter_weights, py::dict shell_weights, int iterations, int output_configurations, py::list distances, py::list threads_per_rank, double atol, double rtol, iteration_mode iteration_mode) :
     m_structure(structure),
     m_handle(new IterationSettings(
             *structure.handle(),
@@ -44,6 +46,7 @@ namespace sqsgenerator::python {
             iterations,
             output_configurations,
             helpers::list_to_vector<double>(distances),
+            helpers::list_to_vector<int>(threads_per_rank),
             atol,
             rtol,
             iteration_mode

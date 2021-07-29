@@ -47,8 +47,8 @@ BOOST_PYTHON_MODULE(data) {
             .def_readonly("frac_coords", &StructurePythonWrapper::frac_coords)
             .def_readonly("distance_vecs", &StructurePythonWrapper::distance_vecs)
             .def_readonly("distance_matrix", &StructurePythonWrapper::distance_matrix)
-//            .def<np::ndarray(StructurePythonWrapper::*)(const py::list&, double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
-//            .def<np::ndarray(StructurePythonWrapper::*)(double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
+            //.def<np::ndarray(StructurePythonWrapper::*)(const py::list&, double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
+            //.def<np::ndarray(StructurePythonWrapper::*)(double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
             .def_readonly("pbc", &StructurePythonWrapper::pbc);
 
     py::class_<SQSResultCollection>("SQSResultCollection")

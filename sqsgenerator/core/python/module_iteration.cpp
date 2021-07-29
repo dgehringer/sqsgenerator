@@ -1,6 +1,7 @@
 //
 // Created by dominik on 14.07.21.
 //
+#include "version.hpp"
 #include "types.hpp"
 #include "sqs.hpp"
 #include "data.hpp"
@@ -25,18 +26,19 @@ void init_logging() {
                 boost::log::keywords::format = COMMON_FMT,
                 boost::log::keywords::auto_flush = true
         );
+
         logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::trace);
         log_initialized = true;
     }
 }
 
-SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings) {
+SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings, boost::log::trivial::severity_level log_level = boost::log::trivial::info) {
+    logging::core::get()->set_filter(logging::trivial::severity >= log_level);
     auto sqs_results = sqsgenerator::do_pair_iterations(*settings.handle());
     SQSResultCollection wrapped_results;
     for (SQSResult &r : sqs_results) wrapped_results.push_back(SQSResultPythonWrapper(std::move(r)));
     return wrapped_results;
 }
-
 
 
 BOOST_PYTHON_MODULE(iteration) {
@@ -46,14 +48,22 @@ BOOST_PYTHON_MODULE(iteration) {
 
         py::enum_<iteration_mode>("IterationMode")
                 .value("random", sqsgenerator::random)
-                .value("systematic", systematic);
+                .value("systematic", sqsgenerator::systematic);
+
+        py::enum_<boost::log::trivial::severity_level>("BoostLogLevel")
+                .value("trace", boost::log::trivial::trace)
+                .value("debug", boost::log::trivial::debug)
+                .value("info", boost::log::trivial::info)
+                .value("warning", boost::log::trivial::warning)
+                .value("error", boost::log::trivial::error)
+                .value("fatal", boost::log::trivial::fatal);
 
         py::class_<pair_shell_weights_t>("ShellWeights")
                 .def(py::map_indexing_suite<pair_shell_weights_t>());
         //StructurePythonWrapper wrapper, double target_objective, np::ndarray parameter_weights, pair_shell_weights_t shell_weights, int iterations, int output_configurations, int iteration_mode, uint8_t prec
-        py::class_<IterationSettingsPythonWrapper>("IterationSettings",py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, iteration_mode>())
-                .def(py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, double, double, iteration_mode>())
+        py::class_<IterationSettingsPythonWrapper>("IterationSettings",py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, py::list, iteration_mode>())
                 .def(py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, py::list, double, double, iteration_mode>())
+                .def(py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, py::list, py::list, double, double, iteration_mode>())
                 .def_readonly("num_atoms", &IterationSettingsPythonWrapper::num_atoms)
                 .def_readonly("num_shells", &IterationSettingsPythonWrapper::num_shells)
                 .def_readonly("num_iterations", &IterationSettingsPythonWrapper::num_iterations)
@@ -68,4 +78,14 @@ BOOST_PYTHON_MODULE(iteration) {
                 .def_readonly("rtol", &IterationSettingsPythonWrapper::rtol);
 
         py::def("pair_sqs_iteration", &pair_sqs_iteration);
+
+        py::list features;
+#ifdef _OPENMP
+        features.append("openmp");
+#endif
+#if defined(USE_MPI)
+    features.append("mpi");
+#endif
+        py::scope().attr("__features__")= features;
+        py::scope().attr("__version__") = py::make_tuple(VERSION_MAJOR, VERSION_MINOR, GIT_COMMIT_HASH, GIT_BRANCH);
 }
