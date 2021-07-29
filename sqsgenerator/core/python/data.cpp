@@ -38,14 +38,21 @@ std::shared_ptr<SQSResult> SQSResultPythonWrapper::handle() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+StructurePythonWrapper::StructurePythonWrapper(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, configuration_t species, std::array<bool, 3> pbc) :
+    m_handle(std::shared_ptr<atomistics::Structure>(
+                    new atomistics::Structure(lattice, frac_coords, species,pbc)))
+                    {
+
+}
+
 StructurePythonWrapper::StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols, py::tuple pbc):
-    m_handle(std::shared_ptr<atomistics::Structure>(new atomistics::Structure(
+        StructurePythonWrapper(
             helpers::ndarray_to_multi_array<const_array_2d_ref_t>(lattice),
             helpers::ndarray_to_multi_array<const_array_2d_ref_t>(frac_coords),
-            helpers::list_to_vector<std::string>(symbols),
-    {py::extract<bool>(pbc[0]),py::extract<bool>(pbc[1]), py::extract<bool>(pbc[2])})))
-{}
-
+            sqsgenerator::utils::atomistics::Atoms::symbol_to_z(helpers::list_to_vector<std::string>(symbols)),
+        {py::extract<bool>(pbc[0]),py::extract<bool>(pbc[1]), py::extract<bool>(pbc[2])})
+        {}
 
 np::ndarray StructurePythonWrapper::lattice() {
     return helpers::multi_array_to_ndarray(m_handle->lattice());

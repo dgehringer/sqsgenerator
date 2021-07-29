@@ -131,7 +131,8 @@ setup(
     version = "0.1",
     ext_modules = [
         CMakeExtension('sqsgenerator.core.data', 'data'),
-        CMakeExtension('sqsgenerator.core.iteration', 'iteration')
+        # CMakeExtension('sqsgenerator.core.iteration', 'iteration'),
+        CMakeExtension('sqsgenerator.core.utils', 'utils')
     ],
     cmdclass = {
         'build_ext': cmake_build_ext,

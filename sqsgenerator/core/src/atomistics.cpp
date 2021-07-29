@@ -149,19 +149,31 @@ namespace sqsgenerator::utils::atomistics {
     }
 
     std::vector<Atom> Atoms::from_z(const std::vector<species_t> &numbers) {
-        std::vector<Atom> result;
-        for (const auto &num: numbers) result.push_back(Atoms::from_z(num));
-        return result;
+        return apply<Atom, species_t>(numbers, [](species_t s) -> Atom {return from_z(s);});
     }
 
     std::vector<Atom> Atoms::from_symbol(const std::vector<std::string> &symbols) {
-        std::vector<Atom> result;
-        for (const auto &num: symbols) result.push_back(Atoms::from_symbol(num));
-        return result;
+        return apply<Atom, std::string>(symbols, [](const std::string &s) -> Atom {return from_symbol(s);});
+    }
+
+    species_t Atoms::symbol_to_z(const std::string &symbol) {
+        return from_symbol(symbol).Z;
+    }
+
+    std::vector<species_t> Atoms::symbol_to_z(const std::vector<std::string> &symbol) {
+        return apply<species_t , std::string>(symbol, [](const std::string& s) -> species_t {return symbol_to_z(s); });
+    }
+
+    std::string Atoms::z_to_symbol(species_t species) {
+        return from_z(species).symbol;
+    }
+
+    std::vector<std::string> Atoms::z_to_symbol(const std::vector<species_t> &species){
+        return apply<std::string, species_t>(species, [](species_t s) -> std::string {return z_to_symbol(s); });
     }
 
 
-    Structure::Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc)
+    Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc)
           : m_lattice(lattice),
             m_frac_coords(frac_coords),
             m_pbc(pbc),
@@ -186,12 +198,12 @@ namespace sqsgenerator::utils::atomistics {
         m_natoms = species.size();
     }
 
-    Structure::Structure(array_2d_t lattice, array_2d_t frac_coords,
+    Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords,
                          std::vector<std::string> species, std::array<bool, 3> pbc) :
             Structure(lattice, frac_coords, Atoms::from_symbol(species), pbc) {}
 
-    Structure::Structure(array_2d_t lattice, array_2d_t frac_coords,
-                         std::vector<species_t> species,
+            Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords,
+                         configuration_t species,
                          std::array<bool, 3> pbc) :
             Structure(lattice, frac_coords, Atoms::from_z(species), pbc) {}
 

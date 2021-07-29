@@ -164,6 +164,13 @@ namespace sqsgenerator::utils {
             return  it != v.end() ? it - v.begin() : -1;
         }
 
+        template<typename TOut, typename TIn>
+        std::vector<TOut> apply(const std::vector<TIn> &input, std::function<TOut(TIn)> f) {
+            std::vector<TOut> result;
+            std::transform(input.begin(),  input.end(), std::back_inserter(result), f);
+            return result;
+        }
+
         configuration_t unique_species(configuration_t conf);
         std::vector<size_t> configuration_histogram(const configuration_t &conf);
         std::tuple<configuration_t, configuration_t> pack_configuration(const configuration_t &configuration);

@@ -1,7 +1,7 @@
 //
 // Created by dominik on 30.05.21.
 //
-
+#include "version.hpp"
 #include "data.hpp"
 #include "helpers.hpp"
 #include "container_wrappers.hpp"
@@ -57,4 +57,5 @@ BOOST_PYTHON_MODULE(data) {
                  py::return_value_policy<py::copy_non_const_reference>())
             .def("__iter__", py::iterator<SQSResultCollection>());
 
+    py::scope().attr("__version__") = py::make_tuple(VERSION_MAJOR, VERSION_MINOR, GIT_COMMIT_HASH, GIT_BRANCH);
 }

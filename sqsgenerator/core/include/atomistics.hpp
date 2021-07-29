@@ -77,6 +77,16 @@ namespace sqsgenerator::utils::atomistics {
          * @return vector of Atom objects
          */
         static std::vector<Atom> from_symbol(const std::vector<std::string> &symbols);
+
+        static species_t symbol_to_z(const std::string &symbol);
+
+        static std::vector<species_t> symbol_to_z(const std::vector<std::string> &symbol);
+
+        static std::string z_to_symbol(species_t species);
+
+        static std::vector<std::string> z_to_symbol(const std::vector<species_t> &species);
+
+
     };
 
     class Structure {
@@ -90,9 +100,9 @@ namespace sqsgenerator::utils::atomistics {
         std::vector<Atom> m_species;
 
     public:
-        Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc);
-        Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<std::string> species, std::array<bool, 3> pbc);
-        Structure(array_2d_t lattice, array_2d_t frac_coords, std::vector<species_t> species, std::array<bool, 3> pbc);
+        Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc);
+        Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, std::vector<std::string> species, std::array<bool, 3> pbc);
+        Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, configuration_t species, std::array<bool, 3> pbc);
 
         [[nodiscard]] size_t num_atoms() const;
         [[nodiscard]] const_array_2d_ref_t lattice() const;

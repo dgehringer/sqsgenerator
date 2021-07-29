@@ -47,8 +47,8 @@ namespace sqsgenerator::utils {
                 throw std::out_of_range("The rank is larger than the total number of permutations");
             }
             size_t k{0};
-            size_t atoms = {conf.size()};
-            size_t nspecies{hist.size()};
+            size_t atoms {conf.size()};
+            size_t nspecies {hist.size()};
             rank_t suffix_count;
 
             for (size_t i = 0; i < atoms; i++) {

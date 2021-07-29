@@ -36,6 +36,7 @@ namespace sqsgenerator::python {
         std::shared_ptr<atomistics::Structure> m_handle;
     public:
         StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols, py::tuple pbc);
+        StructurePythonWrapper(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, configuration_t species, std::array<bool, 3> pbc);
         StructurePythonWrapper(const StructurePythonWrapper &other) = default;
         np::ndarray lattice();
         np::ndarray frac_coords();

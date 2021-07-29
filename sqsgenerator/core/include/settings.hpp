@@ -48,8 +48,9 @@ namespace sqsgenerator {
         [[nodiscard]] int num_iterations() const;
         [[nodiscard]] size_t num_species() const;
         [[nodiscard]] iteration_mode mode() const;
-        [[nodiscard]] std::vector<int> threads_per_rank() const;
         [[nodiscard]] const Structure &structure() const;
+        [[nodiscard]] std::vector<AtomPair> pair_list() const;
+        [[nodiscard]] std::vector<int> threads_per_rank() const;
         [[nodiscard]] int num_output_configurations() const;
         [[nodiscard]] pair_shell_weights_t shell_weights() const;
         [[nodiscard]] configuration_t packed_configuraton() const;
@@ -58,8 +59,7 @@ namespace sqsgenerator {
         [[nodiscard]] const_array_3d_ref_t target_objective() const;
         [[nodiscard]] const_array_3d_ref_t parameter_prefactors() const;
         [[nodiscard]] configuration_t unpack_configuration(const configuration_t &conf) const;
-        std::vector<AtomPair> pair_list() const;
-        const_pair_shell_matrix_ref_t shell_matrix() const;
+        [[nodiscard]] const_pair_shell_matrix_ref_t shell_matrix() const;
         [[nodiscard]] std::tuple<std::vector<shell_t>, std::vector<double>> shell_indices_and_weights() const;
     };
 }

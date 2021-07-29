@@ -32,7 +32,22 @@ add_library(data SHARED
         )
 set_target_properties(data PROPERTIES SUFFIX .so)
 set_target_properties(data PROPERTIES PREFIX "")
-target_link_libraries(data pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(data ${Python3_LIBRARIES} ${Boost_LIBRARIES})
+
+add_library(utils SHARED
+        module_utils.cpp
+        ../src/rank.cpp
+        ../src/result.cpp
+        ../src/atomistics.cpp
+        ../src/utils.cpp
+        ../src/structure_utils.cpp
+        data.hpp
+        data.cpp
+        )
+add_dependencies(utils data)
+set_target_properties(utils PROPERTIES SUFFIX .so)
+set_target_properties(utils PROPERTIES PREFIX "")
+target_link_libraries(utils ${Python3_LIBRARIES} ${Boost_LIBRARIES})
 
 
 add_library(iteration SHARED
