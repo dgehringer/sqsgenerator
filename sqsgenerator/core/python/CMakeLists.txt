@@ -14,7 +14,7 @@ if(USE_MPI)
     endif()
 endif()
 
-include_directories(../include include)
+include_directories(${SQSGENERATOR_INCLUDE_DIR} include)
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Python3_LIBRARY_DIRS})
@@ -22,11 +22,11 @@ link_directories(${Python3_LIBRARY_DIRS})
 
 add_library(data SHARED
         module_data.cpp
-        ../src/rank.cpp
-        ../src/result.cpp
-        ../src/atomistics.cpp
-        ../src/utils.cpp
-        ../src/structure_utils.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/atomistics.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/result.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/rank.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/utils.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/structure_utils.cpp
         data.hpp
         data.cpp
         )
@@ -36,11 +36,11 @@ target_link_libraries(data ${Python3_LIBRARIES} ${Boost_LIBRARIES})
 
 add_library(utils SHARED
         module_utils.cpp
-        ../src/rank.cpp
-        ../src/result.cpp
-        ../src/atomistics.cpp
-        ../src/utils.cpp
-        ../src/structure_utils.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/atomistics.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/result.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/rank.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/utils.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/structure_utils.cpp
         data.hpp
         data.cpp
         )
@@ -54,13 +54,13 @@ add_library(iteration SHARED
         module_iteration.cpp
         data.cpp
         iteration.cpp
-        ../src/rank.cpp
-        ../src/sqs.cpp
-        ../src/result.cpp
-        ../src/atomistics.cpp
-        ../src/settings.cpp
-        ../src/utils.cpp
-        ../src/structure_utils.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/sqs.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/settings.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/atomistics.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/result.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/rank.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/utils.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/structure_utils.cpp
          )
 
 add_dependencies(iteration data)
