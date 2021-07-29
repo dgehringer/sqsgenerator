@@ -34,6 +34,7 @@ endif()
 configure_file(${PROJECT_SOURCE_DIR}/sqsgenerator/core/include/version.hpp.in ${PROJECT_SOURCE_DIR}/sqsgenerator/core/include/version.hpp)
 # There is an issue find FindBoost.cmake
 # https://gitlab.kitware.com/cmake/cmake/-/issues/20638: That's why log setup is added
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_LOG_DYN_LINK")
 find_package(Boost REQUIRED COMPONENTS system python numpy log_setup log)
 message([BOOST]:INCLUDE_DIRS: ${Boost_INCLUDE_DIRS})
 message([BOOST]:LIBRARIES: ${Boost_LIBRARIES})
