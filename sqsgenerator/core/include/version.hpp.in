@@ -1,0 +1,14 @@
+//
+// Created by dominik on 29.07.21.
+//
+
+#ifndef SQSGENERATOR_VERSION_HPP
+#define SQSGENERATOR_VERSION_HPP
+
+#define VERSION_MAJOR @sqsgenerator_VERSION_MAJOR@
+#define VERSION_MINOR @sqsgenerator_VERSION_MINOR@
+#define GIT_BRANCH "@GIT_BRANCH@"
+#define GIT_COMMIT_HASH "@GIT_COMMIT_HASH@"
+
+
+#endif //SQSGENERATOR_VERSION_HPP

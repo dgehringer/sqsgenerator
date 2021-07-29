@@ -177,7 +177,6 @@ namespace sqsgenerator {
                 offset_full;
 
         parameter_storage_t vec(full_size);
-        assert(matrix.size() == reduced_size);
         for (size_t shell = 0; shell < nshells; shell++) {
             offset_full = shell * npars_per_shell_sym;
             offset_compact = shell * npars_per_shell_asym;
@@ -238,7 +237,7 @@ namespace sqsgenerator {
         std::vector<size_t> pair_list(convert_pair_list(settings.pair_list()));
         std::vector<size_t> hist(utils::configuration_histogram(settings.packed_configuraton()));
         rank_t nperms = utils::total_permutations(settings.packed_configuraton());
-        size_t nshells{settings.num_shells()}, nspecies{settings.num_species()}, nparams {nshells * nspecies * nspecies}, reduced_size;
+        size_t nshells {settings.num_shells()}, nspecies{settings.num_species()}, nparams {nshells * nspecies * nspecies}, reduced_size;
         auto reindexer(make_reduction_vector(settings));
         std::tie(reduced_size, prefactors, parameter_weights, target_objectives) = reduce_weights_matrices(settings,
                                                                                                            reindexer);
@@ -398,7 +397,6 @@ namespace sqsgenerator {
         } // pragma omp parallel
         std::vector<SQSResult> tmp_results, final_results;
         for (auto &r : results) tmp_results.push_back(std::move(r));
-        //std::copy(results.begin(), results.end(), final_results.begin());
 
 #if defined (USE_MPI)
         double buf_par[nparams], buf_obj;

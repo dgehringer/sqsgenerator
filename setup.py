@@ -1,3 +1,4 @@
+import re
 import os
 import sys
 import subprocess
@@ -6,13 +7,20 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from setuptools.command.install import install
 
-ENABLE_MPI = False
+WITH_MPI = False
 
-
+opt_flags = {
+    'Release': {
+        'unix': ['-O3', '-DNDEBUG', '-march=native', '-mtune=native', '-ffast-math']
+    },
+    'Debug': {
+        'unix': ['-g']
+    }
+}
 
 
 class CMakeExtension(Extension):
-    def __init__(self, name, target='', cmake_lists_dir='.', debug=False, verbose=False, **kwargs):
+    def __init__(self, name, target='', cmake_lists_dir='.', debug=False, verbose=True, **kwargs):
         Extension.__init__(self, name, sources=[], **kwargs)
         self.cmake_lists_dir = os.path.abspath(cmake_lists_dir)
         self.debug = debug
@@ -20,10 +28,26 @@ class CMakeExtension(Extension):
         self.verbose = verbose
 
 
+class intall_custom(install):
+    user_options = install.user_options + [
+        ('with-mpi', None, 'Enables MPI Parallelization')
+    ]
+
+    def initialize_options(self):
+        super(intall_custom, self).initialize_options()
+        self.with_mpi = WITH_MPI
+
+    def finalize_options(self):
+        super(intall_custom, self).finalize_options()
+        global WITH_MPI
+        WITH_MPI = self.with_mpi
+
+
 class cmake_build_ext(build_ext):
     user_options = build_ext.user_options + [
         ('with-mpi', None, 'Enables MPI Parallelization')
     ]
+
     def build_extensions(self):
         # Ensure that CMake is present and working
         try:
@@ -32,16 +56,16 @@ class cmake_build_ext(build_ext):
             raise RuntimeError('Cannot find CMake executable')
         cmake_initialized = False
 
-        for ext in self.extensions:
+        subprocess.check_call(['echo', f'{bool(self.with_mpi)}'])
 
+        for ext in self.extensions:
             extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
             cfg = 'Debug' if ext.debug else 'Release'
-            opt_args = []
             cmake_args = [
-                f'-DCMAKE_BUILD_TYPE={cfg}'
+                f'-DCMAKE_BUILD_TYPE={cfg}',
                 # Ask CMake to place the resulting library in the directory
                 # containing the extension
-                f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}'
+                f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}',
                 # Other intermediate static libraries are placed in a
                 # temporary build directory instead
                 f'-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_{cfg.upper()}={self.build_temp}',
@@ -51,9 +75,9 @@ class cmake_build_ext(build_ext):
                 # '-DPython3_EXECUTABLE={}'.format(sys.executable),
                 # Add other project-specific CMake arguments if needed
                 # ...
-                f'-DUSE_MPI={"ON" if self.with_mpi else "OFF"}'
+                f'-DUSE_MPI={"ON" if self.with_mpi else "OFF"}',
+                '-DCMAKE_CXX_FLAGS_{}={}'.format(cfg.upper(), ' '.join(opt_flags.get(cfg, {}).get(self.compiler.compiler_type, [])) )
             ]
-
 
             # We can handle some platform-specific settings at our discretion
             if platform.system() == 'Windows':
@@ -66,7 +90,7 @@ class cmake_build_ext(build_ext):
                 # Assuming that Visual Studio and MinGW are supported compilers
                 if self.compiler.compiler_type == 'msvc':
                     cmake_args += [
-                        '-DCMAKE_GENERATOR_PLATFORM=%s' % plat,
+                        f'-DCMAKE_GENERATOR_PLATFORM={plat}'
                     ]
                 else:
                     cmake_args += [
@@ -95,20 +119,22 @@ class cmake_build_ext(build_ext):
 
     def initialize_options(self):
         super(cmake_build_ext, self).initialize_options()
-        self.with_mpi = ENABLE_MPI
+        self.with_mpi = WITH_MPI
 
     def finalize_options(self):
         """finalize options"""
         super(cmake_build_ext, self).finalize_options()
 
-    #def run(self):
-    #    super(cmake_build_ext, self).run()
         
-setup(name = "sqsenerator",
-      version = "0.1",
-      ext_modules = [
-          CMakeExtension('sqsgenerator.core.data', 'data'),
-          CMakeExtension('sqsgenerator.core.iteration', 'iteration')
-      ],
-      cmdclass = {'build_ext': cmake_build_ext},
-      )
+setup(
+    name = "sqsenerator",
+    version = "0.1",
+    ext_modules = [
+        CMakeExtension('sqsgenerator.core.data', 'data'),
+        CMakeExtension('sqsgenerator.core.iteration', 'iteration')
+    ],
+    cmdclass = {
+        'build_ext': cmake_build_ext,
+        'install': intall_custom
+    }
+)

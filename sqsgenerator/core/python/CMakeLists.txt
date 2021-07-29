@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(sqsgenerator.core.python)
-set(CMAKE_CXX_STANDARD 17)
+project(python_bindings VERSION ${sqsgenerator_VERSION_MAJOR}.${sqsgenerator_VERSION_MINOR})
 
 find_package (Python3 COMPONENTS Interpreter Development)
 

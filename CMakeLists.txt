@@ -1,5 +1,20 @@
 cmake_minimum_required(VERSION 3.12)
-project(sqsgenerator)
+project(sqsgenerator VERSION 0.1)
+
+execute_process(
+        COMMAND git rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# Get the latest commit hash
+execute_process(
+        COMMAND git rev-parse HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+message([REPO]: ${GIT_COMMIT_HASH}@${GIT_BRANCH})
+
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,7 +28,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-
+configure_file(${PROJECT_SOURCE_DIR}/sqsgenerator/core/include/version.hpp.in ${PROJECT_SOURCE_DIR}/sqsgenerator/core/include/version.hpp)
 # There is an issue find FindBoost.cmake
 # https://gitlab.kitware.com/cmake/cmake/-/issues/20638: That's why log setup is added
 find_package(Boost REQUIRED COMPONENTS system python numpy log_setup log)
@@ -47,19 +62,7 @@ if (USE_MPI)
     endif()
 endif()
 
-execute_process(
-        COMMAND git rev-parse --abbrev-ref HEAD
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_BRANCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-# Get the latest commit hash
-execute_process(
-        COMMAND git rev-parse HEAD
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_COMMIT_HASH
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-message([REPO]: ${GIT_COMMIT_HASH}@${GIT_BRANCH})
 
 ###########################
 ### Documentation stuff ###

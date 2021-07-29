@@ -1,6 +1,7 @@
 //
 // Created by dominik on 14.07.21.
 //
+#include "version.hpp"
 #include "types.hpp"
 #include "sqs.hpp"
 #include "data.hpp"
@@ -38,15 +39,6 @@ SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings, 
     for (SQSResult &r : sqs_results) wrapped_results.push_back(SQSResultPythonWrapper(std::move(r)));
     return wrapped_results;
 }
-
-bool is_mpi_enabled() {
-#if defined (USE_MPI)
-    return true;
-#else
-    return false;
-#endif
-}
-
 
 
 BOOST_PYTHON_MODULE(iteration) {
@@ -86,6 +78,14 @@ BOOST_PYTHON_MODULE(iteration) {
                 .def_readonly("rtol", &IterationSettingsPythonWrapper::rtol);
 
         py::def("pair_sqs_iteration", &pair_sqs_iteration);
-        py::def("is_mpi_enabled", &is_mpi_enabled);
 
+        py::list features;
+#ifdef _OPENMP
+        features.append("openmp");
+#endif
+#if defined(USE_MPI)
+    features.append("mpi");
+#endif
+        py::scope().attr("__features__")= features;
+        py::scope().attr("__version__") = py::make_tuple(VERSION_MAJOR, VERSION_MINOR, GIT_COMMIT_HASH, GIT_BRANCH);
 }
