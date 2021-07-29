@@ -106,7 +106,7 @@ namespace sqsgenerator::test {
         array_2d_t fcoords;
         array_2d_t distances;
         array_3d_t vecs;
-        pair_shell_matrix shells;
+        pair_shell_matrix_t shells;
     };
 
     TestCaseData read_test_data(std::string const &path) {
@@ -158,7 +158,7 @@ namespace sqsgenerator::test {
     }
 
     template<>
-    void assert_multi_array_equal<pair_shell_matrix>(const pair_shell_matrix &a, const pair_shell_matrix &b) {
+    void assert_multi_array_equal<pair_shell_matrix_t>(const pair_shell_matrix_t &a, const pair_shell_matrix_t &b) {
         ASSERT_EQ(a.num_elements(), b.num_elements());
         for (size_t i = 0; i < a.num_elements(); ++i) {
             //ASSERT_NEAR(std::abs<int>(a.data()[i]), std::abs<int>(b.data()[i]), 1.0e-5);
@@ -192,7 +192,6 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(StructureUtilsTestFixture, TestShellMatrix) {
-        typedef pair_shell_matrix::index index_t;
         for (TestCaseData &test_case : test_cases) {
             matrix<double> lattice (matrix_from_multi_array(test_case.lattice));
             matrix<double> fcoords (matrix_from_multi_array(test_case.fcoords));
@@ -228,7 +227,6 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(StructureUtilsTestFixture, TestCreatePairListSizes) {
-        typedef pair_shell_matrix::index index_t;
         for (TestCaseData &test_case : test_cases) {
             matrix<double> lattice (matrix_from_multi_array(test_case.lattice));
             matrix<double> fcoords (matrix_from_multi_array(test_case.fcoords));
@@ -238,7 +236,7 @@ namespace sqsgenerator::test {
             auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
             auto d2 = sqsgenerator::utils::distance_matrix(pbc_vecs);
             auto distances = sqsgenerator::utils::default_shell_distances(d2);
-            pair_shell_matrix shells = sqsgenerator::utils::shell_matrix(d2, distances);
+            pair_shell_matrix_t shells = sqsgenerator::utils::shell_matrix(d2, distances);
             auto max_shell = static_cast<index_t>(*std::max_element(shells.origin(), shells.origin()+shells.num_elements()));
             for (auto i = 1; i <= max_shell; i++) {
                 counts.insert(std::make_pair(i, 0));
