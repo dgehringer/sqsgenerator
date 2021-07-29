@@ -448,7 +448,6 @@ namespace sqsgenerator {
             else final_results.push_back(std::move(r));
         }
         BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::num_results = " << final_results.size();
-        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::num_tmp_results = " << tmp_results.size();
         return final_results;
     }
 }
