@@ -1,3 +1,5 @@
+import collections
+import enum
 import operator
 
 import yaml
@@ -7,9 +9,12 @@ import attrdict
 import functools
 import itertools
 import numpy as np
+import typing as T
 from sqsgenerator.compat import require, Feature
 from sqsgenerator.core.data import Structure
-import typing as T
+from sqsgenerator.core.iteration import IterationMode
+
+__parameter_registry = collections.OrderedDict({})
 
 
 class BadSettings(Exception):
@@ -17,6 +22,56 @@ class BadSettings(Exception):
 
 attr = operator.attrgetter
 item = operator.itemgetter
+
+def random_mode(settings): return settings.mode == IterationMode.random
+
+def if_(condition):
+    def then_(th_val):
+        def else_(el_val):
+            def stmt_(settings): return th_val if condition(settings) else el_val
+            return stmt_
+        return else_
+    return then_
+
+def get_function_logger(f: T.Callable) -> logging.Logger:
+    return logging.getLogger(f.__module__ + '.' + f.__name__)
+
+
+class Default(enum.Enum):
+    NoDefault = 0
+
+
+def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, required: T.Union[T.Callable, bool]=False, key: T.Union[T.Callable, str] = None):
+    if key is None: key = name
+    if isinstance(required, bool): get_required = lambda *_: required
+    if isinstance(key, str): get_key = lambda *_: key
+    if not callable(default): get_default = lambda *_: default
+    have_default = default != Default.NoDefault
+    # if not required and default is None: raise RuntimeWarning(f'Option "{name}" is optional but no default value was specfied. "None" will be used')
+
+    def _decorator(f: T.Callable):
+        @functools.wraps(f)
+        def _wrapped(settings: attrdict.AttrDict):
+            is_required = get_required(settings)
+            k = get_key(settings)
+            if k not in settings:
+                nonlocal name
+                if is_required:
+                    if not have_default:
+                        raise BadSettings(f'Required parameter "{name}" was not found')
+                    else:
+                        df = get_default(settings)
+                        get_function_logger(f).warning(f'Parameter "{name}" was not found defaulting to: "{df}"')
+                        settings[k] = df
+                        return df
+            else: return f(settings)
+
+        global __parameter_registry
+        __parameter_registry[name] = _wrapped
+        return _wrapped
+
+    return _decorator
+
 
 def transpose(iterable: T.Iterable): return zip(*iterable)
 
@@ -34,11 +89,7 @@ def setup_logging():
         )
 
 
-def get_function_logger(f: T.Callable):
-    return logging.getLogger(f.__module__ + '.' + f.__name__)
-
-
-def try_(f : T.Callable, *args, exc_type=Exception, raise_exc=True, return_success=False, msg=None, log_exc_info=False, **kwargs):
+def try_(f: T.Callable, *args, exc_type: T.Type = Exception, raise_exc: bool=True, return_success: bool =False, msg: T.Optional[str]=None, log_exc_info: bool=False, **kwargs) -> T.Any:
     try:
         result = f(*args, **kwargs)
         success = True
@@ -66,7 +117,7 @@ def to_ase_atoms(structure: Structure):
 
 
 @require(Feature.pymatgen)
-def from_pymatgen_structure(structure):
+def from_pymatgen_structure(structure) -> Structure:
     lattice = structure.lattice.matrix
     data = map(lambda site: (site.species_string, site.frac_coords), structure)
     species, frac_coords = transpose(data)
@@ -74,7 +125,7 @@ def from_pymatgen_structure(structure):
 
 
 @require(Feature.ase)
-def from_ase_atoms(atoms):
+def from_ase_atoms(atoms) -> Structure:
     lattice = np.array(atoms.cell)
     frac_coords = np.array(atoms.get_scaled_positions())
     if tuple(atoms.pbc) != (True, True, True): raise RuntimeWarning("At present I can only handle fully periodic structure. I'will overwrite ase.Atoms.pbc setting to (True, True, True)")
@@ -82,13 +133,13 @@ def from_ase_atoms(atoms):
 
 
 @require(Feature.ase)
-def read_structure_file_with_ase(fn, **kwargs):
+def read_structure_file_with_ase(fn, **kwargs) -> Structure:
     import ase.io
     return from_ase_atoms(ase.io.read(fn, **kwargs))
 
 
 @require(Feature.pymatgen)
-def read_structure_file_with_pymatgen(fn, **kwargs):
+def read_structure_file_with_pymatgen(fn, **kwargs) -> Structure:
     import pymatgen.core
     return from_pymatgen_structure(pymatgen.core.Structure.from_file(fn, **kwargs))
 
@@ -124,7 +175,9 @@ def make_supercell(structure: Structure, sa: int = 1, sb: int = 1, sc : int = 1)
     structure_supercell = Structure(lattice_supercell, frac_coords_supercell, species_supercell, (True, True, True))
     return structure_supercell
 
-def read_structure(settings : attrdict.AttrDict):
+
+@parameter('structure', required=True)
+def read_structure(settings : attrdict.AttrDict) -> Structure:
     needed_fields = {'lattice', 'coords', 'species'}
     s = settings.structure
     if isinstance(s, Structure): structure = s
@@ -147,9 +200,25 @@ def read_structure(settings : attrdict.AttrDict):
         sizes = settings.structure.supercell
         if len(sizes) != 3: raise BadSettings('To create a supercell you need to specify three lengths')
         structure = make_supercell(structure, *sizes)
+
     return structure
 
 
+@parameter('mode', default=IterationMode.random, required=True)
+def read_mode(settings: attrdict.AttrDict):
+    if settings.mode not in IterationMode.names:
+        raise BadSettings(f'Unknown iteration mode "{settings.mode}". Available iteration modes are {list(IterationMode.names.keys())}')
+    return IterationMode.names[settings.mode]
+
+@parameter('iterations', default=if_(random_mode)(1e5)(-1), required=if_(random_mode)(True)(False))
+def read_iterations(settings: attrdict.AttrDict):
+    print(settings.iterations)
+
+def process_settings(settings: attrdict.AttrDict):
+    print(__parameter_registry)
+    for param, processor in __parameter_registry.items():
+        processor(settings)
+    print(settings)
 
 if __name__ == '__main__':
 
@@ -160,4 +229,4 @@ if __name__ == '__main__':
     d = attrdict.AttrDict(yaml.safe_load(open('examples/cs-cl.sqs.yaml')))
     print(compat.have_ase(), compat.have_pymatgen(), compat.have_pyiron(), compat.have_mpi4py())
 
-    read_structure(d)
+    process_settings(d)
