@@ -23,7 +23,9 @@ class BadSettings(Exception):
 attr = operator.attrgetter
 item = operator.itemgetter
 
+
 def random_mode(settings): return settings.mode == IterationMode.random
+
 
 def if_(condition):
     def then_(th_val):
