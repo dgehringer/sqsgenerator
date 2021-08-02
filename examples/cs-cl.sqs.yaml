@@ -14,5 +14,4 @@ structure:
   species:
     - Cs
     - Cl
-mode: systematic
-iterations: 10000
+mode: random

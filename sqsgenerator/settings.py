@@ -45,9 +45,10 @@ class Default(enum.Enum):
 
 def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, required: T.Union[T.Callable, bool]=False, key: T.Union[T.Callable, str] = None):
     if key is None: key = name
-    if isinstance(required, bool): get_required = lambda *_: required
-    if isinstance(key, str): get_key = lambda *_: key
-    if not callable(default): get_default = lambda *_: default
+    get_required = lambda *_: required if isinstance(required, bool) else required
+    get_key = lambda *_: key if isinstance(key, str) else key
+    get_default = (lambda *_: default) if not callable(default) else default
+
     have_default = default != Default.NoDefault
     # if not required and default is None: raise RuntimeWarning(f'Option "{name}" is optional but no default value was specfied. "None" will be used')
 
@@ -202,7 +203,6 @@ def read_structure(settings : attrdict.AttrDict) -> Structure:
         sizes = settings.structure.supercell
         if len(sizes) != 3: raise BadSettings('To create a supercell you need to specify three lengths')
         structure = make_supercell(structure, *sizes)
-
     return structure
 
 
@@ -219,7 +219,7 @@ def read_iterations(settings: attrdict.AttrDict):
 def process_settings(settings: attrdict.AttrDict):
     print(__parameter_registry)
     for param, processor in __parameter_registry.items():
-        processor(settings)
+        settings[param] = processor(settings)
     print(settings)
 
 if __name__ == '__main__':
