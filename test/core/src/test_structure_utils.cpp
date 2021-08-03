@@ -126,7 +126,6 @@ namespace sqsgenerator::test {
     protected:
         std::vector<TestCaseData> test_cases{};
 
-
     public:
         void SetUp() {
             // code here will execute just before the test ensues

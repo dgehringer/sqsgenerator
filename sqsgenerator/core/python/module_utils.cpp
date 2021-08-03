@@ -11,6 +11,7 @@
 #include "utils.hpp"
 #include "version.hpp"
 #include "helpers.hpp"
+#include "structure_utils.hpp"
 
 using namespace sqsgenerator;
 using namespace sqsgenerator::python;
@@ -71,6 +72,11 @@ StructurePythonWrapper make_rank_structure(StructurePythonWrapper &s, rank_t ran
     return {s.handle()->lattice(), s.handle()->frac_coords(), make_rank_internal(s.handle()->configuration(), rank), s.handle()->pbc()};
 }
 
+py::list default_shell_distances(StructurePythonWrapper &s, double atol=1e-5, double rtol=1e-8) {
+    return helpers::vector_to_list(sqsgenerator::utils::default_shell_distances(s.handle()->distance_matrix(), atol, rtol));
+}
+
+
 BOOST_PYTHON_MODULE(utils) {
     Py_Initialize();
     py::def("rank_structure", &rank_structure);
@@ -81,6 +87,8 @@ BOOST_PYTHON_MODULE(utils) {
 
     py::def("make_rank", &make_rank_iterable);
     py::def("make_rank", &make_rank_structure);
+
+    py::def("default_shell_distances", &default_shell_distances);
 
     py::scope().attr("__version__") = py::make_tuple(VERSION_MAJOR, VERSION_MINOR, GIT_COMMIT_HASH, GIT_BRANCH);
 }

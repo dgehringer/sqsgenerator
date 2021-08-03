@@ -65,7 +65,6 @@ def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, require
                     else:
                         df = get_default(settings)
                         get_function_logger(f).warning(f'Parameter "{name}" was not found defaulting to: "{df}"')
-                        settings[k] = df
                         return df
             else: return f(settings)
 
@@ -212,23 +211,25 @@ def read_mode(settings: attrdict.AttrDict):
         raise BadSettings(f'Unknown iteration mode "{settings.mode}". Available iteration modes are {list(IterationMode.names.keys())}')
     return IterationMode.names[settings.mode]
 
+
 @parameter('iterations', default=if_(random_mode)(1e5)(-1), required=if_(random_mode)(True)(False))
 def read_iterations(settings: attrdict.AttrDict):
     print(settings.iterations)
 
+
 def process_settings(settings: attrdict.AttrDict):
-    print(__parameter_registry)
     for param, processor in __parameter_registry.items():
         settings[param] = processor(settings)
     print(settings)
+
 
 if __name__ == '__main__':
 
     setup_logging()
     import os
     import compat
-    print(os.getcwd())
+    # print(os.getcwd())
     d = attrdict.AttrDict(yaml.safe_load(open('examples/cs-cl.sqs.yaml')))
-    print(compat.have_ase(), compat.have_pymatgen(), compat.have_pyiron(), compat.have_mpi4py())
+    # print(compat.have_ase(), compat.have_pymatgen(), compat.have_pyiron(), compat.have_mpi4py())
 
     process_settings(d)
