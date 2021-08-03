@@ -15,4 +15,11 @@ structure:
     - Cs
     - Cl
 mode: random
-pair_weights: 0
+iterations: 1e6
+composition:
+  all:
+    Na: 27
+    Cl: 27
+  Cs:
+    Fr: 13
+    Ta: 14

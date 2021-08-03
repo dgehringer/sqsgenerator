@@ -65,4 +65,10 @@ def require(*features: Feature, condition=all):
 
     return _decorator
 
+
+def have_mpi_support():
+    import sqsgenerator.core.iteration
+    return 'mpi' in sqsgenerator.core.iteration.__features__
+
+
 _check_features()

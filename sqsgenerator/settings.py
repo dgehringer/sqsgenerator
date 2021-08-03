@@ -10,40 +10,20 @@ import functools
 import itertools
 import numpy as np
 import typing as T
-from sqsgenerator.compat import require, Feature
-from sqsgenerator.core.data import Structure
+from sqsgenerator.fn import *
+from sqsgenerator.structure import Structure, read_structure_from_file, make_supercell, from_ase_atoms, from_pymatgen_structure
+from sqsgenerator.compat import require, Feature, have_mpi_support
 from sqsgenerator.core.iteration import IterationMode
+from sqsgenerator.core.utils import default_shell_distances
+
 
 __parameter_registry = collections.OrderedDict({})
 
-
-class BadSettings(Exception):
-    pass
-
-attr = operator.attrgetter
-item = operator.itemgetter
+ATOL = 1e-5
+RTOL = 1e-8
 
 
-def random_mode(settings): return settings.mode == IterationMode.random
-
-
-def if_(condition):
-    def then_(th_val):
-        def else_(el_val):
-            def stmt_(settings): return th_val if condition(settings) else el_val
-            return stmt_
-        return else_
-    return then_
-
-def get_function_logger(f: T.Callable) -> logging.Logger:
-    return logging.getLogger(f.__module__ + '.' + f.__name__)
-
-
-class Default(enum.Enum):
-    NoDefault = 0
-
-
-def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, required: T.Union[T.Callable, bool]=False, key: T.Union[T.Callable, str] = None):
+def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, required: T.Union[T.Callable, bool]=True, key: T.Union[T.Callable, str] = None):
     if key is None: key = name
     get_required = lambda *_: required if isinstance(required, bool) else required
     get_key = lambda *_: key if isinstance(key, str) else key
@@ -75,7 +55,28 @@ def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, require
     return _decorator
 
 
-def transpose(iterable: T.Iterable): return zip(*iterable)
+class BadSettings(Exception):
+    pass
+
+
+def random_mode(settings): return settings.mode == IterationMode.random
+
+
+def unique_species(settings): return set(sp.symbol for sp in settings.structure.species)
+
+
+def num_species(settings): return len(unique_species(settings))
+
+
+def num_shells(settings): return len(settings.shell_weights)
+
+
+def num_sites_on_sublattice(settings, sublattice): return sum(sp.symbol.lower() == sublattice.lower() for sp  in settings.structure.species) if sublattice != 'all' else settings.structure.num_atoms
+
+
+
+def get_function_logger(f: T.Callable) -> logging.Logger:
+    return logging.getLogger(f.__module__ + '.' + f.__name__)
 
 
 def setup_logging():
@@ -88,97 +89,20 @@ def setup_logging():
             format="%(message)s",
             datefmt="[%X]",
             handlers=[rich.logging.RichHandler(rich_tracebacks=True)]
-        )
+    )
 
 
-def try_(f: T.Callable, *args, exc_type: T.Type = Exception, raise_exc: bool=True, return_success: bool =False, msg: T.Optional[str]=None, log_exc_info: bool=False, **kwargs) -> T.Any:
-    try:
-        result = f(*args, **kwargs)
-        success = True
-    except exc_type as e:
-        if msg: get_function_logger(f).exception(f'Failed to {msg}', exc_info=e if log_exc_info else None)
-        if raise_exc: raise
-        result = None
-        success = False
-    return (success, result) if return_success else result
+@parameter('atol', default=ATOL)
+def read_atol(settings : attrdict.AttrDict):
+    return settings.atol
 
 
-@require(Feature.pymatgen)
-def to_pymatgen_structure(structure: Structure):
-    from pymatgen.core import Structure as PymatgenStructure, Lattice as PymatgenLattice
-    symbols = list(map(attr('symbol'), structure.species))
-    lattice = PymatgenLattice(structure.lattice)
-    return PymatgenStructure(lattice, symbols, structure.frac_coords, coords_are_cartesian=False)
+@parameter('rtol', default=RTOL)
+def read_atol(settings : attrdict.AttrDict):
+    return settings.rtol
 
 
-@require(Feature.ase)
-def to_ase_atoms(structure: Structure):
-    from ase import Atoms
-    numbers = list(map(attr('Z'), structure.species))
-    return Atoms(cell=structure.lattice, scaled_positions=structure.frac_coords, numbers=numbers, pbc=structure.pbc)
-
-
-@require(Feature.pymatgen)
-def from_pymatgen_structure(structure) -> Structure:
-    lattice = structure.lattice.matrix
-    data = map(lambda site: (site.species_string, site.frac_coords), structure)
-    species, frac_coords = transpose(data)
-    return Structure(np.array(lattice), np.array(frac_coords), species, (True, True, True))
-
-
-@require(Feature.ase)
-def from_ase_atoms(atoms) -> Structure:
-    lattice = np.array(atoms.cell)
-    frac_coords = np.array(atoms.get_scaled_positions())
-    if tuple(atoms.pbc) != (True, True, True): raise RuntimeWarning("At present I can only handle fully periodic structure. I'will overwrite ase.Atoms.pbc setting to (True, True, True)")
-    return Structure(lattice, frac_coords, list(atoms.symbols), (True, True, True))
-
-
-@require(Feature.ase)
-def read_structure_file_with_ase(fn, **kwargs) -> Structure:
-    import ase.io
-    return from_ase_atoms(ase.io.read(fn, **kwargs))
-
-
-@require(Feature.pymatgen)
-def read_structure_file_with_pymatgen(fn, **kwargs) -> Structure:
-    import pymatgen.core
-    return from_pymatgen_structure(pymatgen.core.Structure.from_file(fn, **kwargs))
-
-
-@require(Feature.ase, Feature.pymatgen, condition=any)
-def read_structure_from_file(settings: attrdict.AttrDict):
-    known_readers = [ Feature.ase.value, Feature.pymatgen.value ]
-    available_readers = list(filter(compat.have_feature, known_readers))
-    reader = settings.structure.get('reader', 'ase')
-    if reader not in available_readers: raise BadSettings(f'Unnokwn reader specification "{reader}". Available readers are {available_readers}')
-    reader_kwargs = settings.structure.get('args', {})
-    reader_funcs = dict(ase=read_structure_file_with_ase, pymatgen=read_structure_file_with_pymatgen)
-    return try_(reader_funcs[reader], settings.structure.file, **reader_kwargs, msg=f'read structure file "{settings.structure.file}"')
-
-
-def make_supercell(structure: Structure, sa: int = 1, sb: int = 1, sc : int = 1):
-    sizes = (sa, sb, sc)
-    num_cells = np.prod(sizes)
-    scale = np.reciprocal(np.array(sizes).astype(float))
-
-    num_atoms_supercell = num_cells * structure.num_atoms
-    lattice_supercell = structure.lattice * np.diag(sizes)
-    species_supercell = list(map(attr('symbol'), structure.species)) * num_cells
-
-    frac_coords_supercell = []
-    for ta, tb, tc in itertools.product(*map(range, sizes)):
-        t = np.vstack([np.array([ta, tb, tc]*scale)]*structure.num_atoms)
-        frac_coords_supercell.append(structure.frac_coords + t)
-    frac_coords_supercell = np.vstack(frac_coords_supercell)
-
-    assert frac_coords_supercell.shape == (num_atoms_supercell, 3)
-    assert len(species_supercell) == num_atoms_supercell
-    structure_supercell = Structure(lattice_supercell, frac_coords_supercell, species_supercell, (True, True, True))
-    return structure_supercell
-
-
-@parameter('structure', required=True)
+@parameter('structure')
 def read_structure(settings : attrdict.AttrDict) -> Structure:
     needed_fields = {'lattice', 'coords', 'species'}
     s = settings.structure
@@ -188,7 +112,7 @@ def read_structure(settings : attrdict.AttrDict) -> Structure:
         if isinstance(s, Atoms): structure = from_ase_atoms(s)
     elif compat.have_feature(Feature.pymatgen):
         from pymatgen.core import Structure as PymatgenStructure
-        if isinstance(s, PymatgenStructure): structure = s
+        if isinstance(s, PymatgenStructure): structure = from_pymatgen_structure(s)
     elif 'file' in settings.structure:
         read_structure_from_file(settings)
     elif all(field in settings.structure for field in needed_fields):
@@ -214,14 +138,83 @@ def read_mode(settings: attrdict.AttrDict):
 
 @parameter('iterations', default=if_(random_mode)(1e5)(-1), required=if_(random_mode)(True)(False))
 def read_iterations(settings: attrdict.AttrDict):
-    print(settings.iterations)
+    return int(float(settings.iterations))
+
+
+@parameter('shell_distances', default=lambda s: default_shell_distances(s.structure, s.atol, s.rtol), required=True)
+def read_shell_distances(settings: attrdict.AttrDict):
+    return settings.shell_distances
+
+
+@parameter('shell_weights', default=lambda settings: {i: 1.0/i for i, distance in enumerate(settings.shell_distances[1:], start=1)}, required=True)
+def read_shell_weights(settings: attrdict.AttrDict):
+    return settings.shell_weights
+
+
+@parameter('pair_weights', default=lambda s: np.ones((num_species(s), num_species(s))), required=True)
+def read_pair_weights(settings: attrdict.AttrDict):
+    nums = num_species(settings)
+    if isinstance(settings.pair_weights, (list, tuple)):
+        w = np.array(settings.pair_weights).astype(float)
+        if w.shape == (nums, nums): return w
+        else: raise BadSettings(f'The "pair_weights" you have specified has a wrong shape ({w.shape}). Expected {(nums, nums)}')
+    else:
+        raise BadSettings(f'As "pair_weights" I do expect a {nums}x{nums} matrix, since your structure contains {nums} different species')
+
+
+@parameter('target_objective', default=lambda s: np.zeros((num_shells(s), num_species(s), num_species(s))), required=True)
+def read_target_objective(settings: attrdict.AttrDict):
+    nums = num_species(settings)
+    nshells = len(settings.shell_weights)
+    if isinstance(settings.target_objective, (int, float)):
+        o = np.ones((nshells, nums, nums)).astype(float)
+        for index, (shell_index, shell_weight) in enumerate(sorted(settings.shell_weights.items(), key=item(0))):
+            o[index,:,:] = settings.target_objective * shell_weight
+        return o
+    elif isinstance(settings.target_objective, (list, tuple)):
+        o = np.array(settings.target_objective).astype(float)
+        if o.ndim == 3:
+            expected_shape = (nshells, nums, nums)
+            if o.shape != expected_shape: raise BadSettings(f'The 3D "pair_weights" you have specified has a wrong shape ({o.shape}). Expected {expected_shape}')
+            else: return o
+        elif o.ndim == 2:
+            expected_shape = (nums, nums)
+            if o.shape != expected_shape: raise BadSettings(f'The 2D "pair_weights" you have specified has a wrong shape ({o.shape}). Expected {expected_shape}')
+            else:
+                f = np.ones((nshells, nums, nums)).astype(float)
+                for index, (shell_index, shell_weight) in enumerate(sorted(settings.shell_weights.items(), key=item(0))):
+                    f[index, :, :] = o * shell_weight
+                return f
+        else: raise BadSettings(f'The "pair_weights" you have specified has a {o.ndim} dimensions. I only understand 2 and 3')
+    else:
+        raise BadSettings(f'Cannot interpret "target_objective" setting. Acceptable values are a single number, {nums}x{nums} or {nshells}x{nums}x{nums} matrices!')
+
+
+@parameter('threads_per_rank', default=(-1,), required=True)
+def read_threads_per_rank(settings: attrdict.AttrDict):
+    if isinstance(settings.threads_per_rank, (float, int)):
+        return [int(settings.threads_per_rank)]
+    elif isinstance(settings.threads_per_rank, (list, tuple)):
+        if len(settings.threads_per_rank) != 1:
+            if not have_mpi_support(): raise BadSettings(f'The module sqsgenerator.core.iteration was not compiled with MPI support')
+        return list(settings.threads_per_rank)
+    else: raise BadSettings(f'Cannot interpret "threads_per_rank" setting.')
+
+
+@parameter('composition', required=True)
+def read_composition(settings: attrdict.AttrDict):
+    if not isinstance(settings.composition, dict): raise BadSettings(f'Cannot interpret "composition" setting. I expected a dictionary')
+    allowed_sublattices = {'all',}.union(unique_species(settings))
+    for sublattice in settings.composition.keys():
+        if sublattice not in allowed_sublattices: raise BadSettings(f'The structure does not have an "{sublattice}" subllatice. Possible values would be {allowed_sublattices}')
+        print(num_sites_on_sublattice(settings, sublattice))
+
 
 
 def process_settings(settings: attrdict.AttrDict):
     for param, processor in __parameter_registry.items():
         settings[param] = processor(settings)
-    print(settings)
-
+    return settings
 
 if __name__ == '__main__':
 
@@ -231,5 +224,7 @@ if __name__ == '__main__':
     # print(os.getcwd())
     d = attrdict.AttrDict(yaml.safe_load(open('examples/cs-cl.sqs.yaml')))
     # print(compat.have_ase(), compat.have_pymatgen(), compat.have_pyiron(), compat.have_mpi4py())
-
+    import sqsgenerator.core.iteration
+    print(sqsgenerator.core.iteration.__version__)
     process_settings(d)
+    print(compat.have_feature(Feature.rich))

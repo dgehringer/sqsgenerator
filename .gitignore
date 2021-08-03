@@ -1,4 +1,7 @@
 .idea/
+.idea.clion/
 __pycache__/
 cmake-build-*/
 build/
+*.egg-info/
+dist/
