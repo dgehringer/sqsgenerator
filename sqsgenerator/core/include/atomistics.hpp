@@ -86,6 +86,8 @@ namespace sqsgenerator::utils::atomistics {
 
         static std::vector<std::string> z_to_symbol(const std::vector<species_t> &species);
 
+        static std::vector<Atom> all_elements();
+
 
     };
 

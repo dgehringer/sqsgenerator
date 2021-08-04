@@ -1,95 +1,27 @@
-import collections
-import enum
-import operator
 
 import yaml
-import click
-import logging
 import attrdict
-import functools
-import itertools
 import numpy as np
-import typing as T
-from sqsgenerator.fn import *
-from sqsgenerator.structure import Structure, read_structure_from_file, make_supercell, from_ase_atoms, from_pymatgen_structure
-from sqsgenerator.compat import require, Feature, have_mpi_support
-from sqsgenerator.core.iteration import IterationMode
-from sqsgenerator.core.utils import default_shell_distances
+import collections
+from sqsgenerator.core import IterationMode, default_shell_distances, BadSettings, available_species
+from sqsgenerator.core.fn import parameter as parameter_, partial, if_, item, attr, identity, method
+from sqsgenerator.structure import Structure, make_supercell, from_ase_atoms, from_pymatgen_structure, num_species, num_sites_on_sublattice, unique_species, read_structure_from_file, structure_to_dict
+from sqsgenerator.compat import Feature, have_mpi_support
 
 
 __parameter_registry = collections.OrderedDict({})
+
+
+parameter = partial(parameter_, registry=__parameter_registry)
 
 ATOL = 1e-5
 RTOL = 1e-8
 
 
-def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, required: T.Union[T.Callable, bool]=True, key: T.Union[T.Callable, str] = None):
-    if key is None: key = name
-    get_required = lambda *_: required if isinstance(required, bool) else required
-    get_key = lambda *_: key if isinstance(key, str) else key
-    get_default = (lambda *_: default) if not callable(default) else default
-
-    have_default = default != Default.NoDefault
-    # if not required and default is None: raise RuntimeWarning(f'Option "{name}" is optional but no default value was specfied. "None" will be used')
-
-    def _decorator(f: T.Callable):
-        @functools.wraps(f)
-        def _wrapped(settings: attrdict.AttrDict):
-            is_required = get_required(settings)
-            k = get_key(settings)
-            if k not in settings:
-                nonlocal name
-                if is_required:
-                    if not have_default:
-                        raise BadSettings(f'Required parameter "{name}" was not found')
-                    else:
-                        df = get_default(settings)
-                        get_function_logger(f).warning(f'Parameter "{name}" was not found defaulting to: "{df}"')
-                        return df
-            else: return f(settings)
-
-        global __parameter_registry
-        __parameter_registry[name] = _wrapped
-        return _wrapped
-
-    return _decorator
-
-
-class BadSettings(Exception):
-    pass
-
-
-def random_mode(settings): return settings.mode == IterationMode.random
-
-
-def unique_species(settings): return set(sp.symbol for sp in settings.structure.species)
-
-
-def num_species(settings): return len(unique_species(settings))
-
-
 def num_shells(settings): return len(settings.shell_weights)
 
 
-def num_sites_on_sublattice(settings, sublattice): return sum(sp.symbol.lower() == sublattice.lower() for sp  in settings.structure.species) if sublattice != 'all' else settings.structure.num_atoms
-
-
-
-def get_function_logger(f: T.Callable) -> logging.Logger:
-    return logging.getLogger(f.__module__ + '.' + f.__name__)
-
-
-def setup_logging():
-    try:
-        import rich.logging
-    except ImportError: pass
-    else:
-        logging.basicConfig(
-            level="NOTSET",
-            format="%(message)s",
-            datefmt="[%X]",
-            handlers=[rich.logging.RichHandler(rich_tracebacks=True)]
-    )
+def random_mode(settings): return settings.mode == IterationMode.random
 
 
 @parameter('atol', default=ATOL)
@@ -151,9 +83,9 @@ def read_shell_weights(settings: attrdict.AttrDict):
     return settings.shell_weights
 
 
-@parameter('pair_weights', default=lambda s: np.ones((num_species(s), num_species(s))), required=True)
+@parameter('pair_weights', default=lambda s: np.ones((num_species(s.structure), num_species(s.structure))), required=True)
 def read_pair_weights(settings: attrdict.AttrDict):
-    nums = num_species(settings)
+    nums = num_species(settings.structure)
     if isinstance(settings.pair_weights, (list, tuple)):
         w = np.array(settings.pair_weights).astype(float)
         if w.shape == (nums, nums): return w
@@ -162,9 +94,9 @@ def read_pair_weights(settings: attrdict.AttrDict):
         raise BadSettings(f'As "pair_weights" I do expect a {nums}x{nums} matrix, since your structure contains {nums} different species')
 
 
-@parameter('target_objective', default=lambda s: np.zeros((num_shells(s), num_species(s), num_species(s))), required=True)
+@parameter('target_objective', default=lambda s: np.zeros((num_shells(s), num_species(s.structure), num_species(s.structure))), required=True)
 def read_target_objective(settings: attrdict.AttrDict):
-    nums = num_species(settings)
+    nums = num_species(settings.structure)
     nshells = len(settings.shell_weights)
     if isinstance(settings.target_objective, (int, float)):
         o = np.ones((nshells, nums, nums)).astype(float)
@@ -204,27 +136,58 @@ def read_threads_per_rank(settings: attrdict.AttrDict):
 @parameter('composition', required=True)
 def read_composition(settings: attrdict.AttrDict):
     if not isinstance(settings.composition, dict): raise BadSettings(f'Cannot interpret "composition" setting. I expected a dictionary')
-    allowed_sublattices = {'all',}.union(unique_species(settings))
+    allowed_sublattices = {'all',}.union(unique_species(settings.structure))
+    allowed_symbols = set(map(attr('symbol'), available_species()))
     for sublattice in settings.composition.keys():
         if sublattice not in allowed_sublattices: raise BadSettings(f'The structure does not have an "{sublattice}" subllatice. Possible values would be {allowed_sublattices}')
-        print(num_sites_on_sublattice(settings, sublattice))
-
-
+        num_sites = num_sites_on_sublattice(settings.structure, sublattice)
+        sublattice_composition = settings.composition[sublattice]
+        if not isinstance(sublattice_composition, dict): raise BadSettings(f'Cannot interpret "composition" setting, specified for sublattice {sublattice}')
+        for species, number in sublattice_composition.items():
+            if species not in allowed_symbols: raise BadSettings(f'I have never heard of the chemical element "{species}". Please use a real chemical element!')
+            if not isinstance(number, (float, int)): raise BadSettings(f'I do not understand how many atoms of type "{species}" I should distribute on the "{sublattice}" sublattice. You said "{number}"')
+            sublattice_composition[species] = int(number)
+        num_distributed_atoms = sum(sublattice_composition.values())
+        if num_distributed_atoms != num_sites: raise BadSettings(f'Cannot distribute {num_distributed_atoms} on the "{sublattice}" sublattice, which has actually {num_sites} sites')
+    return settings.composition
 
 def process_settings(settings: attrdict.AttrDict):
     for param, processor in __parameter_registry.items():
         settings[param] = processor(settings)
     return settings
 
+
+def settings_to_dict(settings: attrdict.AttrDict):
+    converters = {int: identity, float: identity, str: identity, Structure: structure_to_dict, IterationMode: str, np.ndarray: method('tolist')}
+
+    def _generic_to_dict(d):
+        td = type(d)
+        if isinstance(d, (tuple, list, set)):
+            return td(map(_generic_to_dict, d))
+        elif isinstance(d, dict):
+            return td( { k: _generic_to_dict(v) for k, v in d.items() } )
+        elif td in converters:
+            return converters[td](d)
+        else: raise TypeError(f'No converter specified for type "{td}"')
+
+    out = _generic_to_dict(settings)
+    return out
+
+
+
 if __name__ == '__main__':
 
-    setup_logging()
-    import os
     import compat
     # print(os.getcwd())
     d = attrdict.AttrDict(yaml.safe_load(open('examples/cs-cl.sqs.yaml')))
     # print(compat.have_ase(), compat.have_pymatgen(), compat.have_pyiron(), compat.have_mpi4py())
     import sqsgenerator.core.iteration
     print(sqsgenerator.core.iteration.__version__)
-    process_settings(d)
+    proc = process_settings(d)
+    from pprint import pprint
+    pprint(proc)
+    exported = settings_to_dict(proc)
+    pprint(exported)
+    proc1 = process_settings(exported)
+    exported1 = settings_to_dict(proc1)
     print(compat.have_feature(Feature.rich))
