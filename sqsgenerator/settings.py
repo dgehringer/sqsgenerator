@@ -1,3 +1,4 @@
+import pprint
 
 import yaml
 import attrdict
@@ -151,6 +152,7 @@ def read_composition(settings: attrdict.AttrDict):
         if num_distributed_atoms != num_sites: raise BadSettings(f'Cannot distribute {num_distributed_atoms} on the "{sublattice}" sublattice, which has actually {num_sites} sites')
     return settings.composition
 
+
 def process_settings(settings: attrdict.AttrDict):
     for param, processor in __parameter_registry.items():
         settings[param] = processor(settings)
@@ -158,14 +160,21 @@ def process_settings(settings: attrdict.AttrDict):
 
 
 def settings_to_dict(settings: attrdict.AttrDict):
-    converters = {int: identity, float: identity, str: identity, Structure: structure_to_dict, IterationMode: str, np.ndarray: method('tolist')}
+    converters = {
+        int: identity,
+        float: identity,
+        str: identity,
+        Structure: structure_to_dict,
+        IterationMode: str,
+        np.ndarray: method('tolist')
+    }
 
     def _generic_to_dict(d):
         td = type(d)
         if isinstance(d, (tuple, list, set)):
             return td(map(_generic_to_dict, d))
         elif isinstance(d, dict):
-            return td( { k: _generic_to_dict(v) for k, v in d.items() } )
+            return dict( { k: _generic_to_dict(v) for k, v in d.items() } )
         elif td in converters:
             return converters[td](d)
         else: raise TypeError(f'No converter specified for type "{td}"')
@@ -176,7 +185,6 @@ def settings_to_dict(settings: attrdict.AttrDict):
 
 
 if __name__ == '__main__':
-
     import compat
     # print(os.getcwd())
     d = attrdict.AttrDict(yaml.safe_load(open('examples/cs-cl.sqs.yaml')))
@@ -184,10 +192,8 @@ if __name__ == '__main__':
     import sqsgenerator.core.iteration
     print(sqsgenerator.core.iteration.__version__)
     proc = process_settings(d)
-    from pprint import pprint
-    pprint(proc)
-    exported = settings_to_dict(proc)
-    pprint(exported)
-    proc1 = process_settings(exported)
-    exported1 = settings_to_dict(proc1)
-    print(compat.have_feature(Feature.rich))
+    s1 = settings_to_dict(proc).copy()
+    s2 = settings_to_dict(process_settings(attrdict.AttrDict(s1))).copy()
+
+    with open('proc1.yaml', 'w') as h: yaml.safe_dump(s1, h, default_flow_style=None)
+    with open('proc2.yaml', 'w') as h: yaml.safe_dump(s2, h, default_flow_style=None)

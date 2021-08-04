@@ -1,16 +1,14 @@
-import attrdict
-import itertools
+
 import numpy as np
 from sqsgenerator.core import Structure, BadSettings
 from sqsgenerator.core.fn import *
 from sqsgenerator.compat import require, Feature, have_feature
 
 
-# def unique_species(structure): return set(sp.symbol for sp in structure.species)
-
 unique_species = c_attr('species') | apply(attr('symbol')) | set
 num_species = c_(unique_species) | len
 symbols = c_attr('species') | apply(attr('symbol')) | list
+
 
 def num_sites_on_sublattice(structure, sublattice): return sum(sp.symbol == sublattice for sp in structure.species) if sublattice != 'all' else structure.num_atoms
 
@@ -73,7 +71,7 @@ def make_supercell(structure: Structure, sa: int = 1, sb: int = 1, sc : int = 1)
     sizes = (sa, sb, sc)
     num_cells = np.prod(sizes)
     scale = np.reciprocal(np.array(sizes).astype(float))
-
+    scaled_coords = np.vstack([scale]*structure.num_atoms) * structure.frac_coords
     num_atoms_supercell = num_cells * structure.num_atoms
     lattice_supercell = structure.lattice * np.diag(sizes)
     species_supercell = list(map(attr('symbol'), structure.species)) * num_cells
@@ -81,13 +79,14 @@ def make_supercell(structure: Structure, sa: int = 1, sb: int = 1, sc : int = 1)
     frac_coords_supercell = []
     for ta, tb, tc in itertools.product(*map(range, sizes)):
         t = np.vstack([np.array([ta, tb, tc]*scale)]*structure.num_atoms)
-        frac_coords_supercell.append(structure.frac_coords + t)
+        frac_coords_supercell.append(scaled_coords + t)
     frac_coords_supercell = np.vstack(frac_coords_supercell)
 
     assert frac_coords_supercell.shape == (num_atoms_supercell, 3)
     assert len(species_supercell) == num_atoms_supercell
     structure_supercell = Structure(lattice_supercell, frac_coords_supercell, species_supercell, (True, True, True))
     return structure_supercell
+
 
 def structure_to_dict(structure: Structure):
     return dict(lattice=structure.lattice.tolist(), coords=structure.frac_coords.tolist(), species=symbols(structure))
