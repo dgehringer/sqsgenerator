@@ -1,3 +1,4 @@
+import io
 import sys
 
 import click
@@ -38,6 +39,7 @@ def read_settings_file(path, format='yaml') -> T.Optional[attrdict.AttrDict]:
     return data
 
 
+
 @click.command('process')
 @click.argument('filename', type=click.Path(exists=True))
 @click.option('--input-format', '-if', type=click.Choice(['yaml', 'json', 'pickle']), default='yaml')
@@ -57,12 +59,17 @@ def process(filename, input_format, param, output_format):
         f = F(output_format)
         if not have_feature(f):
             error(f'The package "{format}" is not installed, consider to install it with')
+
+        def safe_dumps(d, **kwargs):
+            buf = io.StringIO()
+            get_module(F.yaml).safe_dump(d, buf, **kwargs)
+            return buf.getvalue()
+
         dumpers = {
-            F.json: 'dumps',
-            F.pickle: 'dumps',
-            F.yaml: 'safe_dump'
+            F.json: lambda d: get_module(F.json).dumps(d, indent=4),
+            F.pickle: lambda d: get_module(F.pickle).dumps(d),
+            F.yaml: lambda d: safe_dumps(d, default_flow_style=None)
         }
-        dumper = getattr(get_module(f), dumpers[f])
-        content = dumper(filtered)
+        content = dumpers[f](filtered)
         if f == F.pickle: sys.stdout.buffer.write(content)
         else: print(content)

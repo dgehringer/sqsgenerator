@@ -2,6 +2,7 @@
 import click
 from sqsgenerator.commands.process import process
 
+
 def make_version_string():
     from sqsgenerator.core import __version__
     major, minor, *_ = __version__
@@ -16,7 +17,7 @@ def make_version_message():
 
 
 @click.group(help='sqsgenerator')
-@click.version_option(prog_name='sqsgenerator', package_name='sqsgenerator', version=make_version_string(), message=make_version_message())
+@click.version_option(prog_name='sqsgenerator', version=make_version_string(), message=make_version_message())
 def cli():
     pass
 
