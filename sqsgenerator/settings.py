@@ -1,13 +1,12 @@
-import pprint
 
-import yaml
 import attrdict
 import numpy as np
 import collections
+import typing as T
 from sqsgenerator.core import IterationMode, default_shell_distances, BadSettings, available_species
 from sqsgenerator.core.fn import parameter as parameter_, partial, if_, item, attr, identity, method
 from sqsgenerator.structure import Structure, make_supercell, from_ase_atoms, from_pymatgen_structure, num_species, num_sites_on_sublattice, unique_species, read_structure_from_file, structure_to_dict
-from sqsgenerator.compat import Feature, have_mpi_support
+from sqsgenerator.compat import Feature, have_mpi_support, have_feature
 
 
 __parameter_registry = collections.OrderedDict({})
@@ -40,22 +39,22 @@ def read_structure(settings : attrdict.AttrDict) -> Structure:
     needed_fields = {'lattice', 'coords', 'species'}
     s = settings.structure
     if isinstance(s, Structure): structure = s
-    elif compat.have_feature(Feature.ase):
+    if have_feature(Feature.ase):
         from ase import Atoms
         if isinstance(s, Atoms): structure = from_ase_atoms(s)
-    elif compat.have_feature(Feature.pymatgen):
+    if have_feature(Feature.pymatgen):
         from pymatgen.core import Structure as PymatgenStructure
         if isinstance(s, PymatgenStructure): structure = from_pymatgen_structure(s)
-    elif 'file' in settings.structure:
-        read_structure_from_file(settings)
-    elif all(field in settings.structure for field in needed_fields):
-        lattice = np.array(settings.structure.lattice)
-        coords = np.array(settings.structure.coords)
-        species = list(settings.structure.species)
+    if 'file' in s:
+        structure = read_structure_from_file(settings)
+    if all(field in s for field in needed_fields):
+        lattice = np.array(s.lattice)
+        coords = np.array(s.coords)
+        species = list(s.species)
         structure = Structure(lattice, coords, species, (True, True, True))
     else: raise BadSettings('Cannot read structure from the settings')
 
-    if 'supercell' in settings.structure:
+    if 'supercell' in s:
         sizes = settings.structure.supercell
         if len(sizes) != 3: raise BadSettings('To create a supercell you need to specify three lengths')
         structure = make_supercell(structure, *sizes)
@@ -153,13 +152,18 @@ def read_composition(settings: attrdict.AttrDict):
     return settings.composition
 
 
-def process_settings(settings: attrdict.AttrDict):
-    for param, processor in __parameter_registry.items():
+def process_settings(settings: attrdict.AttrDict, params: T.Optional[T.Set[str]] = None):
+    params = params if params is not None else set(parameter_list())
+    last_needed_parameter = max(params, key=parameter_index)
+    for index, (param, processor) in enumerate(__parameter_registry.items()):
+        if param not in params:
+            # we can only skip this parameter if None of the other parameters dpends on param
+            if parameter_index(param) > parameter_index(last_needed_parameter): continue
         settings[param] = processor(settings)
     return settings
 
 
-def settings_to_dict(settings: attrdict.AttrDict):
+def settings_to_dict(settings: attrdict.AttrDict) -> T.Dict[str, T.Any]:
     converters = {
         int: identity,
         float: identity,
@@ -183,17 +187,9 @@ def settings_to_dict(settings: attrdict.AttrDict):
     return out
 
 
+def parameter_list() -> T.List[str]:
+    return list(__parameter_registry.keys())
 
-if __name__ == '__main__':
-    import compat
-    # print(os.getcwd())
-    d = attrdict.AttrDict(yaml.safe_load(open('examples/cs-cl.sqs.yaml')))
-    # print(compat.have_ase(), compat.have_pymatgen(), compat.have_pyiron(), compat.have_mpi4py())
-    import sqsgenerator.core.iteration
-    print(sqsgenerator.core.iteration.__version__)
-    proc = process_settings(d)
-    s1 = settings_to_dict(proc).copy()
-    s2 = settings_to_dict(process_settings(attrdict.AttrDict(s1))).copy()
 
-    with open('proc1.yaml', 'w') as h: yaml.safe_dump(s1, h, default_flow_style=None)
-    with open('proc2.yaml', 'w') as h: yaml.safe_dump(s2, h, default_flow_style=None)
+def parameter_index(parameter: str) -> int:
+    return parameter_list().index(parameter)

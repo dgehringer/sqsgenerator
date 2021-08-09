@@ -1,8 +1,9 @@
 import logging
 import typing as T
 from sqsgenerator.core.data import Structure, available_species
-from sqsgenerator.core.iteration import IterationMode, IterationSettings
+from sqsgenerator.core.iteration import IterationMode, IterationSettings, __version__, __features__
 from sqsgenerator.core.utils import default_shell_distances
+
 
 
 class BadSettings(Exception):

@@ -102,7 +102,7 @@ def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, require
                         raise BadSettings(f'Required parameter "{name}" was not found')
                     else:
                         df = get_default(settings)
-                        get_function_logger(f).warning(f'Parameter "{name}" was not found defaulting to: "{df}"')
+                        get_function_logger(f).info(f'Parameter "{name}" was not found defaulting to: "{df}"')
                         return df
             else: return f(settings)
 
