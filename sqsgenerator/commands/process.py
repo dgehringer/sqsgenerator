@@ -53,8 +53,8 @@ def process(filename, input_format, param, output_format):
     filtered = {k : v for k, v in settings_to_dict(processed).items() if k in parameters_to_process}
 
     if output_format == 'native':
-        import rich
-        rich.print(filtered)
+        from pprint import pprint
+        pprint(filtered, compact=True)
     else:
         f = F(output_format)
         if not have_feature(f):
