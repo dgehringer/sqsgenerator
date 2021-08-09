@@ -56,8 +56,6 @@ class cmake_build_ext(build_ext):
             raise RuntimeError('Cannot find CMake executable')
         cmake_initialized = False
 
-        subprocess.check_call(['echo', f'{bool(self.with_mpi)}'])
-
         for ext in self.extensions:
             extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
             cfg = 'Debug' if ext.debug else 'Release'

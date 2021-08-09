@@ -20,6 +20,10 @@ void initialize_converters()
     helpers::Cpp_int_from_python_num();
 }
 
+py::list available_species() {
+    return helpers::vector_to_list(atomistics::Atoms::all_elements());
+}
+
 BOOST_PYTHON_MODULE(data) {
     Py_Initialize();
     np::initialize();
@@ -56,6 +60,8 @@ BOOST_PYTHON_MODULE(data) {
             .def("__getitem__", &helpers::std_item<SQSResultCollection>::get,
                  py::return_value_policy<py::copy_non_const_reference>())
             .def("__iter__", py::iterator<SQSResultCollection>());
+
+    py::def("available_species", &available_species);
 
     py::scope().attr("__version__") = py::make_tuple(VERSION_MAJOR, VERSION_MINOR, GIT_COMMIT_HASH, GIT_BRANCH);
 }

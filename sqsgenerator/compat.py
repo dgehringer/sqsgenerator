@@ -1,6 +1,8 @@
 import logging
 import operator
 import functools
+import sys
+
 import frozendict
 import typing as T
 
@@ -14,6 +16,10 @@ class Feature(Enum):
     rich = 'rich'
     pyiron = 'pyiron'
     mpi4py = 'mpi4py'
+    json = 'json'
+    yaml = 'yaml'
+    pickle = 'pickle'
+    sqsgen = 'sqsgen'
 
 
 class FeatureNotAvailableException(Exception):
@@ -21,6 +27,10 @@ class FeatureNotAvailableException(Exception):
 
 
 __features = None
+
+
+def get_module(feature: Feature):
+    return sys.modules[feature.value]
 
 
 def is_initialized():

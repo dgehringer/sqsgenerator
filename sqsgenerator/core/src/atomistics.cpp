@@ -172,6 +172,10 @@ namespace sqsgenerator::utils::atomistics {
         return apply<std::string, species_t>(species, [](species_t s) -> std::string {return z_to_symbol(s); });
     }
 
+    std::vector<Atom> Atoms::all_elements() {
+        return Atoms::m_elements;
+    }
+
 
     Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc)
           : m_lattice(lattice),
