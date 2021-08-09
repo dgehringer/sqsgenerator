@@ -32,12 +32,16 @@ void init_logging() {
     }
 }
 
-SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings, boost::log::trivial::severity_level log_level = boost::log::trivial::info) {
-    logging::core::get()->set_filter(logging::trivial::severity >= log_level);
+SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings) {
     auto sqs_results = sqsgenerator::do_pair_iterations(*settings.handle());
     SQSResultCollection wrapped_results;
     for (SQSResult &r : sqs_results) wrapped_results.push_back(SQSResultPythonWrapper(std::move(r)));
     return wrapped_results;
+}
+
+
+void set_log_level(boost::log::trivial::severity_level log_level = boost::log::trivial::info) {
+    logging::core::get()->set_filter(logging::trivial::severity >= log_level);
 }
 
 
@@ -77,6 +81,7 @@ BOOST_PYTHON_MODULE(iteration) {
                 .def_readonly("atol", &IterationSettingsPythonWrapper::atol)
                 .def_readonly("rtol", &IterationSettingsPythonWrapper::rtol);
 
+        py::def("set_log_level", &set_log_level);
         py::def("pair_sqs_iteration", &pair_sqs_iteration);
 
         py::list features;
