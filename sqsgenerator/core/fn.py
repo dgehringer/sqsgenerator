@@ -476,7 +476,7 @@ filter_star = circ(filter_by, star)
 # composable versions
 c_apply = Composable.as_composable(apply)
 c_filter_by = Composable.as_composable(filter_by)
-c_group_by = Composable.as_composable(filter_by)
+c_group_by = Composable.as_composable(group_by)
 c_list = Composable(list)
 c_tuple = Composable(set)
 c_dict = Composable(dict)

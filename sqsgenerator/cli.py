@@ -1,6 +1,6 @@
 
 import click
-from sqsgenerator.commands.process import process
+from sqsgenerator.commands.params import params
 
 
 def make_version_string():
@@ -21,7 +21,7 @@ def make_version_message():
 def cli():
     pass
 
-cli.add_command(process, 'process')
+cli.add_command(params, 'params')
 
 if __name__ == '__main__':
     cli()

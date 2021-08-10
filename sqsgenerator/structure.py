@@ -1,8 +1,58 @@
+import numbers
+import itertools
 
 import numpy as np
-from sqsgenerator.core import Structure, BadSettings
+import typing as T
+from sqsgenerator.core import Structure as Structure_, BadSettings
 from sqsgenerator.core.fn import *
 from sqsgenerator.compat import require, Feature, have_feature
+
+from ase.atoms import Atoms
+
+
+class Structure(Structure_):
+
+    def __init__(self, lattice: np.ndarray, frac_coords: np.ndarray, symbols=T.List[str], pbc=(True, True, True)):
+        super(Structure, self).__init__(lattice, frac_coords, symbols, pbc)
+        self._symbols = np.array(tuple(map(attr('symbol'), self.species)))
+        self._numbers = np.array(tuple(map(attr('Z'), self.species)))
+
+    @property
+    def symbols(self):
+        return self._symbols
+
+    @property
+    def numbers(self):
+        return self._numbers
+
+    def __len__(self):
+        return self.num_atoms
+
+    def __repr__(self):
+        def group_symbols():
+            for species, same in itertools.groupby(self._symbols):
+                num_same = len(list(same))
+                yield species if num_same == 1 else f'{species}{num_same}'
+
+        formula = ''.join(group_symbols())
+        return f'Structure({formula}, len={self.num_atoms})'
+
+    def sorted(self):
+        return self[np.argsort(self._numbers)]
+
+    def __getitem__(self, item):
+        if isinstance(item, numbers.Integral):
+            if item < -self.num_atoms or item >= self.num_atoms:
+                raise IndexError('Index out of range.')
+            return self.species[item]
+
+        if isinstance(item, (list, tuple, np.ndarray)):
+            indices = np.array(item)
+            if indices.dtype != int: raise TypeError('Only integer numbers cann be used for slicing')
+            if indices.dtype == bool: indices = np.argwhere(indices).flatten()  # boolean mask slice
+        elif isinstance(item, slice): indices = np.arange(self.num_atoms)[item]
+        else: raise TypeError(f'Structure indices must not be of type {type(item)}')
+        return Structure(self.lattice, self.frac_coords[indices], self.symbols[indices])
 
 
 unique_species = c_attr('species') | apply(attr('symbol')) | set
