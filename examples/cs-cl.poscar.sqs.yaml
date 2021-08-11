@@ -1,0 +1,14 @@
+
+structure:
+  supercell:
+    - 3
+    - 3
+    - 3
+  file: examples/cs-cl.vasp
+mode: random
+iterations: 1e6
+composition:
+  which: Cs
+  Fr: 9
+  Ta: 9
+  Lu: 9

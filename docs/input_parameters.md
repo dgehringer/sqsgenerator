@@ -6,24 +6,120 @@ Each of the parameters below represents an entry in the **YAML** (or key in a `d
 
 (The order corresponds to what is parsed in `sqsgenerator.settings.py`)
 
-- `atol` - absolute tolerance for calculating the default distances of the coordination shells (unit $\text{\AA}$). `atol` and `rtol` are used to determine if two numbers are close.
+---
 
-  **Required:** No
+### `atol`
 
-  **Default**: `1e-3`
-  **Accepted:** positive floating point numbers
+Absolute tolerance for calculating the default distances of the coordination shells (unit $\text{\AA}$). `atol` and `rtol` are used to determine if two numbers are close.
 
-* `rtol` - relative tolerance for calculating the default distances of the coordination shells (unit $\text{\AA}$​​​​). `atol` and `rtol` are used to determine if two numbers are close.
+* **Required:** No
+* **Default**: `1e-3`
+* **Accepted:** positive floating point numbers (`float`)
 
-  **Required:** No
+### `rtol`
 
-  **Default**: `1e-5`
+relative tolerance for calculating the default distances of the coordination shells (unit $\text{\AA}$). `atol` and `rtol` are used to determine if two numbers are close.
 
-  **Accepted:** positive floating point numbers
-  **Hint:** Have a look on the `shell_distances` parameter, by entering
+* **Required:** No
+* **Default**: `1e-5`
+* **Accepted:** positive floating point numbers (`float`)
+* **Hint:** 
+  Have a look on the `shell_distances` parameter, by entering
 
   ```bash
   sqsgenerator params show input.yaml --param shell_distances
   ```
 
+  In case you get some distances which are really close e. g. 4.12345 and 4.12346 it is maybe a good idea to increase `rtol` and/or `atol` such that `sqsgenerator` groups them into the same coordination shell
+
+### `max_output_configurations`
+
+The maximum number of output configurations. 
+
+* **Required:** No
+* **Default:** 10
+* **Accepted:** positive finite integer number (`int`)
+* **Hint:** In case the code runs with MPI parallelization, each rank will generate at most `max_output_configurations` which are gathered at the head rank.
+
+### `composition` 
+
+The composition of the output configuration, defined as an dictionary.  Keys are symbols of chemical elements, whereas values are the number of atoms of the corresponding species. 
+
+* **Required:** Yes
+* **Accepted:** a dictionary with chemical symbols as keys (`dict[str, int]`) 
+* **Hint**: the sum of the atoms distributed must **exactly** match the number of lattice positions
+* **Examples:**
+  - Ternary alloy, consisting of 54 atoms ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$)
+    ```yaml
+    composition:
+      Ti: 18
+      Al: 18
+      Mo: 18
+    ```
+  - *fcc*-Aluminum cell,  64 atoms, randomly distribute  8 vacancies
+    ```yaml
+    composition:
+      Al: 56
+      0: 8
+    ```
+
+### `composition.which`
+
+Used to select a sublattice (collection of lattice sites) from the specified input structure. Note that the number of atoms in the `composition` paramter has to sum up to the number of selected lattice positions
+
+* **Required:** No
+* **Default:** *all*
+* **Accepted:**
   
+  * either *all* or a chemical symbol specified in the input structure (`str`)
+  * list of indices to choose from the input structure (`list[int]`)
+* **Hint**: the sum of the atoms distributed must **exactly** match the number of selected lattice positions. 
+* **Examples:**
+  * Ternary alloy, 54 atoms, create ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$​​​​)
+    ```yaml
+    composition:
+      which: all
+      Ti: 18
+      Al: 18
+      Mo: 18
+    ```
+    
+  * *rock-salt* TiN (B1),  64 atoms, randomly distribute B and N on the N sublattice $\text{Ti}_{32}(\text{B}_{16}\text{N}_{16}) = \text{Ti}(\text{B}_{0.5}\text{N}_{0.5})$​​
+    ```yaml
+    composition:
+      which: N
+      N: 16
+      B: 16
+    ```
+    
+  * *rock-salt* TiN (B1),  64 atoms, randomly distribute Al, V and Ti on the Ti sublattice $(\text{Ti}_{16}\text{Al}_{8}\text{V}_{8})\text{N}_{32} = (\text{Ti}_{0.5}\text{Al}_{0.25}\text{V}_{0.25})\text{N}$​
+    
+    ```yaml
+    composition:
+      which: Ti
+      Ti: 16
+      Al: 8
+      V: 8
+    ```
+    
+  * select all **even** sites from your structure, 16 atoms, using a index, list and distribute W, Ta and Mo on those sites
+    ```yaml
+    composition:
+      which: [0, 2, 4, 6, 8, 10, 12, 14]
+      W: 3
+      Ta: 3
+      Mo: 2
+    ```
+
+### `structure`
+
+the structure where `sqsgenerator` will operate on. `composition.which` will select the sites from the specified structure. The coordinates must be supplied in **fractional** style. It can be specified by supplying a filename or directly as a dictionary
+
+* **Required:** Yes
+* **Accepted:**
+  * dictionary with a `file` key (`dict`)
+  * dictionary with a `lattice`, `coords` and `species` key (`dict`)
+* **Hint:** 
+  * In a filename is specified `ase` is available `sqsgenerator` will automatically use it to load the structure using `ase.io.read`. Alternatively it will fall back to `pymatgen`. If both packages are not available it will raise an `FeatureError`.
+  * You can explicitly instruct to use one of the packages by settings `structure.reader` to either *ase* or *pymatgen*
+
