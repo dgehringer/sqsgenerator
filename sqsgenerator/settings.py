@@ -8,7 +8,7 @@ import typing as T
 from itertools import repeat, chain
 from sqsgenerator.core import IterationMode, default_shell_distances, BadSettings, available_species, IterationSettings
 from sqsgenerator.core.fn import parameter as parameter_, partial, if_, item, attr, identity, method, isa
-from sqsgenerator.structure import Structure, make_supercell, from_ase_atoms, from_pymatgen_structure, num_species, num_sites_on_sublattice, unique_species, read_structure_from_file, structure_to_dict
+from sqsgenerator.structure import Structure, make_supercell, from_ase_atoms, from_pymatgen_structure, num_species, unique_species, read_structure_from_file, structure_to_dict
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature
 
 
@@ -17,8 +17,8 @@ __parameter_registry = collections.OrderedDict({})
 
 parameter = partial(parameter_, registry=__parameter_registry)
 
-ATOL = 1e-5
-RTOL = 1e-8
+ATOL = 1e-3
+RTOL = 1e-5
 
 
 def num_shells(settings): return len(settings.shell_weights)
@@ -42,6 +42,7 @@ def read_atol(settings : attrdict.AttrDict):
 @parameter('max_output_configurations', default=10)
 def read_max_output_configurations(settings : attrdict.AttrDict):
     return settings.max_output_configurations
+
 
 @parameter('composition', required=True)
 def read_composition(settings: attrdict.AttrDict):
