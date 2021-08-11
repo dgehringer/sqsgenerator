@@ -2,6 +2,7 @@
 
 variables:
   SQSGENERATOR_BUILD_DIR: build
+  SQSGENERATOR_MAIN_BRANCH: relaunch
 
 
 stages:
@@ -10,6 +11,9 @@ stages:
 
 
 build-all:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $SQSGENERATOR_MAIN_BRANCH'
+      when: always
   before_script:
     - echo "[BUILD] | Checking gtest"
     - dpkg -l libgtest-dev
