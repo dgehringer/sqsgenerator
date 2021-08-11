@@ -208,3 +208,22 @@ Instructs `sqsgenerator` to create a supercell of the the specified structure
         - 3
         - 3
       file: cs-cl.cif
+
+### `mode`
+
+The iteration mode specifies how new structures are generated. 
+
+- *random* the configuration will be shuffled randomly
+
+- *systematic* will instruct the code generate configurations in lexicographical order and to scan the **complete configurational space**. In case *systematic* is specified the `iterations` parameter will be ignored, since the number of permutations is predefined. Therefore for a system with $N$ atoms with $M$ species, will lead to
+  $$
+  N_{\text{iterations}} = \dfrac{N!}{\prod_m^M N_m!} \quad \text{where} \quad \sum_m^M N_m = N
+  $$
+  iterations.
+
+* **Required:** No
+* **Default:** *random*
+* **Accepted:** *random* or *systematic* (`str`)
+* **Hint:** 
+  * In case you use the *systematic* make sure that the total number of configurations to check is a number a computer can check in finite times
+  * To compute the total number of permutations you can use 
