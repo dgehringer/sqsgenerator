@@ -29,11 +29,13 @@ def random_mode(settings): return settings.mode == IterationMode.random
 
 @parameter('atol', default=ATOL)
 def read_atol(settings : attrdict.AttrDict):
+    if not isinstance(settings.atol, float) or settings.atol < 0: raise BadSettings(f'The absolute tolerance can be only a positive floating point number')
     return settings.atol
 
 
 @parameter('rtol', default=RTOL)
 def read_atol(settings : attrdict.AttrDict):
+    if not isinstance(settings.atol, float) or settings.atol < 0: raise BadSettings(f'The relative tolerance can be only a positive floating point number')
     return settings.rtol
 
 
