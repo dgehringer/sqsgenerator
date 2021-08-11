@@ -50,13 +50,16 @@ The composition of the output configuration, defined as an dictionary.  Keys are
 * **Hint**: the sum of the atoms distributed must **exactly** match the number of lattice positions
 * **Examples:**
   - Ternary alloy, consisting of 54 atoms ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$)
+    
     ```yaml
     composition:
       Ti: 18
       Al: 18
       Mo: 18
     ```
+    
   - *fcc*-Aluminum cell,  64 atoms, randomly distribute  8 vacancies
+    
     ```yaml
     composition:
       Al: 56
@@ -76,6 +79,7 @@ Used to select a sublattice (collection of lattice sites) from the specified inp
 * **Hint**: the sum of the atoms distributed must **exactly** match the number of selected lattice positions. 
 * **Examples:**
   * Ternary alloy, 54 atoms, create ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$​​​​)
+    
     ```yaml
     composition:
       which: all
@@ -85,6 +89,7 @@ Used to select a sublattice (collection of lattice sites) from the specified inp
     ```
     
   * *rock-salt* TiN (B1),  64 atoms, randomly distribute B and N on the N sublattice $\text{Ti}_{32}(\text{B}_{16}\text{N}_{16}) = \text{Ti}(\text{B}_{0.5}\text{N}_{0.5})$​​
+    
     ```yaml
     composition:
       which: N
@@ -103,6 +108,7 @@ Used to select a sublattice (collection of lattice sites) from the specified inp
     ```
     
   * select all **even** sites from your structure, 16 atoms, using a index, list and distribute W, Ta and Mo on those sites
+    
     ```yaml
     composition:
       which: [0, 2, 4, 6, 8, 10, 12, 14]
@@ -120,6 +126,85 @@ the structure where `sqsgenerator` will operate on. `composition.which` will sel
   * dictionary with a `file` key (`dict`)
   * dictionary with a `lattice`, `coords` and `species` key (`dict`)
 * **Hint:** 
+
   * In a filename is specified `ase` is available `sqsgenerator` will automatically use it to load the structure using `ase.io.read`. Alternatively it will fall back to `pymatgen`. If both packages are not available it will raise an `FeatureError`.
   * You can explicitly instruct to use one of the packages by settings `structure.reader` to either *ase* or *pymatgen*
 
+* **Examples:**
+
+  * directly specify CsCl (B2) structure in the input file
+
+    ```yaml
+    structure:  
+      lattice:
+        - [4.123, 0.0, 0.0]
+        - [0.0, 4.123, 0.0]
+        - [0.0, 0.0, 4.123]
+      coords: # put fractional coordinates here -> not cartesian
+        - [0.0, 0.0, 0.0]
+        - [0.5, 0.5, 0.5]
+      species:
+        - Cs
+        - Cl
+    ```
+    Please note that for each entry in `coords` there must be an corresponding species specified in the `species` list
+  *  specify a file (must be readable by `ase.io.read` , fallback to `pymatgen` if `ase` is not present)
+    
+    ```yaml
+    structure:
+      file: cs-cl.vasp # POSCAR/CONTCAR format
+    ```
+    
+  * specify a file and explicitly set a reader for reading the structure file
+    
+    ```yaml
+    structure:
+       file: cs-cl.cif
+       reader: pymatgen # use pymatgen to read the CIF file
+    ```
+  
+  * specify read a file and  pass arguments to the reading package. E. g. read las configuration from a MD-trajectory
+    
+    ```yaml
+    structure:
+      file: md.traj
+      reader: ase
+      args:
+        index: -1
+    ```
+    if `args` is present in will be unpacked (`**`) into `ase.io.read`
+
+### `structure.supercell`
+
+Instructs `sqsgenerator` to create a supercell of the the specified structure
+
+* **Required:** No
+* **Accepted:** a list/tuple of positive integer number of length 3 (`tuple[int]`)
+* **Examples:**
+
+  * Create a $3\times3\times3$ supercell of the CsCl (B2) structure
+
+    ```yaml
+    structure:
+      supercell: [3, 3, 3]
+      lattice:
+        - [4.123, 0.0, 0.0]
+        - [0.0, 4.123, 0.0]
+        - [0.0, 0.0, 4.123]
+      coords: # put fractional coordinates here -> not cartesian
+        - [0.0, 0.0, 0.0]
+        - [0.5, 0.5, 0.5]
+      species:
+        - Cs
+        - Cl
+    ```
+
+  * Create a  $3\times3\times3$ supercell of a structure file
+
+    ```yaml
+    structure:
+      supercell:
+        - 3
+        - 3
+        - 3
+      file: cs-cl.cif

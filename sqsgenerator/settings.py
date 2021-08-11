@@ -8,7 +8,7 @@ import typing as T
 from itertools import repeat, chain
 from sqsgenerator.core import IterationMode, default_shell_distances, BadSettings, available_species, IterationSettings
 from sqsgenerator.core.fn import parameter as parameter_, partial, if_, item, attr, identity, method, isa
-from sqsgenerator.structure import Structure, make_supercell, from_ase_atoms, from_pymatgen_structure, num_species, unique_species, read_structure_from_file, structure_to_dict
+from sqsgenerator.structure import Structure, make_supercell, from_ase_atoms, from_pymatgen_structure, num_species, read_structure_from_file, structure_to_dict
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature
 
 
@@ -53,7 +53,7 @@ def read_composition(settings: attrdict.AttrDict):
         settings['composition']['which'] = tuple(range(structure.num_atoms))
     elif isinstance(settings.composition.which, str):
         sublattice = settings.composition.which
-        allowed_sublattices = {'all', }.union(unique_species(structure))
+        allowed_sublattices = {'all', }.union(structure.unique_species)
         if sublattice not in allowed_symbols: raise BadSettings(f'I have never heard of the chemical element "{sublattice}". Please use a real chemical element!')
         if sublattice not in allowed_sublattices: raise BadSettings(f'The structure does not have an "{sublattice}" sublattice. Possible values would be {allowed_sublattices}')
         if sublattice == 'all': mask = tuple(range(structure.num_atoms))
@@ -151,7 +151,7 @@ def read_pair_weights(settings: attrdict.AttrDict):
         raise BadSettings(f'As "pair_weights" I do expect a {nums}x{nums} matrix, since your structure contains {nums} different species')
 
 
-@parameter('target_objective', default=lambda s: np.zeros((num_shells(s), num_species(s.structure), num_species(s.structure))), required=True)
+@parameter('target_objective', default=lambda s: np.zeros((num_shells(s), s.structure.num_unique_species, s.structure.num_unique_species)), required=True)
 def read_target_objective(settings: attrdict.AttrDict):
     nums = num_species(settings.structure)
     nshells = len(settings.shell_weights)

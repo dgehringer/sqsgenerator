@@ -16,6 +16,7 @@ class Structure(Structure_):
         super(Structure, self).__init__(lattice, frac_coords, symbols, pbc)
         self._symbols = np.array(tuple(map(attr('symbol'), self.species)))
         self._numbers = np.array(tuple(map(attr('Z'), self.species)))
+        self._unique_species = set(np.unique(self._symbols))
 
     @property
     def symbols(self):
@@ -24,6 +25,14 @@ class Structure(Structure_):
     @property
     def numbers(self):
         return self._numbers
+
+    @property
+    def num_unique_species(self):
+        return len(self._unique_species)
+
+    @property
+    def unique_species(self):
+        return self._unique_species
 
     def __len__(self):
         return self.num_atoms
@@ -54,13 +63,13 @@ class Structure(Structure_):
         else: raise TypeError(f'Structure indices must not be of type {type(item)}')
         return Structure(self.lattice, self.frac_coords[indices], self.symbols[indices])
 
+    def to_dict(self):
+        return structure_to_dict(self)
+
 
 unique_species = c_attr('species') | apply(attr('symbol')) | set
 num_species = c_(unique_species) | len
 symbols = c_attr('species') | apply(attr('symbol')) | list
-
-
-def num_sites_on_sublattice(structure, sublattice): return sum(sp.symbol == sublattice for sp in structure.species) if sublattice != 'all' else structure.num_atoms
 
 
 @require(Feature.ase, Feature.pymatgen, condition=any)

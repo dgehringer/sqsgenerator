@@ -4,7 +4,7 @@ structure:
     - 3
     - 3
     - 3
-  file: examples/cs-cl.vasp
+  file: examples/cs-cl.cif
 mode: random
 iterations: 1e6
 composition:
