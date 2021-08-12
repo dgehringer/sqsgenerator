@@ -92,7 +92,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
 
 #### Examples
 - Ternary alloy, 54 atoms, create ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$)
-    
+  
     ```yaml
     composition:
       which: all
@@ -102,7 +102,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
     ```
     
 - *rock-salt* TiN (B1),  64 atoms, randomly distribute B and N on the N sublattice $\text{Ti}_{32}(\text{B}_{16}\text{N}_{16}) = \text{Ti}(\text{B}_{0.5}\text{N}_{0.5})$
-    
+  
     ```yaml
     composition:
       which: N
@@ -111,7 +111,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
     ```
     
 - *rock-salt* TiN (B1),  64 atoms, randomly distribute Al, V and Ti on the Ti sublattice $(\text{Ti}_{16}\text{Al}_{8}\text{V}_{8})\text{N}_{32} = (\text{Ti}_{0.5}\text{Al}_{0.25}\text{V}_{0.25})\text{N}$
-    
+  
     ```yaml
     composition:
       which: Ti
@@ -121,7 +121,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
     ```
     
 - select all **even** sites from your structure, 16 atoms, using a index, list and distribute W, Ta and Mo on those sites
-    
+  
     ```yaml
     composition:
       which: [0, 2, 4, 6, 8, 10, 12, 14]
@@ -165,14 +165,14 @@ the structure where `sqsgenerator` will operate on. `composition.which` will sel
     Please note that for each entry in `coords` there must be an corresponding species specified in the `species` list
     
 -  specify a file (must be readable by `ase.io.read` , fallback to `pymatgen` if `ase` is not present)
-    
+   
     ```yaml
     structure:
       file: cs-cl.vasp # POSCAR/CONTCAR format
     ```
     
 - specify a file and explicitly set a reader for reading the structure file
-    
+  
     ```yaml
     structure:
        file: cs-cl.cif
@@ -180,7 +180,7 @@ the structure where `sqsgenerator` will operate on. `composition.which` will sel
     ```
   
 - specify read a file and  pass arguments to the reading package. E. g. read las configuration from a MD-trajectory
-    
+  
     ```yaml
     structure:
       file: md.traj
@@ -240,7 +240,6 @@ The iteration mode specifies how new structures are generated.
   $$
   
   iterations.
-
 - **Required:** No
 - **Default:** *random*
 - **Accepted:** *random* or *systematic* (`str`)
@@ -253,5 +252,26 @@ sqsgenerator compute total-permutations
 - `sqsgenerator` also allows you to guess how long it might take to check a certain number of iterations:
 ```{code-block} bash
 sqsgenerator compute estimated-time
+```
+````
+
+### `iterations`
+number of configurations to check. This parameter is ignored if `mode` was set to *systematic*
+
+- **Required:** No
+- **Default:** $10^5$ if `mode` is *random*
+- **Accepted:** a positive integer number (`int`)
+
+### `shell_distances`
+the radii of the coordination shells in Angstrom. All lattice positions will be binned into the specified coordination shells
+
+- **Required:** No
+- **Default:** automatically determined by `sqsgenerator`
+- **Accepted:** a list of positive floating point numbers (`list[float]`)
+
+````{hint}
+You can have a look at the the computed shell distances, and check if they are fine using:
+```{code-block} bash
+sqsgenerator params show input.yaml -p shell_distances
 ```
 ````
