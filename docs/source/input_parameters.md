@@ -29,7 +29,7 @@ relative tolerance for calculating the default distances of the coordination she
 ````{hint}
 Have a look on the `shell_distances` parameter, by entering:
 
-  ```bash
+  ```{code-block} bash
   sqsgenerator params show input.yaml --param shell_distances
   ```
 In case you get some distances which are really close e. g. 4.12345 and 4.12346 it is maybe a good idea to increase `rtol` and/or `atol` such that `sqsgenerator` groups them into the same coordination shell
