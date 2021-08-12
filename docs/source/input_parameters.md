@@ -61,19 +61,19 @@ The sum of the atoms distributed must **exactly** match the number of positions 
 #### Examples
 - Ternary alloy, consisting of 54 atoms ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$)
 
-    ```yaml
+    ```{code-block} yaml
     composition:
-    Ti: 18
-    Al: 18
-    Mo: 18
+      Ti: 18
+      Al: 18
+      Mo: 18
     ```
 
 - *fcc*-Aluminum cell,  64 atoms, randomly distribute  8 vacancies
 
-    ```yaml
+    ```{code-block} yaml
     composition:
-    Al: 56
-    0: 8
+      Al: 56
+      0: 8
     ```
 
 ### `composition.which`
@@ -93,7 +93,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
 #### Examples
 - Ternary alloy, 54 atoms, create ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$)
   
-    ```yaml
+    ```{code-block} yaml
     composition:
       which: all
       Ti: 18
@@ -103,7 +103,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
     
 - *rock-salt* TiN (B1),  64 atoms, randomly distribute B and N on the N sublattice $\text{Ti}_{32}(\text{B}_{16}\text{N}_{16}) = \text{Ti}(\text{B}_{0.5}\text{N}_{0.5})$
   
-    ```yaml
+    ```{code-block} yaml
     composition:
       which: N
       N: 16
@@ -112,7 +112,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
     
 - *rock-salt* TiN (B1),  64 atoms, randomly distribute Al, V and Ti on the Ti sublattice $(\text{Ti}_{16}\text{Al}_{8}\text{V}_{8})\text{N}_{32} = (\text{Ti}_{0.5}\text{Al}_{0.25}\text{V}_{0.25})\text{N}$
   
-    ```yaml
+    ```{code-block} yaml
     composition:
       which: Ti
       Ti: 16
@@ -122,7 +122,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
     
 - select all **even** sites from your structure, 16 atoms, using a index, list and distribute W, Ta and Mo on those sites
   
-    ```yaml
+    ```{code-block} yaml
     composition:
       which: [0, 2, 4, 6, 8, 10, 12, 14]
       W: 3
@@ -147,9 +147,9 @@ the structure where `sqsgenerator` will operate on. `composition.which` will sel
 
 #### Examples
 
-- directly specify CsCl (B2) structure in the input file
+- directly specify $\text{CsCl}$ (B2) structure in the input file
 
-    ```yaml
+    ```{code-block} yaml
     structure:  
       lattice:
         - [4.123, 0.0, 0.0]
@@ -166,14 +166,14 @@ the structure where `sqsgenerator` will operate on. `composition.which` will sel
     
 -  specify a file (must be readable by `ase.io.read` , fallback to `pymatgen` if `ase` is not present)
    
-    ```yaml
+    ```{code-block} yaml
     structure:
       file: cs-cl.vasp # POSCAR/CONTCAR format
     ```
     
 - specify a file and explicitly set a reader for reading the structure file
   
-    ```yaml
+    ```{code-block} yaml
     structure:
        file: cs-cl.cif
        reader: pymatgen # use pymatgen to read the CIF file
@@ -181,7 +181,7 @@ the structure where `sqsgenerator` will operate on. `composition.which` will sel
   
 - specify read a file and  pass arguments to the reading package. E. g. read las configuration from a MD-trajectory
   
-    ```yaml
+    ```{code-block} yaml
     structure:
       file: md.traj
       reader: ase
@@ -200,9 +200,9 @@ Instructs `sqsgenerator` to create a supercell of the the specified structure
 
 #### Examples
 
-- Create a $3\times3\times3$ supercell of the CsCl (B2) structure
+- Create a $3\times3\times3$ supercell of the $\text{CsCl}$ (B2) structure
 
-    ```yaml
+    ```{code-block} yaml
     structure:
       supercell: [3, 3, 3]
       lattice:
@@ -219,7 +219,7 @@ Instructs `sqsgenerator` to create a supercell of the the specified structure
 
 - Create a  $3\times3\times3$ supercell of a structure file
 
-    ```yaml
+    ```{code-block} yaml
     structure:
       supercell:
         - 3
@@ -235,11 +235,10 @@ The iteration mode specifies how new structures are generated.
 
 - *systematic* will instruct the code generate configurations in lexicographical order and to scan the **complete configurational space**. In case *systematic* is specified the `iterations` parameter will be ignored, since the number of permutations is predefined. Therefore for a system with $N$ atoms with $M$ species, will lead to
 
-  $$
-  N_{\text{iterations}} = \dfrac{N!}{\prod_m^M N_m!} \quad \text{where} \quad \sum_m^M N_m = N
-  $$
-  
-  iterations.
+$$
+N_{\text{iterations}} = \dfrac{N!}{\prod_m^M N_m!} \quad \text{where} \quad \sum_m^M N_m = N
+$$
+
 - **Required:** No
 - **Default:** *random*
 - **Accepted:** *random* or *systematic* (`str`)
@@ -275,3 +274,62 @@ You can have a look at the the computed shell distances, and check if they are f
 sqsgenerator params show input.yaml -p shell_distances
 ```
 ````
+
+### `target_objective`
+the target objective $\alpha'_{\eta\xi}$ {eq}`eqn:objective`, which the SRO parameters {eq}`eqn:wc-sro-multi` are minimzed against. It is an array of three-dimensions of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$. By passing custom values you can fine-tune the individual SRO paramters.
+
+- **Requrired**: No
+- **Default:** an array of zeros of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$
+- **Accepted:**
+  - a single scalar value. An array filled with the scalar value of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ will be created (`float`)
+  - a 2D matrix of shape $\left( N_{\text{species}}, N_{\text{species}} \right)$ the matrix will be stacked along the first dimension $N_{\text{shells}}$ times to generate the $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ array (`np.ndarray`)
+  - a 3D array of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ (`np.ndarray`)
+
+````{note}
+-  because of $\alpha'_{\eta\xi} = \alpha'_{\xi\eta}$ the `target_objective` is a **symmetric** quantity. Thus in case an  $\alpha_{\eta\xi}^{'T} \neq \alpha'_{\xi\eta}$ an `BadSettings` error is raised
+-  the atomic species specified in `strcuture` by their ordinal number in **ascending order** 
+    - In case of the $\text{CsCl}$ the actual ordering is $\text{Cl}(Z=17), \text{Cs}(Z=55)$.
+    ```{math}
+    \boldsymbol{\alpha}' = \left[
+    \begin{array}{cc}
+    \alpha_{\text{Cl-Cl}} & \alpha_{\text{Cl-Cs}} \\
+    \alpha_{\text{Cs-Cl}} & \alpha_{\text{Cs-Cs}}
+    \end{array}
+    \right]
+    ```
+    - In case of the $\text{TiAlMo}$ the actual ordering is $\text{Al}(Z=13), \text{Ti}(Z=22), \text{Mo}(Z=42)$.
+    ```{math}
+    \boldsymbol{\alpha}' = \left[
+    \begin{array}{ccc}
+    \alpha_{\text{Al-Al}} & \alpha_{\text{Al-Ti}} & \alpha_{\text{Al-Mo}} \\
+    \alpha_{\text{Ti-Al}} & \alpha_{\text{Ti-Ti}} & \alpha_{\text{Ti-Mo}} \\
+    \alpha_{\text{Mo-Al}} & \alpha_{\text{Mo-Ti}} & \alpha_{\text{Mo-Mo}} \\
+    \end{array}
+    \right]
+    ```
+````
+#### Examples
+- distribute everything randomly
+  
+  ```{code-block} yaml
+  target_objective: 0 # this is the default behaviour
+  ```
+- search for a clustered $\text{CsCl}$ structure
+
+  ```{code-block} yaml
+  target_objective: 1 # which is equivalent to 
+  target_objective:
+    - [1, 1]
+    - [1, 1]
+  ``` 
+  
+- custom settings for a ternary alloy (unknown use case :smile: )
+
+  ```{code-block} yaml
+  target_objective:
+    - [ 1, -1, 0]
+    - [-1,  1, 0]
+    - [ 0,  0, 1]
+  ``` 
+
+ 
