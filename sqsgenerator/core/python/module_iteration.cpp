@@ -5,6 +5,7 @@
 #include "types.hpp"
 #include "sqs.hpp"
 #include "data.hpp"
+#include "helpers.hpp"
 #include "iteration.hpp"
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
@@ -32,11 +33,15 @@ void init_logging() {
     }
 }
 
-SQSResultCollection pair_sqs_iteration(IterationSettingsPythonWrapper settings) {
-    auto sqs_results = sqsgenerator::do_pair_iterations(*settings.handle());
+py::tuple pair_sqs_iteration(IterationSettingsPythonWrapper settings) {
+    auto [sqs_results, thread_timings] = sqsgenerator::do_pair_iterations(*settings.handle());
     SQSResultCollection wrapped_results;
-    for (SQSResult &r : sqs_results) wrapped_results.push_back(SQSResultPythonWrapper(std::move(r)));
-    return wrapped_results;
+    for (auto &r : sqs_results) wrapped_results.push_back(SQSResultPythonWrapper(std::move(r)));
+    py::dict thread_timings_converted;
+    for (const auto &timing: thread_timings) {
+        thread_timings_converted[timing.first] = sqsgenerator::python::helpers::vector_to_list(timing.second);
+    }
+    return py::make_tuple(wrapped_results, thread_timings_converted);
 }
 
 

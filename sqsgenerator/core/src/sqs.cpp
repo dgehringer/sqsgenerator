@@ -192,7 +192,7 @@ namespace sqsgenerator {
         return vec;
     }
 
-    std::vector<SQSResult> do_pair_iterations(const IterationSettings &settings) {
+    std::tuple<std::vector<SQSResult>, timing_map_t> do_pair_iterations(const IterationSettings &settings) {
         typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point_t;
         typedef boost::circular_buffer<SQSResult> result_buffer_t;
         auto threads_per_rank {settings.threads_per_rank()};
@@ -200,11 +200,11 @@ namespace sqsgenerator {
 #if defined(USE_MPI)
         int mpi_all_gather_err, mpi_initialized, mpi_thread_level_support_provided, mpi_thread_level_support_required {MPI_THREAD_SERIALIZED};
         MPI_Initialized(&mpi_initialized);
-        if (!mpi_initialized) {
+        if (!mpi_initialized) { // Initialize MPI runtime in case we have none yet
             BOOST_LOG_TRIVIAL(info) << "do_pair_iterations:: MPI Runtime was not initialized. I'm going to do that!";
             MPI_Init_thread(nullptr, nullptr, mpi_thread_level_support_required, &mpi_thread_level_support_provided);
         }
-        else MPI_Query_thread(&mpi_thread_level_support_provided);
+        else MPI_Query_thread(&mpi_thread_level_support_provided); // Ensure that we can use the MPI runtime in the multi-threaded-section
         if (mpi_thread_level_support_provided < mpi_thread_level_support_required) throw std::runtime_error("MPI threading level support is not fulfilling the requirements. I need at least 'MPI_THREAD_SERIALIZED'");
 
         MPI_Comm_size(MPI_COMM_WORLD, &mpi_num_ranks);
@@ -220,7 +220,7 @@ namespace sqsgenerator {
         mpi_rank = 0;
         log_settings(settings);
 #endif
-        // In case a negative number is specified it should try to get as many threads as possible
+        // In case a negative number is specified we try to get as many threads as possible
         if( threads_per_rank[mpi_rank] < 0) {
             threads_per_rank[mpi_rank] = omp_get_max_threads();
             BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::num_threads_requested::default = " << threads_per_rank[mpi_rank];
@@ -230,8 +230,8 @@ namespace sqsgenerator {
         BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::num_threads_requested = " << num_threads_per_rank;
 
         double best_objective{std::numeric_limits<double>::max()};
+        timing_map_t thread_timings;
         rank_iteration_map_t iteration_ranks;
-        std::vector<long> thread_timings;
         parameter_storage_t prefactors, parameter_weights, target_objectives;
         result_buffer_t results(settings.num_output_configurations());
         std::vector<size_t> pair_list(convert_pair_list(settings.pair_list()));
@@ -245,6 +245,7 @@ namespace sqsgenerator {
         omp_set_num_threads(num_threads_per_rank);
         #pragma omp parallel default(shared) firstprivate(nspecies, nshells, reduced_size, mpi_rank, mpi_num_ranks)
         {
+            double avg_loop_time;
             double objective_local;
             uint64_t random_seed_local;
             time_point_t start_time, end_time;
@@ -256,10 +257,11 @@ namespace sqsgenerator {
 
             #pragma omp single
             {
-               bool need_redistribution_local {nthreads != threads_per_rank[mpi_rank]}, need_redistribution;
+                thread_timings.emplace(mpi_rank,  std::vector<double>(nthreads));
+                bool need_redistribution_local {nthreads != threads_per_rank[mpi_rank]}, need_redistribution;
 #if defined (USE_MPI)
                 bool need_redistribution_global;
-                bool need_redistribution_other[mpi_num_ranks];
+                bool need_redistribution_other[mpi_num_ranks]; // Check if any of the other MPI ranks got less threads than expected
                 MPI_Allgather(&need_redistribution_local, 1, MPI_CXX_BOOL, need_redistribution_other, 1, MPI_CXX_BOOL, MPI_COMM_WORLD);
                 for (int i = 0; i < mpi_num_ranks; i++) if (need_redistribution_other[i])  need_redistribution_global = need_redistribution_other[i];
                 BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::redistribution_requests = " +
@@ -270,10 +272,10 @@ namespace sqsgenerator {
 #else
                 need_redistribution = need_redistribution_local;
 #endif
-                if (need_redistribution) {
+                if (need_redistribution) { // The work has to be distributed on a different amount of total threads, than what whe expected
                     threads_per_rank[mpi_rank] = nthreads;
 #if defined(USE_MPI)
-                    int buf_threads_per_rank[mpi_num_ranks];
+                    int buf_threads_per_rank[mpi_num_ranks]; // Inform the other ranks about the number of threads available at the own rank
                     mpi_all_gather_err = MPI_Allgather(&nthreads, 1, MPI_INT, buf_threads_per_rank, 1, MPI_INT, MPI_COMM_WORLD);
                     if (mpi_all_gather_err != MPI_SUCCESS) {
                         BOOST_LOG_TRIVIAL(error) << "do_pair_iterations::rank::" << mpi_rank << ": MPI_Alltoall failed";
@@ -391,21 +393,32 @@ namespace sqsgenerator {
                 }
             } // for
             end_time = std::chrono::high_resolution_clock::now();
+            avg_loop_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count()) /(long)(end_it - start_it);
             #pragma omp critical
-            BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::avg_loop_time = " << static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count()) /(long)(end_it - start_it);
+            {
+                BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::avg_loop_time = " << avg_loop_time;
+                thread_timings[mpi_rank][thread_id] = avg_loop_time;
+            };
+
 
         } // pragma omp parallel
         std::vector<SQSResult> tmp_results, final_results;
         for (auto &r : results) tmp_results.push_back(std::move(r));
 
 #if defined (USE_MPI)
-        double buf_par[nparams], buf_obj;
+        int actual_threads_on_rank {static_cast<int>(thread_timings[mpi_rank].size())};
+        double buf_par[nparams], buf_obj, buf_timings[actual_threads_on_rank];
         species_t buf_conf[settings.num_atoms()];
-        std::vector<int> num_sqs_results;
-        if (mpi_rank == HEAD_RANK)  num_sqs_results.resize(mpi_num_ranks);
+        std::vector<int> num_sqs_results, num_actual_threads_on_rank;
+        if (mpi_rank == HEAD_RANK)  {
+            num_sqs_results.resize(mpi_num_ranks);
+            num_actual_threads_on_rank.resize(mpi_num_ranks);
+        }
         int num_results {static_cast<int>(results.size())};
 
+        // Gater the number of final configurations and the number of threads on each rank
         MPI_Gather(&num_results, 1, MPI_INT, num_sqs_results.data(), 1, MPI_INT, HEAD_RANK, MPI_COMM_WORLD);
+        MPI_Gather(&actual_threads_on_rank, 1, MPI_INT, num_actual_threads_on_rank.data(), 1, MPI_INT, HEAD_RANK, MPI_COMM_WORLD);
         if (mpi_rank == HEAD_RANK) {
             for (int other_rank = 0; other_rank < mpi_num_ranks; other_rank++) {
                 if (other_rank == HEAD_RANK) continue;
@@ -414,11 +427,17 @@ namespace sqsgenerator {
                     MPI_Status status;
                     MPI_Recv(&buf_par[0], static_cast<int>(nparams), MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
                     MPI_Recv(&buf_conf[0], static_cast<int>(settings.num_atoms()), MPI_UINT8_T, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
-                    MPI_Recv(&buf_obj,1, MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&buf_obj, 1, MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
                     BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::got_result::" << j << "::from::" << other_rank;
                     SQSResult collected(buf_obj, {-1}, configuration_t(&buf_conf[0], &buf_conf[0]+settings.num_atoms()), parameter_storage_t(&buf_par[0], &buf_par[0] + nparams));
                     tmp_results.push_back(collected);
                 }
+                // Recieve also timing information from the other ranks
+                MPI_Status status_recv_timing;
+                int threads_on_other_rank = num_actual_threads_on_rank[other_rank];
+                MPI_Recv(&buf_timings[0], threads_on_other_rank, MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status_recv_timing);
+                BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::received_thread_timings::from::" << other_rank;
+                thread_timings.emplace(other_rank, std::vector<double>(&buf_timings[0], &buf_timings[0]+threads_on_other_rank));
             }
         }
         else {
@@ -430,6 +449,9 @@ namespace sqsgenerator {
                 MPI_Send(&buf_conf[0], static_cast<int>(settings.num_atoms()), MPI_UINT8_T, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
                 MPI_Send(&buf_obj, 1, MPI_DOUBLE, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
             }
+            // Send thread timing information over to head rank
+            std::copy(thread_timings[mpi_rank].begin(), thread_timings[mpi_rank].end(), buf_timings);
+            MPI_Send(&buf_timings[0], actual_threads_on_rank, MPI_DOUBLE, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
         }
         if (!mpi_initialized) MPI_Finalize();
 #endif
@@ -448,6 +470,6 @@ namespace sqsgenerator {
             else final_results.push_back(std::move(r));
         }
         BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::num_results = " << final_results.size();
-        return final_results;
+        return std::make_tuple(final_results, thread_timings);
     }
 }

@@ -18,6 +18,7 @@ namespace sqsgenerator {
     typedef uint8_t species_t;
     typedef int shell_t;
     typedef boost::multiprecision::cpp_int rank_t;
+    typedef std::map<int, std::vector<double>> timing_map_t;
     typedef boost::multi_array<shell_t, 2> pair_shell_matrix_t;
     typedef boost::const_multi_array_ref<shell_t, 2> const_pair_shell_matrix_ref_t;
     typedef boost::multi_array_ref<shell_t, 2> pair_shell_matrix_ref_t;
