@@ -7,7 +7,7 @@
 
 $$
 \alpha_{AB} = 1 - \dfrac{N_{AB}}{NMx_Ax_B}
-$$
+$$ (eqn:wc-sro)
 
 Where $N_{AB}$ the number of $A-B$ bonds, $N$  the number of atoms in the cell, $x_A$ ($x_B$) the mole fraction of $A$ ($B$) and $M$ the number of neighbors on the lattice (e. g $M^{fcc}=12$). Thus it compares the number of $A-B$ bonds in a given (numerator) configuration with that of statistical ideal solid solution (denominator). Thus the following cases can occur
 
@@ -23,7 +23,7 @@ Yes it actually can! Indeed on a *fcc* lattice each atom exhibits $M^{fcc}_1=12$
 
 $$
 \alpha^k_{AB} = 1 - \dfrac{N_{AB}^k}{NM^kx_Ax_B}.
-$$
+$$ (eqn:wc-sro-shells)
 
 ### But what about optimizing multi-component alloys?
 
@@ -31,7 +31,7 @@ Similarly the generalization to multi-component systems is a straight as for the
 
 $$
 \alpha^i_{\xi\eta} = 1 - \dfrac{N^i_{\xi\eta}}{NM^ix_{\xi}x_{\eta}}
-$$
+$$ (eqn:wc-sro-multi)
 
 where again $M^{i}$ is the number of sites in the $i$-th coordination shell, $x_\xi$ and $x_\eta$ are the mole-fraction of the corresponding species and $N^i_{\xi\eta}$ the number of $\xi-\eta$ "*bonds*"/pairs in the coordination shell.
 
@@ -41,17 +41,20 @@ This is a quite large number of parameters to optimize. In order to squeeze thos
 
 $$
 \mathcal{O}(\sigma) = \sum_{k}w^i\sum_{\xi,\eta}\left|\alpha'_{\xi\eta}-\alpha^i_{\xi\eta}\right|
-$$
+$$ (eqn:objective)
 
 where $w^i$ are the coordination shell weighting factor, to take into account the decreasing influence of shells which are farther away.  $\alpha'_{\xi\eta}$ are the "*target objective*" parameters. Those can be used to optimize pairs between different species differently.
 
 The `sqsgenerator` tries different atomic configurations $\sigma$ by "*randomly shuffling*" or "*systematically*" (in lexicographical order) to filter out those configuration which **minimize** $\mathcal{O}(\sigma)$.
 
 
+```{note}
+The mapping of an atomic configuration $\sigma$ on a scalar values via $\mathcal{O}(\sigma)$ is non-injective, thus you might end up with quite a lot of configurations, which are "*equal*" in the here presented formalism.
+```
 
-**Note:** The mapping of an atomic configuration $\sigma$ on a scalar values via $\mathcal{O}(\sigma)$ is non-injective, thus you might end up with quite a lot of configurations, which are "*equal*" in the here presented formalism.​
-
-**Note:** In the technical part of the documentation we refer to $w^i$​ as the `shell_weights` and to  $\alpha'_{\xi\eta}$  as the `target_objective`.
+```{note}
+In the technical part of the documentation we refer to $w^i$ as the `shell_weights` and to  $\alpha'_{\xi\eta}$  as the `target_objective`.
+```
 
 ## Triplet-based Short-Range-Order
 
@@ -70,11 +73,10 @@ It follows that the number of triplets that can be formed $T^{\left\{i,j,k\right
 
 $$
 T^{\left\{i,j,k\right\}} = \left|\left\{ (\xi,\eta,\zeta) | (c_{\xi\eta}, c_{\eta\zeta},c_{\xi\zeta}) \in \left\{i,j,k\right\} \right\} \right|_{\forall \xi,\eta,\zeta \in \widetilde{M}}
-$$
+$$ (eqn:triplet-number)
 
 The number of all triplets are computed from the input structure before the iteration itself starts.
-
 $$
 \beta^{ijk}_{\xi\eta\zeta} = 1 - \dfrac{N^{ijk}_{\xi\eta\zeta}}{\frac{1}{|\{i,j,k\}|}NT^{\left\{i,j,k\right\}}x_\xi x_\eta x_\zeta}
-$$
+$$ (eqn:triplet-sro)
 
