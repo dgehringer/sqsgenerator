@@ -2,7 +2,7 @@ import logging
 import typing as T
 from sqsgenerator.core.data import Structure, available_species
 from sqsgenerator.core.iteration import IterationMode, IterationSettings, __version__, __features__, BoostLogLevel, set_log_level
-from sqsgenerator.core.utils import default_shell_distances
+from sqsgenerator.core.utils import default_shell_distances, total_permutations, rank_structure
 
 TRACE = 5
 logging.addLevelName(TRACE, 'TRACE')
@@ -17,6 +17,7 @@ def set_core_log_level(level: int = logging.WARNING) -> T.NoReturn:
         logging.ERROR: BoostLogLevel.error
     }
     set_log_level(level_map.get(level))
+
 
 class BadSettings(Exception):
     pass
