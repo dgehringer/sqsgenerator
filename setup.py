@@ -70,12 +70,17 @@ class cmake_build_ext(build_ext):
                 # Hint CMake to use the same Python executable that
                 # is launching the build, prevents possible mismatching if
                 # multiple versions of Python are installed
-                # '-DPython3_EXECUTABLE={}'.format(sys.executable),
+                '-DPython3_EXECUTABLE={}'.format(sys.executable),
                 # Add other project-specific CMake arguments if needed
                 # ...
                 f'-DUSE_MPI={"ON" if self.with_mpi else "OFF"}',
                 '-DCMAKE_CXX_FLAGS_{}={}'.format(cfg.upper(), ' '.join(opt_flags.get(cfg, {}).get(self.compiler.compiler_type, [])) )
             ]
+
+            # we allow to overlead cmake compiler options
+            for env_var_name, env_var_value in os.environ.items():
+                if env_var_name.startswith('CMAKE'):
+                    cmake_args.append(f'-D{env_var_name}={env_var_value}')
 
             # We can handle some platform-specific settings at our discretion
             if platform.system() == 'Windows':
