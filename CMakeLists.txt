@@ -77,7 +77,8 @@ endif()
 include_directories(sqsgenerator/core/include)
 include_directories(${Boost_INCLUDE_DIRS})
 
-add_subdirectory(test)
+# remove tests for the moment
+# add_subdirectory(test)
 add_subdirectory(sqsgenerator/core/python)
 
 if (MPI_FOUND)
