@@ -10,6 +10,7 @@ Welcome to sqsgenerator's documentation!
    :maxdepth: 1
    :caption: Contents:
 
+   installation_guide
    input_parameters
    what_is_actually_computed
 
