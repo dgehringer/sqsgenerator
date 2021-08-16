@@ -1,4 +1,5 @@
 import io
+import sys
 import click
 import attrdict
 import typing as T
@@ -41,14 +42,18 @@ def error(message, exc_type=click.Abort, raise_exc=True, style=None):
     if raise_exc: raise exc_type(message)
 
 
-def pretty_print(*objects, **kwargs):
+def pretty_print(*objects, show=True, stream=sys.stdout, paginate=False, **kwargs):
     buf = io.StringIO()
     if have_feature(F.rich):
-        get_module(F.rich).print(*objects, **kwargs)
+        console = get_module(F.rich).get_console()
+        with console.capture() as capture:
+            console.print(*objects, **kwargs)
+        buf.write(capture.get())
     else:
         from pprint import pprint
         for o in objects: pprint(o, stream=buf, **kwargs)
-    return buf.getvalue()
+    printer = functools.partial(click.echo, file=stream, nl=False) if not paginate else click.echo_via_pager
+    return printer(buf.getvalue()) if show else buf.getvalue()
 
 
 @require(F.json, F.yaml, F.pickle, condition=any)
