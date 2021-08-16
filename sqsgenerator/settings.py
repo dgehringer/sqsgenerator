@@ -198,7 +198,6 @@ def process_settings(settings: attrdict.AttrDict, params: T.Optional[T.Set[str]]
             # we can only skip this parameter if None of the other parameters dpends on param
             if parameter_index(param) > parameter_index(last_needed_parameter): continue
         settings[param] = processor(settings)
-        print("PROCESSING: PARAM: ", param)
     return settings
 
 
