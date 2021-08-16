@@ -40,10 +40,11 @@ where again $M^{i}$ is the number of sites in the $i$-th coordination shell, $x_
 This is a quite large number of parameters to optimize. In order to squeeze those together we produce a single scalar value by simply summing over those parameters. Therefore we define our "*objective-function*" as for a certain atomic configuration $\sigma$ as,
 
 $$
-\mathcal{O}(\sigma) = \sum_{k}w^i\sum_{\xi,\eta}\left|\alpha'_{\xi\eta}-\alpha^i_{\xi\eta}\right|
+\mathcal{O}(\sigma) = \sum_{k}w^i\sum_{\xi,\eta} \left| \alpha'_{\xi\eta}-p_{\xi\eta}\alpha^i_{\xi\eta} \right|
 $$ (eqn:objective)
 
 where $w^i$ are the coordination shell weighting factor, to take into account the decreasing influence of shells which are farther away.  $\alpha'_{\xi\eta}$ are the "*target objective*" parameters. Those can be used to optimize pairs between different species differently.
+$p_{\xi\eta}$ are *pair weights* and allows the user to weight pair types differently.
 
 The `sqsgenerator` tries different atomic configurations $\sigma$ by "*randomly shuffling*" or "*systematically*" (in lexicographical order) to filter out those configuration which **minimize** $\mathcal{O}(\sigma)$.
 

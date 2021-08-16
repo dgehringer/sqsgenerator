@@ -275,11 +275,57 @@ sqsgenerator params show input.yaml -p shell_distances
 ```
 ````
 
+### `shell_weights`
+accounts for the fact that coodination shells which are farther away are less important. This parameter also determines 
+**which** shells should be taken into account. It corresponds to $w^i$ {eq}`eqn:objective` in the objective function eq}`eqn:objective`.
+
+- **Required**: No
+- **Default**: $\frac{1}{i}$ where $i$ is the index of the coordination shell. Automatically determined by `sqsgenerator`
+- **Accepted:** a dictionary where keys are the shell indices and the values $w^i$ parameters (`dict[int, float]`)
+
+````{note}
+- If nothing is specified **all available** coordination shells are used
+- You can improve the performace of `sqsgenerator` by neglecting some coordination shells
+- If you specify a shell index which does not exist a `BadSettings` error will be raised
+- If a shell index is missing the coordination shell is not taken into accoutn for the optimization
+- You can have a look on the generated weights by checking
+```{code-block} bash
+sqsgenerator params show input.yaml -p shell_weights
+```
+````
+
+#### Examples
+To consider all coordination shells, simply do not specify any value
+
+- Only use the first coordination shell
+  
+  ```{code-block} yaml
+  shell_weights:
+    1: 1.0
+  ```
+
+- Use first and second coodination shell
+  
+  ```{code-block} yaml
+  shell_weights:
+    1: 1.0 # this are the default values anyway
+    2: 0.5
+  ```
+  
+### `pair_weights`
+thr "*pair weights*" $p_{\xi\eta}$  {eq}`eqn:objective` used to differentiate bonds between atomic species.
+Note that `sqsgenerator` sorts the atomic species interally in ascending order by their ordinal number.
+Please refer to the `target_objective` parameter documentation for further details regarding the interal reordering.
+
+- **Required:** No
+- **Default:** an array of **ones** of shape $\left(N_{\text{species}}, N_{\text{species}} \right)$
+- **Accepted:**  a 2D matrix of shape $\left( N_{\text{species}}, N_{\text{species}} \right)$ (`np.ndarray`)
+
 ### `target_objective`
 the target objective $\alpha'_{\eta\xi}$ {eq}`eqn:objective`, which the SRO parameters {eq}`eqn:wc-sro-multi` are minimzed against. It is an array of three-dimensions of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$. By passing custom values you can fine-tune the individual SRO paramters.
 
-- **Requrired**: No
-- **Default:** an array of zeros of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$
+- **Requrired:** No
+- **Default:** an array of **zeros** of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$
 - **Accepted:**
   - a single scalar value. An array filled with the scalar value of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ will be created (`float`)
   - a 2D matrix of shape $\left( N_{\text{species}}, N_{\text{species}} \right)$ the matrix will be stacked along the first dimension $N_{\text{shells}}$ times to generate the $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ array (`np.ndarray`)
@@ -308,6 +354,7 @@ the target objective $\alpha'_{\eta\xi}$ {eq}`eqn:objective`, which the SRO para
     \right]
     ```
 ````
+
 #### Examples
 - distribute everything randomly
   
