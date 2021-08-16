@@ -14,7 +14,7 @@ structure:
   species:
     - Cs
     - Cl
-mode: random
+mode: systematic
 iterations: 1e6
 composition:
   which: Cs
