@@ -62,7 +62,7 @@ def format_seconds(seconds: float) -> str:
 @click.command('estimated-time')
 @click.option('--verbose', '-v', is_flag=True, default=False)
 @click_settings_file('all')
-def estimate_time(settings, verbose):
+def estimate_time( settings, verbose):
     have_random_mode = settings.mode == IterationMode.random
     num_iterations = settings.iterations if have_random_mode else total_permutations_(settings.structure)
     num_test_iterations = 100000
@@ -88,6 +88,8 @@ def estimate_time(settings, verbose):
         pretty_print(f'On average it takes me {average_thread_time / num_threads:.3f} µs to analyze one configuration ({average_thread_time:.3f} µs per thread)')
         pretty_print(f'This is a throughput of {1e6 / (average_thread_time / num_threads):.0f} configurations/s ({1e6 / average_thread_time:.0f} configurations/s per thread)')
         pretty_print(f'The initialization/finalization overhead was {overhead:.2f} seconds')
+
+    return estimated_seconds
 
 compute.add_command(rank_structure, 'rank')
 compute.add_command(shell_distances, 'shell-distances')
