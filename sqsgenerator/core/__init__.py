@@ -4,6 +4,18 @@ from sqsgenerator.core.data import Structure, available_species
 from sqsgenerator.core.iteration import IterationMode, IterationSettings, __version__, __features__, BoostLogLevel, set_log_level, pair_sqs_iteration
 from sqsgenerator.core.utils import default_shell_distances, total_permutations, rank_structure
 
+__all__ = [
+    'Structure',
+    'available_species',
+    'IterationMode',
+    'IterationSettings',
+    'set_core_log_level',
+    'pair_sqs_iteration',
+    'total_permutations',
+    'rank_structure'
+    'default_shell_distances'
+]
+
 TRACE = 5
 logging.addLevelName(TRACE, 'TRACE')
 
@@ -20,7 +32,11 @@ def set_core_log_level(level: int = logging.WARNING) -> T.NoReturn:
 
 
 class BadSettings(Exception):
-    pass
+
+    def __init__(self, message, parameter=None):
+        super(BadSettings, self).__init__(message)
+        self.message = message
+        self.parameter = parameter
 
 
 def get_function_logger(f: T.Callable) -> logging.Logger:

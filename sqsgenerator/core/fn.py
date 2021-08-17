@@ -95,22 +95,29 @@ def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, require
         def _wrapped(settings: attrdict.AttrDict):
             is_required = get_required(settings)
             k = get_key(settings)
+            nonlocal name
             if k not in settings:
-                nonlocal name
                 if is_required:
                     if not have_default:
-                        raise BadSettings(f'Required parameter "{name}" was not found')
+                        raise BadSettings(f'Required parameter "{name}" was not found', parameter=name)
                     else:
+                        # a default is needed but found
                         df = get_default(settings)
                         get_function_logger(f).info(f'Parameter "{name}" was not found defaulting to: "{df}"')
                         return df
-            else: return f(settings)
+            else:
+                # we catch the exception here and raise it again, to inject the parameter information automatically
+                try: processed_value = f(settings)
+                except BadSettings as exc:
+                    exc.parameter = name # set the parameter info and forward the exception
+                    raise
+                else: return processed_value
 
+        # register the parameters at the parameter_registry
         if registry is not None: registry[name] = _wrapped
         return _wrapped
 
     return _decorator
-
 
 
 # Haskell inspired fst and snd function
