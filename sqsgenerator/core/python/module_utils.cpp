@@ -76,6 +76,22 @@ py::list default_shell_distances(StructurePythonWrapper &s, double atol=1e-5, do
     return helpers::vector_to_list(sqsgenerator::utils::default_shell_distances(s.handle()->distance_matrix(), atol, rtol));
 }
 
+py::list atoms_from_numbers(const py::object &iterable) {
+    auto numbers = helpers::list_to_vector<species_t>(iterable);
+    std::vector<atomistics::Atom> atoms = atomistics::Atoms::from_z(numbers);
+    return helpers::vector_to_list(atoms);
+}
+
+py::list atoms_from_symbols(const py::object &iterable) {
+    auto symbols = helpers::list_to_vector<std::string>(iterable);
+    std::vector<atomistics::Atom> atoms = atomistics::Atoms::from_symbol(symbols);
+    return helpers::vector_to_list(atoms);
+}
+
+py::list available_species() {
+    return helpers::vector_to_list(atomistics::Atoms::all_elements());
+}
+
 
 BOOST_PYTHON_MODULE(utils) {
     Py_Initialize();
@@ -89,6 +105,11 @@ BOOST_PYTHON_MODULE(utils) {
     py::def("make_rank", &make_rank_structure);
 
     py::def("default_shell_distances", &default_shell_distances);
+
+    py::def("atoms_from_numbers", atoms_from_numbers);
+    py::def("atoms_from_symbols", atoms_from_symbols);
+
+    py::def("available_species", &available_species);
 
     py::scope().attr("__version__") = py::make_tuple(VERSION_MAJOR, VERSION_MINOR, GIT_COMMIT_HASH, GIT_BRANCH);
 }
