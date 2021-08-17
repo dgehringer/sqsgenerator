@@ -379,4 +379,15 @@ the target objective $\alpha'_{\eta\xi}$ {eq}`eqn:objective`, which the SRO para
     - [ 0,  0, 1]
   ``` 
 
- 
+ ### `threads_per_rank`
+
+number of threads should be used on each rank. The value(s) is (are) passed on to `omp_set_num_threads`. 
+If the version of `sqsgenerator` **is not capable**  MPI parallelism, a single value is needed.
+If `sqsgenerator` was called within a MPI runtime, a entry must be present for each rank. 
+In case OpenMP schedules a different number of threads, than specified in `threads_per_rank`the workload will 
+be redistributed automatically. Negative values represent a call to `omp_get_max_num_threads` (as many threads as 
+possible). Further reading can be found in the [parallelization guide]().
+
+- **Required:** No
+- **Default:** `[-1]` if there is no MPI support. Otherwise `[-1]*N` where `N` is the number of MPI ranks
+- **Accepts:** a list of integers number (`list[int]`)
