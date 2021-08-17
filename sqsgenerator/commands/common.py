@@ -41,7 +41,7 @@ def pretty_print(*objects, show=True, paginate='auto', **kwargs):
     if have_feature(F.rich):
         console = get_module(F.rich).get_console()
         with console.capture() as capture:
-            console.print(*objects, **kwargs, end='')
+            console.print(*objects, **kwargs)
         buf.write(capture.get())
         console_height = console.height
     else:

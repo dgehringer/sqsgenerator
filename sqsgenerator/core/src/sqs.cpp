@@ -400,7 +400,6 @@ namespace sqsgenerator {
                 thread_timings[mpi_rank][thread_id] = avg_loop_time;
             };
 
-
         } // pragma omp parallel
         std::vector<SQSResult> tmp_results, final_results;
         for (auto &r : results) tmp_results.push_back(std::move(r));
