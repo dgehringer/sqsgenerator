@@ -4,10 +4,13 @@ import attrdict
 import numpy as np
 import collections
 import typing as T
+from operator import attrgetter as attr, itemgetter as item, methodcaller as method
+from functools import partial
 from itertools import repeat, chain
-from sqsgenerator.core import IterationMode, default_shell_distances, BadSettings, available_species, IterationSettings
-from sqsgenerator.core.fn import parameter as parameter_, partial, if_, item, attr, identity, method, isa
-from sqsgenerator.structure import Structure, make_supercell, from_ase_atoms, from_pymatgen_structure, num_species, read_structure_from_file, structure_to_dict
+from .exceptions import BadSettings
+from .functional import parameter as parameter_, if_, isa, identity
+from sqsgenerator.core import IterationMode, default_shell_distances, available_species, IterationSettings, Structure, structure_to_dict, make_supercell
+from sqsgenerator.settings.structure import from_ase_atoms, from_pymatgen_structure, num_species, read_structure_from_file
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature
 
 
@@ -237,48 +240,6 @@ def process_settings(settings: attrdict.AttrDict, params: T.Optional[T.Set[str]]
             if parameter_index(param) > parameter_index(last_needed_parameter): continue
         settings[param] = processor(settings)
     return settings
-
-
-def settings_to_dict(settings: attrdict.AttrDict) -> T.Dict[str, T.Any]:
-    converters = {
-        int: identity,
-        float: identity,
-        str: identity,
-        bool: identity,
-        Structure: structure_to_dict,
-        IterationMode: str,
-        np.ndarray: method('tolist')
-    }
-
-    def _generic_to_dict(d):
-        td = type(d)
-        if isinstance(d, (tuple, list, set)):
-            return td(map(_generic_to_dict, d))
-        elif isinstance(d, dict):
-            return dict( { k: _generic_to_dict(v) for k, v in d.items() } )
-        elif td in converters:
-            return converters[td](d)
-        else: raise TypeError(f'No converter specified for type "{td}"')
-
-    out = _generic_to_dict(settings)
-    return out
-
-
-def construct_settings(settings: attrdict.AttrDict, process=True) -> IterationSettings:
-    settings = process_settings(settings) if process else settings
-    return IterationSettings(
-        settings.structure,
-        settings.target_objective,
-        settings.pair_weights,
-        dict(settings.shell_weights),
-        settings.iterations,
-        settings.max_output_configurations,
-        list(settings.shell_distances),
-        list(settings.threads_per_rank),
-        settings.atol,
-        settings.rtol,
-        settings.mode
-    )
 
 
 def parameter_list() -> T.List[str]:
