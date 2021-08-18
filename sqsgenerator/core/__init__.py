@@ -3,26 +3,42 @@ import operator
 import functools
 import frozendict
 import typing as T
-from .structure import Structure, structure_to_dict, Atom, make_supercell
+
+
 from .iteration import __version__, __features__
 from .iteration import set_log_level, pair_sqs_iteration
 from .iteration import IterationMode, IterationSettings, BoostLogLevel
+
+from .structure import Structure, structure_to_dict, Atom, make_supercell
+
+from .data import SQSResult
+
 from .utils import default_shell_distances, total_permutations, rank_structure, atoms_from_numbers, \
-    atoms_from_symbols, available_species
+    atoms_from_symbols, available_species, symbols_from_z
 
 __all__ = [
     '__version__',
     '__features__',
-    'Structure',
-    'available_species',
+    'set_log_level',
+    'pair_sqs_iteration',
     'IterationMode',
     'IterationSettings',
-    'set_core_log_level',
-    'pair_sqs_iteration',
-    'total_permutations',
-    'rank_structure'
+    'BoostLogLevel',
+
+    'Structure',
+    'structure_to_dict',
+    'Atom'
+    'make_supercell',
+
+    'SQSResult',
+
     'default_shell_distances',
-    'get_function_logger',
+    'total_permutations',
+    'rank_structure',
+    'atoms_from_numbers',
+    'atoms_from_symbols',
+    'available_species',
+    'symbols_from_z'
 ]
 
 attr = operator.attrgetter

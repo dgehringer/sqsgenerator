@@ -88,6 +88,12 @@ py::list atoms_from_symbols(const py::object &iterable) {
     return helpers::vector_to_list(atoms);
 }
 
+py::list symbols_from_z(const py::object &iterable) {
+    auto numbers = helpers::list_to_vector<species_t>(iterable);
+    std::vector<std::string> symbols = atomistics::Atoms::z_to_symbol(numbers);
+    return helpers::vector_to_list(symbols);
+}
+
 py::list available_species() {
     return helpers::vector_to_list(atomistics::Atoms::all_elements());
 }
@@ -106,8 +112,10 @@ BOOST_PYTHON_MODULE(utils) {
 
     py::def("default_shell_distances", &default_shell_distances);
 
-    py::def("atoms_from_numbers", atoms_from_numbers);
-    py::def("atoms_from_symbols", atoms_from_symbols);
+    py::def("atoms_from_numbers", &atoms_from_numbers);
+    py::def("atoms_from_symbols", &atoms_from_symbols);
+
+    py::def("symbols_from_z", &symbols_from_z);
 
     py::def("available_species", &available_species);
 

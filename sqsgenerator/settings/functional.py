@@ -69,7 +69,7 @@ def try_(f: T.Callable, *args, exc_type: T.Type = Exception, raise_exc: bool=Tru
     return (success, result) if return_success else result
 
 
-def isa(o: T.Tuple[type]) :
+def isa(o: T.Tuple[type]):
     """
     Constructs a type-checking predicate. Represents isinstance(x, o)
     :param o: the types to checked
@@ -81,4 +81,4 @@ def isa(o: T.Tuple[type]) :
 
 
 def identity():
-    return lambda *_: _
+    return lambda _: _

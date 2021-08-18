@@ -10,7 +10,7 @@ from itertools import repeat, chain
 from .exceptions import BadSettings
 from .functional import parameter as parameter_, if_, isa, identity
 from sqsgenerator.core import IterationMode, default_shell_distances, available_species, IterationSettings, Structure, structure_to_dict, make_supercell
-from sqsgenerator.settings.structure import from_ase_atoms, from_pymatgen_structure, num_species, read_structure_from_file
+from sqsgenerator.settings.adapters import from_ase_atoms, from_pymatgen_structure, num_species, read_structure_from_file
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature
 
 
@@ -53,6 +53,23 @@ def read_atol(settings : attrdict.AttrDict):
     return settings.rtol
 
 
+@parameter('mode', default=IterationMode.random, required=True)
+def read_mode(settings: attrdict.AttrDict):
+    if settings.mode not in IterationMode.names:
+        raise BadSettings(f'Unknown iteration mode "{settings.mode}". Available iteration modes are {list(IterationMode.names.keys())}')
+    return IterationMode.names[settings.mode]
+
+
+@parameter('iterations', default=if_(random_mode)(1e5)(-1), required=if_(random_mode)(True)(False))
+def read_iterations(settings: attrdict.AttrDict):
+    return int(float(settings.iterations))
+
+
+@parameter('max_output_configurations', default=10)
+def read_max_output_configurations(settings : attrdict.AttrDict):
+    return settings.max_output_configurations
+
+
 @parameter('composition', required=True)
 def read_composition(settings: attrdict.AttrDict):
     structure = read_structure(settings)
@@ -91,19 +108,22 @@ def read_composition(settings: attrdict.AttrDict):
     if num_distributed_atoms != num_atoms_on_sublattice: raise BadSettings(f'The sublattice has {num_atoms_on_sublattice} but you tried to distribute {num_distributed_atoms} atoms')
 
     is_sublattice = tuple(range(structure.num_atoms)) != which
+    species = list(chain(*(repeat(*c) for c in actual_composition())))
+
     if is_sublattice:
         settings['sublattice'] = dict(
             structure=structure,
             which=which
         )
         sublattice_structure = structure[which]
-        species = list(chain(*(repeat(*c) for c in actual_composition())))
         settings['structure'] = Structure(sublattice_structure.lattice, sublattice_structure.frac_coords, species)
+    else:
+        settings['structure'] = Structure(structure.lattice, structure.frac_coords, species)
 
     settings['is_sublattice'] = is_sublattice
     return settings.composition
 
-
+count = 0
 @parameter('structure')
 def read_structure(settings : attrdict.AttrDict) -> Structure:
     needed_fields = {'lattice', 'coords', 'species'}
@@ -133,24 +153,8 @@ def read_structure(settings : attrdict.AttrDict) -> Structure:
         if len(sizes) != 3: raise BadSettings('To create a supercell you need to specify three lengths')
         structure = make_supercell(structure, *sizes)
         del settings.structure['supercell']
+
     return structure
-
-
-@parameter('mode', default=IterationMode.random, required=True)
-def read_mode(settings: attrdict.AttrDict):
-    if settings.mode not in IterationMode.names:
-        raise BadSettings(f'Unknown iteration mode "{settings.mode}". Available iteration modes are {list(IterationMode.names.keys())}')
-    return IterationMode.names[settings.mode]
-
-
-@parameter('iterations', default=if_(random_mode)(1e5)(-1), required=if_(random_mode)(True)(False))
-def read_iterations(settings: attrdict.AttrDict):
-    return int(float(settings.iterations))
-
-
-@parameter('max_output_configurations', default=10)
-def read_max_output_configurations(settings : attrdict.AttrDict):
-    return settings.max_output_configurations
 
 
 @parameter('shell_distances', default=lambda s: default_shell_distances(s.structure, s.atol, s.rtol), required=True)

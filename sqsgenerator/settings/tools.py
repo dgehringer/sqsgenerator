@@ -10,10 +10,10 @@ from sqsgenerator.core import Structure, structure_to_dict, IterationMode, Itera
 
 def settings_to_dict(settings: attrdict.AttrDict) -> T.Dict[str, T.Any]:
     converters = {
-        int: identity,
-        float: identity,
-        str: identity,
-        bool: identity,
+        int: identity(),
+        float: identity(),
+        str: identity(),
+        bool: identity(),
         Structure: structure_to_dict,
         IterationMode: str,
         np.ndarray: method('tolist')

@@ -46,7 +46,7 @@ def _is_feature_available(feature: Feature):
 
 def _check_features():
     global __features
-    if  __features is None:
+    if __features is None:
         self_module = __import__(__name__)
         __features = frozendict.frozendict(map(lambda f: (f.value, _is_feature_available(f)), Feature))
         for feat in Feature:
@@ -68,10 +68,10 @@ def require(*features: Feature, condition=all):
         assert is_initialized()
 
         @functools.wraps(f)
-        def _wrapped(*args, **kwargs):
+        def _wrapper(*args, **kwargs):
             if not condition(map(have_feature, features)): raise FeatureNotAvailableException(features)
             return f(*args, **kwargs)
-        return _wrapped
+        return _wrapper
 
     return _decorator
 

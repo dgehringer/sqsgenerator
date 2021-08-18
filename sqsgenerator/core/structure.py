@@ -58,11 +58,6 @@ class Structure(Structure_):
         else: raise TypeError(f'Structure indices must not be of type {type(item)}')
         return Structure(self.lattice, self.frac_coords[indices], self.symbols[indices])
 
-    def __setitem__(self, item, value):
-        accepted_types = (str, int, Atom)
-        if isinstance(item, numbers.Integral):
-            if item < -self.num_atoms or item >= self.num_atoms: raise IndexError('Index out of range.')
-
     def to_dict(self):
         return structure_to_dict(self)
 
@@ -72,25 +67,30 @@ def symbols(structure: Structure):
 
 
 def structure_to_dict(structure: Structure):
-    return dict(lattice=structure.lattice.tolist(), coords=structure.frac_coords.tolist(), species=symbols(structure))
+    return dict(lattice=structure.lattice.tolist(), coords=structure.frac_coords.tolist(), species=structure.symbols.tolist())
 
 
 def make_supercell(structure: Structure, sa: int = 1, sb: int = 1, sc : int = 1):
     sizes = (sa, sb, sc)
     num_cells = np.prod(sizes)
-    scale = np.reciprocal(np.array(sizes).astype(float))
-    scaled_coords = np.vstack([scale]*structure.num_atoms) * structure.frac_coords
-    num_atoms_supercell = num_cells * structure.num_atoms
-    lattice_supercell = structure.lattice * np.diag(sizes)
-    species_supercell = list(map(attr('symbol'), structure.species)) * num_cells
+    num_atoms_supercell = structure.num_atoms * num_cells
+    scale = np.diag(sizes).astype(float)
+    iscale = np.linalg.inv(scale)
+    supercell_lattice = scale @ structure.lattice
 
-    frac_coords_supercell = []
-    for ta, tb, tc in itertools.product(*map(range, sizes)):
-        t = np.vstack([np.array([ta, tb, tc]*scale)]*structure.num_atoms)
-        frac_coords_supercell.append(scaled_coords + t)
-    frac_coords_supercell = np.vstack(frac_coords_supercell)
+    scaled_fc = structure.frac_coords @ iscale.T
 
-    assert frac_coords_supercell.shape == (num_atoms_supercell, 3)
-    assert len(species_supercell) == num_atoms_supercell
-    structure_supercell = Structure(lattice_supercell, frac_coords_supercell, species_supercell, (True, True, True))
+    def make_translation_vector(a, b, c):
+        return np.tile(np.array([a, b, c]) @ iscale, [structure.num_atoms, 1])
+
+    supercell_coords = np.vstack([
+        scaled_fc + make_translation_vector(*shift)
+        for shift in itertools.product(*map(range, sizes))
+    ])
+
+    supercell_species = np.tile(structure.symbols, num_cells).tolist()
+
+    assert supercell_coords.shape == (num_atoms_supercell, 3)
+    assert len(supercell_species) == num_atoms_supercell
+    structure_supercell = Structure(supercell_lattice, supercell_coords, supercell_species, (True, True, True))
     return structure_supercell

@@ -10,9 +10,9 @@ from sqsgenerator.commands.common import click_settings_file, pretty_print
 
 
 @click.command('total-permutations')
-@click_settings_file({'structure'})
+@click_settings_file({'structure', 'mode', 'iterations'})
 def total_permutations(settings):
-    permutations = total_permutations_(settings.structure)
+    permutations = total_permutations_(settings.structure) if settings.mode == IterationMode.systematic else settings.iterations
     pretty_print(permutations)
     return permutations
 
