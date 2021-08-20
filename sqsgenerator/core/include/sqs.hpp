@@ -20,5 +20,6 @@ using namespace sqsgenerator::utils::atomistics;
 namespace sqsgenerator {
 
     std::tuple<std::vector<SQSResult>, timing_map_t> do_pair_iterations(const IterationSettings &settings);
+    SQSResult do_pair_analysis(const IterationSettings &settings);
 }
 #endif //SQSGENERATOR_SQS_HPP

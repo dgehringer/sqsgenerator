@@ -44,6 +44,9 @@ py::tuple pair_sqs_iteration(IterationSettingsPythonWrapper settings) {
     return py::make_tuple(wrapped_results, thread_timings_converted);
 }
 
+SQSResultPythonWrapper pair_analysis(IterationSettingsPythonWrapper settings) {
+    return SQSResultPythonWrapper(std::move(sqsgenerator::do_pair_analysis(*settings.handle())));
+}
 
 void set_log_level(boost::log::trivial::severity_level log_level = boost::log::trivial::info) {
     logging::core::get()->set_filter(logging::trivial::severity >= log_level);
@@ -88,6 +91,7 @@ BOOST_PYTHON_MODULE(iteration) {
 
         py::def("set_log_level", &set_log_level);
         py::def("pair_sqs_iteration", &pair_sqs_iteration);
+        py::def("pair_analysis", &pair_analysis);
 
         py::list features;
 #ifdef _OPENMP

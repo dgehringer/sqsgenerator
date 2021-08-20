@@ -27,17 +27,17 @@ namespace sqsgenerator {
         return message.str();
     }
 
-    void log_settings(const IterationSettings &settings) {
+    void log_settings(const std::string &function_name, const IterationSettings &settings) {
         std::string mode = ((settings.mode() == random) ? "random" : "systematic");
-        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::mode = "  + mode;
-        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_atoms = " << settings.num_atoms();
-        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_species = " << settings.num_species();
-        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::settings::num_shells = " << settings.num_shells();
+        BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::mode = "  + mode;
+        BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::num_atoms = " << settings.num_atoms();
+        BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::num_species = " << settings.num_species();
+        BOOST_LOG_TRIVIAL(info) << function_name << "::settings::num_shells = " << settings.num_shells();
         auto [shells, weights] = settings.shell_indices_and_weights();
-        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::settings::shell_weights = " + format_dict(shells, weights);
-        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::settings::num_iterations = " << settings.num_iterations();
-        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_output_configurations = " << settings.num_output_configurations();
-        BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::settings::num_pairs = " << settings.pair_list().size();
+        BOOST_LOG_TRIVIAL(info) << function_name << "::settings::shell_weights = " + format_dict(shells, weights);
+        BOOST_LOG_TRIVIAL(info) << function_name << "::settings::num_iterations = " << settings.num_iterations();
+        BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::num_output_configurations = " << settings.num_output_configurations();
+        BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::num_pairs = " << settings.pair_list().size();
     }
 
     void count_pairs(const configuration_t &configuration, const std::vector<size_t> &pair_list,
@@ -213,12 +213,12 @@ namespace sqsgenerator {
         if (mpi_rank == HEAD_RANK) {
             if (static_cast<int>(settings.threads_per_rank().size()) != mpi_num_ranks) throw std::runtime_error("Number if ranks does not match the number of entries in the thread map");
             BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::mpi::num_ranks = " << mpi_num_ranks;
-            log_settings(settings);
+            log_settings("do_pair_iterations", settings);
         }
 #else
         mpi_num_ranks = 1;
         mpi_rank = 0;
-        log_settings(settings);
+        log_settings("do_pair_iterations", settings);
 #endif
         // In case a negative number is specified we try to get as many threads as possible
         if( threads_per_rank[mpi_rank] < 0) {
@@ -252,6 +252,8 @@ namespace sqsgenerator {
             double best_objective_local{best_objective};
             get_next_configuration_t get_next_configuration;
             int thread_id {omp_get_thread_num()}, nthreads {omp_get_num_threads()};
+            configuration_t configuration_local(settings.packed_configuraton());
+            parameter_storage_t parameters_local(reduced_size * nshells);
 
             // we have to synchronize the threads before we go on with initialization
 
@@ -297,8 +299,7 @@ namespace sqsgenerator {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::num_iterations = " << (end_it - start_it);
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::iteration_end = " << end_it;
             }
-            configuration_t configuration_local(settings.packed_configuraton());
-            parameter_storage_t parameters_local(reduced_size * nshells);
+
 
             switch (settings.mode()) {
                 case iteration_mode::random: {
@@ -357,7 +358,6 @@ namespace sqsgenerator {
                             MPI_Iprobe(MPI_ANY_SOURCE, TAG_BETTER_OBJECTIVE, MPI_COMM_WORLD, &have_message, &request_status);
                         }
                     }
-
 #endif
                     // we do only an atomic read from the global shared variable in case the local one is already satisfied
                     #pragma omp atomic read
@@ -399,7 +399,6 @@ namespace sqsgenerator {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::avg_loop_time = " << avg_loop_time;
                 thread_timings[mpi_rank][thread_id] = avg_loop_time;
             };
-
         } // pragma omp parallel
         std::vector<SQSResult> tmp_results, final_results;
         for (auto &r : results) tmp_results.push_back(std::move(r));
@@ -470,5 +469,27 @@ namespace sqsgenerator {
         }
         BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::num_results = " << final_results.size();
         return std::make_tuple(final_results, thread_timings);
+    }
+
+    SQSResult do_pair_analysis(const IterationSettings &settings) {
+        log_settings("do_pair_analysis", settings);
+        auto reindexer(make_reduction_vector(settings));
+        size_t nshells {settings.num_shells()},
+                nspecies{settings.num_species()},
+                nparams {nshells * nspecies * nspecies},
+                reduced_size;
+        configuration_t configuration(settings.packed_configuraton());
+        parameter_storage_t prefactors, parameter_weights, target_objectives;
+        std::vector<size_t> pair_list(convert_pair_list(settings.pair_list()));
+        std::vector<size_t> hist(utils::configuration_histogram(settings.packed_configuraton()));
+
+        std::tie(reduced_size, prefactors, parameter_weights, target_objectives) = reduce_weights_matrices(settings, reindexer);
+        parameter_storage_t sro_parameters(reduced_size * nshells);
+
+        count_pairs(configuration, pair_list, sro_parameters, reindexer, nspecies, true);
+        double objective = calculate_pair_objective(sro_parameters, prefactors, parameter_weights, target_objectives);
+        rank_t configuration_rank = rank_permutation(configuration, nspecies);
+        SQSResult result(objective, configuration_rank, settings.unpack_configuration(configuration), expand_matrix(sro_parameters, settings, reindexer));
+        return result;
     }
 }
