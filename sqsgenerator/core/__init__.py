@@ -6,7 +6,7 @@ import typing as T
 
 
 from .iteration import __version__, __features__
-from .iteration import set_log_level, pair_sqs_iteration
+from .iteration import set_log_level, pair_sqs_iteration, pair_analysis
 from .iteration import IterationMode, IterationSettings, BoostLogLevel
 
 from .structure import Structure, structure_to_dict, Atom, make_supercell
@@ -24,6 +24,7 @@ __all__ = [
     'IterationMode',
     'IterationSettings',
     'BoostLogLevel',
+    'pair_analysis',
 
     'Structure',
     'structure_to_dict',

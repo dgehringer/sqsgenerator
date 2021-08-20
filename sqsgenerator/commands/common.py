@@ -7,8 +7,9 @@ import attrdict
 import typing as T
 import functools
 import collections.abc
+from sqsgenerator.io import read_settings_file
 from sqsgenerator.settings import process_settings, parameter_list, BadSettings
-from sqsgenerator.compat import have_feature, get_module, require, Feature as F
+from sqsgenerator.compat import have_feature, get_module, Feature as F
 
 
 def ensure_iterable(o: T.Any, exclude=(str, bytes, bytearray), factory=set):
@@ -79,12 +80,12 @@ def exit_on_input_parameter_error(f):
     return _inner
 
 
-def click_settings_file(process=None):
+def click_settings_file(process=None, default_name='sqs.yaml'):
 
     def _decorator(f: T.Callable):
 
         @functools.wraps(f)
-        @click.argument('filename', type=click.Path(exists=True), default='sqs.yaml')
+        @click.argument('filename', type=click.Path(exists=True), default=default_name)
         @click.option('--input-format', '-if', type=click.Choice(['yaml', 'json', 'pickle']), default='yaml')
         def _dummy(filename, input_format, *args, **kwargs):
             settings = read_settings_file(filename, format=input_format)
@@ -101,48 +102,3 @@ def click_settings_file(process=None):
         return exit_on_input_parameter_error(_dummy)
 
     return _decorator
-
-
-@require(F.json, F.yaml, F.pickle, condition=any)
-def dumps(o: dict, output_format='yaml'):
-    f = F(output_format)
-    if not have_feature(f): error(f'The package "{format}" is not installed, consider to install it with')
-
-    def safe_dumps(d, **kwargs):
-        buf = io.StringIO()
-        get_module(F.yaml).safe_dump(d, buf, **kwargs)
-        return buf.getvalue()
-
-    dumpers = {
-        F.json: lambda d: get_module(F.json).dumps(d, indent=4),
-        F.pickle: lambda d: get_module(F.pickle).dumps(d),
-        F.yaml: lambda d: safe_dumps(d, default_flow_style=None)
-    }
-    content = dumpers[f](o)
-    return content if f == F.pickle else content.encode()
-
-
-@require(F.yaml, F.json, condition=any)
-def read_settings_file(path, format='yaml') -> T.Optional[attrdict.AttrDict]:
-    f = F(format)
-    readers = {
-        F.json: 'loads',
-        F.pickle: 'loads',
-        F.yaml: 'safe_load'
-    }
-    if not have_feature(f):
-        error(f'The package "{format}" is not installed, consider to install it with')
-    reader = getattr(get_module(f), readers[f])
-    try:
-        with open(path, 'r' if f != F.pickle else 'rb') as settings_file:
-            content = settings_file.read()
-    except FileNotFoundError:
-        error(f'The settings file "{path}" does not exist')
-        return
-    try:
-        data = attrdict.AttrDict(reader(content))
-    except Exception as e:
-        prefix = type(e).__name__
-        error(f'While reading the file "{path}", a "{prefix}" occurred. Maybe the file has the wrong format. I was expecting a "{format}"-file. You can specify a different input-file format using the "--format" option', prefix=prefix)
-        return
-    return data

@@ -1,8 +1,9 @@
 
 import sys
 import click
-from sqsgenerator.commands.common import pretty_print, dumps, click_settings_file
-from sqsgenerator.settings import process_settings, settings_to_dict, parameter_list, construct_settings
+from sqsgenerator.io import dumps, to_dict
+from sqsgenerator.commands.common import pretty_print, click_settings_file
+from sqsgenerator.settings import process_settings, parameter_list, construct_settings
 
 
 @click.command('show')
@@ -15,7 +16,7 @@ def show(settings, param, output_format, inplace):
     parameters_to_process = set(param or parameter_list())
     processed = process_settings(settings, params=parameters_to_process)
     parameters_to_output = parameters_to_process.union({} if parameters_selected else {'sublattice'})
-    filtered = {k : v for k, v in settings_to_dict(processed).items() if k in parameters_to_output}
+    filtered = {k : v for k, v in to_dict(processed).items() if k in parameters_to_output}
     if inplace:
         output_format = settings.input_format
         output_file = open(settings.file_name, 'wb')

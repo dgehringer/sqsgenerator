@@ -8,9 +8,10 @@ from operator import attrgetter as attr, itemgetter as item, methodcaller as met
 from functools import partial
 from itertools import repeat, chain
 from .exceptions import BadSettings
-from .functional import parameter as parameter_, if_, isa, identity
-from sqsgenerator.core import IterationMode, default_shell_distances, available_species, IterationSettings, Structure, structure_to_dict, make_supercell
-from sqsgenerator.settings.adapters import from_ase_atoms, from_pymatgen_structure, num_species, read_structure_from_file
+from .functional import parameter as parameter_, if_, isa
+from sqsgenerator.io import read_structure_from_file
+from sqsgenerator.core import IterationMode, default_shell_distances, available_species, Structure, make_supercell
+from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature
 
 
@@ -70,6 +71,39 @@ def read_max_output_configurations(settings : attrdict.AttrDict):
     return settings.max_output_configurations
 
 
+@parameter('structure')
+def read_structure(settings : attrdict.AttrDict) -> Structure:
+    needed_fields = {'lattice', 'coords', 'species'}
+    s = settings.structure
+    structure = None
+    if isinstance(s, Structure): structure = s
+    elif 'file' in s:
+        structure = read_structure_from_file(settings)
+    elif isinstance(s, dict):
+        if all(field in s for field in needed_fields):
+            lattice = np.array(s.lattice)
+            coords = np.array(s.coords)
+            species = list(s.species)
+            structure = Structure(lattice, coords, species, (True, True, True))
+        else: raise BadSettings(f'A structure dictionary needs the following fields {needed_fields}')
+
+    if have_feature(Feature.ase) and structure is None:
+        from ase import Atoms
+        if isinstance(s, Atoms): structure = from_ase_atoms(s)
+    if have_feature(Feature.pymatgen) and structure is None:
+        from pymatgen.core import Structure as PymatgenStructure
+        if isinstance(s, PymatgenStructure): structure = from_pymatgen_structure(s)
+    if structure is None: raise BadSettings('Cannot read structure from the settings')
+
+    if 'supercell' in s:
+        sizes = settings.structure.supercell
+        if len(sizes) != 3: raise BadSettings('To create a supercell you need to specify three lengths')
+        structure = make_supercell(structure, *sizes)
+        del settings.structure['supercell']
+
+    return structure
+
+
 @parameter('composition', required=True)
 def read_composition(settings: attrdict.AttrDict):
     structure = read_structure(settings)
@@ -123,39 +157,6 @@ def read_composition(settings: attrdict.AttrDict):
     settings['is_sublattice'] = is_sublattice
     return settings.composition
 
-count = 0
-@parameter('structure')
-def read_structure(settings : attrdict.AttrDict) -> Structure:
-    needed_fields = {'lattice', 'coords', 'species'}
-    s = settings.structure
-    structure = None
-    if isinstance(s, Structure): structure = s
-    elif 'file' in s:
-        structure = read_structure_from_file(settings)
-    elif isinstance(s, dict):
-        if all(field in s for field in needed_fields):
-            lattice = np.array(s.lattice)
-            coords = np.array(s.coords)
-            species = list(s.species)
-            structure = Structure(lattice, coords, species, (True, True, True))
-        else: raise BadSettings(f'A structure dictionary needs the following fields {needed_fields}')
-
-    if have_feature(Feature.ase) and structure is None:
-        from ase import Atoms
-        if isinstance(s, Atoms): structure = from_ase_atoms(s)
-    if have_feature(Feature.pymatgen) and structure is None:
-        from pymatgen.core import Structure as PymatgenStructure
-        if isinstance(s, PymatgenStructure): structure = from_pymatgen_structure(s)
-    if structure is None: raise BadSettings('Cannot read structure from the settings')
-
-    if 'supercell' in s:
-        sizes = settings.structure.supercell
-        if len(sizes) != 3: raise BadSettings('To create a supercell you need to specify three lengths')
-        structure = make_supercell(structure, *sizes)
-        del settings.structure['supercell']
-
-    return structure
-
 
 @parameter('shell_distances', default=lambda s: default_shell_distances(s.structure, s.atol, s.rtol), required=True)
 def read_shell_distances(settings: attrdict.AttrDict):
@@ -185,9 +186,9 @@ def read_shell_weights(settings: attrdict.AttrDict):
     return settings.shell_weights
 
 
-@parameter('pair_weights', default=lambda s: np.ones((num_species(s.structure), num_species(s.structure))), required=True)
+@parameter('pair_weights', default=lambda s: np.ones((s.structure.num_unique_species, s.structure.num_unique_species)), required=True)
 def read_pair_weights(settings: attrdict.AttrDict):
-    nums = num_species(settings.structure)
+    nums = settings.structure.num_unique_species
     if isinstance(settings.pair_weights, (list, tuple)):
         w = np.array(settings.pair_weights).astype(float)
         if w.shape == (nums, nums): return w
@@ -198,7 +199,7 @@ def read_pair_weights(settings: attrdict.AttrDict):
 
 @parameter('target_objective', default=lambda s: np.zeros((num_shells(s), s.structure.num_unique_species, s.structure.num_unique_species)), required=True)
 def read_target_objective(settings: attrdict.AttrDict):
-    nums = num_species(settings.structure)
+    nums = settings.structure.num_unique_species
     nshells = len(settings.shell_weights)
     if isinstance(settings.target_objective, (int, float)):
         o = np.ones((nshells, nums, nums)).astype(float)
