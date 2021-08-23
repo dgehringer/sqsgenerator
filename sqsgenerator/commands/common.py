@@ -80,7 +80,7 @@ def exit_on_input_parameter_error(f):
     return _inner
 
 
-def click_settings_file(process=None, default_name='sqs.yaml'):
+def click_settings_file(process=None, default_name='sqs.yaml', ignore=()):
 
     def _decorator(f: T.Callable):
 
@@ -96,7 +96,7 @@ def click_settings_file(process=None, default_name='sqs.yaml'):
                 param_list = parameter_list()
                 if 'all' in process: process = param_list
                 else: assert all(p in param_list for p in process)
-                settings = process_settings(settings, params=process)
+                settings = process_settings(settings, params=process, ignore=ignore)
 
             return f(settings, *args, **kwargs)
 
