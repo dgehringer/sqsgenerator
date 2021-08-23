@@ -1,8 +1,11 @@
 
+import os
 import io
-
+import tarfile
+import zipfile
 import attrdict
 import functools
+import frozendict
 import typing as T
 import numpy as np
 from operator import attrgetter as attr, methodcaller as method
@@ -13,6 +16,7 @@ from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure, to_py
 
 known_adapters = (F.ase, F.pymatgen)
 
+compression_to_file_extension = frozendict.frozendict(zip='zip', bz2='tar.bz2', gz='tar.gz', xz='tar.xz')
 
 output_formats = {
     F.pymatgen: {'cif', 'mcif', 'poscar', 'cssr', 'json', 'xsf', 'prismatic', 'yaml'}
@@ -186,3 +190,36 @@ def to_dict(settings: dict) -> T.Dict[str, T.Any]:
 
     out = _generic_to_dict(settings)
     return out
+
+
+def export_structures(structures: T.Dict[int, Structure], format='cif', output_file='sqs.result', writer='ase', compress=None):
+    output_prefix = output_file
+    if compress:
+        output_archive_file_mode = f'x:{compress}' if compress != 'zip' else 'x'
+        output_archive_name = f'{output_prefix}.{compression_to_file_extension.get(compress)}'
+        open_ = tarfile.open if compress != 'zip' else zipfile.ZipFile
+        archive_handle = open_(output_archive_name, output_archive_file_mode)
+    else:
+        archive_handle = None
+
+    def write_structure_dump(data: bytes, filename: str):
+        if not compress:
+            with open(filename, 'wb') as fh:
+                fh.write(data)
+        else:
+            if compress == 'zip':
+                assert isinstance(archive_handle, zipfile.ZipFile)
+                archive_handle.writestr(filename, data)
+            else:
+                assert isinstance(archive_handle, tarfile.TarFile)
+                with io.BytesIO(data) as buf:
+                    tar_info = tarfile.TarInfo(name=filename)
+                    tar_info.size = len(data)
+                    archive_handle.addfile(tar_info, buf)
+
+    for rank, structure in structures.items():
+        filename = f'{rank}.{format}'
+        data = dumps_structure(structure, format, writer=writer)
+        write_structure_dump(data, filename)
+
+    if compress: archive_handle.close()

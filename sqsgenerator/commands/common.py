@@ -87,7 +87,7 @@ def click_settings_file(process=None, default_name='sqs.yaml'):
         @functools.wraps(f)
         @click.argument('filename', type=click.Path(exists=True), default=default_name)
         @click.option('--input-format', '-if', type=click.Choice(['yaml', 'json', 'pickle']), default='yaml')
-        def _dummy(filename, input_format, *args, **kwargs):
+        def _dummy(*args, filename=default_name, input_format='yaml', **kwargs):
             settings = read_settings_file(filename, format=input_format)
             settings['file_name'] = filename
             settings['input_format'] = input_format
@@ -97,6 +97,7 @@ def click_settings_file(process=None, default_name='sqs.yaml'):
                 if 'all' in process: process = param_list
                 else: assert all(p in param_list for p in process)
                 settings = process_settings(settings, params=process)
+
             return f(settings, *args, **kwargs)
 
         return exit_on_input_parameter_error(_dummy)
