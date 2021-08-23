@@ -8,18 +8,6 @@
 using namespace sqsgenerator::utils;
 
 namespace sqsgenerator {
-/*        Structure &m_structure;
-        uint8_t m_prec;
-        int m_niterations;
-        int m_noutput_configurations;
-        size_t m_nspecies;
-        configuration_t m_configuration_packing_indices;
-        configuration_t m_packed_configuration;
-        pair_shell_weights_t m_shell_weights;
-        iteration_mode m_mode;
-        array_2d_t m_parameter_weights;
-        array_3d_t m_target_objective;
-        array_3d_t m_parameter_prefactors;*/
 
     typedef array_3d_t::index index_t;
 

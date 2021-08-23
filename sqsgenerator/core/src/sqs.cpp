@@ -64,11 +64,11 @@ namespace sqsgenerator {
     double calculate_pair_objective(parameter_storage_t &bonds, const parameter_storage_t &prefactors,
                                            const parameter_storage_t &parameter_weights,
                                            const parameter_storage_t &target_objectives) {
-        double total_objective{0.0};
-        size_t nparams{bonds.size()};
+        double total_objective {0.0};
+        size_t nparams {bonds.size()};
         for (size_t i = 0; i < nparams; i++) {
-            bonds[i] = parameter_weights[i] * (1.0 - bonds[i] * prefactors[i]);
-            total_objective += std::abs(bonds[i] - target_objectives[i]);
+            bonds[i] =  (1.0 - bonds[i] * prefactors[i]);
+            total_objective += parameter_weights[i] * std::abs(bonds[i] - target_objectives[i]);
         }
         return total_objective;
     }

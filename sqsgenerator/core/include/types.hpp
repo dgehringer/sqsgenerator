@@ -15,7 +15,7 @@
 #include <boost/numeric/ublas/storage.hpp>
 
 namespace sqsgenerator {
-    typedef uint8_t species_t;
+    typedef int species_t;
     typedef int shell_t;
     typedef boost::multiprecision::cpp_int rank_t;
     typedef std::map<int, std::vector<double>> timing_map_t;
