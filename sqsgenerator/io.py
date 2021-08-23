@@ -117,6 +117,7 @@ def read_settings_file(path, format='yaml') -> T.Optional[attrdict.AttrDict]:
         raise IOError(f'While reading the file "{path}", a "{prefix}" occurred. Maybe the file has the wrong format. I was expecting a "{format}"-file. You can specify a different input-file format using the "--format" option')
     return data
 
+
 @require(F.ase)
 def read_structure_file_with_ase(fn, **kwargs) -> Structure:
     import ase.io

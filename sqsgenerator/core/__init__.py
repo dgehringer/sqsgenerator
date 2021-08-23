@@ -74,17 +74,4 @@ def get_function_logger(f: T.Callable) -> logging.Logger:
     return logging.getLogger(f.__module__ + '.' + f.__name__)
 
 
-def setup_logging():
-    try:
-        import rich.logging
-    except ImportError: pass
-    else:
-        logging.basicConfig(
-            level="NOTSET",
-            format="%(message)s",
-            datefmt="[%X]",
-            handlers=[rich.logging.RichHandler(rich_tracebacks=True)]
-    )
-
-
 set_core_log_level()

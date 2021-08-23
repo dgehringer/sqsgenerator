@@ -1,12 +1,8 @@
-import io
-import functools
-import attrdict
+
 import numpy as np
-from sqsgenerator.settings.functional import try_
-from sqsgenerator.settings.exceptions import BadSettings
 from operator import attrgetter as attr
 from sqsgenerator.core import Structure
-from sqsgenerator.compat import Feature as F, have_feature, require
+from sqsgenerator.compat import Feature as F, require
 import typing as T
 
 
@@ -39,7 +35,7 @@ def from_pymatgen_structure(structure) -> Structure:
 @require(F.ase)
 def from_ase_atoms(atoms) -> Structure:
     lattice = np.array(atoms.cell)
-    frac_coords = np.array(atoms.get_scaled_positions())
+    frac_coords = np.array(atoms.get_scaled_positions()).copy()
     if tuple(atoms.pbc) != (True, True, True): raise RuntimeWarning("At present I can only handle fully periodic structure. I'will overwrite ase.Atoms.pbc setting to (True, True, True)")
     return Structure(lattice, frac_coords, list(atoms.symbols), (True, True, True))
 

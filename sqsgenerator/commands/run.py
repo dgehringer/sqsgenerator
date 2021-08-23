@@ -2,13 +2,12 @@ import os
 import click
 import attrdict
 import functools
-import frozendict
 import numpy as np
 import typing as T
 from sqsgenerator.compat import Feature as F
 from sqsgenerator.settings import construct_settings
 from sqsgenerator.settings.readers import read_structure
-from sqsgenerator.io import supported_formats, dumps_structure, to_dict, dumps, compression_to_file_extension, export_structures
+from sqsgenerator.io import supported_formats, to_dict, dumps, compression_to_file_extension, export_structures
 from sqsgenerator.commands.common import click_settings_file, error, pretty_print
 from sqsgenerator.core import pair_sqs_iteration, set_core_log_level, log_levels, symbols_from_z, SQSResult, Structure, pair_analysis
 from operator import attrgetter as attr
@@ -118,22 +117,21 @@ def export(settings, format='cif', writer='ase', compress=None, output_file='sqs
         if output_file is not None \
         else (os.path.splitext(settings.file_name)[0] if 'file_name' in settings else 'sqs')
     writer = F(writer)
+
     if format not in supported_formats(writer):
         error(f'{writer.value} does not support the format "{format}". '
-              f'Supported formats are {supported_formats(writer)}')
+              f'Supported formats are {supported_formats(writer)}', prefix='FeatureError')
 
     structures = expand_results(result_document)
     export_structures(structures, format=format, output_file=output_prefix, writer=writer, compress=compress)
 
 
 @click.command('analysis')
-@click_settings_file(process=None)
+@click_settings_file('all', ignore=('composition',))
 def analysis(settings):
-    print(settings)
-    structure = read_structure(settings)
-    print(structure)
-    #iteration_settings = construct_settings(settings, False)
-    #result = pair_analysis(iteration_settings)
+    iteration_settings = construct_settings(settings, False)
+    result = pair_analysis(iteration_settings)
+    pretty_print(result.objective, result.parameters(settings.target_objective.shape))
     #print(make_result_document((result,), settings))
 
 
