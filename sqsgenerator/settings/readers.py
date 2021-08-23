@@ -4,7 +4,8 @@ import attrdict
 import numpy as np
 import collections
 import typing as T
-from operator import attrgetter as attr, itemgetter as item, methodcaller as method
+import collections.abc
+from operator import attrgetter as attr, itemgetter as item
 from functools import partial
 from itertools import repeat, chain
 from .exceptions import BadSettings
@@ -35,7 +36,7 @@ def convert(o, to=int, on_fail=BadSettings, message=None):
     if isinstance(o, to): return o
     try:
         r = to(o)
-    except ValueError:
+    except (ValueError, TypeError):
         if on_fail is not None:
             raise on_fail(message) if message is not None else on_fail()
     else:
@@ -49,13 +50,15 @@ def read_atol(settings : attrdict.AttrDict):
 
 
 @parameter('rtol', default=RTOL)
-def read_atol(settings : attrdict.AttrDict):
-    if not isinstance(settings.atol, float) or settings.atol < 0: raise BadSettings(f'The relative tolerance can be only a positive floating point number')
+def read_rtol(settings : attrdict.AttrDict):
+    if not isinstance(settings.rtol, float) or settings.rtol < 0: raise BadSettings(f'The relative tolerance can be only a positive floating point number')
     return settings.rtol
 
 
 @parameter('mode', default=IterationMode.random, required=True)
 def read_mode(settings: attrdict.AttrDict):
+    if isinstance(settings.mode, IterationMode):
+        return settings.mode
     if settings.mode not in IterationMode.names:
         raise BadSettings(f'Unknown iteration mode "{settings.mode}". Available iteration modes are {list(IterationMode.names.keys())}')
     return IterationMode.names[settings.mode]
@@ -63,12 +66,16 @@ def read_mode(settings: attrdict.AttrDict):
 
 @parameter('iterations', default=if_(random_mode)(1e5)(-1), required=if_(random_mode)(True)(False))
 def read_iterations(settings: attrdict.AttrDict):
-    return int(float(settings.iterations))
+    num_iterations =  convert(settings.iterations, message=f'Cannot convert "{settings.iterations}" to int')
+    if num_iterations < 0: raise BadSettings('"iterations" must be positive')
+    return num_iterations
 
 
 @parameter('max_output_configurations', default=10)
 def read_max_output_configurations(settings : attrdict.AttrDict):
-    return settings.max_output_configurations
+    num_confs = convert(settings.max_output_configurations, message=f'Cannot convert "{settings.max_output_configurations}" to int')
+    if num_confs < 0: raise BadSettings('"max_output_configurations" must be positive')
+    return num_confs
 
 
 @parameter('structure')
@@ -76,26 +83,34 @@ def read_structure(settings : attrdict.AttrDict) -> Structure:
     needed_fields = {'lattice', 'coords', 'species'}
     s = settings.structure
     structure = None
-    if isinstance(s, Structure): structure = s
-    elif 'file' in s:
-        structure = read_structure_from_file(settings)
-    elif isinstance(s, dict):
-        if all(field in s for field in needed_fields):
+    if isinstance(s, Structure):
+        structure = s
+
+    if have_feature(Feature.ase) and structure is None:
+        from ase import Atoms
+        if isinstance(s, Atoms):
+            structure = from_ase_atoms(s)
+    if have_feature(Feature.pymatgen) and structure is None:
+        from pymatgen.core import Structure as PymatgenStructure, PeriodicSite
+        if isinstance(s, PymatgenStructure):
+            structure = from_pymatgen_structure(s)
+        elif isinstance(s, collections.abc.Iterable):
+            site_list = list(s)
+            if site_list and all(map(isa(PeriodicSite), site_list)):
+                structure = from_pymatgen_structure(PymatgenStructure.from_sites(site_list))
+
+    if isinstance(s, dict) and structure is None:
+        if 'file' in s:
+            structure = read_structure_from_file(settings)
+        elif all(field in s for field in needed_fields):
             lattice = np.array(s.lattice)
             coords = np.array(s.coords)
             species = list(s.species)
             structure = Structure(lattice, coords, species, (True, True, True))
         else: raise BadSettings(f'A structure dictionary needs the following fields {needed_fields}')
 
-    if have_feature(Feature.ase) and structure is None:
-        from ase import Atoms
-        if isinstance(s, Atoms): structure = from_ase_atoms(s)
-    if have_feature(Feature.pymatgen) and structure is None:
-        from pymatgen.core import Structure as PymatgenStructure
-        if isinstance(s, PymatgenStructure): structure = from_pymatgen_structure(s)
-    if structure is None: raise BadSettings('Cannot read structure from the settings')
-
-    if 'supercell' in s:
+    if structure is None: raise BadSettings(f'Cannot read structure from the settings, "{type(s)}"')
+    if isinstance(s, dict) and 'supercell' in s:
         sizes = settings.structure.supercell
         if len(sizes) != 3: raise BadSettings('To create a supercell you need to specify three lengths')
         structure = make_supercell(structure, *sizes)
@@ -113,16 +128,20 @@ def read_composition(settings: attrdict.AttrDict):
         if isinstance(settings.composition.which, str):
             sublattice = settings.composition.which
             allowed_sublattices = {'all', }.union(structure.unique_species)
-            if sublattice not in allowed_symbols: raise BadSettings(f'I have never heard of the chemical element "{sublattice}". Please use a real chemical element!')
-            if sublattice not in allowed_sublattices: raise BadSettings(f'The structure does not have an "{sublattice}" sublattice. Possible values would be {allowed_sublattices}')
-            if sublattice == 'all': mask = tuple(range(structure.num_atoms))
+            if sublattice not in allowed_sublattices:
+                raise BadSettings(f'The structure does not have an "{sublattice}" sublattice. Possible values would be {allowed_sublattices}')
+            if sublattice == 'all':
+                mask = tuple(range(structure.num_atoms))
             else: mask = tuple(i for i, sp in enumerate(structure.species) if sp.symbol == sublattice)
             which = mask
         elif isinstance(settings.composition.which, (list, tuple)):
             sublattice = tuple(set(settings.composition.which)) # eliminate duplicates
-            if len(sublattice) < 2: raise BadSettings('You need to at least specify two different lattice positions to define a sublattice')
-            if not all(map(isa(int), sublattice)): raise BadSettings(f'I do only understand integer lists to specify a sublattice')
-            if not all(map(lambda _: 0 <= _ < structure.num_atoms, sublattice)): raise BadSettings(f'All indices in the list must be 0 <= index < {structure.num_atoms}')
+            if len(sublattice) < 2:
+                raise BadSettings('You need to at least specify two different lattice positions to define a sublattice')
+            if not all(map(isa(int), sublattice)):
+                raise BadSettings(f'I do only understand integer lists to specify a sublattice')
+            if not all(map(lambda _: 0 <= _ < structure.num_atoms, sublattice)):
+                raise BadSettings(f'All indices in the list must be 0 <= index < {structure.num_atoms}')
             which = settings.composition.which
         else: raise BadSettings('I do not understand your composition specification')
         # we remove the which clause from the settings, since we are replacing the structure with the sublattice structure
@@ -134,12 +153,15 @@ def read_composition(settings: attrdict.AttrDict):
     actual_composition = lambda: ((k, v) for k, v in settings.composition.items() if k not in {'which'})
     for species, amount in actual_composition():
         if species == 'which': continue
-        if species not in allowed_symbols: raise BadSettings(f'I have never heard of the chemical element "{species}". Please use a real chemical element!')
-        if not isinstance(amount, int) or amount < 1: raise BadSettings(f'I can only distribute an integer number of atoms on the "{species}" sublattice. You specified "{amount}"')
+        if species not in allowed_symbols:
+            raise BadSettings(f'I have never heard of the chemical element "{species}". Please use a real chemical element!')
+        if not isinstance(amount, int) or amount < 1:
+            raise BadSettings(f'I can only distribute an integer number of atoms on the "{species}" sublattice. You specified "{amount}"')
 
     num_atoms_on_sublattice = len(which)
     num_distributed_atoms = sum(amount for _, amount in actual_composition())
-    if num_distributed_atoms != num_atoms_on_sublattice: raise BadSettings(f'The sublattice has {num_atoms_on_sublattice} but you tried to distribute {num_distributed_atoms} atoms')
+    if num_distributed_atoms != num_atoms_on_sublattice:
+        raise BadSettings(f'The sublattice has {num_atoms_on_sublattice} but you tried to distribute {num_distributed_atoms} atoms')
 
     is_sublattice = tuple(range(structure.num_atoms)) != which
     species = list(chain(*(repeat(*c) for c in actual_composition())))
@@ -160,8 +182,10 @@ def read_composition(settings: attrdict.AttrDict):
 
 @parameter('shell_distances', default=lambda s: default_shell_distances(s.structure, s.atol, s.rtol), required=True)
 def read_shell_distances(settings: attrdict.AttrDict):
-    if not isinstance(settings.shell_distances, (list, tuple, set)): raise BadSettings('I only understand list, sets, and tuples for the shell-distances parameter')
-    if not all(map(isa(numbers.Real), settings.shell_distances)): raise BadSettings('All shell distances must be real values')
+    if not isinstance(settings.shell_distances, (list, tuple, set)):
+        raise BadSettings('I only understand list, sets, and tuples for the shell-distances parameter')
+    if not all(map(isa(numbers.Real), settings.shell_distances)):
+        raise BadSettings('All shell distances must be real values')
 
     sorted_distances = list(sorted(settings.shell_distances))
 
@@ -236,13 +260,15 @@ def read_threads_per_rank(settings: attrdict.AttrDict):
     else: raise BadSettings(f'Cannot interpret "threads_per_rank" setting.')
 
 
-def process_settings(settings: attrdict.AttrDict, params: T.Optional[T.Set[str]] = None):
+def process_settings(settings: attrdict.AttrDict, params: T.Optional[T.Set[str]] = None, ignore=()):
     params = params if params is not None else set(parameter_list())
     last_needed_parameter = max(params, key=parameter_index)
+    ignore = set(ignore)
     for index, (param, processor) in enumerate(__parameter_registry.items()):
         if param not in params:
             # we can only skip this parameter if None of the other parameters dpends on param
             if parameter_index(param) > parameter_index(last_needed_parameter): continue
+        if param in ignore: continue
         settings[param] = processor(settings)
     return settings
 
