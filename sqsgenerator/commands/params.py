@@ -11,7 +11,7 @@ from sqsgenerator.settings import process_settings, parameter_list, construct_se
 @click.option('--output-format', '-of', type=click.Choice(['yaml', 'json', 'pickle', 'native']), default='native')
 @click.option('--inplace', is_flag=True)
 @click_settings_file(process=None)
-def show(settings, param, output_format, inplace):
+def show(settings, param=None, output_format='yaml', inplace=False):
     parameters_selected = bool(param)
     parameters_to_process = set(param or parameter_list())
     processed = process_settings(settings, params=parameters_to_process)

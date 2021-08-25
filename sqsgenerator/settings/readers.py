@@ -26,16 +26,20 @@ ATOL = 1e-3
 RTOL = 1e-5
 
 
+def int_safe(x):
+    return int(float(x))
+
+
 def num_shells(settings): return len(settings.shell_weights)
 
 
 def random_mode(settings): return settings.mode == IterationMode.random
 
 
-def convert(o, to=int, on_fail=BadSettings, message=None):
+def convert(o, to=int, converter=None, on_fail=BadSettings, message=None):
     if isinstance(o, to): return o
     try:
-        r = to(o)
+        r = (to if converter is None else converter)(o)
     except (ValueError, TypeError):
         if on_fail is not None:
             raise on_fail(message) if message is not None else on_fail()
@@ -66,14 +70,14 @@ def read_mode(settings: attrdict.AttrDict):
 
 @parameter('iterations', default=if_(random_mode)(1e5)(-1), required=if_(random_mode)(True)(False))
 def read_iterations(settings: attrdict.AttrDict):
-    num_iterations =  convert(settings.iterations, message=f'Cannot convert "{settings.iterations}" to int')
+    num_iterations =  convert(settings.iterations, converter=int_safe, message=f'Cannot convert "{settings.iterations}" to int')
     if num_iterations < 0: raise BadSettings('"iterations" must be positive')
     return num_iterations
 
 
 @parameter('max_output_configurations', default=10)
 def read_max_output_configurations(settings : attrdict.AttrDict):
-    num_confs = convert(settings.max_output_configurations, message=f'Cannot convert "{settings.max_output_configurations}" to int')
+    num_confs = convert(settings.max_output_configurations, converter=int_safe, message=f'Cannot convert "{settings.max_output_configurations}" to int')
     if num_confs < 0: raise BadSettings('"max_output_configurations" must be positive')
     return num_confs
 
@@ -186,17 +190,23 @@ def read_shell_distances(settings: attrdict.AttrDict):
         raise BadSettings('I only understand list, sets, and tuples for the shell-distances parameter')
     if not all(map(isa(numbers.Real), settings.shell_distances)):
         raise BadSettings('All shell distances must be real values')
-
-    sorted_distances = list(sorted(settings.shell_distances))
-
-    for distance in sorted_distances:
-        if distance < 0.0: raise BadSettings(f'A distance can never be less than zero. You specified "{distance}"')
+    distances = list(filter(lambda d: not np.isclose(d, 0.0), settings.shell_distances))
+    if len(distances) < 1:
+        raise BadSettings('You need to specify at least one shell-distance')
+    for distance in distances:
+        if distance < 0.0:
+            raise BadSettings(f'A distance can never be less than zero. You specified "{distance}"')
+    sorted_distances = list(sorted(distances))
+    sorted_distances.insert(0, 0.0)
     return sorted_distances
 
 
 @parameter('shell_weights', default=lambda settings: {i: 1.0/i for i, distance in enumerate(settings.shell_distances[1:], start=1)}, required=True)
 def read_shell_weights(settings: attrdict.AttrDict):
-    if not isinstance(settings.shell_weights, dict): raise BadSettings('I only understand dictionaries for the shell-weight parameter')
+    if not isinstance(settings.shell_weights, dict):
+        raise BadSettings('I only understand dictionaries for the shell-weight parameter')
+    if len(settings.shell_weights) < 1:
+        raise BadSettings('You have to include at least one coordination shell to carry out the optimization')
     allowed_indices = set(range(1, len(settings.shell_distances)))
 
     parsed_weights = {
@@ -206,17 +216,21 @@ def read_shell_weights(settings: attrdict.AttrDict):
         }
 
     for shell in parsed_weights.keys():
-        if shell not in allowed_indices: raise BadSettings(f'The shell {shell} you specified is not allowed. Allowed values are {allowed_indices}')
+        if shell not in allowed_indices:
+            raise BadSettings(f'The shell {shell} you specified is not allowed. Allowed values are {allowed_indices}')
     return settings.shell_weights
 
 
-@parameter('pair_weights', default=lambda s: np.ones((s.structure.num_unique_species, s.structure.num_unique_species)), required=True)
+@parameter('pair_weights', default=lambda s: (~np.eye(s.structure.num_unique_species, dtype=bool)).astype(int), required=True)
 def read_pair_weights(settings: attrdict.AttrDict):
     nums = settings.structure.num_unique_species
-    if isinstance(settings.pair_weights, (list, tuple)):
+    if isinstance(settings.pair_weights, (list, tuple, np.ndarray)):
         w = np.array(settings.pair_weights).astype(float)
-        if w.shape == (nums, nums): return w
-        else: raise BadSettings(f'The "pair_weights" you have specified has a wrong shape ({w.shape}). Expected {(nums, nums)}')
+        if w.shape != (nums, nums):
+            raise BadSettings(f'The "pair_weights" you have specified has a wrong shape ({w.shape}). Expected {(nums, nums)}')
+        if not np.allclose(w, w.T):
+            raise BadSettings(f'The "pair_weights" matrix must be symmetric')
+        return w
     else:
         raise BadSettings(f'As "pair_weights" I do expect a {nums}x{nums} matrix, since your structure contains {nums} different species')
 
@@ -230,34 +244,44 @@ def read_target_objective(settings: attrdict.AttrDict):
         for index, (shell_index, shell_weight) in enumerate(sorted(settings.shell_weights.items(), key=item(0))):
             o[index,:,:] = settings.target_objective * shell_weight
         return o
-    elif isinstance(settings.target_objective, (list, tuple)):
+    elif isinstance(settings.target_objective, (list, tuple, np.ndarray)):
         o = np.array(settings.target_objective).astype(float)
         if o.ndim == 3:
             expected_shape = (nshells, nums, nums)
-            if o.shape != expected_shape: raise BadSettings(f'The 3D "pair_weights" you have specified has a wrong shape ({o.shape}). Expected {expected_shape}')
-            else: return o
+            if o.shape != expected_shape:
+                raise BadSettings(f'The 3D "target_objective" you have specified has a wrong shape ({o.shape}). Expected {expected_shape}')
+            for i, shell_objective in enumerate(o, start=1):
+                if not np.allclose(shell_objective, shell_objective.T):
+                    raise BadSettings(f'The "target_objective" parameters in shell {i} are not symmetric')
+            return o
         elif o.ndim == 2:
             expected_shape = (nums, nums)
-            if o.shape != expected_shape: raise BadSettings(f'The 2D "pair_weights" you have specified has a wrong shape ({o.shape}). Expected {expected_shape}')
-            else:
-                f = np.ones((nshells, nums, nums)).astype(float)
-                for index, (shell_index, shell_weight) in enumerate(sorted(settings.shell_weights.items(), key=item(0))):
-                    f[index, :, :] = o * shell_weight
-                return f
-        else: raise BadSettings(f'The "pair_weights" you have specified has a {o.ndim} dimensions. I only understand 2 and 3')
+            if o.shape != expected_shape:
+                raise BadSettings(f'The 2D "target_objective" you have specified has a wrong shape ({o.shape}). Expected {expected_shape}')
+            if not np.allclose(o, o.T):
+                raise BadSettings(f'The "target_objective" parameters are not symmetric')
+            f = np.ones((nshells, nums, nums)).astype(float)
+            for index, (shell_index, shell_weight) in enumerate(sorted(settings.shell_weights.items(), key=item(0))):
+                f[index, :, :] = o * shell_weight
+            return f
+        else:
+            raise BadSettings(f'The "target_objective" you have specified has a {o.ndim} dimensions. I only can cope with 2 and 3')
     else:
         raise BadSettings(f'Cannot interpret "target_objective" setting. Acceptable values are a single number, {nums}x{nums} or {nshells}x{nums}x{nums} matrices!')
 
 
-@parameter('threads_per_rank', default=(-1,), required=True)
+@parameter('threads_per_rank', default=[-1], required=True)
 def read_threads_per_rank(settings: attrdict.AttrDict):
+    converter = partial(convert, to=int, converter=int_safe, message='Cannot parse "threads_per_rank" argument')
     if isinstance(settings.threads_per_rank, (float, int)):
-        return [int(settings.threads_per_rank)]
-    elif isinstance(settings.threads_per_rank, (list, tuple)):
+        return [converter(settings.threads_per_rank)]
+    if isinstance(settings.threads_per_rank, (list, tuple, np.ndarray)):
         if len(settings.threads_per_rank) != 1:
-            if not have_mpi_support(): raise BadSettings(f'The module sqsgenerator.core.iteration was not compiled with MPI support')
-        return list(settings.threads_per_rank)
-    else: raise BadSettings(f'Cannot interpret "threads_per_rank" setting.')
+            if not have_mpi_support():
+                raise BadSettings(f'The module sqsgenerator.core.iteration was not compiled with MPI support')
+        return list(map(converter, settings.threads_per_rank))
+
+    raise BadSettings(f'Cannot interpret "threads_per_rank" setting.')
 
 
 def process_settings(settings: attrdict.AttrDict, params: T.Optional[T.Set[str]] = None, ignore=()):
@@ -266,7 +290,7 @@ def process_settings(settings: attrdict.AttrDict, params: T.Optional[T.Set[str]]
     ignore = set(ignore)
     for index, (param, processor) in enumerate(__parameter_registry.items()):
         if param not in params:
-            # we can only skip this parameter if None of the other parameters dpends on param
+            # we can only skip this parameter if None of the other parameters depends on param
             if parameter_index(param) > parameter_index(last_needed_parameter): continue
         if param in ignore: continue
         settings[param] = processor(settings)
