@@ -5,12 +5,12 @@ import numpy as np
 import collections
 import typing as T
 import collections.abc
-from operator import attrgetter as attr, itemgetter as item
 from functools import partial
 from itertools import repeat, chain
 from .exceptions import BadSettings
 from .functional import parameter as parameter_, if_, isa
 from sqsgenerator.io import read_structure_from_file
+from operator import attrgetter as attr, itemgetter as item
 from sqsgenerator.core import IterationMode, default_shell_distances, available_species, Structure, make_supercell
 from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature

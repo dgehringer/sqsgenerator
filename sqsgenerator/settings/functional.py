@@ -69,4 +69,4 @@ def isa(o: T.Tuple[type]):
 
 
 def identity():
-    return lambda _: _
+    return lambda _: _  # pragma: no cover
