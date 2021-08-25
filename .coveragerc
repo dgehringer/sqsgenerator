@@ -2,4 +2,3 @@
 exclude_lines =
     pragma: no cover
     def __repr__
-    def have_mpi_support
