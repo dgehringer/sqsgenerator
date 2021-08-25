@@ -106,15 +106,15 @@ def read_settings_file(path, format='yaml') -> T.Optional[attrdict.AttrDict]:
         raise FeatureNotAvailableException(f'The package "{format}" is not installed, consider to install it with')
     reader = getattr(get_module(f), readers[f])
     try:
-        with open(path, 'r' if f != F.pickle else 'rb') as settings_file:
+        mode = 'r' if f != F.pickle else 'rb'
+        with open(path, mode) as settings_file:
             content = settings_file.read()
-    except FileNotFoundError:
+    except (FileNotFoundError, UnicodeDecodeError):
         raise
     try:
         data = attrdict.AttrDict(reader(content))
     except Exception as e:
-        prefix = type(e).__name__
-        raise IOError(f'While reading the file "{path}", a "{prefix}" occurred. Maybe the file has the wrong format. I was expecting a "{format}"-file. You can specify a different input-file format using the "--format" option')
+        raise IOError(f'While reading the file "{path}", a "{type(e).__name__}" occurred. Maybe the file has the wrong format. I was expecting a "{format}"-file. You can specify a different input-file format using the "--format" option')
     return data
 
 
