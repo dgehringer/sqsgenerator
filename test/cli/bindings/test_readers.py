@@ -262,7 +262,7 @@ class TestSettingReaders(unittest.TestCase):
 
         shells = {1: 1.0}
         validated = ff(shell_weights=shells)
-        self.assertEqual(shells, validated)
+        self.assertDictEqual(shells, validated)
 
     @test_function(read_pair_weights)
     def test_read_pair_weights(self, f):
@@ -346,13 +346,14 @@ class TestSettingReaders(unittest.TestCase):
             with self.assertRaises(BadSettings):
                 f(threads_per_rank=(1,2,4))
 
+        with self.assertRaises(BadSettings):
+            f(threads_per_rank="asfasdf")
         import multiprocessing
         for i in range(1, multiprocessing.cpu_count()+1):
             self.assertEqual(f(threads_per_rank=i), [i])
             self.assertEqual(f(threads_per_rank=float(i)), [i])
             self.assertEqual(f(threads_per_rank=(i)), [i])
             self.assertEqual(f(threads_per_rank=(float(i))), [i])
-
 
 
 if __name__ == '__main__':
