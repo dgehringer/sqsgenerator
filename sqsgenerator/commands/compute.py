@@ -1,9 +1,9 @@
-import collections
+
 import time
 import click
 import numpy as np
+import collections
 from math import isclose
-from sqsgenerator.compat import have_mpi_support
 from sqsgenerator.settings import construct_settings
 from sqsgenerator.core import total_permutations as total_permutations_, default_shell_distances, rank_structure, IterationMode, pair_sqs_iteration
 from sqsgenerator.commands.common import click_settings_file, pretty_print
@@ -53,9 +53,10 @@ def format_seconds(seconds: float) -> str:
     for uval, label in units.items():
         if seconds > uval:
             q, r = divmod(seconds, uval)
-            result.append( f'{q:.0f} {label}{"s" if not isclose(q, 1.0) else ""}')
+            result.append(f'{q:.0f} {label}{"s" if not isclose(q, 1.0) else ""}')
             seconds -= q*uval
-    result += ['and', f'{seconds:.3f} seconds']
+    if not isclose(seconds, 0.0):
+        result += ['and', f'{seconds:.3f} seconds']
     return ' '.join(result)
 
 

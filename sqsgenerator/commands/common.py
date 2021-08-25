@@ -16,12 +16,12 @@ def ensure_iterable(o: T.Any, exclude=(str, bytes, bytearray), factory=set):
     else: return factory((o,))
 
 
-def error(message, exc_type=click.Abort, raise_exc=True, prefix=None):
+def error(message, exc_type=click.Abort, raise_exc=True, prefix=None, **kwargs):
     message = pretty_print(message, show=False)
     if prefix is not None:
         prefix = click.style(prefix, fg='red', bold=True, underline=True)
         message = f'{prefix}: {message}'
-    click.echo(message)
+    click.echo(message, **kwargs)
     if raise_exc: raise exc_type(message)
 
 
@@ -70,9 +70,9 @@ def exit_on_input_parameter_error(f):
         except BadSettings as exc:
             prefix = type(exc).__name__
             raise_first = exc.parameter is None
-            error(exc.message, prefix=prefix, raise_exc=raise_first)
+            error(exc.message, prefix=prefix, raise_exc=raise_first, nl=False)
             error(f'Maybe the documentation can help you: {make_help_link(exc.parameter)}',
-                  prefix=prefix, raise_exc=not raise_first)
+                  prefix=prefix, raise_exc=not raise_first, nl=False)
         else:
             return result
 

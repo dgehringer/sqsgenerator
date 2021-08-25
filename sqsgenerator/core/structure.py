@@ -47,13 +47,17 @@ class Structure(Structure_):
 
     def __getitem__(self, item):
         if isinstance(item, numbers.Integral):
-            if item < -self.num_atoms or item >= self.num_atoms: raise IndexError('Index out of range.')
+            if item < -self.num_atoms or item >= self.num_atoms:
+                raise IndexError('Index out of range.')
             return self.species[item]
 
         if isinstance(item, (list, tuple, np.ndarray)):
             indices = np.array(item)
-            if indices.dtype != int: raise TypeError('Only integer numbers cann be used for slicing')
-            if indices.dtype == bool: indices = np.argwhere(indices).flatten()  # boolean mask slice
+            if indices.dtype == bool:
+                indices = np.argwhere(indices).flatten()
+            elif indices.dtype != int:
+                raise TypeError('Only integer numbers cann be used for slicing')
+             # boolean mask slice
         elif isinstance(item, slice):
             indices = np.arange(self.num_atoms)[item]
         else:
@@ -62,10 +66,6 @@ class Structure(Structure_):
 
     def to_dict(self):
         return structure_to_dict(self)
-
-
-def symbols(structure: Structure):
-    return list(map(attr('symbols'), structure.species))
 
 
 def structure_to_dict(structure: Structure):
