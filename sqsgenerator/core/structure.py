@@ -54,8 +54,10 @@ class Structure(Structure_):
             indices = np.array(item)
             if indices.dtype != int: raise TypeError('Only integer numbers cann be used for slicing')
             if indices.dtype == bool: indices = np.argwhere(indices).flatten()  # boolean mask slice
-        elif isinstance(item, slice): indices = np.arange(self.num_atoms)[item]
-        else: raise TypeError(f'Structure indices must not be of type {type(item)}')
+        elif isinstance(item, slice):
+            indices = np.arange(self.num_atoms)[item]
+        else:
+            raise TypeError(f'Structure indices must not be of type {type(item)}')
         return Structure(self.lattice, self.frac_coords[indices], self.symbols[indices])
 
     def to_dict(self):

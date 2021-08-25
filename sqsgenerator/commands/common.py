@@ -3,7 +3,6 @@ import io
 import os
 import sys
 import click
-import attrdict
 import typing as T
 import functools
 import collections.abc
