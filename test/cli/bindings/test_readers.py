@@ -1,8 +1,11 @@
+import functools
 import os
 import random
 import unittest
 import attrdict
 import numpy as np
+from sqsgenerator.compat import have_mpi_support
+from sqsgenerator.core import default_shell_distances
 from sqsgenerator.adapters import to_ase_atoms, to_pymatgen_structure
 from sqsgenerator.io import read_settings_file
 from sqsgenerator.settings.readers import read_atol, \
@@ -11,6 +14,11 @@ from sqsgenerator.settings.readers import read_atol, \
     read_structure, \
     read_iterations, \
     read_composition, \
+    read_pair_weights, \
+    read_shell_weights, \
+    read_shell_distances, \
+    read_target_objective, \
+    read_threads_per_rank, \
     read_max_output_configurations, \
     BadSettings, ATOL, RTOL, IterationMode, Structure
 
@@ -41,13 +49,12 @@ class TestSettingReaders(unittest.TestCase):
         self.raw_dict_from_file = read_settings_file('examples/cs-cl.poscar.sqs.yaml')
         self.file_name = self.raw_dict_from_file.structure.file
         self.structure = read_structure(self.raw_dict)
+        self.distances = default_shell_distances(self.structure, ATOL, RTOL)
 
     def assertStructureEquals(self, s1: Structure, s2: Structure, prec=3):
         self.assertEqual(s1.num_unique_species, s2.num_unique_species)
         self.assertTrue(np.allclose(s1.numbers, s2.numbers))
         coords_close = np.allclose(np.round(s1.frac_coords, prec), np.round(s2.frac_coords, prec))
-        if not coords_close:
-            print(np.abs(s1.frac_coords - s2.frac_coords))
         self.assertTrue(coords_close)
 
     @test_function(read_atol)
@@ -130,7 +137,6 @@ class TestSettingReaders(unittest.TestCase):
         with self.assertRaises(BadSettings):
             f(structure={'A': 1})
 
-
     @test_function(read_composition)
     def test_read_composition(self, f):
 
@@ -196,6 +202,158 @@ class TestSettingReaders(unittest.TestCase):
         read_composition(s)
         self.assertTrue('is_sublattice' in s)
         self.assertTrue(s.is_sublattice)
+
+        sublattice = [0,2,4,5,6,7,8,9]
+        s = settings(structure=self.structure, composition=dict(H=4, He=4, which=sublattice))
+        read_composition(s)
+        self.assertTrue('is_sublattice' in s)
+        self.assertTrue(s.is_sublattice)
+
+    @test_function(read_shell_distances)
+    def test_read_shell_distances(self, f):
+        atol = read_atol(settings())
+        rtol = read_rtol(settings())
+        distances = f(structure=self.structure, atol=atol, rtol=rtol)
+        np.testing.assert_array_almost_equal(distances, default_shell_distances(self.structure, atol, rtol))
+
+        with self.assertRaises(BadSettings):
+            f(shell_distances=[0, -1, 2, 3, 4])
+
+        with self.assertRaises(BadSettings):
+            f(shell_distances="Wrong type")
+
+        with self.assertRaises(BadSettings):
+            f(shell_distances=[0, 1, 2, 3, complex(1, 2)])
+
+        with self.assertRaises(BadSettings):
+            f(shell_distances=[])
+
+        with self.assertRaises(BadSettings):
+            f(shell_distances=[0.0]*2)
+
+        custom_distances = [0, 1, 2, 4, 5]
+        np.testing.assert_array_almost_equal(custom_distances, f(shell_distances=custom_distances))
+
+        custom_distances = [1, 2, 4, 5]
+        np.testing.assert_array_almost_equal([0.0]+custom_distances, f(shell_distances=custom_distances))
+
+    @test_function(read_shell_weights)
+    def test_read_shell_weights(self, f):
+        atol = read_atol(settings())
+        rtol = read_rtol(settings())
+        distances = read_shell_distances(settings(structure=self.structure, atol=atol, rtol=rtol))
+        ff = functools.partial(f, shell_distances=distances)
+        weights = f(shell_distances=distances)
+        for i, w in weights.items():
+            self.assertAlmostEqual(w, 1.0/i)
+        self.assertEqual(len(weights)+1, len(distances))
+
+        with self.assertRaises(BadSettings):
+            ff(shell_weights={len(distances)+1: 1.0})
+
+        with self.assertRaises(BadSettings):
+            ff(shell_weights={-1: 1.0})
+
+        with self.assertRaises(BadSettings):
+            ff(shell_weights={})
+
+        with self.assertRaises(BadSettings):
+            ff(shell_weights=[1.0])
+
+        shells = {1: 1.0}
+        validated = ff(shell_weights=shells)
+        self.assertEqual(shells, validated)
+
+    @test_function(read_pair_weights)
+    def test_read_pair_weights(self, f):
+        ff = functools.partial(f, structure=self.structure)
+        ns = self.structure.num_unique_species
+
+        default_value = (~np.eye(self.structure.num_unique_species, dtype=bool)).astype(int)
+        np.testing.assert_array_almost_equal(f(structure=self.structure), default_value)
+
+        np.testing.assert_array_almost_equal(np.eye(ns), ff(pair_weights=np.eye(ns)))
+
+        with self.assertRaises(BadSettings):
+            ff(pair_weights=np.eye(ns + 1))
+
+        with self.assertRaises(BadSettings):
+            ff(pair_weights="string")
+
+        with self.assertRaises(BadSettings):
+            ff(pair_weights=np.arange(ns*ns).reshape((ns, ns)))
+
+    @test_function(read_target_objective)
+    def test_read_test_target_objective(self, f):
+        ff = functools.partial(f, structure=self.structure, shell_distances=self.distances)
+        default_sw = read_shell_weights(settings(structure=self.structure, atol=ATOL, rtol=RTOL, shell_distances=self.distances))
+        ns = self.structure.num_unique_species
+
+        def shape(sw : dict = default_sw): return (len(sw), ns, ns)
+
+        max_num_shells = len(default_sw)
+        for nshells in range(1, max_num_shells+1):
+            sw = {i: 1.0/i for i in range(1, nshells+1)}
+            self.assertEqual(ff(shell_weights=sw).shape, shape(sw))
+
+            targets = ff(shell_weights=sw, target_objective=nshells)
+            self.assertEqual(targets.shape, shape(sw))
+            for shell, w in sw.items():
+                actual = targets[shell-1, :, :]
+                should_be = np.ones_like(actual) * w * nshells
+                np.testing.assert_array_almost_equal(actual, should_be)
+
+        fff = functools.partial(ff, shell_weights=default_sw)
+        with self.assertRaises(BadSettings):
+            fff(target_objective="sadf")
+
+        with self.assertRaises(BadSettings):
+            fff(target_objective=np.arange(10))
+
+        with self.assertRaises(BadSettings):
+            fff(target_objective=np.ones((2,2,2,2)))
+
+        # test 3D array
+        all_ones = np.ones(shape())
+        np.testing.assert_array_almost_equal(all_ones, fff(target_objective=all_ones))
+
+        with self.assertRaises(BadSettings):
+            # test non symmetric sub-arrays
+            fff(target_objective=np.arange(np.prod(shape())).reshape(shape()))
+
+        with self.assertRaises(BadSettings):
+            fff(target_objective=np.zeros((2, ns+1, ns)))
+
+        # test 2D arrays
+        all_ones = np.ones((ns, ns))
+        target_objective = fff(target_objective=all_ones)
+        for shell in sorted(default_sw):
+            np.testing.assert_array_almost_equal(target_objective[shell-1], np.ones_like(all_ones)*default_sw[shell])
+
+        with self.assertRaises(BadSettings):
+            # non-symmetric input
+            fff(target_objective=np.arange(ns * ns).reshape((ns, ns)))
+
+        with self.assertRaises(BadSettings):
+            fff(target_objective=np.ones((ns+1, ns)))
+
+    @test_function(read_threads_per_rank)
+    def test_read_threads_per_rank(self, f):
+        default = [-1]
+        self.assertEqual(f(), default)
+
+        if not have_mpi_support():
+            with self.assertRaises(BadSettings):
+                f(threads_per_rank=(1,2,4))
+
+        import multiprocessing
+        for i in range(1, multiprocessing.cpu_count()+1):
+            self.assertEqual(f(threads_per_rank=i), [i])
+            self.assertEqual(f(threads_per_rank=float(i)), [i])
+            self.assertEqual(f(threads_per_rank=(i)), [i])
+            self.assertEqual(f(threads_per_rank=(float(i))), [i])
+
+
 
 if __name__ == '__main__':
     unittest.main()
