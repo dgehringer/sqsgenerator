@@ -8,3 +8,4 @@ dist/
 _static/
 _build/
 _templates/
+*.inplace*.yaml
