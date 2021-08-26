@@ -1,9 +1,9 @@
 
 structure:
   supercell:
-    - 3
-    - 3
-    - 3
+    - 2
+    - 2
+    - 2
   lattice:
     - [3.165, 0.0, 0.0]
     - [0.0, 3.165, 0.0]
@@ -14,13 +14,14 @@ structure:
   species:
     - W
     - W
-mode: random
-iterations: 2e6
-
+mode: systematic
+iterations: 0
+max_output_configurations: 13000
 shell_weights:
   1: 1.0
-
+target_objective: -100.0
 composition:
-  W: 27
-  Re: 27
+  Cs: 8
+  Cl: 8
+threads_per_rank: 1
 
