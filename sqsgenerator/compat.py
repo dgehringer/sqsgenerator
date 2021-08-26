@@ -1,13 +1,11 @@
+
+import sys
 import logging
 import operator
 import functools
-import sys
-
 import frozendict
 import typing as T
-
 from enum import Enum
-import logging
 
 
 class Feature(Enum):
@@ -19,7 +17,6 @@ class Feature(Enum):
     json = 'json'
     yaml = 'yaml'
     pickle = 'pickle'
-    sqsgen = 'sqsgen'
 
 
 class FeatureNotAvailableException(Exception):

@@ -221,7 +221,7 @@ def read_shell_weights(settings: attrdict.AttrDict):
     return settings.shell_weights
 
 
-@parameter('pair_weights', default=lambda s: (~np.eye(s.structure.num_unique_species, dtype=bool)).astype(int), required=True)
+@parameter('pair_weights', default=lambda s: (~np.eye(s.structure.num_unique_species, dtype=bool)).astype(float), required=True)
 def read_pair_weights(settings: attrdict.AttrDict):
     nums = settings.structure.num_unique_species
     if isinstance(settings.pair_weights, (list, tuple, np.ndarray)):

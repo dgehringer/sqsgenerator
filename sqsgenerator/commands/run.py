@@ -116,8 +116,12 @@ def iteration(settings, log_level, do_export, output_file, dump, dump_format, du
     result_document = make_result_document(sqs_results, settings, fields=dump_include)
     if dump_inplace:
         settings.update(result_document)
-        keys_to_remove = {'file_name', 'input_format', 'compositions', 'iterations', 'max_output_configurations', 'mode', 'threads_per_rank'}
+        keys_to_remove = {'file_name', 'input_format', 'composition', 'iterations', 'max_output_configurations',
+                          'mode', 'threads_per_rank', 'is_sublattice'}
         final_document = {k: v for k, v in settings.items() if k  not in keys_to_remove}
+        if 'sublattice' in final_document:
+            final_document.update(final_document['sublattice'])
+            del final_document['sublattice']
     else:
         final_document = result_document
 
@@ -147,7 +151,6 @@ def iteration(settings, log_level, do_export, output_file, dump, dump_format, du
 @click.option('--output', '-o', 'output_file', type=click.Path(dir_okay=False, allow_dash=True))
 @click_settings_file(process=None, default_name='sqs.result.yaml')
 def export(settings, format='cif', writer='ase', compress=None, output_file='sqs.result'):
-    pretty_print(settings)
     result_document = attrdict.AttrDict(settings)
     needed_keys = {'structure', 'configurations'}
     if not all(map(lambda k: k in result_document, needed_keys)):
