@@ -77,6 +77,7 @@ T^{\left\{i,j,k\right\}} = \left|\left\{ (\xi,\eta,\zeta) | (c_{\xi\eta}, c_{\et
 $$ (eqn:triplet-number)
 
 The number of all triplets are computed from the input structure before the iteration itself starts.
+
 $$
 \beta^{ijk}_{\xi\eta\zeta} = 1 - \dfrac{N^{ijk}_{\xi\eta\zeta}}{\frac{1}{|\{i,j,k\}|}NT^{\left\{i,j,k\right\}}x_\xi x_\eta x_\zeta}
 $$ (eqn:triplet-sro)
