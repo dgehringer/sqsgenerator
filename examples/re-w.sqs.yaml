@@ -5,22 +5,22 @@ structure:
     - 3
     - 3
   lattice:
-    - [4.123, 0.0, 0.0]
-    - [0.0, 4.123, 0.0]
-    - [0.0, 0.0, 4.123]
+    - [3.165, 0.0, 0.0]
+    - [0.0, 3.165, 0.0]
+    - [0.0, 0.0, 3.165]
   coords:
     - [0.0, 0.0, 0.0]
     - [0.5, 0.5, 0.5]
   species:
-    - Cs
-    - Cl
+    - W
+    - W
 mode: random
-iterations: 1e6
+iterations: 2e6
+
 shell_weights:
   1: 1.0
+
 composition:
-  which: Cs
-  Fr: 9
-  Ta: 9
-  Lu: 9
+  W: 27
+  Re: 27
 
