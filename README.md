@@ -1,5 +1,5 @@
 # sqsgenerator
-
+ 
 ## Installation
 
 ### Libraries
