@@ -4,9 +4,11 @@
 
 #ifndef SQSGENERATOR_TYPES_HPP
 #define SQSGENERATOR_TYPES_HPP
-#include <vector>
+
 #include <map>
 #include <array>
+#include <chrono>
+#include <vector>
 #include <cstdint>
 #include <functional>
 #include <boost/multi_array.hpp>
@@ -33,6 +35,8 @@ namespace sqsgenerator {
     typedef std::vector<species_t> configuration_t;
     typedef std::vector<double> parameter_storage_t;
     typedef std::map<shell_t, double> pair_shell_weights_t;
+    typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point_t;
+    typedef std::map<int, std::map<int, std::tuple<rank_t, rank_t>>> rank_iteration_map_t;
     using get_next_configuration_t = std::function<bool(configuration_t&)>;
     using get_next_configuration_ptr_t = std::function<bool(species_t*, size_t)>;
     template<size_t NDims>

@@ -19,7 +19,7 @@
 
 namespace sqsgenerator {
 
-    typedef std::map<int, std::map<int, std::tuple<rank_t, rank_t>>> rank_iteration_map_t;
+
 
     std::string format_sqs_result(const sqsgenerator::SQSResult &result) {
         std::stringstream message;
@@ -40,23 +40,21 @@ namespace sqsgenerator {
         BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::num_pairs = " << settings.pair_list().size();
     }
 
+    inline
     void count_pairs(const configuration_t &configuration, const std::vector<size_t> &pair_list,
-                            std::vector<double> &bonds, const std::vector<int> &reindexer, size_t nspecies,
-                            bool clear) {
-        species_t si, sj;
+                     std::vector<double> &bonds,
+                     size_t nspecies,
+                     bool clear) {
         std::vector<size_t>::difference_type row_size{3};
-        size_t npars_reduced{(nspecies * (nspecies - 1)) / 2 + nspecies}, offset;
-        int flat_index;
+        size_t num_sro_params {nspecies * nspecies};
         if (clear) std::fill(bonds.begin(), bonds.end(), 0.0);
         for (auto it = pair_list.begin(); it != pair_list.end(); it += row_size) {
-            si = configuration[*it];
-            sj = configuration[*(it + 1)];
-            if (sj > si) std::swap(si, sj);
-            offset = sj * nspecies + si;
-            assert(offset < reindexer.size());
-            flat_index = reindexer[offset];
-            assert(flat_index >= 0 && flat_index < static_cast<int>(reindexer.size()));
-            bonds[*(it + 2) * npars_reduced + flat_index]++;
+            auto si {configuration[*it]};
+            auto sj {configuration[*(it + 1)]};
+            auto shell{*(it + 2)};
+            bonds[shell * num_sro_params + sj * nspecies + si]++;
+            // write to (sj,si) only if si != sj
+            if (si != sj) bonds[shell * num_sro_params + si * nspecies + sj]++;
         }
     }
 
@@ -74,20 +72,19 @@ namespace sqsgenerator {
     }
 
     rank_iteration_map_t compute_ranks(const IterationSettings &settings, const std::vector<int> &threads_per_rank) {
-        rank_t start_it, end_it, total;
-        auto nthreads = std::accumulate(threads_per_rank.begin(), threads_per_rank.end(), 0);
-
         auto thread_count {0};
         rank_iteration_map_t rank_map;
-        auto niterations{settings.num_iterations()};
+        auto niterations {settings.num_iterations()};
         auto num_mpi_ranks {static_cast<int>(threads_per_rank.size())};
+        auto nthreads {std::accumulate(threads_per_rank.begin(), threads_per_rank.end(), 0)};
+
         total = (settings.mode() == random) ? niterations : utils::total_permutations(settings.packed_configuraton());
         for (int mpi_rank = 0; mpi_rank < num_mpi_ranks; mpi_rank++) {
-            auto  threads_in_mpi_rank = threads_per_rank[mpi_rank];
+            auto threads_in_mpi_rank = threads_per_rank[mpi_rank];
             std::map<int, std::tuple<rank_t, rank_t>> local_rank_map;
             for (int local_thread_id = 0; local_thread_id < threads_in_mpi_rank; local_thread_id++) {
-                start_it = total / nthreads * thread_count;
-                end_it = start_it + total / nthreads;
+                auto start_it = total / nthreads * thread_count;
+                auto end_it = start_it + total / nthreads;
                 // permutation sequence indexing starts with one
                 if (settings.mode() == systematic) {
                     start_it++;
@@ -114,89 +111,12 @@ namespace sqsgenerator {
         return result;
     }
 
-    /**
-     * computes a index vector which maps each index of a (symmetric) matrix stored in a flat array into a the offset
-     * for a another flat arrray. Due to the symmertric property (\f$i \leq j\f$) we do not have to store all values.
-     *
-     * Let's consider a \f$N \times N\f$ matrix (E. g. 2 times 2). When storing it as an flat array the index can be
-     * computed by \f$i\cdot N  +j \f$. . In case of the \f$2 \times 2\f$ array
-     *
-     * @param settings iteration settings
-     * @return a vector storing the indices of for storing a symmetric matrix
-     */
-    std::vector<int> make_reduction_vector(const IterationSettings &settings) {
-        std::vector<int> triu;
-        int nspecies{static_cast<int>(settings.num_species())};
-        for (int i = 0; i < nspecies; i++) { for (int j = i; j < nspecies; j++) triu.push_back(i * nspecies + j); }
-        std::vector<int> indices(*std::max_element(triu.begin(), triu.end()) + 1);
-        std::fill(indices.begin(), indices.end(), -1);
-        for (int i = 0; i < static_cast<int>(triu.size()); i++) indices[triu[i]] = i;
-        return indices;
-    }
-
-    std::tuple<size_t, parameter_storage_t, parameter_storage_t, parameter_storage_t>
-    reduce_weights_matrices(const IterationSettings &settings, const std::vector<int> &reindexer) {
-        // We make use of the symmetry property of the weights
-        size_t nspecies{settings.num_species()},
-                nshells{settings.num_shells()},
-                npars_per_shell_asym{
-                (nspecies * (nspecies - 1)) / 2 + nspecies}, // upper half of a symmetric matrix plus the main diagonal
-        reduced_size{nshells * npars_per_shell_asym};
-        auto[_, sorted_shell_weights] = settings.shell_indices_and_weights();
-        assert(sorted_shell_weights.size() == nshells);
-        auto target_objectives_full = settings.target_objective();
-        auto prefactors_full = settings.parameter_prefactors();
-        auto parameter_weights_full = settings.parameter_weights();
-        parameter_storage_t prefactors(reduced_size), parameter_weights(reduced_size), target_objectives(reduced_size);
-        size_t offset{0};
-        for (size_t shell = 0; shell < nshells; shell++) {
-            auto shell_weight{sorted_shell_weights[shell]};
-            for (size_t si = 0; si < nspecies; si++) {
-                for (size_t sj = si; sj < nspecies; sj++) {
-                    int flat_index{reindexer[si * nspecies + sj]};
-                    offset = shell * npars_per_shell_asym + flat_index;
-                    assert(flat_index >= 0 && flat_index < static_cast<int>(npars_per_shell_asym));
-                    prefactors[offset] = prefactors_full[shell][si][sj];
-                    target_objectives[offset] = target_objectives_full[shell][si][sj];
-                    parameter_weights[offset] = shell_weight * parameter_weights_full[si][sj];
-                }
-            }
-        }
-        return std::make_tuple(npars_per_shell_asym, prefactors, parameter_weights, target_objectives);
-    }
-
-    parameter_storage_t expand_matrix(const parameter_storage_t &matrix, const IterationSettings &settings,
-                                      const std::vector<int> &reindexer) {
-        size_t nspecies{settings.num_species()},
-                nshells{settings.num_shells()},
-                npars_per_shell_asym{
-                (nspecies * (nspecies - 1)) / 2 + nspecies}, // upper half of a symmetric matrix plus the main diagonal
-        npars_per_shell_sym{nspecies * nspecies}, // upper half of a symmetric matrix plus the main diagonal
-                full_size{nshells * nspecies * nspecies},
-                offset_compact,
-                offset_full;
-
-        parameter_storage_t vec(full_size);
-        for (size_t shell = 0; shell < nshells; shell++) {
-            offset_full = shell * npars_per_shell_sym;
-            offset_compact = shell * npars_per_shell_asym;
-            for (size_t si = 0; si < nspecies; si++) {
-                for (size_t sj = si; sj < nspecies; sj++) {
-                    int flat_index{reindexer[si * nspecies + sj]};
-                    vec[offset_full + si * nspecies + sj] = matrix[offset_compact + flat_index];
-                    if (si != sj) vec[offset_full + sj * nspecies + si] = matrix[offset_compact + flat_index];
-                    assert(flat_index >= 0 && flat_index < static_cast<int>(npars_per_shell_asym));
-                }
-            }
-        }
-        return vec;
-    }
 
     std::tuple<std::vector<SQSResult>, timing_map_t> do_pair_iterations(const IterationSettings &settings) {
-        typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point_t;
-        typedef boost::circular_buffer<SQSResult> result_buffer_t;
+        typedef boost::circular_buffer<SQSResult> result_buffer_t; // this typedef is an implementation detail and used just in this method
         auto threads_per_rank {settings.threads_per_rank()};
         int mpi_num_ranks, mpi_rank;
+
 #if defined(USE_MPI)
         int mpi_all_gather_err, mpi_initialized, mpi_thread_level_support_provided, mpi_thread_level_support_required {MPI_THREAD_SERIALIZED};
         MPI_Initialized(&mpi_initialized);
@@ -229,31 +149,33 @@ namespace sqsgenerator {
         auto num_threads_per_rank = threads_per_rank[mpi_rank];
         BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::num_threads_requested = " << num_threads_per_rank;
 
-        double best_objective{std::numeric_limits<double>::max()};
         timing_map_t thread_timings;
         rank_iteration_map_t iteration_ranks;
-        parameter_storage_t prefactors, parameter_weights, target_objectives;
+        double best_objective{std::numeric_limits<double>::max()};
+        rank_t nperms = utils::total_permutations(settings.packed_configuraton());
+
         result_buffer_t results(settings.num_output_configurations());
+
         std::vector<size_t> pair_list(convert_pair_list(settings.pair_list()));
         std::vector<size_t> hist(utils::configuration_histogram(settings.packed_configuraton()));
-        rank_t nperms = utils::total_permutations(settings.packed_configuraton());
-        size_t nshells {settings.num_shells()}, nspecies{settings.num_species()}, nparams {nshells * nspecies * nspecies}, reduced_size;
-        auto reindexer(make_reduction_vector(settings));
-        std::tie(reduced_size, prefactors, parameter_weights, target_objectives) = reduce_weights_matrices(settings,
-                                                                                                           reindexer);
+
+        size_t nshells {settings.num_shells()}
+        size_t nspecies {settings.num_species()}
+        size_t nparams {nshells * nspecies * nspecies};
+
+        parameter_storage_t targets_objectives {settings.target_objective()};
+        parameter_storage_t parameter_weights {settings.parameter_weights()};
+        parameter_storage_t parameter_prefactors {settings.parameter_prefactors()};
 
         omp_set_num_threads(num_threads_per_rank);
-        #pragma omp parallel default(shared) firstprivate(nspecies, nshells, reduced_size, mpi_rank, mpi_num_ranks)
+        #pragma omp parallel default(shared) firstprivate(nspecies, nshells, nparams, mpi_rank, mpi_num_ranks)
         {
-            double avg_loop_time;
-            double objective_local;
             uint64_t random_seed_local;
-            time_point_t start_time, end_time;
-            double best_objective_local{best_objective};
+            double best_objective_local {best_objective};
             get_next_configuration_t get_next_configuration;
             int thread_id {omp_get_thread_num()}, nthreads {omp_get_num_threads()};
             configuration_t configuration_local(settings.packed_configuraton());
-            parameter_storage_t parameters_local(reduced_size * nshells);
+            parameter_storage_t parameters_local(nparams);
 
             // we have to synchronize the threads before we go on with initialization
 
@@ -300,7 +222,6 @@ namespace sqsgenerator {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::iteration_end = " << end_it;
             }
 
-
             switch (settings.mode()) {
                 case iteration_mode::random: {
                     #pragma omp critical
@@ -325,29 +246,30 @@ namespace sqsgenerator {
                 } break;
             }
 
-            start_time = std::chrono::high_resolution_clock::now();
+            time_point_t start_time = std::chrono::high_resolution_clock::now();
             for (rank_t i = start_it; i < end_it; i++) {
                 get_next_configuration(configuration_local);
-                count_pairs(configuration_local, pair_list, parameters_local, reindexer, nspecies, true);
-                objective_local = calculate_pair_objective(parameters_local, prefactors, parameter_weights,
+                count_pairs(configuration_local, pair_list, parameters_local, nspecies, true);
+                auto objective_local = calculate_pair_objective(parameters_local, parameter_prefactors, parameter_weights,
                                                                   target_objectives);
                 if (objective_local <= best_objective_local) {
 
 #if defined(USE_MPI)
                     /*
-                     * We check if one of the other processes has found a better objective. We check if any of the other
-                     * ranks has populated a better objective. Again we just need one thread to update the best_objective
+                     * We check (at one thread at a time) if any of the other ranks, has populated a better objective.
+                     * Therefore we check if any messages have, arrived at our own rank. If, so we read all messages
+                     * , in case more than one rank has found something, and upate your rank, and thread internal
+                     * "best_objective" value.
                      */
                     #pragma omp critical
                     {
+                        int have_message;
                         MPI_Request request;
                         MPI_Status request_status;
-                        int have_message;
-                        int source_rank;
-                        double global_best_objective;
                         MPI_Iprobe(MPI_ANY_SOURCE, TAG_BETTER_OBJECTIVE, MPI_COMM_WORLD, &have_message, &request_status);
                         while (have_message) {
-                            source_rank = request_status.MPI_SOURCE;
+                            double global_best_objective;
+                            int source_rank = request_status.MPI_SOURCE;
                             MPI_Irecv(&global_best_objective, 1, MPI_DOUBLE, source_rank, TAG_BETTER_OBJECTIVE, MPI_COMM_WORLD, &request);
                             MPI_Wait(&request, &request_status);
                             if (global_best_objective < best_objective) {
@@ -359,7 +281,7 @@ namespace sqsgenerator {
                         }
                     }
 #endif
-                    // we do only an atomic read from the global shared variable in case the local one is already satisfied
+                    // we do only an atomic read from the global shared variable in case the current is smaller than the thread internal
                     #pragma omp atomic read
                     best_objective_local = best_objective;
 
@@ -392,35 +314,58 @@ namespace sqsgenerator {
                     }
                 }
             } // for
-            end_time = std::chrono::high_resolution_clock::now();
-            avg_loop_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count()) /(long)(end_it - start_it);
+            time_point_t end_time = std::chrono::high_resolution_clock::now();
+            auto avg_loop_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count()) /(long)(end_it - start_it);
             #pragma omp critical
             {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::avg_loop_time = " << avg_loop_time;
                 thread_timings[mpi_rank][thread_id] = avg_loop_time;
             };
         } // pragma omp parallel
+
+        // After the main loop has finished, we copy (move) the values from the circular buffer into a vector
         std::vector<SQSResult> tmp_results, final_results;
         for (auto &r : results) tmp_results.push_back(std::move(r));
 
 #if defined (USE_MPI)
+        /*
+         * If MPI is used we have to send timing information, therefore a few things are needed
+         *  - We need to now how many threads were actually allocated on our own MPI rank (actual_threads_on_rank)
+         *  - A storage where to store the actual number of threads per MPI rank (num_actual_threads_on_rank)
+         *  - A storage where to store the actual number of found results per MPI rank (num_sqs_results)
+         */
         int actual_threads_on_rank {static_cast<int>(thread_timings[mpi_rank].size())};
-        double buf_par[nparams], buf_obj, buf_timings[actual_threads_on_rank];
+        double buf_timings[actual_threads_on_rank];
         species_t buf_conf[settings.num_atoms()];
         std::vector<int> num_sqs_results, num_actual_threads_on_rank;
         if (mpi_rank == HEAD_RANK)  {
             num_sqs_results.resize(mpi_num_ranks);
             num_actual_threads_on_rank.resize(mpi_num_ranks);
         }
-        int num_results {static_cast<int>(results.size())};
 
+        // Synchornize the actual number of threads per rank (num_actual_threads_on_rank) and the number of SQS results
+        // (num_sqs_results)
+        int num_results {static_cast<int>(results.size())};
         // Gater the number of final configurations and the number of threads on each rank
         MPI_Gather(&num_results, 1, MPI_INT, num_sqs_results.data(), 1, MPI_INT, HEAD_RANK, MPI_COMM_WORLD);
         MPI_Gather(&actual_threads_on_rank, 1, MPI_INT, num_actual_threads_on_rank.data(), 1, MPI_INT, HEAD_RANK, MPI_COMM_WORLD);
+
+        // Exchange buffers
+        double buf_par[nparams], buf_obj;
         if (mpi_rank == HEAD_RANK) {
             for (int other_rank = 0; other_rank < mpi_num_ranks; other_rank++) {
                 if (other_rank == HEAD_RANK) continue;
                 int num_sqs_results_of_rank = num_sqs_results[other_rank];
+                /*
+                 * The synchonization routing works the following
+                 *  - we collect the actual number of found results (num_sqs_results_of_rank) form each rank (other_rank)
+                 *  - for each result there are three Send/Recv
+                 *    - 1. SRO parameters
+                 *    - 2. the configuration
+                 *    - 3. the objective function value
+                 *  - we construct a new SQSResult object on the head rank
+                 *  - after that we synchronize thread timing information
+                 */
                 for (int j = 0; j < num_sqs_results_of_rank; j++) {
                     MPI_Status status;
                     MPI_Recv(&buf_par[0], static_cast<int>(nparams), MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
@@ -439,6 +384,7 @@ namespace sqsgenerator {
             }
         }
         else {
+            // on the non-head ranks we send all the data stored in the rank-internal SQSResult
             for (auto &r : tmp_results) {
                 std::copy(r.storage().begin(), r.storage().end(), buf_par);
                 std::copy(r.configuration().begin(), r.configuration().end(), buf_conf);
@@ -455,11 +401,10 @@ namespace sqsgenerator {
 #endif
         std::unordered_set<rank_t> ranks;
         for (auto &r : tmp_results) {
+            // rank computation is relatively demanding, in the main loop we only set it to {-1}
             rank_t rank = rank_permutation(r.configuration(), settings.num_species());
             r.set_rank(rank);
             r.set_configuration(settings.unpack_configuration(r.configuration()));
-            r.set_storage(expand_matrix(r.storage(), settings, reindexer));
-            assert(r.storage().size() == nparams);
             BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::conf = " << format_sqs_result(r);
             if (settings.mode() == random && !ranks.insert(rank).second) {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::duplicate_configuration = " << rank;
@@ -473,23 +418,22 @@ namespace sqsgenerator {
 
     SQSResult do_pair_analysis(const IterationSettings &settings) {
         log_settings("do_pair_analysis", settings);
-        auto reindexer(make_reduction_vector(settings));
         size_t nshells {settings.num_shells()},
                 nspecies{settings.num_species()},
-                nparams {nshells * nspecies * nspecies},
-                reduced_size;
+                nparams {nshells * nspecies * nspecies};
         configuration_t configuration(settings.packed_configuraton());
-        parameter_storage_t prefactors, parameter_weights, target_objectives;
         std::vector<size_t> pair_list(convert_pair_list(settings.pair_list()));
         std::vector<size_t> hist(utils::configuration_histogram(settings.packed_configuraton()));
 
-        std::tie(reduced_size, prefactors, parameter_weights, target_objectives) = reduce_weights_matrices(settings, reindexer);
+        parameter_storage_t targets_objectives {settings.target_objective()};
+        parameter_storage_t parameter_weights {settings.parameter_weights()};
+        parameter_storage_t parameter_prefactors {settings.parameter_prefactors()};
         parameter_storage_t sro_parameters(reduced_size * nshells);
 
-        count_pairs(configuration, pair_list, sro_parameters, reindexer, nspecies, true);
-        double objective = calculate_pair_objective(sro_parameters, prefactors, parameter_weights, target_objectives);
+        count_pairs(configuration, pair_list, sro_parameters, nspecies, true);
+        double objective = calculate_pair_objective(sro_parameters, parameter_prefactors, parameter_weights, target_objectives);
         rank_t configuration_rank = rank_permutation(configuration, nspecies);
-        SQSResult result(objective, configuration_rank, settings.unpack_configuration(configuration), expand_matrix(sro_parameters, settings, reindexer));
+        SQSResult result(objective, configuration_rank, settings.unpack_configuration(configuration), sro_parameters);
         return result;
     }
 }
