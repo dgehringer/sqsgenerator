@@ -6,13 +6,14 @@ import attrdict
 import functools
 import numpy as np
 import typing as T
+from operator import attrgetter as attr
 from sqsgenerator.compat import Feature as F
 from sqsgenerator.settings import construct_settings
-from sqsgenerator.settings.readers import read_structure, process_settings
+from sqsgenerator.settings.readers import read_structure
+from sqsgenerator.commands.common import click_settings_file, error
 from sqsgenerator.io import supported_formats, to_dict, dumps, compression_to_file_extension, export_structures
-from sqsgenerator.commands.common import click_settings_file, error, pretty_print
 from sqsgenerator.core import pair_sqs_iteration, set_core_log_level, log_levels, symbols_from_z, SQSResult, Structure, pair_analysis, available_species
-from operator import attrgetter as attr, itemgetter as item
+
 
 TimingDictionary = T.Dict[int, T.List[float]]
 Settings = attrdict.AttrDict
@@ -93,6 +94,7 @@ def expand_results(dense: Settings):
 @click.command('iteration')
 @click.option('--export', '-e', 'do_export', is_flag=True)
 @click.option('--dump/--no-dump', default=True)
+@click.option('--minimal/--no-minimal', default=True)
 @click.option('--format', '-f', type=click.STRING, default='cif')
 @click.option('--dump-inplace', '--inplace', 'dump_inplace', is_flag=True)
 @click.option('--writer', '-w', type=click.Choice(['ase', 'pymatgen']), default='ase')
@@ -102,10 +104,14 @@ def expand_results(dense: Settings):
 @click.option('--dump-include', '-di', 'dump_include', type=click.Choice(['parameters', 'timings', 'objective']), multiple=True)
 @click.option('--compress', '-c', type=click.Choice(list(compression_to_file_extension)))
 @click_settings_file('all')
-def iteration(settings, log_level, do_export, output_file, dump, dump_format, dump_include, dump_inplace, format, writer, compress):
+def iteration(settings, log_level, do_export, output_file, dump, dump_format, dump_include, dump_inplace, format, writer, compress, minimal):
     iteration_settings = construct_settings(settings, False)
     set_core_log_level(log_levels.get(log_level))
     sqs_results, timings = pair_sqs_iteration(iteration_settings)
+
+    if minimal:
+        min_objective = min(sqs_results, key=attr('objective')).objective
+        sqs_results = list(filter(lambda r: np.isclose(r.objective, min_objective), sqs_results))
 
     output_prefix = output_file \
         if output_file is not None \

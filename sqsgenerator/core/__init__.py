@@ -5,15 +5,15 @@ import frozendict
 import typing as T
 
 
-from .iteration import __version__, __features__
-from .iteration import set_log_level, pair_sqs_iteration, pair_analysis
-from .iteration import IterationMode, IterationSettings, BoostLogLevel
+from sqsgenerator.core.iteration import __version__, __features__
+from sqsgenerator.core.iteration import set_log_level, pair_sqs_iteration, pair_analysis
+from sqsgenerator.core.iteration import IterationMode, IterationSettings, BoostLogLevel
 
-from .structure import Structure, structure_to_dict, Atom, make_supercell
+from sqsgenerator.core.structure import Structure, structure_to_dict, Atom, make_supercell
 
-from .data import SQSResult
+from sqsgenerator.core.data import SQSResult
 
-from .utils import default_shell_distances, total_permutations, rank_structure, atoms_from_numbers, \
+from sqsgenerator.core.utils import default_shell_distances, total_permutations, rank_structure, atoms_from_numbers, \
     atoms_from_symbols, available_species, symbols_from_z
 
 __all__ = [
