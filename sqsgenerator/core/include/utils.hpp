@@ -106,6 +106,10 @@ namespace boost{
         return message.str();
     }
 
+    template<typename MultiArray>
+    std::vector<typename MultiArray::element> to_flat_vector(const MultiArray &array) {
+        return std::vector<typename MultiArray::element>(array.data(), array.data() + array.num_elements());
+    }
 
     template<typename MultiArray, typename T1 = typename MultiArray::element>
     std::string format_matrix(MultiArray array) {
