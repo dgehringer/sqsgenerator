@@ -1,7 +1,9 @@
 
 import click
 from sqsgenerator.commands.run import run
+from sqsgenerator.commands.export import export
 from sqsgenerator.commands.params import params
+from sqsgenerator.commands.analyse import analyse
 from sqsgenerator.commands.compute import compute
 
 
@@ -24,9 +26,12 @@ def cli():
     pass
 
 
-cli.add_command(params, 'params')
-cli.add_command(compute, 'compute')
 cli.add_command(run, 'run')
+cli.add_command(params, 'params')
+cli.add_command(export, 'export')
+cli.add_command(analyse, 'analyse')
+cli.add_command(compute, 'compute')
+
 
 if __name__ == '__main__':
     cli()
