@@ -7,13 +7,14 @@ import typing as T
 import collections.abc
 from functools import partial
 from itertools import repeat, chain
-from .exceptions import BadSettings
-from .functional import parameter as parameter_, if_, isa
-from sqsgenerator.io import read_structure_from_file
 from operator import attrgetter as attr, itemgetter as item
-from sqsgenerator.core import IterationMode, default_shell_distances, available_species, Structure, make_supercell
-from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure
+
+from sqsgenerator.io import read_structure_from_file
+from sqsgenerator.settings.exceptions import BadSettings
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature
+from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure
+from sqsgenerator.settings.functional import parameter as parameter_, if_, isa
+from sqsgenerator.core import IterationMode, default_shell_distances, available_species, Structure, make_supercell
 
 
 __parameter_registry = collections.OrderedDict({})
@@ -68,7 +69,7 @@ def read_mode(settings: attrdict.AttrDict):
     return IterationMode.names[settings.mode]
 
 
-@parameter('iterations', default=if_(random_mode)(1e5)(-1), required=if_(random_mode)(True)(False))
+@parameter('iterations', default=if_(random_mode)(100000)(-1), required=if_(random_mode)(True)(False))
 def read_iterations(settings: attrdict.AttrDict):
     num_iterations =  convert(settings.iterations, converter=int_safe, message=f'Cannot convert "{settings.iterations}" to int')
     if num_iterations < 0: raise BadSettings('"iterations" must be positive')
