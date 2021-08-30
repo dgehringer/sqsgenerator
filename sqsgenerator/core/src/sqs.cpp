@@ -65,26 +65,30 @@ namespace sqsgenerator {
         double total_objective {0.0};
         size_t nparams {bonds.size()};
         for (size_t i = 0; i < nparams; i++) {
+            // std::cout << "\tparam[" << i << "], num_bonds=" << bonds[i] << ", prefactors=" << prefactors[i];
             bonds[i] =  (1.0 - bonds[i] * prefactors[i]);
+            // std::cout << ", sro=" << bonds[i] << ", target=" << target_objectives[i] << ", weight=" << parameter_weights[i] << ", contribution=" << parameter_weights[i] * std::abs(bonds[i] - target_objectives[i]) <<std::endl;
             total_objective += parameter_weights[i] * std::abs(bonds[i] - target_objectives[i]);
         }
+        // std::cout << "total_objective=" << total_objective << std::endl;
         return total_objective;
     }
 
     rank_iteration_map_t compute_ranks(const IterationSettings &settings, const std::vector<int> &threads_per_rank) {
         auto thread_count {0};
         rank_iteration_map_t rank_map;
-        auto niterations {settings.num_iterations()};
-        auto num_mpi_ranks {static_cast<int>(threads_per_rank.size())};
+        int num_mpi_ranks {static_cast<int>(threads_per_rank.size())};
         auto nthreads {std::accumulate(threads_per_rank.begin(), threads_per_rank.end(), 0)};
 
-        total = (settings.mode() == random) ? niterations : utils::total_permutations(settings.packed_configuraton());
+        rank_t niterations(settings.num_iterations());
+        rank_t total = (settings.mode() == random) ? niterations :utils::total_permutations(settings.packed_configuraton());
+
         for (int mpi_rank = 0; mpi_rank < num_mpi_ranks; mpi_rank++) {
             auto threads_in_mpi_rank = threads_per_rank[mpi_rank];
             std::map<int, std::tuple<rank_t, rank_t>> local_rank_map;
             for (int local_thread_id = 0; local_thread_id < threads_in_mpi_rank; local_thread_id++) {
-                auto start_it = total / nthreads * thread_count;
-                auto end_it = start_it + total / nthreads;
+                rank_t start_it = total / nthreads * thread_count;
+                rank_t end_it = start_it + total / nthreads;
                 // permutation sequence indexing starts with one
                 if (settings.mode() == systematic) {
                     start_it++;
@@ -115,7 +119,6 @@ namespace sqsgenerator {
     std::tuple<std::vector<SQSResult>, timing_map_t> do_pair_iterations(const IterationSettings &settings) {
         typedef boost::circular_buffer<SQSResult> result_buffer_t; // this typedef is an implementation detail and used just in this method
         auto threads_per_rank {settings.threads_per_rank()};
-        int mpi_num_ranks, mpi_rank;
 
 #if defined(USE_MPI)
         int mpi_all_gather_err, mpi_initialized, mpi_thread_level_support_provided, mpi_thread_level_support_required {MPI_THREAD_SERIALIZED};
@@ -127,6 +130,7 @@ namespace sqsgenerator {
         else MPI_Query_thread(&mpi_thread_level_support_provided); // Ensure that we can use the MPI runtime in the multi-threaded-section
         if (mpi_thread_level_support_provided < mpi_thread_level_support_required) throw std::runtime_error("MPI threading level support is not fulfilling the requirements. I need at least 'MPI_THREAD_SERIALIZED'");
 
+        int mpi_num_ranks, mpi_rank;
         MPI_Comm_size(MPI_COMM_WORLD, &mpi_num_ranks);
         MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
@@ -136,8 +140,8 @@ namespace sqsgenerator {
             log_settings("do_pair_iterations", settings);
         }
 #else
-        mpi_num_ranks = 1;
-        mpi_rank = 0;
+        int mpi_rank {0};
+        int mpi_num_ranks {1};
         log_settings("do_pair_iterations", settings);
 #endif
         // In case a negative number is specified we try to get as many threads as possible
@@ -159,13 +163,13 @@ namespace sqsgenerator {
         std::vector<size_t> pair_list(convert_pair_list(settings.pair_list()));
         std::vector<size_t> hist(utils::configuration_histogram(settings.packed_configuraton()));
 
-        size_t nshells {settings.num_shells()}
-        size_t nspecies {settings.num_species()}
+        size_t nshells {settings.num_shells()};
+        size_t nspecies {settings.num_species()};
         size_t nparams {nshells * nspecies * nspecies};
 
-        parameter_storage_t targets_objectives {settings.target_objective()};
-        parameter_storage_t parameter_weights {settings.parameter_weights()};
-        parameter_storage_t parameter_prefactors {settings.parameter_prefactors()};
+        parameter_storage_t target_objectives (boost::to_flat_vector(settings.target_objective()));
+        parameter_storage_t parameter_weights (boost::to_flat_vector(settings.parameter_weights()));
+        parameter_storage_t parameter_prefactors (boost::to_flat_vector(settings.parameter_prefactors()));
 
         omp_set_num_threads(num_threads_per_rank);
         #pragma omp parallel default(shared) firstprivate(nspecies, nshells, nparams, mpi_rank, mpi_num_ranks)
@@ -425,10 +429,10 @@ namespace sqsgenerator {
         std::vector<size_t> pair_list(convert_pair_list(settings.pair_list()));
         std::vector<size_t> hist(utils::configuration_histogram(settings.packed_configuraton()));
 
-        parameter_storage_t targets_objectives {settings.target_objective()};
-        parameter_storage_t parameter_weights {settings.parameter_weights()};
-        parameter_storage_t parameter_prefactors {settings.parameter_prefactors()};
-        parameter_storage_t sro_parameters(reduced_size * nshells);
+        parameter_storage_t target_objectives (boost::to_flat_vector(settings.target_objective()));
+        parameter_storage_t parameter_weights (boost::to_flat_vector(settings.parameter_weights()));
+        parameter_storage_t parameter_prefactors (boost::to_flat_vector(settings.parameter_prefactors()));
+        parameter_storage_t sro_parameters(nparams);
 
         count_pairs(configuration, pair_list, sro_parameters, nspecies, true);
         double objective = calculate_pair_objective(sro_parameters, parameter_prefactors, parameter_weights, target_objectives);
