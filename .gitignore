@@ -9,3 +9,5 @@ _static/
 _build/
 _templates/
 *.inplace*.yaml
+*.result*.yaml
+*.so
