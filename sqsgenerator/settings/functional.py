@@ -68,5 +68,13 @@ def isa(o: T.Tuple[type]):
     return lambda x: isinstance(x, o)
 
 
+def star(f):
+    return lambda x: f(*x)
+
+
+def const(o):
+    return lambda *_: o
+
+
 def identity():
     return lambda _: _  # pragma: no cover
