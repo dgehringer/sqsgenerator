@@ -76,7 +76,7 @@ The sum of the atoms distributed must **exactly** match the number of positions 
       0: 8
     ```
 
-### `composition.which`
+### `which`
 
 Used to select a sublattice (collection of lattice sites) from the specified input structure. Note that the number of atoms in the `composition` paramter has to sum up to the number of selected lattice positions
 
@@ -94,8 +94,8 @@ The sum of the atoms distributed must **exactly** match the number of **selected
 - Ternary alloy, 54 atoms, create ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$)
   
     ```{code-block} yaml
+    which: all
     composition:
-      which: all
       Ti: 18
       Al: 18
       Mo: 18
@@ -104,8 +104,8 @@ The sum of the atoms distributed must **exactly** match the number of **selected
 - *rock-salt* TiN (B1),  64 atoms, randomly distribute B and N on the N sublattice $\text{Ti}_{32}(\text{B}_{16}\text{N}_{16}) = \text{Ti}(\text{B}_{0.5}\text{N}_{0.5})$
   
     ```{code-block} yaml
+    which: N
     composition:
-      which: N
       N: 16
       B: 16
     ```
@@ -113,8 +113,8 @@ The sum of the atoms distributed must **exactly** match the number of **selected
 - *rock-salt* TiN (B1),  64 atoms, randomly distribute Al, V and Ti on the Ti sublattice $(\text{Ti}_{16}\text{Al}_{8}\text{V}_{8})\text{N}_{32} = (\text{Ti}_{0.5}\text{Al}_{0.25}\text{V}_{0.25})\text{N}$
   
     ```{code-block} yaml
+    which: Ti
     composition:
-      which: Ti
       Ti: 16
       Al: 8
       V: 8
@@ -123,8 +123,8 @@ The sum of the atoms distributed must **exactly** match the number of **selected
 - select all **even** sites from your structure, 16 atoms, using a index, list and distribute W, Ta and Mo on those sites
   
     ```{code-block} yaml
+    which: [0, 2, 4, 6, 8, 10, 12, 14]
     composition:
-      which: [0, 2, 4, 6, 8, 10, 12, 14]
       W: 3
       Ta: 3
       Mo: 2
@@ -132,7 +132,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
 
 ### `structure`
 
-the structure where `sqsgenerator` will operate on. `composition.which` will select the sites from the specified structure. The coordinates must be supplied in **fractional** style. It can be specified by supplying a filename or directly as a dictionary
+the structure where `sqsgenerator` will operate on. `which` will select the sites from the specified structure. The coordinates must be supplied in **fractional** style. It can be specified by supplying a filename or directly as a dictionary
 
 - **Required:** Yes
 - **Accepted:**
@@ -313,13 +313,32 @@ To consider all coordination shells, simply do not specify any value
   ```
   
 ### `pair_weights`
-thr "*pair weights*" $p_{\xi\eta}$  {eq}`eqn:objective` used to differentiate bonds between atomic species.
+thr "*pair weights*" $\tilde{p}_{\xi\eta}^i$  {eq}`eqn:objective-actual` used to differentiate bonds between atomic species.
 Note that `sqsgenerator` sorts the atomic species interally in ascending order by their ordinal number.
-Please refer to the `target_objective` parameter documentation for further details regarding the interal reordering.
+Please refer to the `target_objective` parameter documentation for further details regarding the internal reordering.
+
+The default value is a hollow matrix, which is multiplied with the corresponding shell weight
+
+$$
+  p_{\xi\eta} = \frac{1}{2}\left(\mathbf{J}_N - \mathbf{I}_N \right)
+$$ (eqn:parameter-weight-single-shell)
+
+where $N=N_{\text{species}}$, $\mathbf{J}_N$ the matrix full of ones and $\mathbf{I}_N$ the identity matrix.
+Using this formalism the default value for $\tilde{p}_{\xi\eta}^i$ is calculates according to Eq. {eq}`eqn:parameter-weight-efficient` and
+{eq}`eqn:parameter-weight-single-shell` as
+
+$$
+  \tilde{p}_{\xi\eta}^i = w^i p_{\xi\eta}  = \frac{1}{2}w_i\left(\mathbf{J}_N - \mathbf{I}_N \right)
+$$ (eqn:parameter-weight-default)
+
+where $w^i$ is the `shell_weight` of the i$^\text{th}$ coordination shell. If a 2D input or any of the of the sub-array 
+in case of a 3D input array is not symmetric a `BadSettings` exception is raised.
 
 - **Required:** No
-- **Default:** an array of **ones** of shape $\left(N_{\text{species}}, N_{\text{species}} \right)$
-- **Accepted:**  a 2D matrix of shape $\left( N_{\text{species}}, N_{\text{species}} \right)$ (`np.ndarray`)
+- **Default:** an array as described in Eq. {eq}`eqn:parameter-weight-default` shape $\left(N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$
+- **Accepted:**  
+  - a 2D matrix of shape $\left( N_{\text{species}}, N_{\text{species}} \right)$. The input is interpreted as $p_{\xi\eta}$ and will be stacked along the first dimensions and multiplied with $w_i$ to generate a shape of $N_{\text{shells}}$ times to generate the $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ array (`np.ndarray`)
+  - a 3D array of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$. The input is interpreted as $\tilde{p}_{\xi\eta}^i$ (`np.ndarray`)
 
 ### `target_objective`
 the target objective $\alpha'_{\eta\xi}$ {eq}`eqn:objective`, which the SRO parameters {eq}`eqn:wc-sro-multi` are minimzed against. It is an array of three-dimensions of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$. By passing custom values you can fine-tune the individual SRO paramters.
