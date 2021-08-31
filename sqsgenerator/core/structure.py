@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 import typing as T
 from operator import attrgetter as attr
-from .data import Structure as Structure_, Atom
+from sqsgenerator.core.data import Structure as Structure_, Atom
 
 
 class Structure(Structure_):
@@ -66,6 +66,21 @@ class Structure(Structure_):
 
     def to_dict(self):
         return structure_to_dict(self)
+
+    def slice_with_species(self, species, which=None):
+        which = which or tuple(range)
+        return self.with_species(species, which=which)[which]
+
+    def with_species(self, species, which=None):
+        which = which or tuple(range)
+        species = list(species)
+        if len(species) < 1:
+            raise ValueError('Cannot create an empty structure')
+        if len(which) != len(species):
+            raise ValueError('Number of species does not match the number of specified atoms')
+        new_symbols = self.symbols.copy()
+        new_symbols[np.array(which)] = species
+        return Structure(self.lattice, self.frac_coords, new_symbols.tolist())
 
 
 def structure_to_dict(structure: Structure):

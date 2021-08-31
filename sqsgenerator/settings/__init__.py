@@ -1,11 +1,17 @@
-import attrdict
-from .exceptions import BadSettings
+
+from attrdict import AttrDict
+from sqsgenerator.settings.exceptions import BadSettings
 from sqsgenerator.core import IterationSettings
-from .readers import process_settings, parameter_list
+from sqsgenerator.settings.readers import process_settings, parameter_list
 
 
-def construct_settings(settings: attrdict.AttrDict, process=True) -> IterationSettings:
+def construct_settings(settings: AttrDict, process=True, **overloads) -> IterationSettings:
+    for overload, value in overloads.items():
+        if overload not in settings:
+            raise KeyError(overload)
+        settings[overload] = value
     settings = process_settings(settings) if process else settings
+
     return IterationSettings(
         settings.structure,
         settings.target_objective,
