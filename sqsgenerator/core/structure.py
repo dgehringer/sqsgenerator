@@ -10,8 +10,8 @@ class Structure(Structure_):
 
     def __init__(self, lattice: np.ndarray, frac_coords: np.ndarray, symbols=T.List[str], pbc=(True, True, True)):
         super(Structure, self).__init__(lattice, frac_coords, symbols, pbc)
-        self._symbols = np.array(tuple(map(attr('symbol'), self.species)))
-        self._numbers = np.array(tuple(map(attr('Z'), self.species)))
+        self._symbols = np.array(list(map(attr('symbol'), self.species)))
+        self._numbers = np.fromiter(map(attr('Z'), self.species), dtype=int, count=self.num_atoms)
         self._unique_species = set(np.unique(self._symbols))
 
     @property
