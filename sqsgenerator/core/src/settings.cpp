@@ -11,7 +11,7 @@ namespace sqsgenerator {
 
     typedef array_3d_t::index index_t;
 
-    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<double> shell_distances, std::vector<int> threads_per_rank, double atol, double rtol, iteration_mode mode) :
+    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_3d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<double> shell_distances, std::vector<int> threads_per_rank, double atol, double rtol, iteration_mode mode) :
         m_structure(structure),
         m_atol(atol),
         m_rtol(rtol),
@@ -40,7 +40,7 @@ namespace sqsgenerator {
         init_prefactors();
     }
 
-    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_2d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<int> threads_per_rank, double atol, double rtol, iteration_mode mode) :
+    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_3d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<int> threads_per_rank, double atol, double rtol, iteration_mode mode) :
             IterationSettings(structure, target_objective, parameter_weights, shell_weights, iterations, output_configurations,
                               default_shell_distances(structure.distance_matrix(), atol, rtol), threads_per_rank, atol, rtol, mode)
     { }
@@ -127,7 +127,7 @@ namespace sqsgenerator {
         return m_packed_configuration;
     }
 
-    [[nodiscard]] const_array_2d_ref_t IterationSettings::parameter_weights() const {
+    [[nodiscard]] const_array_3d_ref_t IterationSettings::parameter_weights() const {
         return m_parameter_weights;
     }
 

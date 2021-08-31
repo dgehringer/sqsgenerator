@@ -13,7 +13,7 @@ namespace sqsgenerator::python {
     m_handle(new IterationSettings(
                 *structure.handle(),
                 helpers::ndarray_to_multi_array<const_array_3d_ref_t>(target_objective),
-                helpers::ndarray_to_multi_array<const_array_2d_ref_t>(parameter_weights),
+                helpers::ndarray_to_multi_array<const_array_3d_ref_t>(parameter_weights),
                 helpers::dict_to_map<shell_t, double>(shell_weights),
                 iterations,
                 output_configurations,
@@ -26,7 +26,7 @@ namespace sqsgenerator::python {
     m_handle(new IterationSettings(
             *structure.handle(),
             helpers::ndarray_to_multi_array<const_array_3d_ref_t>(target_objective),
-            helpers::ndarray_to_multi_array<const_array_2d_ref_t>(parameter_weights),
+            helpers::ndarray_to_multi_array<const_array_3d_ref_t>(parameter_weights),
             helpers::dict_to_map<shell_t, double>(shell_weights),
             iterations,
             output_configurations,
@@ -41,7 +41,7 @@ namespace sqsgenerator::python {
     m_handle(new IterationSettings(
             *structure.handle(),
             helpers::ndarray_to_multi_array<const_array_3d_ref_t>(target_objective),
-            helpers::ndarray_to_multi_array<const_array_2d_ref_t>(parameter_weights),
+            helpers::ndarray_to_multi_array<const_array_3d_ref_t>(parameter_weights),
             helpers::dict_to_map<shell_t, double>(shell_weights),
             iterations,
             output_configurations,
