@@ -13,7 +13,7 @@ from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature
 from sqsgenerator.core import IterationMode, available_species, Structure, make_supercell
 from sqsgenerator.io import read_structure_from_file
-from sqsgenerator.settings.defaults import defaults, random_mode
+from sqsgenerator.settings.defaults import defaults, random_mode, num_shells, num_species
 from sqsgenerator.settings.exceptions import BadSettings
 from sqsgenerator.settings.functional import parameter as parameter_, if_, isa, star
 
@@ -22,6 +22,23 @@ __parameter_registry = collections.OrderedDict({})
 # the parameter decorator registers all the "processor" function with their names in __parameter_registry
 # the ordering will be according to their definition in this file
 parameter = partial(parameter_, registry=__parameter_registry)
+
+
+def ensure_array_shape(o: np.ndarray, shape: tuple, msg: T.Optional[str]=None):
+    if o.shape != shape:
+        raise (BadSettings(msg) if msg is not None else BadSettings)
+
+
+def ensure_array_symmetric(o: np.ndarray, msg: T.Optional[str]=None):
+    error = BadSettings(msg) if msg is not None else BadSettings
+    if o.ndim == 2:
+        if not np.allclose(o, o.T):
+            raise error
+    elif o.ndim == 3:
+        for i, oo in enumerate(o, start=1):
+            if not np.allclose(oo, oo.T):
+                raise error
+    return True
 
 
 def int_safe(x):
@@ -216,57 +233,50 @@ def read_shell_weights(settings: AttrDict):
 
 @parameter('pair_weights', default=defaults.pair_weights, required=True)
 def read_pair_weights(settings: AttrDict):
-    nums = settings.structure.num_unique_species
+    nums = num_species(settings)
+    nshells = num_shells(settings)
+
     if isinstance(settings.pair_weights, (list, tuple, np.ndarray)):
         w = np.array(settings.pair_weights).astype(float)
-        if w.shape != (nums, nums):
-            raise BadSettings(
-                f'The "pair_weights" you have specified has a wrong shape ({w.shape}). Expected {(nums, nums)}')
-        if not np.allclose(w, w.T):
-            raise BadSettings(f'The "pair_weights" matrix must be symmetric')
-        return w
-    else:
+        if w.ndim in {2, 3}:
+            expected_shape = (nshells, nums, nums) if w.ndim == 3 else (nums, nums)
+
+            ensure_array_shape(w, expected_shape, f'The 3D "pair_weights" you have specified '
+                                                  f'has a wrong shape ({w.shape}). Expected {expected_shape}')
+            ensure_array_symmetric(w, f'The "pair_weights" parameters are not symmetric')
+
+            sorted_weights = sorted(settings.shell_weights.items(), key=item(0))
+            weights = w if w.ndim == 3 else np.stack([w*shell_weight for _, shell_weight in sorted_weights])
+            return weights
+
         raise BadSettings(f'As "pair_weights" I do expect a {nums}x{nums} matrix, '
                           f'since your structure contains {nums} different species')
 
 
 @parameter('target_objective', default=defaults.target_objective, required=True)
 def read_target_objective(settings: AttrDict):
-    nums = settings.structure.num_unique_species
-    nshells = len(settings.shell_weights)
+    nums = num_species(settings)
+    nshells = num_shells(settings)
+
     if isinstance(settings.target_objective, (int, float)):
-        o = np.ones((nshells, nums, nums)).astype(float)
-        for index, (shell_index, shell_weight) in enumerate(sorted(settings.shell_weights.items(), key=item(0))):
-            o[index, :, :] = settings.target_objective * shell_weight
-        return o
-    elif isinstance(settings.target_objective, (list, tuple, np.ndarray)):
+        return np.ones((nshells, nums, nums)).astype(float)*float(settings.target_objective)
+
+    if isinstance(settings.target_objective, (list, tuple, np.ndarray)):
         o = np.array(settings.target_objective).astype(float)
-        if o.ndim == 3:
-            expected_shape = (nshells, nums, nums)
-            if o.shape != expected_shape:
-                raise BadSettings(f'The 3D "target_objective" you have specified '
-                                  f'has a wrong shape ({o.shape}). Expected {expected_shape}')
-            for i, shell_objective in enumerate(o, start=1):
-                if not np.allclose(shell_objective, shell_objective.T):
-                    raise BadSettings(f'The "target_objective" parameters in shell {i} are not symmetric')
-            return o
-        elif o.ndim == 2:
-            expected_shape = (nums, nums)
-            if o.shape != expected_shape:
-                raise BadSettings(f'The 2D "target_objective" you have specified '
-                                  f'has a wrong shape ({o.shape}). Expected {expected_shape}')
-            if not np.allclose(o, o.T):
-                raise BadSettings(f'The "target_objective" parameters are not symmetric')
-            f = np.ones((nshells, nums, nums)).astype(float)
-            for index, (shell_index, shell_weight) in enumerate(sorted(settings.shell_weights.items(), key=item(0))):
-                f[index, :, :] = o * shell_weight
-            return f
-        else:
-            raise BadSettings(f'The "target_objective" you have specified has a {o.ndim} dimensions. '
-                              f'I only can cope with 2 and 3')
-    else:
-        raise BadSettings(f'Cannot interpret "target_objective" setting. '
-                          f'Acceptable values are a single number, {nums}x{nums} or {nshells}x{nums}x{nums} matrices!')
+        if o.ndim in {2, 3}:
+            expected_shape = (nshells, nums, nums) if o.ndim == 3 else (nums, nums)
+            ensure_array_shape(o, expected_shape, f'The 3D "target_objective" you have specified '
+                                                  f'has a wrong shape ({o.shape}). Expected {expected_shape}')
+
+            ensure_array_symmetric(o, f'The "target_objective" parameters are not symmetric')
+            objectives = o if o.ndim == 3 else np.stack([o]*nshells)
+            return objectives
+
+        raise BadSettings(f'The "target_objective" you have specified has a {o.ndim} dimensions. '
+                          f'I only can cope with 2 and 3')
+
+    raise BadSettings(f'Cannot interpret "target_objective" setting. '
+                      f'Acceptable values are a single number, {nums}x{nums} or {nshells}x{nums}x{nums} matrices!')
 
 
 @parameter('threads_per_rank', default=defaults.threads_per_rank, required=True)
@@ -291,7 +301,8 @@ def process_settings(settings: AttrDict, params: T.Optional[T.Set[str]] = None, 
         if param not in params:
             # we can only skip this parameter if None of the other parameters depends on param
             if parameter_index(param) > parameter_index(last_needed_parameter): continue
-        if param in ignore: continue
+        if param in ignore:
+            continue
         settings[param] = processor(settings)
     return settings
 

@@ -1,6 +1,7 @@
 
 import numpy as np
 from attrdict import AttrDict
+from operator import itemgetter as item
 from sqsgenerator.core import IterationMode, Structure, default_shell_distances as default_shell_distances_core
 from sqsgenerator.settings.functional import const, if_
 
@@ -9,8 +10,12 @@ ATOL = 1e-3
 RTOL = 1e-5
 
 
-def num_shells(settings):
+def num_shells(settings: AttrDict):
     return len(settings.shell_weights)
+
+
+def num_species(settings: AttrDict):
+    return settings.structure.slice_with_species(settings.composition, settings.which).num_unique_species
 
 
 def random_mode(settings) -> bool:
@@ -39,7 +44,9 @@ def default_shell_weights(settings: AttrDict):
 
 def default_pair_weights(settings: AttrDict):
     structure = settings.structure.slice_with_species(settings.composition, settings.which)
-    return (~np.eye(structure.num_unique_species, dtype=bool)).astype(float)
+    per_shell_weights = (~np.eye(structure.num_unique_species, dtype=bool)).astype(float)
+    stack = [weight*per_shell_weights for _, weight in sorted(settings.shell_weights.items(), key=item(0))]
+    return np.stack(stack)
 
 
 def default_target_objective(settings: AttrDict):

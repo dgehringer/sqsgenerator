@@ -13,12 +13,12 @@ Settings = AttrDict
 SQSResultCollection = T.Iterable[SQSResult]
 
 
-def make_result_document(sqs_results, settings, timings=None, fields=('configuration',)) -> Settings:
-    allowed_fields = {
-        'configuration': lambda result: symbols_from_z(result.configuration),
-        'objective': attr('objective'),
-        'parameters': lambda result: result.parameters(settings.target_objective.shape)
-    }
+def make_result_document(settings, sqs_results, timings=None, fields=('configuration',)) -> Settings:
+    allowed_fields = dict(
+        configuration=lambda result: symbols_from_z(result.configuration),
+        objective=attr('objective'),
+        parameters=lambda result: result.parameters(settings.target_objective.shape)
+    )
 
     def make_sqs_result_document(result):
         if len(fields) == 1:
@@ -27,42 +27,33 @@ def make_result_document(sqs_results, settings, timings=None, fields=('configura
         else:
             return {f: allowed_fields[f](result) for f in fields}
 
-    have_sublattice = 'sublattice' in settings
+    result_document = dict(
+        structure=settings.structure,
+        configurations={r.rank: make_sqs_result_document(r) for r in sqs_results},
+        which=settings.which
+    )
 
-    result_document = {
-        'structure': settings.sublattice.structure if have_sublattice else settings.structure,
-        'configurations': {r.rank: make_sqs_result_document(r) for r in sqs_results}
-    }
-
-    if have_sublattice:
-        result_document['which'] = settings.sublattice.which
     if timings is not None:
         result_document['timings'] = timings
     return Settings(result_document)
 
 
-def extract_structures(dense: Settings):
-    have_sublattice = 'which' in dense
-    s = read_structure(dense)
-    new_structure = functools.partial(Structure, s.lattice, s.frac_coords)
+def extract_structures(results: Settings):
+    structure: Structure = results.structure
 
-    def new_species(conf):
-        if have_sublattice:
-            species = s.symbols
-            mask = np.array(dense['which'], dtype=int)
-            species[mask] = conf
-            return species.tolist()
-        else: return conf
-
-    return {
+    def get_configuration(conf):
+        return conf if not isinstance(conf, dict) else conf['configuration']
+    structures = {
         rank:
-        new_structure(new_species(conf if not isinstance(conf, dict) else conf['configuration']))
-        for rank, conf in dense['configurations'].items()
+        structure.with_species(get_configuration(conf), which=results.which)
+        for rank, conf in results['configurations'].items()
     }
+    return structures
 
 
 def pair_sqs_iteration(settings: Settings, minimal: bool=True, similar: bool=False, log_level: str='warning') -> T.Tuple[SQSResultCollection, TimingDictionary]:
-    iteration_settings = construct_settings(settings, False)
+    structure = settings.structure.slice_with_species(settings.composition, settings.which)
+    iteration_settings = construct_settings(settings, False, structure=structure)
     set_core_log_level(log_levels.get(log_level))
     sqs_results, timings = pair_sqs_iteration_core(iteration_settings)
 
@@ -82,7 +73,7 @@ def expand_sqs_results(settings, sqs_results, timings=None, include=('configurat
     dump_include = list(include)
     if 'configuration' not in dump_include:
         dump_include += ['configuration']
-    result_document = make_result_document(sqs_results, settings, fields=dump_include, timings=timings)
+    result_document = make_result_document(settings, sqs_results, fields=dump_include, timings=timings)
 
     if inplace:
         settings.update(result_document)
