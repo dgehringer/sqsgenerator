@@ -1,11 +1,11 @@
 import re
 import os
 import sys
-import subprocess
 import platform
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
+import subprocess
 from setuptools.command.install import install
+from setuptools.command.build_ext import build_ext
+from setuptools import setup, Extension, find_packages
 
 WITH_MPI = False
 
@@ -28,17 +28,17 @@ class CMakeExtension(Extension):
         self.verbose = verbose
 
 
-class intall_custom(install):
+class InstallCustom(install):
     user_options = install.user_options + [
         ('with-mpi', None, 'Enables MPI Parallelization')
     ]
 
     def initialize_options(self):
-        super(intall_custom, self).initialize_options()
+        super(InstallCustom, self).initialize_options()
         self.with_mpi = WITH_MPI
 
     def finalize_options(self):
-        super(intall_custom, self).finalize_options()
+        super(InstallCustom, self).finalize_options()
         global WITH_MPI
         WITH_MPI = self.with_mpi
 
@@ -110,10 +110,8 @@ class cmake_build_ext(build_ext):
                 os.makedirs(self.build_temp)
 
             # Config
-            if not cmake_initialized:
-                subprocess.check_call(['cmake', ext.cmake_lists_dir] + cmake_args,
-                                  cwd=self.build_temp)
-                cmake_initialized = True
+
+            subprocess.check_call(['cmake', ext.cmake_lists_dir] + cmake_args, cwd=self.build_temp)
 
             cmake_build_args = ['cmake', '--build', '.', '--config', cfg]
             if ext.target: cmake_build_args += ['--target', ext.target]
@@ -130,8 +128,11 @@ class cmake_build_ext(build_ext):
 
         
 setup(
-    name = "sqsenerator",
-    version = "0.1",
+    name="sqsenerator",
+    version="0.1",
+    description='A simple command line Special Quasirandom Structure generator in Python',
+    author_email='dgehringer@protonmail.com',
+    license='MIT',
     ext_modules = [
         CMakeExtension('sqsgenerator.core.data', 'data'),
         CMakeExtension('sqsgenerator.core.utils', 'utils'),
@@ -139,6 +140,11 @@ setup(
     ],
     cmdclass = {
         'build_ext': cmake_build_ext,
-        'install': intall_custom
-    }
+        'install': InstallCustom
+    },
+    install_requires=['attrdict', 'numpy', 'click', 'rich', 'tabulate', 'pyyaml', 'frozendict'],
+    entry_points={
+        'console_scripts': [ 'sqsgen=sqsgenerator.cli:cli']
+    },
+    packages=find_packages(exclude=('test',))
 )
