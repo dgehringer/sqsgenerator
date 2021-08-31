@@ -1,7 +1,7 @@
 import os
 import click
 from attrdict import AttrDict
-from sqsgenerator.compat import Feature as F
+from sqsgenerator.compat import Feature as F, have_feature
 from sqsgenerator.main import extract_structures
 from sqsgenerator.settings.readers import read_structure
 from sqsgenerator.commands.common import click_settings_file, error
@@ -15,6 +15,8 @@ def export_structures(settings, result_document, output_file=None, format='cif',
         else (os.path.splitext(settings.file_name)[0] if 'file_name' in settings else 'sqs')
 
     writer = F(writer)
+    if not have_feature(writer):
+        error(f'I cannot use "{writer.value}". It seems it is not installed', prefix='FeatureError')
     if format not in supported_formats(writer):
         error(f'{writer.value} does not support the format "{format}". '
               f'Supported formats are {supported_formats(writer)}', prefix='FeatureError')

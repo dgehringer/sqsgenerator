@@ -56,5 +56,6 @@ def analyse(settings, include, output_format, params):
         del document['structure']
     if 'which' in document:
         del document['which']
-    sys.stdout.buffer.write(dumps(to_dict(document), output_format=output_format))
+    if output_format == 'native': pretty_print(document)
+    else: sys.stdout.buffer.write(dumps(to_dict(document), output_format=output_format))
 

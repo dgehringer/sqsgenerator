@@ -5,7 +5,7 @@ import click
 from sqsgenerator.commands.export import export_structures
 from sqsgenerator.commands.common import click_settings_file
 from sqsgenerator.io import to_dict, dumps, compression_to_file_extension
-from sqsgenerator.main import Settings, SQSResult, log_levels, pair_sqs_iteration, expand_sqs_results
+from sqsgenerator.main import log_levels, pair_sqs_iteration, expand_sqs_results
 
 
 @click.command('iteration')
