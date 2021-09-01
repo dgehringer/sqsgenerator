@@ -1,12 +1,15 @@
 
-# Welcome to sqsgenerator's documentation!
+# Welcome to `sqsgenerator`'s documentation!
 
-## Test something
+## Highlights
+
+
+## Table of contents
 
 ```{toctree}
 ---
-caption: Contents
-maxdepth: 1
+caption: 
+maxdepth: 2
 ---
 
 installation_guide
@@ -14,7 +17,7 @@ input_parameters
 what_is_actually_computed
 ```
 
-# Indices and tables
+## API Reference
 
 * {ref}`genindex`
 * {ref}`modindex`

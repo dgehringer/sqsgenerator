@@ -4,8 +4,6 @@
 
 Each of the parameters below represents an entry in the **YAML** (or key in a `dict` if called directly from Python).
 
-(The order corresponds to what is parsed in `sqsgenerator.settings.py`)
-
 ---
 
 ## Parameters
