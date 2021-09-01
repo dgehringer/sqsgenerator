@@ -44,8 +44,7 @@ myst_enable_extensions = [
 ]
 
 extensions = [
-    'myst_parser',
-    'sphinxemoji.sphinxemoji'
+    'myst_parser'
 ]
 
 
