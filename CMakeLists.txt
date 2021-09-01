@@ -65,12 +65,6 @@ if (USE_MPI)
 endif()
 
 
-
-###########################
-### Documentation stuff ###
-###########################
-# add_subdirectory(docs/core)
-
 ######################################################
 include_directories(sqsgenerator/core/include)
 include_directories(${Boost_INCLUDE_DIRS})

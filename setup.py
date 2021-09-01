@@ -145,7 +145,7 @@ setup(
         'build_ext': cmake_build_ext,
         'install': InstallCustom
     },
-    install_requires=['attrdict', 'numpy', 'click', 'rich', 'tabulate', 'pyyaml', 'frozendict'],
+    install_requires=['attrdict', 'numpy', 'click', 'rich', 'pyyaml', 'frozendict'],
     entry_points={
         'console_scripts': [ 'sqsgen=sqsgenerator.cli:cli']
     },

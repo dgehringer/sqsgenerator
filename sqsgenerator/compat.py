@@ -1,3 +1,6 @@
+"""
+Provides utility functions and accsess to optional modules
+"""
 
 import sys
 import logging

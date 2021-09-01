@@ -3,21 +3,20 @@ Provides utilities for exporting structure objects with ase and pymatgen.
 Tools for reading/writings settings files
 """
 
-import functools
 import io
 import tarfile
-import typing as T
 import zipfile
-from operator import attrgetter as attr, methodcaller as method
-
+import functools
 import numpy as np
+import typing as T
 from attrdict import AttrDict
 from frozendict import frozendict
-
-from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure, to_pymatgen_structure, to_ase_atoms
-from sqsgenerator.compat import FeatureNotAvailableException
-from sqsgenerator.compat import require, have_feature, get_module, Feature
 from sqsgenerator.core import Structure, IterationMode
+from sqsgenerator.compat import FeatureNotAvailableException
+from operator import attrgetter as attr, methodcaller as method
+from sqsgenerator.compat import require, have_feature, get_module, Feature
+from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure, to_pymatgen_structure, to_ase_atoms
+
 
 F = Feature
 known_adapters = (F.ase, F.pymatgen)
