@@ -10,5 +10,10 @@ sphinx:
    configuration: docs/source/conf.py
 
 # Optionally build your docs in additional formats such as PDF
-formats: []
+formats:
+   - pdf
 
+python:
+   version: "3.7"
+   install:
+   - requirements: docs/requirements.txt
