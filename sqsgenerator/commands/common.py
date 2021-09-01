@@ -2,13 +2,14 @@
 import io
 import os
 import sys
+import rich
 import click
 import typing as T
 import functools
 import collections.abc
 from sqsgenerator.io import read_settings_file
+from sqsgenerator.commands.help import help
 from sqsgenerator.settings import process_settings, parameter_list, BadSettings
-from sqsgenerator.compat import have_feature, get_module, Feature as F
 
 
 def ensure_iterable(o: T.Any, exclude=(str, bytes, bytearray), factory=set):
@@ -38,16 +39,12 @@ def pretty_print(*objects, show=True, paginate='auto', **kwargs):
     :rtype: str of None
     """
     buf = io.StringIO()
-    if have_feature(F.rich):
-        console = get_module(F.rich).get_console()
-        with console.capture() as capture:
-            console.print(*objects, **kwargs)
-        buf.write(capture.get())
-        console_height = console.height
-    else:
-        from pprint import pprint
-        for o in objects: pprint(o, stream=buf, **kwargs)
-        console_height = 25
+    console = rich.get_console()
+    with console.capture() as capture:
+        console.print(*objects, **kwargs)
+    buf.write(capture.get())
+    console_height = console.height
+
     string = buf.getvalue()
     if paginate == 'auto': paginate = string.count(os.linesep) >= console_height
     printer = functools.partial(click.echo, file=sys.stdout, nl=False) if not paginate else click.echo_via_pager
@@ -85,7 +82,7 @@ def click_settings_file(process=None, default_name='sqs.yaml', ignore=()):
 
         @functools.wraps(f)
         @click.argument('filename', type=click.Path(exists=True), default=default_name)
-        @click.option('--input-format', '-if', type=click.Choice(['yaml', 'json', 'pickle']), default='yaml')
+        @click.option('--input-format', '-if', type=click.Choice(['yaml', 'json', 'pickle']), default='yaml', help=help.input_format)
         def _dummy(*args, filename=default_name, input_format='yaml', **kwargs):
             settings = read_settings_file(filename, format=input_format)
             settings['file_name'] = filename
