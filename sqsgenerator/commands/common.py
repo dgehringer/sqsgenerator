@@ -1,3 +1,6 @@
+"""
+Utilities which are used by the CLI interface commands
+"""
 
 import io
 import os
@@ -13,17 +16,42 @@ from sqsgenerator.settings import process_settings, parameter_list, BadSettings
 
 
 def ensure_iterable(o: T.Any, exclude=(str, bytes, bytearray), factory=set):
-    if isinstance(o, collections.abc.Iterable) or isinstance(o, exclude): return o
-    else: return factory((o,))
+    """
+    wraps {o} into an iterable of type {factor} if it is not in {exclude} or not `collections.abc.Iterable`
+    :param o: the object to wrap
+    :param exclude: list of types to exclude from wrapping (default is `(str, bytes, bytearray)`)
+    :type exclude: Tuple[type...]
+    :param factory: the type of iterable to wrap
+    :type factory: type
+    :return: o wrapped in an iterable
+    :rtype: {factory}
+    """
+    if isinstance(o, collections.abc.Iterable) or isinstance(o, exclude):
+        return o
+    else:
+        return factory((o,))
 
 
 def error(message, exc_type=click.Abort, raise_exc=True, prefix=None, **kwargs):
+    """
+    Prints an error message and abort execution by raising an error
+    :param message: the error message to print
+    :type message: str
+    :param exc_type: the exception type to raise (default is `click.Abort`)
+    :type exc_type: type
+    :param raise_exc: raise an exception (default is `True`)
+    :type raise_exc: True
+    :param prefix: a bold red prefix to the error message
+    :type prefix: str
+    :param kwargs: keyword args are forwarded `to click.echo`
+    """
     message = pretty_print(message, show=False)
     if prefix is not None:
         prefix = click.style(prefix, fg='red', bold=True, underline=True)
         message = f'{prefix}: {message}'
     click.echo(message, **kwargs)
-    if raise_exc: raise exc_type(message)
+    if raise_exc:
+        raise exc_type(message)
 
 
 def pretty_print(*objects, show=True, paginate='auto', **kwargs):
@@ -51,9 +79,16 @@ def pretty_print(*objects, show=True, paginate='auto', **kwargs):
     return printer(buf.getvalue()) if show else buf.getvalue()
 
 
-def make_help_link(parameter: str):
+def make_help_link(parameter: str) -> str:
+    """
+    Formats a help link pointing to the input parameter documentation
+    :param parameter: the input parameter name
+    :type parameter: str
+    :return: the helplink
+    :rtype: str
+    """
     section_permalink = parameter.replace('_', '-')
-    base_url = 'https://sqsgenerator.readthedocs.io'
+    base_url = 'https://sqsgenerator.readthedocs.io/en/latest'
     help_page = 'input_parameters.html'
     return f'{base_url}/{help_page}#{section_permalink}'
 
