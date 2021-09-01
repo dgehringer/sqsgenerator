@@ -23,15 +23,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 set(SQSGENERATOR_SOURCE_DIR ${PROJECT_SOURCE_DIR}/sqsgenerator/core/src)
 set(SQSGENERATOR_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/sqsgenerator/core/include)
 
-# Add the custom modules to module path
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
-
 # by default we create a release build
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
 configure_file(${PROJECT_SOURCE_DIR}/sqsgenerator/core/include/version.hpp.in ${PROJECT_SOURCE_DIR}/sqsgenerator/core/include/version.hpp)
+
 # There is an issue find FindBoost.cmake
 # https://gitlab.kitware.com/cmake/cmake/-/issues/20638: That's why log setup is added
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_LOG_DYN_LINK")

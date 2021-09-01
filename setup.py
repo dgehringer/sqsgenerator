@@ -1,6 +1,7 @@
 import re
 import os
 import sys
+import pprint
 import platform
 import subprocess
 from setuptools.command.install import install
@@ -74,14 +75,25 @@ class cmake_build_ext(build_ext):
                 # Add other project-specific CMake arguments if needed
                 # ...
                 f'-DUSE_MPI={"ON" if self.with_mpi else "OFF"}',
-                '-DCMAKE_CXX_FLAGS_{}={}'.format(cfg.upper(), ' '.join(opt_flags.get(cfg, {}).get(self.compiler.compiler_type, [])) )
+                # '-DCMAKE_CXX_FLAGS_{}={}'.format(cfg.upper(),  )
             ]
+            cmake_cxx_flags = ' '.join(opt_flags.get(cfg, {}).get(self.compiler.compiler_type, []))
 
-            # we allow to overlead cmake compiler options
+            env_var_prefix = 'SQS_'
+            # we allow to overload cmake compiler options
             for env_var_name, env_var_value in os.environ.items():
-                if env_var_name.startswith('CMAKE'):
+                if env_var_name == 'CMAKE_CXX_FLAGS':
+                    # we append them to our release/debug flags
+                    cmake_cxx_flags += f' {env_var_value}'
+                elif env_var_name.startswith('CMAKE'):
                     cmake_args.append(f'-D{env_var_name}={env_var_value}')
+                m = re.match(f'{env_var_prefix}(?P<varname>\w+)', env_var_name)
+                if m:
+                    env_var_name_real = m.groupdict()['varname']
+                    cmake_args.append(f'-D{env_var_name_real}={env_var_value}')
 
+            cmake_args.append('-DCMAKE_CXX_FLAGS_{}={}'.format(cfg.upper(), cmake_cxx_flags))
+            pprint.pprint(cmake_args)
             # We can handle some platform-specific settings at our discretion
             if platform.system() == 'Windows':
                 plat = ('x64' if platform.architecture()[0] == '64bit' else 'Win32')
@@ -100,22 +112,13 @@ class cmake_build_ext(build_ext):
                         '-G', 'MinGW Makefiles',
                     ]
 
-            if sys.platform.startswith("darwin"):
-                # Cross-compile support for macOS - respect ARCHFLAGS if set
-                archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
-                if archs:
-                    cmake_args += ["-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))]
-
-            if not os.path.exists(self.build_temp):
-                os.makedirs(self.build_temp)
-
-            # Config
 
             subprocess.check_call(['cmake', ext.cmake_lists_dir] + cmake_args, cwd=self.build_temp)
 
             cmake_build_args = ['cmake', '--build', '.', '--config', cfg]
             if ext.target: cmake_build_args += ['--target', ext.target]
             if ext.verbose: cmake_build_args += ['--verbose']
+
             subprocess.check_call(cmake_build_args, cwd=self.build_temp)
 
     def initialize_options(self):
