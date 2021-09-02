@@ -21,7 +21,7 @@ opt_flags = {
 
 
 class CMakeExtension(Extension):
-    def __init__(self, name, target='', cmake_lists_dir='.', debug=False, verbose=True, **kwargs):
+    def __init__(self, name, target='', cmake_lists_dir='.', debug=False, verbose=False, **kwargs):
         Extension.__init__(self, name, sources=[], **kwargs)
         self.cmake_lists_dir = os.path.abspath(cmake_lists_dir)
         self.debug = debug
@@ -55,7 +55,8 @@ class cmake_build_ext(build_ext):
             out = subprocess.check_output(['cmake', '--version'])
         except OSError:
             raise RuntimeError('Cannot find CMake executable')
-        cmake_initialized = False
+
+        os.makedirs(self.build_temp, exist_ok=True)
 
         for ext in self.extensions:
             extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
@@ -114,7 +115,6 @@ class cmake_build_ext(build_ext):
 
 
             subprocess.check_call(['cmake', ext.cmake_lists_dir] + cmake_args, cwd=self.build_temp)
-
             cmake_build_args = ['cmake', '--build', '.', '--config', cfg]
             if ext.target: cmake_build_args += ['--target', ext.target]
             if ext.verbose: cmake_build_args += ['--verbose']
@@ -131,7 +131,7 @@ class cmake_build_ext(build_ext):
 
         
 setup(
-    name="sqsenerator",
+    name='sqsgenerator',
     version="0.1",
     description='A simple command line Special Quasirandom Structure generator in Python',
     author_email='dgehringer@protonmail.com',
@@ -147,7 +147,7 @@ setup(
     },
     install_requires=['attrdict', 'numpy', 'click', 'rich', 'pyyaml', 'frozendict'],
     entry_points={
-        'console_scripts': [ 'sqsgen=sqsgenerator.cli:cli']
+        'console_scripts': ['sqsgen=sqsgenerator.cli:cli']
     },
-    packages=find_packages(exclude=('test',))
+    packages=find_packages('.', exclude=['test', 'test.cli', 'docs', 'benchmarks', 'examples'],)
 )
