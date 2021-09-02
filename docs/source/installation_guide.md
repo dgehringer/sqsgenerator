@@ -1,31 +1,20 @@
 
 # Install `sqsgenerator` ...
 
-### Prerequisites
- 
-`sqsgenerator` is Python 3 CLI app. However, its core is written in C++, thus some prerequisites are needed. Please read
-through this section carefully.
+## Optional dependencies - `ase` and `pymatgen`
 
-  - A C++ compiler, such as `g++`, which has support for [OpenMP](https://www.openmp.org/) and supports C++17
-  - [Boost](https://www.boost.org/) libraries are needed to compile the core modules. In particular the following subset of the boost libraries are needed
-    - `libboost_python` (Python bindings)
-    - `libboost_numpy` (Python bindings)
-    - `libboost_log` (logging)
-    - `libboost_log_setup` (logging)
-    - [Boost](https://www.boost.org/) is used to create the Python bindings, logging, multiprecision math and data structures.
-  - [CMake](https://cmake.org/) is used as a build system. A version greater than 3.12 is needed
-  - MPI libraries, in case you want to build a MPI enabled version of `sqsgenerator`
-
-Please make sure to have **all** those tools installed, before installing sqsgenerator.
-
-```{note}
-   [`ase`](https://wiki.fysik.dtu.dk/ase/) and [`pymatgen`](https://pymatgen.org/) are not explictly listed as
-   dependencies of `sqsgenerator`. However ẁe **strongly encourage** you to install at least one of them.
-   `sqsgenerator` uses those packages as backends to export the its results into different file formats. Without
-   `ase` or `pymatgen` results can be exported in YAML format
-```
+[`ase`](https://wiki.fysik.dtu.dk/ase/) and [`pymatgen`](https://pymatgen.org/) are not explicitly listed as
+dependencies of `sqsgenerator`. However we **strongly encourage** you to install at least one of them.
+`sqsgenerator` uses those packages as backends to export the its results into different file formats. Without
+`ase` or `pymatgen` results can be exported in YAML format only.
 
 ## ... with `conda`
+
+```{warning}
+`sqsgenerator` is still under evaluation, therefore the newest version is **yet** not available at the conda-forge channel
+Until evaluation phase is finished, we kindly ask you to **build it yourself**, or to use one of the **pre-built binaries**.
+
+```
 
 `sqsgenerator` is available on the `conda-forge` channel. In case you are already using an Anaconda distribution we 
 strongly encourage you to head for this installation option
@@ -44,28 +33,42 @@ To obtain an **MPI enabled** version of the package, you have to **build it** yo
 
 ## ... with `pip`
 
-`sqsgenerator` is not hosted on PyPi. You still can install the package using `pip` by entering the following lines 
-tino your terminal:
+`sqsgenerator` is not hosted on PyPi. You still can install the package using `pip` by using one of the 
+prebuilt binary packages:
+
+
+| OS    | arch   | Py   | Wheel                                                        |
+| ----- | ------ | ---- | ------------------------------------------------------------ |
+| linux | x86_64 | 3.6  | [sqsgenerator-0.1-cp36-cp36m-linux_x86_64.whl](http://oc.unileoben.ac.at/index.php/s/qqDIydH02PkV32V/download) |
+| linux | x86_64 | 3.7  | [sqsgenerator-0.1-cp37-cp37m-linux_x86_64.whl](http://oc.unileoben.ac.at/index.php/s/34xlYhyZxkyb6xy/download) |
+| linux | x86_64 | 3.8  | [sqsgenerator-0.1-cp38-cp38-linux_x86_64.whl](http://oc.unileoben.ac.at/index.php/s/gTk345lGTwk3C0G/download) |
+| linux | x86_64 | 3.9  | [sqsgenerator-0.1-cp39-cp39-linux_x86_64.whl](http://oc.unileoben.ac.at/index.php/s/3x01KBKarx11BgQ/download) |
+
+Once you have choosen the correct wheel, you can easily install it:
 
 ```{code-block} bash
-pip install git+https://github.com/dgehringer/sqsgenerator
-# for a MPI enabled build
-pip install git+https://github.com/dgehringer/sqsgenerator --install-option="--with-mpi"
+pip install sqsgenerator-0.1-cp36-cp36m-linux_x86_64.whl
 ```
 
-```{note} 
-`sqsgenerator`'s core modules are (for the sake of computational efficiency) written in C++. 
-To compile the extenstions you need the following prerequisites:
-
-  - CMake
-  - g++
-  - boost
-  - (MPI libraries)
-  
- Please make sure to install them before you install the package
-```
 
 ## ... by building it yourself
+
+### Toolchain 
+`sqsgenerator` is Python 3 CLI app. However, its core is written in C++, thus some prerequisites are needed. Please read
+through this section carefully.
+
+  - A C++ compiler, such as `g++`, which has support for [OpenMP](https://www.openmp.org/) and supports C++17
+  - [Boost](https://www.boost.org/) libraries are needed to compile the core modules. In particular the following subset of the boost libraries are needed
+    - `libboost_python` (Python bindings)
+    - `libboost_numpy` (Python bindings)
+    - `libboost_log` (logging)
+    - `libboost_log_setup` (logging)
+    - [Boost](https://www.boost.org/) is used to create the Python bindings, logging, multiprecision math and data structures.
+  - [CMake](https://cmake.org/) is used as a build system. A version greater than 3.12 is needed
+  - MPI libraries, in case you want to build a MPI enabled version of `sqsgenerator`
+
+Please make sure to have **all** those tools installed, before installing sqsgenerator.
+
 
 ### Environment variable forwarding
 
@@ -92,6 +95,9 @@ In the same manner values can be passed to [FindMPI.cmake](https://cmake.org/cma
     ```
 
 2. **Install** required dependencies dependencies (CMake, g++, boost)
+ 
+    with `conda` it is easy to install the toolchain needed to make the binaries    
+
     ```{code-block} bash
     conda activate sqs-build
     conda install -c anaconda boost
@@ -123,6 +129,12 @@ In the same manner values can be passed to [FindMPI.cmake](https://cmake.org/cma
     # or for a MPI build
     python setup.py install --with-mpi
     ```
+
+5. **Remove build dependencies**
+
+    This step is only optional. In case you have compiled the core modules with `SQS_Boost_USE_STATIC_LIBS=ON` the created
+    library does not depend any more on the `boost` libraries.
+    In case you **do not need** them any more and you can remove them again.
 
 ### performing a custom build
 
