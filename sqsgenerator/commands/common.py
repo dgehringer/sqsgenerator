@@ -94,6 +94,10 @@ def make_help_link(parameter: str) -> str:
 
 
 def exit_on_input_parameter_error(f):
+    """
+    Decorator: Wraps a @parameter decorated function -> catches a eventual `BadSettings` error -> creates a help-link for the
+    parameter -> redirects the `BadSettings` into `click.Abort` to stop CLI execution
+    """
 
     @functools.wraps(f)
     def _inner(*args, **kwargs):
@@ -112,6 +116,9 @@ def exit_on_input_parameter_error(f):
 
 
 def click_settings_file(process=None, default_name='sqs.yaml', ignore=()):
+    """
+    Decorator-Factory: A lot of the commands need an input YAML file -> creates a a decorator
+    """
 
     def _decorator(f: T.Callable):
 
