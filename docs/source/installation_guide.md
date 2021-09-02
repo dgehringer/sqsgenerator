@@ -1,7 +1,7 @@
 
 # Install `sqsgenerator` ...
 
-## Prerequisites
+### Prerequisites
  
 `sqsgenerator` is Python 3 CLI app. However, its core is written in C++, thus some prerequisites are needed. Please read
 through this section carefully.
@@ -67,6 +67,22 @@ To compile the extenstions you need the following prerequisites:
 
 ## ... by building it yourself
 
+### Environment variable forwarding
+
+`sqsgenerator`'s `setup.py` forwards all environment variables with a `SQS_` prefix to **cmake**.
+This allows you to create the binaries with your own configuration.
+E. g. [FindBoost.cmake](https://cmake.org/cmake/help/latest/module/FindBoost.html#hints) takes a `BOOST_ROOT` hint to allow
+the use of a custom boost version. Therefore to build `sqsgenerator` with your own Boost version use 
+
+
+   ```{code-block} bash
+   SQS_BOOST_ROOT=/path/to/own/boost python setup.py install # --with-mpi
+   ```
+
+The above code will under-the-hood call **cmake** with a `-DBOOST_ROOT=/path/to/own/boost` option.
+
+In the same manner values can be passed to [FindMPI.cmake](https://cmake.org/cmake/help/latest/module/FindMPI.html).
+
 ### with `conda` on Linux (or  Mac)
 
 1. **Create** an anaconda environment using
@@ -78,7 +94,9 @@ To compile the extenstions you need the following prerequisites:
 2. **Install** required dependencies dependencies (CMake, g++, boost)
     ```{code-block} bash
     conda activate sqs-build
-    conda install -c anaconda cmake gxx_linux-64 boost
+    conda install -c anaconda boost
+    # in case you do not have a system g++/cmake
+    conda install -c anaconda cmake gxx_linux-64 
     ```
     in case you want to have an MPI enabled build also install the `openmpi` package
     ```{code-block} bash
@@ -92,22 +110,19 @@ To compile the extenstions you need the following prerequisites:
    ```
 
 4. **Build & install** the package<br>
+    
+    To ensure that we use Anaconda's `boost` libs (in case also system libraries are installed) we have to give 
+    **cmake** a hint, where to find them. The same is true if you want to use Anacondas C++ compiler (`CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++"`)
 
     ```{code-block} bash
+    SQS_Boost_USE_STATIC_LIBS=ON \
+    SQS_Boost_INCLUDE_DIR="${CONDA_PREFIX}/include" \
+    SQS_Boost_LIBRARY_DIR_RELEASE="${CONDA_PREFIX}/lib" \
+    CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++" \
     python setup.py install
+    # or for a MPI build
     python setup.py install --with-mpi
     ```
-
-    ````{warning}
-    It might be that CMake detects your system's compiler. Please check that before buidling (`which g++`).
-    You can instruct `setup.py` to overrride CMake  default compiler with `CMAKE_CXX_COMPILER` and use that one of your 
-    Anaconda distribution 
-
-    ```{code-block} bash
-    CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++" python setup.py install 
-    CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++" python setup.py install --with-mpi
-    ```
-    ````
 
 ### performing a custom build
 
@@ -115,15 +130,6 @@ Before performing a custom build make sure you do have a **Python 3** Interprete
 [`numpy`](https://numpy.org/) installed.
 After download the sources and building you can configure **cmake** by setting environment variables.
 
-`setup.py` forwards all environment variables with a `SQS_` prefix to **cmake**.
 
-E. g. [FindBoost.cmake](https://cmake.org/cmake/help/latest/module/FindBoost.html#hints) takes a `BOOST_ROOT` hint to allow
-the use of a cutom boost version. Therefore to buils `sqsgenerator` with your own Boost version use 
 
-   ```{code-block} bash
-   SQS_BOOST_ROOT=/path/to/own/boost python setup.py install # --with-mpi
-   ```
 
-The above code will under-the-hood call **cmake** with a `-DBOOST_ROOT=/path/to/own/boost` option.
-
-In the same manner values can be passed to [FindMPI.cmake](https://cmake.org/cmake/help/latest/module/FindMPI.html).
