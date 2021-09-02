@@ -11,7 +11,7 @@ from sqsgenerator.settings.readers import read_structure
 class TestStructure(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.raw_dict = read_settings_file('examples/cs-cl.sqs.yaml')
+        self.raw_dict = read_settings_file('resources/cs-cl.sqs.yaml')
         self.structure = read_structure(self.raw_dict)
 
     def test_slicing(self):

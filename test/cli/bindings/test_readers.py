@@ -46,8 +46,8 @@ def test_function(test_f):
 class TestSettingReaders(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.raw_dict = read_settings_file('examples/cs-cl.sqs.yaml')
-        self.raw_dict_from_file = read_settings_file('examples/cs-cl.poscar.sqs.yaml')
+        self.raw_dict = read_settings_file('resources/cs-cl.sqs.yaml')
+        self.raw_dict_from_file = read_settings_file('resources/cs-cl.poscar.sqs.yaml')
         self.file_name = self.raw_dict_from_file.structure.file
         self.structure = read_structure(self.raw_dict)
         self.distances = default_shell_distances(self.structure, ATOL, RTOL)

@@ -6,7 +6,7 @@ import click.testing
 from sqsgenerator.cli import cli
 
 
-with open('examples/cs-cl.sqs.yaml', 'r') as fh:
+with open('resources/cs-cl.sqs.yaml', 'r') as fh:
     config_contents = fh.read()
 
 

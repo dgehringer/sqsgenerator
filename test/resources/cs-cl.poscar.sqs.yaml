@@ -1,0 +1,15 @@
+
+structure:
+  supercell:
+    - 3
+    - 3
+    - 3
+  file: resources/cs-cl.cif
+mode: random
+iterations: 1e6
+which: Cs
+composition:
+
+  Fr: 9
+  Ta: 9
+  Lu: 9
