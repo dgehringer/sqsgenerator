@@ -141,7 +141,7 @@ py::list default_shell_distances_wrapped(StructurePythonWrapper &s, double atol=
     return helpers::vector_to_list(sqsgenerator::utils::default_shell_distances(s.handle()->distance_matrix(), atol, rtol));
 }
 
-BOOST_PYTHON_MODULE(iteration) {
+BOOST_PYTHON_MODULE(core) {
         Py_Initialize();
         np::initialize();
         init_logging();
