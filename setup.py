@@ -147,5 +147,6 @@ setup(
     entry_points={
         'console_scripts': ['sqsgen=sqsgenerator.cli:cli']
     },
-    packages=find_packages('.', exclude=['test', 'test.cli', 'docs', 'benchmarks', 'examples'],)
+    packages=find_packages('.', exclude=['test']),
+    include_package_data=True
 )
