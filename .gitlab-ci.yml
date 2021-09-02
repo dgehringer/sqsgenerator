@@ -16,3 +16,6 @@ build-all:
     - echo $(pwd)
     - cp examples/cs-cl.sqs.yaml sqs.yaml
     - bash $HOME/bin/sqs-build-wheel.sh
+  artifacts:
+    paths:
+      - dist/
