@@ -77,8 +77,8 @@ def require(*features: Feature, condition=all):
 
 
 def have_mpi_support():
-    import sqsgenerator.core.iteration
-    return 'mpi' in sqsgenerator.core.iteration.__features__
+    import sqsgenerator.core.core
+    return 'mpi' in sqsgenerator.core.core.__features__
 
 
 _check_features()

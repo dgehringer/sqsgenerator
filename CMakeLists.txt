@@ -53,6 +53,7 @@ if (OPENMP_FOUND)
     message ([OPENMP]:LIBRARIES: ${OpenMP_CXX_LIBRARIES})
 endif()
 
+message([MPI]:USE_MPI: ${USE_MPI})
 
 if (USE_MPI)
     find_package(MPI)

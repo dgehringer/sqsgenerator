@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 import typing as T
 from operator import attrgetter as attr
-from sqsgenerator.core.data import Structure as Structure_, Atom
+from sqsgenerator.core.core import Structure as Structure_, Atom
 
 
 class Structure(Structure_):

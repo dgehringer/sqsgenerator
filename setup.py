@@ -137,9 +137,7 @@ setup(
     author_email='dgehringer@protonmail.com',
     license='MIT',
     ext_modules = [
-        CMakeExtension('sqsgenerator.core.data', 'data'),
-        CMakeExtension('sqsgenerator.core.utils', 'utils'),
-        CMakeExtension('sqsgenerator.core.iteration', 'iteration'),
+        CMakeExtension('sqsgenerator.core.core', 'core'),
     ],
     cmdclass = {
         'build_ext': cmake_build_ext,

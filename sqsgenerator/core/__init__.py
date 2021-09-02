@@ -3,12 +3,12 @@ import operator
 import functools
 import frozendict
 import typing as T
-from sqsgenerator.core.data import SQSResult
-from sqsgenerator.core.iteration import __version__, __features__
-from sqsgenerator.core.iteration import set_log_level, pair_sqs_iteration, pair_analysis
-from sqsgenerator.core.iteration import IterationMode, IterationSettings, BoostLogLevel
+from sqsgenerator.core.core import SQSResult
+from sqsgenerator.core.core import __version__, __features__
+from sqsgenerator.core.core import set_log_level, pair_sqs_iteration, pair_analysis
+from sqsgenerator.core.core import IterationMode, IterationSettings, BoostLogLevel
 from sqsgenerator.core.structure import Structure, structure_to_dict, Atom, make_supercell
-from sqsgenerator.core.utils import default_shell_distances, total_permutations, rank_structure, atoms_from_numbers, \
+from sqsgenerator.core.core import default_shell_distances, total_permutations, rank_structure, atoms_from_numbers, \
     atoms_from_symbols, available_species, symbols_from_z
 
 __all__ = [
@@ -20,14 +20,11 @@ __all__ = [
     'IterationSettings',
     'BoostLogLevel',
     'pair_analysis',
-
     'Structure',
     'structure_to_dict',
-    'Atom'
+    'Atom',
     'make_supercell',
-
     'SQSResult',
-
     'default_shell_distances',
     'total_permutations',
     'rank_structure',
