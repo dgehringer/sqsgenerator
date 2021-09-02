@@ -8,6 +8,7 @@ from sqsgenerator.compat import have_mpi_support
 from sqsgenerator.core import default_shell_distances
 from sqsgenerator.adapters import to_ase_atoms, to_pymatgen_structure
 from sqsgenerator.io import read_settings_file
+from sqsgenerator.settings.defaults import ATOL, RTOL
 from sqsgenerator.settings.readers import read_atol, \
     read_rtol, \
     read_mode, \
@@ -20,7 +21,7 @@ from sqsgenerator.settings.readers import read_atol, \
     read_target_objective, \
     read_threads_per_rank, \
     read_max_output_configurations, \
-    BadSettings, ATOL, RTOL, IterationMode, Structure
+    BadSettings, IterationMode, Structure
 
 
 def settings(recursive=True, **kwargs):
@@ -139,75 +140,66 @@ class TestSettingReaders(unittest.TestCase):
 
     @test_function(read_composition)
     def test_read_composition(self, f):
+        which = tuple(range(len(self.structure)))
+
+        ff = functools.partial(f, structure=self.structure, which=which)
 
         with self.assertRaises(BadSettings):
             # raise a TypeError in convert
-            f(structure=self.structure, composition={})
+            ff(composition={})
 
         with self.assertRaises(BadSettings):
             # raise a wrong number of total atoms
-            f(structure=self.structure, composition=dict(Fr=18, Lu=18))
+            ff(composition=dict(Fr=18, Lu=18))
 
         with self.assertRaises(BadSettings):
             # correct number but less than one
-            f(structure=self.structure, composition=dict(Fr=54, Lu=0))
+            ff(composition=dict(Fr=54, Lu=0))
 
         with self.assertRaises(BadSettings):
             # correct number but negative number
-            f(structure=self.structure, composition=dict(Fr=55, Lu=-1))
+            ff(composition=dict(Fr=55, Lu=-1))
 
         with self.assertRaises(BadSettings):
             # wrong species
-            f(structure=self.structure, composition=dict(Fr=27, Kf=27))
+            ff(composition=dict(Fr=27, Kf=27))
 
         with self.assertRaises(BadSettings):
             # type error in atom number
-            f(structure=self.structure, composition=dict(Fr=27, Na='asdf'))
+            ff(composition=dict(Fr=27, Na='asdf'))
 
         with self.assertRaises(BadSettings):
             # wrong number of atoms on sublattice
-            f(structure=self.structure, composition=dict(Fr=27, Kf=27, which='Cs'))
+            f(structure=self.structure, composition=dict(Fr=27, Kf=27), which='Cs')
 
         with self.assertRaises(BadSettings):
             # non existing sublattice
-            f(structure=self.structure, composition=dict(Fr=14, K=13, which='Na'))
+            f(structure=self.structure, composition=dict(Fr=14, K=13), which='Na')
 
-        with self.assertRaises(BadSettings):
-            # wrong type in sublattice specification
-            f(structure=self.structure, composition=dict(Fr=27, Na=27, which=345345))
 
         with self.assertRaises(BadSettings):
             # index out of bounds in sublattice specification
-            f(structure=self.structure, composition=dict(Fr=2, Na=2, which=(0,1,2,4, self.structure.num_atoms+4)))
+            f(structure=self.structure, composition=dict(Fr=2, Na=2), which=(0,1,2,4, self.structure.num_atoms+4))
 
         with self.assertRaises(BadSettings):
             # index out of bounds in sublattice specification
-            f(structure=self.structure, composition=dict(Fr=2, Na=2, which=(0, 1, 2, 4, 'g')))
+            f(structure=self.structure, composition=dict(Fr=2, Na=2), which=(0, 1, 2, 4, 'g'))
 
         with self.assertRaises(BadSettings):
             # too few atoms on sublattice
-            f(structure=self.structure, composition=dict(Fr=0, Na=1, which=(0,)))
+            f(structure=self.structure, composition=dict(Fr=0, Na=1), which=(0,))
 
         with self.assertRaises(BadSettings):
             # wrong number of atoms on sublattice
-            f(structure=self.structure, composition=dict(Fr=27, Kf=27, which='all'))
+            f(structure=self.structure, composition=dict(Fr=27, Kf=27), which=which)
 
-        s = settings(structure=self.structure, composition=dict(Cs=27, Cl=27, which='all'))
+        s = settings(structure=self.structure, composition=dict(Cs=27, Cl=27), which=which)
         read_composition(s)
-        self.assertTrue('is_sublattice' in s)
-        self.assertFalse(s.is_sublattice)
 
-        sublattice = 'Cs'
-        s = settings(structure=self.structure, composition=dict(H=13, He=14, which=sublattice))
-        read_composition(s)
-        self.assertTrue('is_sublattice' in s)
-        self.assertTrue(s.is_sublattice)
 
         sublattice = [0,2,4,5,6,7,8,9]
-        s = settings(structure=self.structure, composition=dict(H=4, He=4, which=sublattice))
+        s = settings(structure=self.structure, composition=dict(H=4, He=4), which=sublattice)
         read_composition(s)
-        self.assertTrue('is_sublattice' in s)
-        self.assertTrue(s.is_sublattice)
 
     @test_function(read_shell_distances)
     def test_read_shell_distances(self, f):

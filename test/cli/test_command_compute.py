@@ -32,7 +32,6 @@ class TestParamsCommand(unittest.TestCase):
     def setUp(self):
         self.cli_runner = click.testing.CliRunner(mix_stderr=False)
 
-
     def assert_have_needed_fields(self, reloaded):
         need_fields = {'atol', 'rtol', 'mode', 'pair_weights', 'shell_distances', 'shell_weights', 'threads_per_rank',
                        'max_output_configurations'}
@@ -61,6 +60,7 @@ class TestParamsCommand(unittest.TestCase):
 
         r = self.cli_runner.invoke(cli, ['params', 'show'])
         self.assertEqual(r.exit_code, 0)
+        print(r.stdout, r.stderr)
 
         self.input_output_loop('yaml', yaml.safe_load)
         self.input_output_loop('json', json.loads)
