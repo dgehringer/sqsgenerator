@@ -1,37 +1,18 @@
 
 
-variables:
-  SQSGENERATOR_BUILD_DIR: build
-  SQSGENERATOR_MAIN_BRANCH: relaunch
-
-
 stages:
   - build
   - test
 
 
 build-all:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $SQSGENERATOR_MAIN_BRANCH'
-      when: always
   before_script:
-    - echo "[BUILD] | Checking gtest"
-    - dpkg -l libgtest-dev
-    - echo "[BUILD] | Checking boost"
-    - dpkg -l libboost-python-dev
-    - dpkg -l libboost-numpy-dev
-    - dpkg -l libboost-system-dev
-    - echo "[BUILD] | Checking cmake"
-    - dpkg -l cmake
-    - echo "[BUILD] | Creating build directory"
-    - mkdir ${SQSGENERATOR_BUILD_DIR}
-    - echo "[BUILD] | Preparing cmake files"
-    - cd ${SQSGENERATOR_BUILD_DIR}
-    - cmake ..
-    - cd ..
+    - bash $HOME/bin/sqs-build-create-envs.sh
   stage: build
   tags:
     - core
     - build
   script:
-    - cmake --build ${SQSGENERATOR_BUILD_DIR}
+    - echo $(pwd)
+    - cp examples/cs-cl.sqs.yaml sqs.yaml
+    - bash $HOME/bin/sqs-build-wheel.sh
