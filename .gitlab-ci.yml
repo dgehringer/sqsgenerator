@@ -3,14 +3,14 @@
 stages:
   - build
   - test
+  - deploy
 
 
-build-all:
+build-wheels:
   before_script:
     - bash $HOME/bin/sqs-build-create-envs.sh
   stage: build
   tags:
-    - core
     - build
   script:
     - echo $(pwd)
@@ -18,4 +18,11 @@ build-all:
     - bash $HOME/bin/sqs-build-wheel.sh
   artifacts:
     paths:
-      - dist/
+      - dist/*.whl
+
+depoly-wheels:
+  stage: deploy
+  tags:
+    - deploy
+  script:
+    - bash $HOME/bin/sqs-deploy-wheel.sh
