@@ -81,4 +81,8 @@ def have_mpi_support():
     return 'mpi' in sqsgenerator.core.core.__features__
 
 
+def available_features():
+    return tuple(feature.value for feature in Feature if have_feature(feature))
+
+
 _check_features()
