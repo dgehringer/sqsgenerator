@@ -13,6 +13,7 @@ maxdepth: 2
 ---
 
 installation_guide
+cli_interface
 input_parameters
 what_is_actually_computed
 ```
