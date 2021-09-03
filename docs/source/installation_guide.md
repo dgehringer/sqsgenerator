@@ -57,6 +57,8 @@ pip install sqsgenerator-0.1-cp36-cp36m-linux_x86_64.whl
 `sqsgenerator` is Python 3 CLI app. However, its core is written in C++, thus some prerequisites are needed. Please read
 through this section carefully.
 
+  - Python interpreter and headers (**>= 3.6**)
+  - [numpy](https://numpy.org) installed
   - A C++ compiler, such as `g++`, which has support for [OpenMP](https://www.openmp.org/) and supports C++17
   - [Boost](https://www.boost.org/) libraries are needed to compile the core modules. In particular the following subset of the boost libraries are needed
     - `libboost_python` (Python bindings)
@@ -86,7 +88,11 @@ The above code will under-the-hood call **cmake** with a `-DBOOST_ROOT=/path/to/
 
 In the same manner values can be passed to [FindMPI.cmake](https://cmake.org/cmake/help/latest/module/FindMPI.html).
 
-### with `conda` on Linux (or  Mac)
+### on Linux (or  Mac)
+
+### with `conda` package manager
+
+With `conda` it is easy to install the needed toolchain, and thus get to a quick customized build
 
 1. **Create** an anaconda environment using
 
@@ -135,13 +141,4 @@ In the same manner values can be passed to [FindMPI.cmake](https://cmake.org/cma
     This step is only optional. In case you have compiled the core modules with `SQS_Boost_USE_STATIC_LIBS=ON` the created
     library does not depend any more on the `boost` libraries.
     In case you **do not need** them any more and you can remove them again.
-
-### performing a custom build
-
-Before performing a custom build make sure you do have a **Python 3** Interpreter as well as 
-[`numpy`](https://numpy.org/) installed.
-After download the sources and building you can configure **cmake** by setting environment variables.
-
-
-
 
