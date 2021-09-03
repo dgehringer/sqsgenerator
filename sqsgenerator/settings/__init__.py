@@ -29,9 +29,11 @@ def construct_settings(settings: AttrDict, process=True, **overloads) -> Iterati
         settings.mode
     )
 
+
 __all__ = [
     'BadSettings',
     'parameter_list',
     'process_settings',
     'construct_settings',
+    'defaults'
 ]

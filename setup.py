@@ -44,7 +44,7 @@ class InstallCustom(install):
         WITH_MPI = self.with_mpi
 
 
-class cmake_build_ext(build_ext):
+class CMakeBuildExt(build_ext):
     user_options = build_ext.user_options + [
         ('with-mpi', None, 'Enables MPI Parallelization')
     ]
@@ -122,12 +122,12 @@ class cmake_build_ext(build_ext):
             subprocess.check_call(cmake_build_args, cwd=self.build_temp)
 
     def initialize_options(self):
-        super(cmake_build_ext, self).initialize_options()
+        super(CMakeBuildExt, self).initialize_options()
         self.with_mpi = WITH_MPI
 
     def finalize_options(self):
         """finalize options"""
-        super(cmake_build_ext, self).finalize_options()
+        super(CMakeBuildExt, self).finalize_options()
 
         
 setup(
@@ -140,7 +140,7 @@ setup(
         CMakeExtension('sqsgenerator.core.core', 'core'),
     ],
     cmdclass = {
-        'build_ext': cmake_build_ext,
+        'build_ext': CMakeBuildExt,
         'install': InstallCustom
     },
     install_requires=['attrdict', 'numpy', 'click', 'rich', 'pyyaml', 'frozendict'],
