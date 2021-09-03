@@ -7,11 +7,11 @@ import os
 import sys
 import rich
 import click
-import typing as T
 import functools
+import typing as T
 import collections.abc
 from sqsgenerator.io import read_settings_file
-from sqsgenerator.commands.help import help
+from sqsgenerator.commands.help import parameter_help as help
 from sqsgenerator.settings import process_settings, parameter_list, BadSettings
 
 
@@ -74,7 +74,8 @@ def pretty_print(*objects, show=True, paginate='auto', **kwargs):
     console_height = console.height
 
     string = buf.getvalue()
-    if paginate == 'auto': paginate = string.count(os.linesep) >= console_height
+    if paginate == 'auto':
+        paginate = string.count(os.linesep) >= console_height
     printer = functools.partial(click.echo, file=sys.stdout, nl=False) if not paginate else click.echo_via_pager
     return printer(buf.getvalue()) if show else buf.getvalue()
 
@@ -95,8 +96,8 @@ def make_help_link(parameter: str) -> str:
 
 def exit_on_input_parameter_error(f):
     """
-    Decorator: Wraps a @parameter decorated function -> catches a eventual `BadSettings` error -> creates a help-link for the
-    parameter -> redirects the `BadSettings` into `click.Abort` to stop CLI execution
+    Decorator: Wraps a @parameter decorated function -> catches a eventual `BadSettings` error -> creates a help-link
+    for the parameter -> redirects the `BadSettings` into `click.Abort` to stop CLI execution
     """
 
     @functools.wraps(f)
@@ -117,14 +118,23 @@ def exit_on_input_parameter_error(f):
 
 def click_settings_file(process=None, default_name='sqs.yaml', ignore=()):
     """
-    Decorator-Factory: A lot of the commands need an input YAML file -> creates a a decorator
+    Decorator-Factory: A lot of the commands need an input YAML file -> creates a a decorator which parses a settings
+    file and takes an input format as parameter. The decorater prcesses the specified file
+    :param process: process (parsed) the settings dictionary with sqsgenerator.core (default is `None`)
+    :type process: Iterable[str] or None
+    :param default_name: if no file path is specified the function will search {default_name} (default is `"sqs.yaml"`)
+    :type default_name: str
+    :param ignore: list of parameters names which are ignored
+    :return: the function wrapped by a `click.option` {input_format} and a `click.argument` {filename} decorator
+    :rtype: callable
     """
 
     def _decorator(f: T.Callable):
 
         @functools.wraps(f)
         @click.argument('filename', type=click.Path(exists=True), default=default_name)
-        @click.option('--input-format', '-if', type=click.Choice(['yaml', 'json', 'pickle']), default='yaml', help=help.input_format)
+        @click.option('--input-format', '-if', type=click.Choice(['yaml', 'json', 'pickle']), default='yaml',
+                      help=help.input_format)
         def _dummy(*args, filename=default_name, input_format='yaml', **kwargs):
             settings = read_settings_file(filename, format=input_format)
             settings['file_name'] = filename
@@ -132,8 +142,9 @@ def click_settings_file(process=None, default_name='sqs.yaml', ignore=()):
             nonlocal process
             if process is not None:
                 param_list = parameter_list()
-                if 'all' in process: process = param_list
-                else: assert all(p in param_list for p in process)
+                if 'all' in process:
+                    process = param_list
+
                 settings = process_settings(settings, params=process, ignore=ignore)
 
             return f(settings, *args, **kwargs)
@@ -141,3 +152,6 @@ def click_settings_file(process=None, default_name='sqs.yaml', ignore=()):
         return exit_on_input_parameter_error(_dummy)
 
     return _decorator
+
+
+pretty_format = functools.partial(pretty_print, show=False)
