@@ -56,9 +56,8 @@ def format_parameters(settings, result):
 @click.option('--output-format', '-of', type=click.Choice(['yaml', 'json', 'pickle', 'native']), default='native',
               help=help.output_format)
 @click.option('--params', '-p', is_flag=True, help=help.dump_params)
-@click.option('--pretty', is_flag=True, help=help.pretty)
 @click_settings_file(process={'structure'}, ignore={'which'}, default_name='sqs.result.yaml')
-def analyse(settings, output_format, params, pretty):
+def analyse(settings, output_format, params):
     if 'configurations' not in settings:
         error('The input document must contain a "configurations" key', prefix='KeyError')
     num_configurations = len(settings.configurations)
@@ -88,18 +87,16 @@ def analyse(settings, output_format, params, pretty):
     if 'which' in document:
         del document['which']
     if output_format == 'native':
-        if pretty:
-            all_renderables = []
-            for rank, result in map_values(AttrDict, document.configurations).items():
-                renderables = list(format_parameters(analyse_settings, AttrDict(result)))
-                renderables.insert(0, Text(f'Parameters:{os.linesep}', style='bold'))
-                renderables.insert(0, Text.assemble(
-                    ('Configuration: ', 'bold'), (f'{result.configuration}', 'bold cyan'))
-                )
-                renderables.insert(0, Text.assemble(('Objective: ', 'bold'), (f'{result.objective}', 'bold cyan')))
-                renderables.insert(0, Text.assemble(('Rank: ', 'bold'), (f'{rank}', 'bold cyan')))
-                all_renderables.extend(renderables)
-            pretty_print(*all_renderables)
-
+        all_renderables = []
+        for rank, result in map_values(AttrDict, document.configurations).items():
+            renderables = list(format_parameters(analyse_settings, AttrDict(result)))
+            renderables.insert(0, Text(f'Parameters:{os.linesep}', style='bold'))
+            renderables.insert(0, Text.assemble(
+                ('Configuration: ', 'bold'), (f'{result.configuration}', 'bold cyan'))
+            )
+            renderables.insert(0, Text.assemble(('Objective: ', 'bold'), (f'{result.objective}', 'bold cyan')))
+            renderables.insert(0, Text.assemble(('Rank: ', 'bold'), (f'{rank}', 'bold cyan')))
+            all_renderables.extend(renderables)
+        pretty_print(*all_renderables)
     else:
         sys.stdout.buffer.write(dumps(to_dict(document), output_format=output_format))

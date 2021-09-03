@@ -27,7 +27,6 @@ command_help = AttrDict(dict(
 parameter_help = AttrDict(dict(
     filename='A path to a file readable by sqsgenerator',  # TODO: Add help links here
     input_format='The filetype of {filename}',
-    pretty='Pretty print SQS results',
     dump_params='Dump input parameters - Append them to the newly generated output',
     output_format='Output format type',
     format='Output format for the structure file(s). The format must be supported by the specified backend',
