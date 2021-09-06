@@ -44,7 +44,8 @@ prebuilt binary packages:
 | linux | x86_64 | 3.8  | [sqsgenerator-0.1-cp38-cp38-linux_x86_64.whl](http://oc.unileoben.ac.at/index.php/s/gTk345lGTwk3C0G/download) |
 | linux | x86_64 | 3.9  | [sqsgenerator-0.1-cp39-cp39-linux_x86_64.whl](http://oc.unileoben.ac.at/index.php/s/3x01KBKarx11BgQ/download) |
 
-Once you have choosen the correct wheel, you can easily install it:
+Once you have choosen the correct wheel for your Python interpreter (`python --vserion`), download one from the table above:
+You can install the downloaded wheel with:
 
 ```{code-block} bash
 pip install sqsgenerator-0.1-cp36-cp36m-linux_x86_64.whl
