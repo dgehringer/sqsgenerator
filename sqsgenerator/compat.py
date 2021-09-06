@@ -89,15 +89,16 @@ def available_features():
 
 def available_features_with_version():
     default_version = lambda _ : ''
-    module_version_attr = lambda f: f'-{get_module(f).__version__}'
+    module_version_attr = lambda f: f'-{get_module(Feature(f)).__version__}'
     verstion_getters = {
-        Feature.ase: module_version_attr,
-        Feature.pymatgen: module_version_attr,
-        Feature.pyiron: module_version_attr,
-        Feature.yaml: module_version_attr,
-        Feature.mpi4py: module_version_attr
+        'ase': module_version_attr,
+        'pymatgen': module_version_attr,
+        'pyiron': module_version_attr,
+        'yaml': module_version_attr,
+        'mpi4py': module_version_attr
     }
-    return tuple(f'{feature.value}{verstion_getters.get(feature, default_version)(feature)}' for feature in Feature)
+    return tuple(f'{feature_str}{verstion_getters.get(feature_str, default_version)(feature_str)}'
+                 for feature_str in available_features())
 
 
 _check_features()
