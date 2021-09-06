@@ -9,13 +9,14 @@
 ```{toctree}
 ---
 caption: 
-maxdepth: 2
+maxdepth: 1
 ---
 
 installation_guide
 cli_interface
 input_parameters
 what_is_actually_computed
+api_reference
 ```
 
 ## API Reference
