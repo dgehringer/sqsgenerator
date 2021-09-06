@@ -40,8 +40,10 @@ def is_initialized():
 def _is_feature_available(feature: Feature):
     try:
         __import__(feature.value)
-    except ImportError: return False
-    else: return True
+    except ImportError:
+        return False
+    else:
+        return True
 
 
 def _check_features():
@@ -83,6 +85,19 @@ def have_mpi_support():
 
 def available_features():
     return tuple(feature.value for feature in Feature if have_feature(feature))
+
+
+def available_features_with_version():
+    default_version = lambda _ : ''
+    module_version_attr = lambda f: f'-{get_module(f).__version__}'
+    verstion_getters = {
+        Feature.ase: module_version_attr,
+        Feature.pymatgen: module_version_attr,
+        Feature.pyiron: module_version_attr,
+        Feature.yaml: module_version_attr,
+        Feature.mpi4py: module_version_attr
+    }
+    return tuple(f'{feature.value}{verstion_getters.get(feature, default_version)(feature)}' for feature in Feature)
 
 
 _check_features()

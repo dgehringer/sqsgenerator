@@ -1,6 +1,6 @@
 
 import click
-from sqsgenerator.compat import available_features
+from sqsgenerator.compat import available_features_with_version
 from sqsgenerator.commands.run import run
 from sqsgenerator.commands.export import export
 from sqsgenerator.commands.params import params
@@ -34,7 +34,7 @@ def make_version_message():
     [magenta italic]email:[/magenta italic] dominik.gehringer@unileoben.ac.at
     [magenta italic]repo:[/magenta italic] https://github.com/dgehringer/sqsgenerator
     [magenta italic]docs:[/magenta italic] https://sqsgenerator.readthedocs.io/en/latest
-    [magenta italic]modules:[/magenta italic] {available_features()}""")
+    [magenta italic]modules:[/magenta italic] {available_features_with_version()}""")
 
 
 @click.group(help=pretty_format(_title))
