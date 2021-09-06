@@ -38,8 +38,7 @@ def make_version_message():
 
 
 @click.group(help=pretty_format(_title))
-@click.version_option(prog_name='sqsgen', package_name='sqsgenerator', version=make_version_string(),
-                      message=make_version_message())
+@click.version_option(prog_name='sqsgen', version=make_version_string(), message=make_version_message())
 def cli():
     pass
 
