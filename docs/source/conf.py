@@ -12,6 +12,7 @@
 #
 import os
 import sys
+import shutil
 import wheel.wheelfile
 import requests
 
@@ -43,8 +44,11 @@ with wheel.wheelfile.WheelFile(wheel_path) as whl:
 
 sys.path.insert(0, package_dir)
 
-import sqsgenerator
+os.remove(os.path.join(package_dir, package_name, 'core', 'core.so'))
+shutil.copy('../core_stubs.py', os.path.join(package_dir, package_name, 'core', 'core.py'))
 
+import sqsgenerator
+print(sqsgenerator)
 # -- Project information -----------------------------------------------------
 
 project = 'sqsgenerator'
