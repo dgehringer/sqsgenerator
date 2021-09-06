@@ -12,8 +12,38 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))
+import wheel.wheelfile
+import requests
 
+wheels = {
+    '3.6': ('sqsgenerator-0.1-cp36-cp36m-linux_x86_64.whl', 'http://oc.unileoben.ac.at/index.php/s/qqDIydH02PkV32V/download'),
+    '3.7': ('sqsgenerator-0.1-cp37-cp37m-linux_x86_64.whl', 'http://oc.unileoben.ac.at/index.php/s/34xlYhyZxkyb6xy/download'),
+    '3.8': ('sqsgenerator-0.1-cp38-cp38-linux_x86_64.whl', 'http://oc.unileoben.ac.at/index.php/s/gTk345lGTwk3C0G/download'),
+    '3.9': ('sqsgenerator-0.1-cp39-cp39-linux_x86_64.whl', 'http://oc.unileoben.ac.at/index.php/s/3x01KBKarx11BgQ/download'),
+}
+
+package_dir = '../deps'
+package_name = 'sqsgenerator'
+os.makedirs(package_dir, exist_ok=True)
+
+py_version = f'{sys.version_info.major}.{sys.version_info.minor}'
+
+wheel_name, wheel_url = wheels.get(py_version)
+wheel_path = os.path.join(package_dir, wheel_name)
+response = requests.get(wheel_url)
+
+print('response_status_code', response.status_code)
+
+with open(wheel_path, 'wb') as fh:
+    fh.write(response.content)
+
+
+with wheel.wheelfile.WheelFile(wheel_path) as whl:
+    whl.extractall(package_dir)
+
+sys.path.insert(0, package_dir)
+
+import sqsgenerator
 
 # -- Project information -----------------------------------------------------
 
