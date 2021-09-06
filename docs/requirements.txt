@@ -1,3 +1,9 @@
+rich
+numpy
+click
+pyyaml
+attrdict
+frozendict
 myst-parser==0.15.1
 pydata-sphinx-theme==0.6.3
 sphinx-click==3.0.1
