@@ -5,7 +5,7 @@ Utility command to export the internal dict-like results into structure files
 import os
 import click
 from attrdict import AttrDict
-from sqsgenerator.main import extract_structures
+from sqsgenerator.public import extract_structures
 from sqsgenerator.settings.readers import read_structure
 from sqsgenerator.compat import Feature as F, have_feature
 from sqsgenerator.commands.common import click_settings_file, error

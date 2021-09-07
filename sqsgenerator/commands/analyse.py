@@ -16,7 +16,7 @@ from operator import attrgetter as attr, itemgetter as item
 from sqsgenerator.commands.help import parameter_help as help, command_help
 from sqsgenerator.settings import construct_settings, process_settings, defaults
 from sqsgenerator.commands.common import click_settings_file, error, pretty_print
-from sqsgenerator.main import pair_analysis, available_species, extract_structures, expand_sqs_results
+from sqsgenerator.public import pair_analysis, available_species, extract_structures, expand_sqs_results
 
 
 species_to_ordinal = dict(map(attr('symbol', 'Z'), available_species()))
