@@ -23,7 +23,13 @@ sys.path.insert(0, '../..')
 shutil.copy(core_stubs, os.path.join(package_dir, 'core', 'core.py'))
 
 import sqsgenerator
+import sqsgenerator.io
+import sqsgenerator.adapters
+import sqsgenerator.settings
 print(sqsgenerator)
+print(sqsgenerator.io)
+print(sqsgenerator.adapters)
+print(sqsgenerator.settings)
 # -- Project information -----------------------------------------------------
 
 project = 'sqsgenerator'
