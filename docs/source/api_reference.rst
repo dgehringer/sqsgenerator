@@ -2,19 +2,44 @@
 API Reference
 =============
 
+.. autoclass:: sqsgenerator.public.IterationMode
 
-.. autofunction:: sqsgenerator.public.process_settings
+    .. attribute:: random
 
-.. autoclass:: sqsgenerator.core.Structure
-    :members: numbers, symbols, num_unique_species, unique_species, to_dict sorted, slice_with_species, with_species
+        Instructs the program to use a Monte-Carlo based sampling of the configurational space
+
+    .. attribute:: systematic
+
+        Will cause sqsgenrator to systematically sample the configurational space. This setting is recommended only
+        for relatively "*small*" structures. We strongly encourage you to use:
+
+            .. highlight:: bash
+            .. code-block:: bash
+
+                sqsgen compute total-permutations
+
+        to obtain the potential number of iterations needed. To roughly estimate the time on your local machine
+        you can use:
+
+            .. highlight:: bash
+            .. code-block:: bash
+
+                sqsgen compute estimated-time
+
+.. autoclass:: sqsgenerator.public.SQSResult
+
+.. autoclass:: sqsgenerator.public.Structure
+    :members: numbers, symbols, num_unique_species, unique_species, to_dict, sorted, slice_with_species, with_species
     :undoc-members:
+
+    .. autofunction:: sqsgenerator.public.Structure.__init__
 
     .. property:: num_atoms
 
         The number of atoms in the structure
 
         :return: the number of atoms
-        :rtype: int
+        :rtype: ``int``
 
     .. property:: distance_matrix
 
@@ -38,9 +63,12 @@ API Reference
         :return: the fractional coordinates
         :rtype: ``np.ndarray``
 
+
 .. autofunction:: sqsgenerator.public.make_supercell
 
+.. autofunction:: sqsgenerator.public.process_settings
 
 .. autofunction:: sqsgenerator.public.make_result_document
 
 .. autofunction:: sqsgenerator.public.pair_sqs_iteration
+
