@@ -11,3 +11,5 @@ _templates/
 *.inplace*.yaml
 *.result*.yaml
 *.so
+
+pyiron.log

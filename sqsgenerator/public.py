@@ -8,6 +8,17 @@ from sqsgenerator.settings import construct_settings, process_settings
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
     SQSResult, symbols_from_z, Structure, pair_analysis, available_species, make_supercell, IterationMode
 
+
+__all__ = [
+    'IterationMode',
+    'Structure',
+    'SQSResult',
+    'make_supercell',
+    'process_settings',
+    'make_result_document',
+    'pair_sqs_iteration'
+]
+
 TimingDictionary = T.Dict[int, T.List[float]]
 Settings = AttrDict
 SQSResultCollection = T.Iterable[SQSResult]
@@ -123,6 +134,13 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
 def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
                        timings: T.Optional[TimingDictionary] = None, include=('configuration',),
                        inplace: bool = False) -> Settings:
+    """
+    Serializes a list of :py:class:`sqsgenerator.public.SQSResult` into a JSON/YAML serializable string
+
+    :param settings: the settings used to compute the {sqs_results}
+    :type settings: AttrDict
+    :param sqs_results:
+    """
     dump_include = list(include)
     if 'configuration' not in dump_include:
         dump_include += ['configuration']

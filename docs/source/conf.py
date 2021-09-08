@@ -61,8 +61,11 @@ myst_enable_extensions = [
 extensions = [
     'sphinx.ext.autodoc',
     'myst_parser',
-    'sphinx_click'
+    'sphinx_click',
+    'sphinxemoji.sphinxemoji',
 ]
+
+sphinxemoji_style = 'twemoji'
 
 
 # Add any paths that contain templates here, relative to this directory.

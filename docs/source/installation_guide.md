@@ -1,6 +1,8 @@
 
 # Install `sqsgenerator` ...
 
+(installation_guide)=
+
 ## Optional dependencies - `ase` and `pymatgen`
 
 [`ase`](https://wiki.fysik.dtu.dk/ase/) and [`pymatgen`](https://pymatgen.org/) are not explicitly listed as
