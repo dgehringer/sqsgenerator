@@ -314,9 +314,9 @@ def process_settings(settings: AttrDict, params: T.Optional[T.Set[str]] = None, 
     :param settings: the dict-like user configuration
     :type settings: AttrDict
     :param params: If specified only the subset of {params} is processed (default is ``None``)
-    :type params: set of str or ``None``
+    :type params: Optional[Set[``None``]]
     :param ignore: a list/iterable of params to ignore (default is ``()``)
-    :type ignore: iterable of str
+    :type ignore: Iterable[``str``]
     :return: the processed settings dictionary
     :rtype: AttrDict
     """

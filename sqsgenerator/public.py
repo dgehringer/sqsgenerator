@@ -6,7 +6,7 @@ from operator import attrgetter as attr
 from sqsgenerator.settings.readers import read_structure
 from sqsgenerator.settings import construct_settings, process_settings
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
-    SQSResult, symbols_from_z, Structure, pair_analysis, available_species, make_supercell
+    SQSResult, symbols_from_z, Structure, pair_analysis, available_species, make_supercell, IterationMode
 
 TimingDictionary = T.Dict[int, T.List[float]]
 Settings = AttrDict
@@ -85,7 +85,7 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
     :param settings: the dict-like settings used for the iteration. Please refer to the
         `Input parameter <https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html>`_ for further information
     :type settings: AttrDict
-    :param minimal: if the result vector contains `sqsgenerator.core.SQSResult` objects with different objective
+    :param minimal: if the result vector contains ``sqsgenerator.core.SQSResult`` objects with different objective
         values, select only those with minimal value of the objective function (default is ``True``)
     :type minimal: bool
     :param similar: in case the result vector contains more than one structure with minimal objective, include also
@@ -93,11 +93,10 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
     :type similar: bool
     :param log_level: the log level of the core extension. Valid values are "*trace*", "*debug*", "*info*", "*warning*"
         and "*error*". Please use "*trace*" when you encounter a bug in the core extension and report an issue
-         (default is ``"warning"``)
+        (default is ``"warning"``)
     :type log_level: str
     :return: the minimal configuration and the corresponding Short-range-order parameters as well as timing information
-    :rtype: a tuple of (iterable of ``sqsgenerator.core.SQSResult``, and dict with ``int`` as keys and ``float`` as
-        values)
+    :rtype: Tuple[Iterable[:py:class:`sqsgenerator.public.SQSResult`], Dict[``int``, ``float``]]
     """
     structure = settings.structure.slice_with_species(settings.composition, settings.which)
     iteration_settings = construct_settings(settings, False, structure=structure)
@@ -121,7 +120,9 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
     return sqs_results, timings
 
 
-def expand_sqs_results(settings, sqs_results, timings=None, include=('configuration',), inplace=False) -> Settings:
+def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
+                       timings: T.Optional[TimingDictionary] = None, include=('configuration',),
+                       inplace: bool = False) -> Settings:
     dump_include = list(include)
     if 'configuration' not in dump_include:
         dump_include += ['configuration']

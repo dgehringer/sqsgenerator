@@ -9,11 +9,30 @@ from sqsgenerator.core.core import Structure as Structure_, Atom
 class Structure(Structure_):
     """
     Structure class used to store structural information. This class is used by the core extension and is a wrapper
-    around the extension internal ``sqsgenerator.core.core.Structure`` class. The class is desinged to be array like,
-    therefore it does not provide any setter functions.
+    around the extension internal ``sqsgenerator.core.core.Structure`` class. The class is designed to be array like,
+    therefore it does not provide any setter functions. Internally this class uses **fractional coordinates** to
+    represent structural information.
     """
 
-    def __init__(self, lattice: np.ndarray, frac_coords: np.ndarray, symbols: T.List[str], pbc: T.Tuple[bool, bool, bool]=(True, True, True)):
+    def __init__(self, lattice: np.ndarray, frac_coords: np.ndarray, symbols: T.List[str],
+                 pbc: T.Tuple[bool, bool, bool] = (True, True, True)):
+        """
+        Constructs a new structure from raw data
+
+        :param lattice: the (3x3) lattice matrix. The three **rows** are interpreted as the lattice vectors **a**,
+            **b** and **c**.
+        :type lattice: ``np.ndarray``
+        :param frac_coords: the **fractional coordinates** of the lattice positions as (3xN) array. Each **row**
+            will be treated as a lattice position
+        :type frac_coords: ``np.ndarray``
+        :param symbols: a list of strings of length N specifiyng the atomic species which occupy the lattice positions
+        :type symbols: List[``str``]
+        :param pbc: the coodinate axes for which **periodic boundary conditions** should be applied.
+            **Do not pass a value here**. This feature is not yet implemented (default is ``(True, True, True)``)
+        :type pbc: Tuple[``bool``, ``bool``, ``bool``]
+        :raises ValueError: if length of {frac_coords} and length of {symbols} do not match
+
+        """
         super(Structure, self).__init__(lattice, frac_coords, symbols, pbc)
         self._symbols = np.array(list(map(attr('symbol'), self.species)))
         self._numbers = np.fromiter(map(attr('Z'), self.species), dtype=int, count=self.num_atoms)
@@ -25,7 +44,7 @@ class Structure(Structure_):
         A ``numpy.ndarray`` storing the symbols of the atomic species. E.g "*Fe*", "*Cr*", "*Ni*"
 
         :return: the array of symbols
-        :rtype: numpy.ndarray
+        :rtype: ``numpy.ndarray``
         """
         return self._symbols
 
@@ -35,7 +54,7 @@ class Structure(Structure_):
         The ordinal numbers of the atoms sitting on the lattice positions
 
         :return: array of ordinal numbers
-        :rtype: numpy.ndarray
+        :rtype: ``numpy.ndarray``
         """
         return self._numbers
 
@@ -45,7 +64,7 @@ class Structure(Structure_):
         The number of unique elements in the structure object
 
         :return: the number of elements
-        :rtype: int
+        :rtype: ``int``
         """
         return len(self._unique_species)
 
@@ -55,7 +74,7 @@ class Structure(Structure_):
         A set of symbols of the occurring species
 
         :return: a set containing the symbol of the occurring species
-        :rtype: set or str
+        :rtype: Set[``str``]
         """
         return self._unique_species
 
@@ -104,7 +123,7 @@ class Structure(Structure_):
         Serializes the object into JSON/YAML serializable dictionary
 
         :return: the JSON/YAML serializable dictionary
-        :rtype: dict
+        :rtype: Dict[``str``, Any]
         """
         return structure_to_dict(self)
 
@@ -116,11 +135,11 @@ class Structure(Structure_):
         in {which}.
 
         :param species: the atomic species specified by their symbols
-        :type species: iterable of str
+        :type species: Iterable[``str``]
         :param which: the indices of the lattice positions to choose (default is ``None``)
-        :type which: iterable of int or ``None``
-        :return: the (subset) Structure with new species
-        :rtype: structure
+        :type which: Optional[Iterable[``int``]]
+        :return: the (subset) structure with new species
+        :rtype: Structure
         :raises ValueError: if length of which is < 1 or length of {which} and {species} does not match
         """
         which = which or tuple(range)
@@ -131,14 +150,14 @@ class Structure(Structure_):
         Creates a new structure containing the lattice positions specified by {which}. The new structure
         is occupied by the atomic elements specified in {species}. In case {which} is ``None`` all lattice positions
         are assumed to be occupied with a new {species}. The new structure will only all lattice positions of the
-        current structure, while on the positions specified by {which} are occipied with {species}.
+        current structure, while on the positions specified by {which} are occipied with {species}
 
         :param species: the atomic species specified by their symbols
-        :type species: iterable of str
+        :type species: Iterable[``str``]
         :param which: the indices of the lattice positions to choose (default is ``None``)
-        :type which: iterable of int or ``None``
-        :return: the (subset) Structure with new species
-        :rtype: structure
+        :type which: Optional[Iterable[``int``]]
+        :return: the structure with new species
+        :rtype: Structure
         :raises ValueError: if length of which is < 1 or length of {which} and {species} does not match
         """
         which = which or tuple(range)
