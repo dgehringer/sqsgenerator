@@ -142,7 +142,7 @@ class Structure(Structure_):
         :rtype: Structure
         :raises ValueError: if length of which is < 1 or length of {which} and {species} does not match
         """
-        which = which or tuple(range)
+        which = which or tuple(range(self.num_atoms))
         return self.with_species(species, which=which)[which]
 
     def with_species(self, species, which=None):
