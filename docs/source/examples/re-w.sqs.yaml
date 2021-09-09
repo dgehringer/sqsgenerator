@@ -1,9 +1,9 @@
 
 structure:
   supercell:
-    - 2
-    - 2
-    - 2
+    - 5
+    - 5
+    - 5
   lattice:
     - [3.165, 0.0, 0.0]
     - [0.0, 3.165, 0.0]
@@ -14,8 +14,5 @@ structure:
   species:
     - W
     - Re
-mode: systematic
-shell_weights:
-  1: 1.0
 
 

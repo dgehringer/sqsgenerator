@@ -47,10 +47,15 @@ In case the code runs with MPI parallelization, **each MPI rank** will generate 
 
 ### `composition` 
 
-The composition of the output configuration, defined as an dictionary.  Keys are symbols of chemical elements, whereas values are the number of atoms of the corresponding species. 
+The composition of the output configuration, defined as an dictionary.  Keys are symbols of chemical elements, 
+whereas values are the number of atoms of the corresponding species. The number in the dict-values or the length of the 
+specified **match** the number of specified positions on the sublattice. See {ref}`which <input-param-which>` input
+parameter
 
 - **Required:** Yes
-- **Accepted:** a dictionary with chemical symbols as keys (`dict[str, int]`) 
+- **Accepted:** 
+  - a list with chemical symbols (`list[str]`)
+  - a dictionary with chemical symbols as keys (`dict[str, int]`) 
 
 ```{note}
 The sum of the atoms distributed must **exactly** match the number of positions on the lattice 
@@ -74,8 +79,15 @@ The sum of the atoms distributed must **exactly** match the number of positions 
       0: 8
     ```
 
-### `which`
+- consider a $\text{W}_{0.5}\text{Re}_{0.5}$ alloy with only 16 atoms. In this case we can also
+  use a slightly more verbose notation to specify the composition
 
+    ```{code-block} yaml
+    composition: [W, W, W, W, W, W, W, W, Re, Re, Re, Re, Re, Re, Re, Re]
+    ```
+
+### `which`
+(input-param-which)=
 Used to select a sublattice (collection of lattice sites) from the specified input structure. Note that the number of atoms in the `composition` paramter has to sum up to the number of selected lattice positions
 
 - **Required:** No

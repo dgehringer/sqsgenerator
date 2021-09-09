@@ -2,11 +2,15 @@ import enum
 import attrdict
 import functools
 import typing as T
-from .exceptions import BadSettings
 from sqsgenerator.core import get_function_logger
+from sqsgenerator.settings.exceptions import BadSettings
 
 
 class Default(enum.Enum):
+    """
+    Dummy Enum to represent "no default" value. ``None`` is not possible, since it is a legit default value, we
+    use  ``Default.NoDfault``to prepresent no default value
+    """
     NoDefault = 0
 
 
@@ -51,13 +55,14 @@ def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, require
 def if_(condition):
     def then_(th_val):
         def else_(el_val):
-            def stmt_(settings): return th_val if condition(settings) else el_val
+            def stmt_(settings):
+                return th_val if condition(settings) else el_val
             return stmt_
         return else_
     return then_
 
 
-def isa(o: T.Tuple[type]):
+def isa(o: T.Union[type]):
     """
     Constructs a type-checking predicate. Represents isinstance(x, o)
     :param o: the types to checked
@@ -68,13 +73,13 @@ def isa(o: T.Tuple[type]):
     return lambda x: isinstance(x, o)
 
 
-def star(f):
+def star(f: T.Callable) -> T.Callable:
     return lambda x: f(*x)
 
 
-def const(o):
+def const(o: T.Any) -> T.Callable:
     return lambda *_: o
 
 
-def identity():
+def identity() -> T.Callable:
     return lambda _: _  # pragma: no cover

@@ -1,21 +1,27 @@
+"""
+Module containing all the routines to process input settings, from the dict-like configuration. Those routines are
+intended for internal use only, and are implicitly exported by the ``process_settings`` function.
+Each of the function with a @parameter decorator are registered in the private module level {__parameter_registry} 
+dict, which makes the visible to the ``process_settings`` function
+"""
+
+import numbers
+import numpy as np
+import typing as T
 import collections
 import collections.abc
-import numbers
-import typing as T
 from functools import partial
+from attrdict import AttrDict
 from itertools import repeat, chain
 from operator import attrgetter as attr, itemgetter as item
 
-import numpy as np
-from attrdict import AttrDict
-
-from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure
-from sqsgenerator.compat import Feature, have_mpi_support, have_feature
-from sqsgenerator.core import IterationMode, available_species, Structure, make_supercell
 from sqsgenerator.io import read_structure_from_file
-from sqsgenerator.settings.defaults import defaults, random_mode, num_shells, num_species
 from sqsgenerator.settings.exceptions import BadSettings
+from sqsgenerator.compat import Feature, have_mpi_support, have_feature
+from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure
 from sqsgenerator.settings.functional import parameter as parameter_, if_, isa, star
+from sqsgenerator.core import IterationMode, available_species, Structure, make_supercell
+from sqsgenerator.settings.defaults import defaults, random_mode, num_shells, num_species
 
 __parameter_registry = collections.OrderedDict({})
 
@@ -24,12 +30,12 @@ __parameter_registry = collections.OrderedDict({})
 parameter = partial(parameter_, registry=__parameter_registry)
 
 
-def ensure_array_shape(o: np.ndarray, shape: tuple, msg: T.Optional[str]=None):
+def ensure_array_shape(o: np.ndarray, shape: tuple, msg: T.Optional[str] = None):
     if o.shape != shape:
         raise (BadSettings(msg) if msg is not None else BadSettings)
 
 
-def ensure_array_symmetric(o: np.ndarray, msg: T.Optional[str]=None):
+def ensure_array_symmetric(o: np.ndarray, msg: T.Optional[str] = None):
     error = BadSettings(msg) if msg is not None else BadSettings
     if o.ndim == 2:
         if not np.allclose(o, o.T):
@@ -46,7 +52,8 @@ def int_safe(x):
 
 
 def convert(o, to=int, converter=None, on_fail=BadSettings, message=None):
-    if isinstance(o, to): return o
+    if isinstance(o, to):
+        return o
     try:
         r = (to if converter is None else converter)(o)
     except (ValueError, TypeError):
@@ -84,7 +91,8 @@ def read_mode(settings: AttrDict):
 def read_iterations(settings: AttrDict):
     num_iterations = convert(settings.iterations, converter=int_safe,
                              message=f'Cannot convert "{settings.iterations}" to int')
-    if num_iterations < 0: raise BadSettings('"iterations" must be positive')
+    if num_iterations < 0:
+        raise BadSettings('"iterations" must be positive')
     return num_iterations
 
 
@@ -122,17 +130,19 @@ def read_structure(settings: AttrDict) -> Structure:
         if 'file' in s:
             structure = read_structure_from_file(settings)
         elif all(field in s for field in needed_fields):
-            lattice = np.array(s.lattice)
-            coords = np.array(s.coords)
-            species = list(s.species)
+            lattice = np.array(s['lattice'])
+            coords = np.array(s['coords'])
+            species = list(s['species'])
             structure = Structure(lattice, coords, species, (True, True, True))
         else:
             raise BadSettings(f'A structure dictionary needs the following fields {needed_fields}')
 
-    if structure is None: raise BadSettings(f'Cannot read structure from the settings, "{type(s)}"')
+    if structure is None:
+        raise BadSettings(f'Cannot read structure from the settings, "{type(s)}"')
     if isinstance(s, dict) and 'supercell' in s:
         sizes = settings.structure.supercell
-        if len(sizes) != 3: raise BadSettings('To create a supercell you need to specify three lengths')
+        if len(sizes) != 3:
+            raise BadSettings('To create a supercell you need to specify three lengths')
         structure = make_supercell(structure, *sizes)
         del settings.structure['supercell']
 
@@ -172,25 +182,31 @@ def read_which(settings: AttrDict):
 def read_composition(settings: AttrDict):
     which = settings.which
 
-    if not isinstance(settings.composition, dict):
-        raise BadSettings(f'Cannot interpret "composition" setting. I expect a dictionary')
+    if not isinstance(settings.composition, (dict, collections.abc.Iterable)):
+        raise BadSettings(f'Cannot interpret "composition" setting. I expect a dictionary or an iterable of strings')
 
+    # in case it is a dictionary we expand it
     allowed_symbols = set(map(attr('symbol'), available_species()))
-    for species, amount in settings.composition.items():
-        if species not in allowed_symbols:
-            raise BadSettings(
-                f'I have never heard of the chemical element "{species}". Please use a real chemical element!')
-        if not isinstance(amount, int) or amount < 1:
-            raise BadSettings(f'I can only distribute an integer number of atoms '
-                              f'on the "{species}" sublattice. You specified "{amount}"')
+    if isinstance(settings.composition, dict):
+        for species, amount in settings.composition.items():
+            if not isinstance(amount, int) or amount < 1:
+                raise BadSettings(f'I can only distribute an integer number of atoms '
+                                  f'on the "{species}" sublattice. You specified "{amount}"')
+        species = list(chain(*map(star(repeat), settings.composition.items())))
+    else:
+        species = list(settings.composition)
 
+    if not all(map(lambda s: s in allowed_symbols, species)):
+            raise BadSettings(f'You composition contains unkown elements. Please use a real chemical elements!')
+
+    num_distributed_atoms = len(species)
     num_atoms_on_sublattice = len(which)
-    num_distributed_atoms = sum(settings.composition.values())
+
     if num_distributed_atoms != num_atoms_on_sublattice:
         raise BadSettings(f'The sublattice has {num_atoms_on_sublattice} '
                           f'but you tried to distribute {num_distributed_atoms} atoms')
 
-    species = list(chain(*map(star(repeat), settings.composition.items())))
+
     return species
 
 
@@ -220,7 +236,7 @@ def read_shell_weights(settings: AttrDict):
     allowed_indices = set(range(1, len(settings.shell_distances)))
 
     parsed_weights = {
-        convert(shell, to=int, message=f'A shell must be an integer. You specified {shell}'): \
+        convert(shell, to=int, message=f'A shell must be an integer. You specified {shell}'):
             convert(weight, to=float, message=f'A weight must be a floating point number. You specified {weight}')
         for shell, weight in settings.shell_weights.items()
     }
@@ -246,7 +262,7 @@ def read_pair_weights(settings: AttrDict):
             ensure_array_symmetric(w, f'The "pair_weights" parameters are not symmetric')
 
             sorted_weights = sorted(settings.shell_weights.items(), key=item(0))
-            weights = w if w.ndim == 3 else np.stack([w*shell_weight for _, shell_weight in sorted_weights])
+            weights = w if w.ndim == 3 else np.stack([w * shell_weight for _, shell_weight in sorted_weights])
             return weights
 
         raise BadSettings(f'As "pair_weights" I do expect a {nums}x{nums} matrix, '
@@ -259,7 +275,7 @@ def read_target_objective(settings: AttrDict):
     nshells = num_shells(settings)
 
     if isinstance(settings.target_objective, (int, float)):
-        return np.ones((nshells, nums, nums)).astype(float)*float(settings.target_objective)
+        return np.ones((nshells, nums, nums)).astype(float) * float(settings.target_objective)
 
     if isinstance(settings.target_objective, (list, tuple, np.ndarray)):
         o = np.array(settings.target_objective).astype(float)
@@ -269,7 +285,7 @@ def read_target_objective(settings: AttrDict):
                                                   f'has a wrong shape ({o.shape}). Expected {expected_shape}')
 
             ensure_array_symmetric(o, f'The "target_objective" parameters are not symmetric')
-            objectives = o if o.ndim == 3 else np.stack([o]*nshells)
+            objectives = o if o.ndim == 3 else np.stack([o] * nshells)
             return objectives
 
         raise BadSettings(f'The "target_objective" you have specified has a {o.ndim} dimensions. '
@@ -293,14 +309,32 @@ def read_threads_per_rank(settings: AttrDict):
     raise BadSettings(f'Cannot interpret "threads_per_rank" setting.')
 
 
-def process_settings(settings: AttrDict, params: T.Optional[T.Set[str]] = None, ignore=()):
+def process_settings(settings: AttrDict, params: T.Optional[T.Set[str]] = None, ignore: T.Iterable[str]=()) -> AttrDict:
+    """
+    Process an dict-like input parameters, according to the rules specified in the 
+    `Input parameter documentation <https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html>`_. This function
+    should be used for processing user input. Therefore, exports the parser functions defined in 
+    ``sqsgenerator.settings.readers``. To specify a specify subset of parameters the {params} argument is used.
+    To {ignore} specifc parameters pass a list of parameter names
+
+    :param settings: the dict-like user configuration
+    :type settings: AttrDict
+    :param params: If specified only the subset of {params} is processed (default is ``None``)
+    :type params: Optional[Set[``None``]]
+    :param ignore: a list/iterable of params to ignore (default is ``()``)
+    :type ignore: Iterable[``str``]
+    :return: the processed settings dictionary
+    :rtype: AttrDict
+    """
+    
     params = params if params is not None else set(parameter_list())
     last_needed_parameter = max(params, key=parameter_index)
     ignore = set(ignore)
     for index, (param, processor) in enumerate(__parameter_registry.items()):
         if param not in params:
             # we can only skip this parameter if None of the other parameters depends on param
-            if parameter_index(param) > parameter_index(last_needed_parameter): continue
+            if parameter_index(param) > parameter_index(last_needed_parameter):
+                continue
         if param in ignore:
             continue
         settings[param] = processor(settings)
@@ -311,5 +345,5 @@ def parameter_list() -> T.List[str]:
     return list(__parameter_registry.keys())
 
 
-def parameter_index(parameter: str) -> int:
-    return parameter_list().index(parameter)
+def parameter_index(p: str) -> int:
+    return parameter_list().index(p)

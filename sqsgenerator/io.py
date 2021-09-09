@@ -1,5 +1,5 @@
 """
-Provides utilities for exporting structure objects with ase and pymatgen.
+Provides utilities for exporting structure objects with ``ase`` and ``pymatgen``.
 Tools for reading/writings settings files
 """
 
@@ -38,6 +38,7 @@ if have_feature(F.ase):
 def prepare_handle(fp: T.IO[bytes], feature: Feature, format: str) -> T.Union[T.IO[bytes], T.IO[str]]:
     """
     Sanitizes a file-like by wrapping it in a TextIO if needed
+
     :param fp: the file-like to sanitize
     :type fp: IO[bytes]
     :param feature: the file writer module "ase" or "pymatgen"
@@ -58,6 +59,7 @@ def prepare_handle(fp: T.IO[bytes], feature: Feature, format: str) -> T.Union[T.
 def default_adapter():
     """
     Gets the default writer/reader module to read files
+
     :return: the default
     :rtype: Feature or None
     """
@@ -69,7 +71,8 @@ def default_adapter():
 def supported_formats(feature=None):
     """
     For a given feature ("ase" or "pymatgen") the supported output file formats computed. If None is passed the values
-    from `default_adapter()` will be used
+    from ``default_adapter()`` will be used
+
     :param feature: the writer/reader feature (default is None)
     :type feature: Feature
     :return: the supported output formats
@@ -95,6 +98,7 @@ def capture(f):
     """
     Decorator which captures the written bytes of a "write" function an. It passed the buffer as the first argument
     to the wrapped function
+
     :param f: a callable returning the written bytes
     :type f: callable
     :return: wrapped function
@@ -116,8 +120,9 @@ def capture(f):
 def dumps(o: dict, output_format: str = 'yaml') -> bytes:
     """
     Dumps a dict-like object into a byte string, using a backend specified by {output_format}
+
     :param o: a dict-like object which is serializable by the module specified by {output_format}
-    :param output_format: backend used to store (json, pickle, yaml) the object (default is `"yaml"`
+    :param output_format: backend used to store (json, pickle, yaml) the object (default is ``"yaml"``
     :type output_format: str
     :return: the dumped content
     :rtype: bytes
@@ -145,9 +150,10 @@ def dumps(o: dict, output_format: str = 'yaml') -> bytes:
 def read_settings_file(path: str, format: str = 'yaml') -> AttrDict:
     """
     Reads a file expecting {format} as the file type
+
     :param path: the file path
     :type path: str
-    :param format: the input file-type (default is `"yaml"`)
+    :param format: the input file-type (default is ``"yaml"``)
     :type format: str
     :return: the parsed settings
     :rtype: AttrDict
@@ -204,14 +210,15 @@ def write_structure_file_with_pymatgen(fp, structure: Structure, format, sort=Tr
 def write_structure_file(fp: T.IO[bytes], structure: Structure, format: str, writer: Feature = default_adapter(),
                          **kwargs) -> T.NoReturn:
     """
-    Write a `sqsgenerator.core.Structure` object into a file, with file format {fromat} using {writer} as backend
+    Write a ``sqsgenerator.core.Structure`` object into a file, with file format {fromat} using {writer} as backend
+
     :param fp: file object
     :type fp: IO[bytes]
     :param structure: the structure to save
     :type structure: Structure
     :param format: file type used. Must be supported by {writer}
     :type format: str
-    :param writer: the writer backend (default is `default_adapter()`)
+    :param writer: the writer backend (default is ``default_adapter()``)
     :type writer: Feature
     :param kwargs: keyword arguments passed to the backends
     """
@@ -228,6 +235,7 @@ def write_structure_file(fp: T.IO[bytes], structure: Structure, format: str, wri
 def read_structure_from_file(settings: AttrDict) -> Structure:
     """
     Read a structure object from
+
     :param settings: the settings dictionary
     :type settings: AttrDict
     :return: the Structure object
@@ -250,9 +258,10 @@ dumps_structure = capture(write_structure_file)
 def to_dict(settings: dict) -> T.Dict[str, T.Any]:
     """
     Utility method to recursively turn a general dictionary into an JSON/YAML serializable dictionary.
-    If a non trivial object is encountered the function searches for a `to_dict()` function. If it has no method
-    available to serialize the object a `TypeError` is raised. **Attention:** the function serialized `np.ndarray` by
-    calling `tolist()`. This is not a good idea but fits the needs in this project
+    If a non trivial object is encountered the function searches for a ``to_dict()`` function. If it has no method
+    available to serialize the object a ``TypeError`` is raised. **Attention:** the function serializes ``np.ndarray`` by
+    calling ``tolist()``. This is not a good idea but fits the needs in this project
+
     :param settings: a generic dictionary object
     :type settings: dict
     :return: a serializable dict
@@ -264,7 +273,7 @@ def to_dict(settings: dict) -> T.Dict[str, T.Any]:
         float: identity,
         str: identity,
         bool: identity,
-        Structure: method('to_dict'),
+        # Structure: method('to_dict'),
         IterationMode: str,
         np.ndarray: method('tolist')
     }
@@ -291,18 +300,21 @@ def export_structures(structures: T.Dict[T.Any, Structure], format: str = 'cif',
     Writes structures into files. The filename is specified by the keys of {structure} argument. The structures stored
     in the values will be written using the {writer} backend in {format}. If compress is specified the structures will
     be dumped into an archive with name {output_file}. The file-extension is chosen automatically.
+
     :param structures: a mapping of filenames and Structures
     :type structures: dict[T.Any, Structure]
-    :param format: output file format (default is `"cif"`)
+    :param format: output file format (default is ``"cif"``)
     :param output_file: the prefix of the output archive name. File extension is chosen automatically.
-        If {compress} is `None` this option is ignored (default is `"sqs.result"`)
+        If {compress} is ``None`` this option is ignored (default is ``"sqs.result"``)
     :type output_file: str
-    :param writer: the writer backend (default is `"ase"`)
+    :param writer: the writer backend (default is ``"ase"``)
     :type writer: str
-    :param compress: compression algorithm (`zip`, `gz`, `bz2` or `xz`) used to store the structure files. If `None`
-        the structures are written to plain files (default is `None`)
+    :param compress: compression algorithm (``zip``, ``gz``, ``bz2`` or ``xz``) used to store the structure files. If ``None``
+        the structures are written to plain files (default is ``None``)
     :type compress: str or None
+
     """
+
     output_prefix = output_file
     if compress:
         # select the proper file-mode as well as file-name and opening method

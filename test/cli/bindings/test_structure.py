@@ -52,5 +52,16 @@ class TestStructure(unittest.TestCase):
         np.testing.assert_array_equal(s.numbers, s[np.arange(len(s))].numbers)
 
         np.testing.assert_array_equal(s.numbers, s[np.ones(len(s)).astype(bool)].numbers)
+
+        with self.assertRaises(ValueError):
+            s.slice_with_species([])
+
+        with self.assertRaises(ValueError):
+            s.slice_with_species(['Fe'], [0, 1])
+
+    def test_repr(self):
+        length = len(self.structure)
+        self.assertTrue(f'len={length}', repr(self.structure))
+
 if __name__ == '__main__':
     unittest.main()

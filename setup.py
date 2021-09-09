@@ -113,7 +113,6 @@ class CMakeBuildExt(build_ext):
                         '-G', 'MinGW Makefiles',
                     ]
 
-
             subprocess.check_call(['cmake', ext.cmake_lists_dir] + cmake_args, cwd=self.build_temp)
             cmake_build_args = ['cmake', '--build', '.', '--config', cfg]
             if ext.target: cmake_build_args += ['--target', ext.target]
