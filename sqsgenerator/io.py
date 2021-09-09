@@ -273,7 +273,7 @@ def to_dict(settings: dict) -> T.Dict[str, T.Any]:
         float: identity,
         str: identity,
         bool: identity,
-        Structure: method('to_dict'),
+        # Structure: method('to_dict'),
         IterationMode: str,
         np.ndarray: method('tolist')
     }

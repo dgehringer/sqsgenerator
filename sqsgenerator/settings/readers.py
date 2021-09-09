@@ -182,25 +182,31 @@ def read_which(settings: AttrDict):
 def read_composition(settings: AttrDict):
     which = settings.which
 
-    if not isinstance(settings.composition, dict):
-        raise BadSettings(f'Cannot interpret "composition" setting. I expect a dictionary')
+    if not isinstance(settings.composition, (dict, collections.abc.Iterable)):
+        raise BadSettings(f'Cannot interpret "composition" setting. I expect a dictionary or an iterable of strings')
 
+    # in case it is a dictionary we expand it
     allowed_symbols = set(map(attr('symbol'), available_species()))
-    for species, amount in settings.composition.items():
-        if species not in allowed_symbols:
-            raise BadSettings(
-                f'I have never heard of the chemical element "{species}". Please use a real chemical element!')
-        if not isinstance(amount, int) or amount < 1:
-            raise BadSettings(f'I can only distribute an integer number of atoms '
-                              f'on the "{species}" sublattice. You specified "{amount}"')
+    if isinstance(settings.composition, dict):
+        for species, amount in settings.composition.items():
+            if not isinstance(amount, int) or amount < 1:
+                raise BadSettings(f'I can only distribute an integer number of atoms '
+                                  f'on the "{species}" sublattice. You specified "{amount}"')
+        species = list(chain(*map(star(repeat), settings.composition.items())))
+    else:
+        species = list(settings.composition)
 
+    if not all(map(lambda s: s in allowed_symbols, species)):
+            raise BadSettings(f'You composition contains unkown elements. Please use a real chemical elements!')
+
+    num_distributed_atoms = len(species)
     num_atoms_on_sublattice = len(which)
-    num_distributed_atoms = sum(settings.composition.values())
+
     if num_distributed_atoms != num_atoms_on_sublattice:
         raise BadSettings(f'The sublattice has {num_atoms_on_sublattice} '
                           f'but you tried to distribute {num_distributed_atoms} atoms')
 
-    species = list(chain(*map(star(repeat), settings.composition.items())))
+
     return species
 
 
