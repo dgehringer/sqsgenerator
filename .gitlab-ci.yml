@@ -44,7 +44,7 @@ test-wheels-coverage:
   artifacts:
     when: always
     reports:
-      cobertura: coverage.xml
+      cobertura: test/coverage.xml
 
 
 
