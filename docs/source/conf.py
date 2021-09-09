@@ -10,11 +10,26 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+import shutil
 
 
+core_stubs = '../core_stubs.py'
+package_dir = '../../sqsgenerator'
+
+sys.path.insert(0, '../..')
+
+shutil.copy(core_stubs, os.path.join(package_dir, 'core', 'core.py'))
+
+import sqsgenerator
+import sqsgenerator.io
+import sqsgenerator.adapters
+import sqsgenerator.settings
+print(sqsgenerator)
+print(sqsgenerator.io)
+print(sqsgenerator.adapters)
+print(sqsgenerator.settings)
 # -- Project information -----------------------------------------------------
 
 project = 'sqsgenerator'
@@ -44,8 +59,13 @@ myst_enable_extensions = [
 ]
 
 extensions = [
-    'myst_parser'
+    'sphinx.ext.autodoc',
+    'myst_parser',
+    'sphinx_click',
+    'sphinxemoji.sphinxemoji',
 ]
+
+sphinxemoji_style = 'twemoji'
 
 
 # Add any paths that contain templates here, relative to this directory.

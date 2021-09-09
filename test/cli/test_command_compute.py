@@ -1,30 +1,9 @@
 import json
 import yaml
-import pickle
 import unittest
 import click.testing
 from sqsgenerator.cli import cli
-
-
-with open('examples/cs-cl.sqs.yaml', 'r') as fh:
-    config_contents = fh.read()
-
-
-def inject_config_file(filename='sqs.yaml'):
-
-    def _decorator(f):
-
-        def _injected(self, *args, **kwargs):
-            assert hasattr(self, 'cli_runner')
-            assert isinstance(self.cli_runner, click.testing.CliRunner)
-            with self.cli_runner.isolated_filesystem():
-                with open(filename, 'w') as fh:
-                    fh.write(config_contents)
-                return f(self, *args, **kwargs)
-
-        return _injected
-
-    return _decorator
+from cli import inject_config_file
 
 
 class TestParamsCommand(unittest.TestCase):
@@ -43,8 +22,6 @@ class TestParamsCommand(unittest.TestCase):
         output_prefix = 'sqs.test'
         r = self.cli_runner.invoke(cli, ['params', 'show', '-of', format])
         self.assertEqual(r.exit_code, 0)
-        if format == 'pickle':
-            print(f"\"{r.stdout}\"")
         reloaded = loader(r.stdout)
         self.assert_have_needed_fields(reloaded)
 
@@ -60,7 +37,6 @@ class TestParamsCommand(unittest.TestCase):
 
         r = self.cli_runner.invoke(cli, ['params', 'show'])
         self.assertEqual(r.exit_code, 0)
-        print(r.stdout, r.stderr)
 
         self.input_output_loop('yaml', yaml.safe_load)
         self.input_output_loop('json', json.loads)

@@ -22,6 +22,7 @@ __all__ = [
     'pair_analysis',
     'Structure',
     'structure_to_dict',
+    'get_function_logger',
     'Atom',
     'make_supercell',
     'SQSResult',
