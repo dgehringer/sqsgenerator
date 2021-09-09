@@ -20,6 +20,20 @@ build-wheels:
     paths:
       - dist/*.whl
 
+test-wheels:
+  before_script:
+    - bash $HOME/bin/sqs-build-create-envs.sh
+  stage: test
+  tags:
+    - test
+  script:
+    - bash $HOME/bin/sqs-test-wheel.sh
+  artifacts:
+    when: always
+    reports:
+      junit: test/test-reports/TEST-*.xml
+
+
 depoly-wheels:
   stage: deploy
   tags:
