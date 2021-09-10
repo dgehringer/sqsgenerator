@@ -44,9 +44,7 @@ test-wheels-coverage:
   artifacts:
     when: always
     reports:
-      cobertura: test/coverage.xml
-
-
+      cobertura: coverage.xml
 
 depoly-wheels:
   stage: deploy
