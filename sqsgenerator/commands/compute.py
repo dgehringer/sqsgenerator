@@ -10,8 +10,8 @@ from math import isclose
 from sqsgenerator.settings import construct_settings
 from sqsgenerator.commands.common import click_settings_file, pretty_print
 from sqsgenerator.commands.help import command_help as c_help
-from sqsgenerator.core import total_permutations as total_permutations_, default_shell_distances, rank_structure, \
-    IterationMode, pair_sqs_iteration
+from sqsgenerator.core import total_permutations as total_permutations_, default_shell_distances, \
+    rank_structure as rank_structure_core, IterationMode, pair_sqs_iteration
 
 
 @click.command('total-permutations', help=c_help.compute.total_permutations)
@@ -24,9 +24,10 @@ def total_permutations(settings):
 
 
 @click.command('shell-distances', help=c_help.compute.shell_distances)
-@click_settings_file({'atol', 'rtol', 'structure'})
+@click_settings_file({'atol', 'rtol', 'structure', 'which', 'composition'})
 def shell_distances(settings):
-    distances = default_shell_distances(settings.structure, settings.atol, settings.rtol)
+    structure = settings.structure.slice_with_species(settings.composition, settings.which)
+    distances = default_shell_distances(structure, settings.atol, settings.rtol)
     pretty_print(distances)
     return distances
 
@@ -34,7 +35,7 @@ def shell_distances(settings):
 @click.command('rank', help=c_help.compute.rank)
 @click_settings_file({'structure'})
 def rank_structure(settings):
-    rank = pretty_print(rank_structure(settings.total_structure if settings.is_sublattice else settings.structure))
+    rank = pretty_print(rank_structure_core(settings.structure))
     pretty_print(rank)
     return rank
 
