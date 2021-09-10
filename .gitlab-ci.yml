@@ -1,5 +1,4 @@
 
-
 stages:
   - build
   - test
@@ -41,11 +40,7 @@ test-wheels-coverage:
     - test
   script:
     - bash $HOME/bin/sqs-test-wheel-coverage.sh
-    - pushd test
-    - conda activate $HOME/envs/sqs-test-3.6
-    - coverage report -m
-    - conda deactivate
-    - popd
+    - bash $HOME/bin/sqs-test-wheel-coverage-report.sh 
   coverage: /^TOTAL.+?(\d+\%)$/
   artifacts:
     when: always
