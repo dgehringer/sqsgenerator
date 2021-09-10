@@ -1,53 +1,51 @@
-import json
-import yaml
+
+
+import re
 import unittest
+import numpy as np
 import click.testing
 from sqsgenerator.cli import cli
 from cli import inject_config_file
+from sqsgenerator.io import read_settings_file
+from sqsgenerator.public import process_settings
+from sqsgenerator.core import rank_structure, default_shell_distances
 
 
-class TestParamsCommand(unittest.TestCase):
+class TestComputeCommand(unittest.TestCase):
 
     def setUp(self):
         self.cli_runner = click.testing.CliRunner(mix_stderr=False)
 
-    def assert_have_needed_fields(self, reloaded):
-        need_fields = {'atol', 'rtol', 'mode', 'pair_weights', 'shell_distances', 'shell_weights', 'threads_per_rank',
-                       'max_output_configurations'}
-
-        for field in need_fields:
-            self.assertIn(field, reloaded)
-
-    def input_output_loop(self, format, loader):
-        output_prefix = 'sqs.test'
-        r = self.cli_runner.invoke(cli, ['params', 'show', '-of', format])
-        self.assertEqual(r.exit_code, 0)
-        reloaded = loader(r.stdout)
-        self.assert_have_needed_fields(reloaded)
-
-        filename = f'{output_prefix}.{format}'
-        with open(filename, 'w') as fh:
-            fh.write(r.stdout)
-
-        r = self.cli_runner.invoke(cli, ['params', 'show', filename , '-if', format])
+    @inject_config_file()
+    def test_compute_total_permutations(self):
+        settings = process_settings(read_settings_file('sqs.yaml'))
+        r = self.cli_runner.invoke(cli, ['compute', 'total-permutations'])
+        computed_permuations = next(iter(re.findall(r'\d+', r.output)))
+        self.assertEqual(settings.iterations, int(computed_permuations))
         self.assertEqual(r.exit_code, 0)
 
     @inject_config_file()
-    def test_params_show(self):
-
-        r = self.cli_runner.invoke(cli, ['params', 'show'])
+    def test_compute_rank(self):
+        settings = process_settings(read_settings_file('sqs.yaml'))
+        r = self.cli_runner.invoke(cli, ['compute', 'rank'])
+        computed_rank = next(iter(re.findall(r'\d+', r.output)))
+        self.assertEqual(int(computed_rank), rank_structure(settings.structure))
         self.assertEqual(r.exit_code, 0)
-
-        self.input_output_loop('yaml', yaml.safe_load)
-        self.input_output_loop('json', json.loads)
 
     @inject_config_file()
-    def test_params_check(self):
-        r = self.cli_runner.invoke(cli, ['params', 'check'])
+    def test_compute_distances(self):
+        settings = process_settings(read_settings_file('sqs.yaml'))
+        structure = settings.structure.slice_with_species(settings.composition, settings.which)
+        r = self.cli_runner.invoke(cli, ['compute', 'shell-distances'])
+        np.testing.assert_array_almost_equal(eval(r.output), default_shell_distances(structure, settings.atol, settings.rtol))
         self.assertEqual(r.exit_code, 0)
 
-        r = self.cli_runner.invoke(cli, ['params', 'check', 'sqs1.yaml'])
-        self.assertNotEqual(r.exit_code, 1)
+    @inject_config_file()
+    def test_compute_estimated_time(self):
+        r = self.cli_runner.invoke(cli, ['compute', 'estimated-time'])
+        self.assertEqual(r.exit_code, 0)
+        r = self.cli_runner.invoke(cli, ['compute', 'estimated-time', '--verbose'])
+        self.assertEqual(r.exit_code, 0)
 
 
 if __name__ == '__main__':
