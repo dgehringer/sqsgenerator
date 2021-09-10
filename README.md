@@ -2,7 +2,7 @@
 
 ![build](https://git.unileoben.ac.at/p1655622/sqsgenerator-core/badges/relaunch/pipeline.svg?style=flat&key_text=build)
 ![tests](https://git.unileoben.ac.at/p1655622/sqsgenerator-core/badges/relaunch/pipeline.svg?style=flat&key_text=tests)
-![coverage](https://git.unileoben.ac.at/p1655622/sqsgenerator-core/badges/relaunch/coverage.svg&key_text=Python+coverage)
+![coverage](https://git.unileoben.ac.at/p1655622/sqsgenerator-core/badges/relaunch/coverage.svg)
 
 ## Installation
 
