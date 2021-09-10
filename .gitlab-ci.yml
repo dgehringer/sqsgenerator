@@ -41,6 +41,10 @@ test-wheels-coverage:
     - test
   script:
     - bash $HOME/bin/sqs-test-wheel-coverage.sh
+    - pushd test
+    - coverage report -m
+    - popd
+  coverage: /^TOTAL.+?(\d+\%)$/
   artifacts:
     when: always
     reports:

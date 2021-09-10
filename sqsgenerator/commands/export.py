@@ -52,7 +52,7 @@ def export(settings, format='cif', writer='ase', compress=None, output_file='sqs
     result_document = AttrDict(settings)
     needed_keys = {'structure', 'configurations'}
 
-    # check if data neeeded for export is there at all
+    # check if data needed for export is there at all
     if not all(map(lambda k: k in result_document, needed_keys)):
         error(f'Result document must at least contain the following keys: {needed_keys}', prefix='KeyError')
 
