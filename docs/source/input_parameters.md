@@ -46,6 +46,7 @@ In case the code runs with MPI parallelization, **each MPI rank** will generate 
 ```
 
 ### `composition` 
+(input-param-composition)=
 
 The composition of the output configuration, defined as an dictionary.  Keys are symbols of chemical elements, 
 whereas values are the number of atoms of the corresponding species. The number in the dict-values or the length of the 
