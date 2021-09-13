@@ -10,6 +10,7 @@
   - [OpenMP](https://www.openmp.org/) parallelized by default, with additional support for MPI parallelization
   - Light dependency footprint 
   - Intuitive to use
+  - Command line interface
 
 ## Table of contents
 
