@@ -34,7 +34,7 @@ class Structure(Structure_):
 
         """
         super(Structure, self).__init__(lattice, frac_coords, symbols, pbc)
-        self._symbols = np.array(list(map(attr('symbol'), self.species)))
+        self._symbols = np.array(list(map(attr('symbol'), self.species)), dtype='<U3')  # Uut is the longest symbol
         self._numbers = np.fromiter(map(attr('Z'), self.species), dtype=int, count=self.num_atoms)
         self._unique_species = set(np.unique(self._symbols))
 
