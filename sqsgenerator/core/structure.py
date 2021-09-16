@@ -78,6 +78,15 @@ class Structure(Structure_):
         """
         return self._unique_species
 
+    def without_vacancies(self):
+        """
+        Removes vacancies from the structure. Removes all lattice sites which are occupied by the "0" species
+
+        :return: a structure with no vacancies
+        :rtype: Structure
+        """
+        return self[~(self.numbers == 0)]
+
     def __len__(self):
         return self.num_atoms
 
@@ -172,6 +181,7 @@ class Structure(Structure_):
 
 
 def structure_to_dict(structure: Structure):
+    structure = structure.without_vacancies()
     return dict(
         lattice=structure.lattice.tolist(),
         coords=structure.frac_coords.tolist(),

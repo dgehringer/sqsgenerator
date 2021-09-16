@@ -210,7 +210,7 @@ def write_structure_file_with_pymatgen(fp, structure: Structure, format, sort=Tr
 def write_structure_file(fp: T.IO[bytes], structure: Structure, format: str, writer: Feature = default_adapter(),
                          **kwargs) -> T.NoReturn:
     """
-    Write a ``sqsgenerator.core.Structure`` object into a file, with file format {fromat} using {writer} as backend
+    Write a ``sqsgenerator.core.Structure`` object into a file, with file format {format} using {writer} as backend
 
     :param fp: file object
     :type fp: IO[bytes]
@@ -273,7 +273,6 @@ def to_dict(settings: dict) -> T.Dict[str, T.Any]:
         float: identity,
         str: identity,
         bool: identity,
-        # Structure: method('to_dict'),
         IterationMode: str,
         np.ndarray: method('tolist')
     }
