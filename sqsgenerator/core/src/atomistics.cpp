@@ -134,7 +134,7 @@ namespace sqsgenerator::utils::atomistics {
     std::map<std::string, species_t> Atoms::m_symbol_map(std::forward<std::map<std::string, species_t>>(make_symbol_map()));
 
     Atom Atoms::from_z(species_t Z) {
-        if (static_cast<species_t>(Z - 1) > Atoms::m_elements.size()) {
+        if (static_cast<species_t>(Z) > Atoms::m_elements.size() - 1) {
             throw std::invalid_argument("No elements known with Z=" + std::to_string(Z));
         }
         return Atoms::m_elements[Z];

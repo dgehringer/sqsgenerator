@@ -27,6 +27,7 @@ def to_pymatgen_structure(structure: Structure):
     :rtype: pymatgen.core.Structure
     """
     from pymatgen.core import Structure as PymatgenStructure, Lattice as PymatgenLattice
+    structure = structure.without_vacancies()
     symbols = list(map(attr('symbol'), structure.species))
     lattice = PymatgenLattice(structure.lattice)
     return PymatgenStructure(lattice, symbols, structure.frac_coords, coords_are_cartesian=False, validate_proximity=True)
@@ -43,6 +44,7 @@ def to_ase_atoms(structure: Structure):
     :rtype: ase.Atoms
     """
     from ase import Atoms
+    structure = structure.without_vacancies()
     numbers = list(map(attr('Z'), structure.species))
     return Atoms(cell=structure.lattice, scaled_positions=structure.frac_coords, numbers=numbers, pbc=structure.pbc)
 

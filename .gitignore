@@ -13,3 +13,6 @@ _templates/
 *.so
 
 pyiron.log
+.pytest_cache/
+*sqs*.yaml
+*sqs*.yml

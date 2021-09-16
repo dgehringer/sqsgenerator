@@ -206,7 +206,6 @@ def read_composition(settings: AttrDict):
         raise BadSettings(f'The sublattice has {num_atoms_on_sublattice} '
                           f'but you tried to distribute {num_distributed_atoms} atoms')
 
-
     return species
 
 

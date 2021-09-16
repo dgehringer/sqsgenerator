@@ -1,0 +1,9 @@
+structure:
+  supercell: [3, 3, 3]
+  file: b2.vasp
+iterations: 1e9
+shell_weights:
+  1: 1.0
+composition:
+  Re: 18
+  W: 36

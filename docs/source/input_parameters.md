@@ -46,6 +46,7 @@ In case the code runs with MPI parallelization, **each MPI rank** will generate 
 ```
 
 ### `composition` 
+(input-param-composition)=
 
 The composition of the output configuration, defined as an dictionary.  Keys are symbols of chemical elements, 
 whereas values are the number of atoms of the corresponding species. The number in the dict-values or the length of the 
@@ -141,7 +142,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
     ```
 
 ### `structure`
-
+(input-param-structure)=
 the structure where `sqsgenerator` will operate on. `which` will select the sites from the specified structure. The coordinates must be supplied in **fractional** style. It can be specified by supplying a filename or directly as a dictionary
 
 - **Required:** Yes
@@ -272,6 +273,7 @@ number of configurations to check. This parameter is ignored if `mode` was set t
 - **Accepted:** a positive integer number (`int`)
 
 ### `shell_distances`
+(input-param-shell-distances)=
 the radii of the coordination shells in Angstrom. All lattice positions will be binned into the specified coordination shells
 
 - **Required:** No
@@ -287,7 +289,10 @@ sqsgenerator params show input.yaml -p shell_distances
 
 ### `shell_weights`
 accounts for the fact that coodination shells which are farther away are less important. This parameter also determines 
-**which** shells should be taken into account. It corresponds to $w^i$ {eq}`eqn:objective` in the objective function eq}`eqn:objective`.
+**which** shells should be taken into account. The `shell_weights` are a mapping (dictionary). It assigns the 
+**shell index** it corresponding shell weight $w^i$. The keys represent the indices of the calculated shell distances 
+computed or specified by the {ref}`shell_distances <input-param-shell-distances>` parameter. Its values correspond 
+to $w^i$ {eq}`eqn:objective` in the objective function.
 
 - **Required**: No
 - **Default**: $\frac{1}{i}$ where $i$ is the index of the coordination shell. Automatically determined by `sqsgenerator`
@@ -297,7 +302,7 @@ accounts for the fact that coodination shells which are farther away are less im
 - If nothing is specified **all available** coordination shells are used
 - You can improve the performace of `sqsgenerator` by neglecting some coordination shells
 - If you specify a shell index which does not exist a `BadSettings` error will be raised
-- If a shell index is missing the coordination shell is not taken into accoutn for the optimization
+- Indices which are not specified explicitly specified are not considered in the optimization
 - You can have a look on the generated weights by checking
 ```{code-block} bash
 sqsgenerator params show input.yaml -p shell_weights

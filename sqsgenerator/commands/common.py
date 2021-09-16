@@ -15,23 +15,6 @@ from sqsgenerator.commands.help import parameter_help as help
 from sqsgenerator.settings import process_settings, parameter_list, BadSettings
 
 
-def ensure_iterable(o: T.Any, exclude=(str, bytes, bytearray), factory=set):
-    """
-    wraps {o} into an iterable of type {factor} if it is not in {exclude} or not `collections.abc.Iterable`
-    :param o: the object to wrap
-    :param exclude: list of types to exclude from wrapping (default is `(str, bytes, bytearray)`)
-    :type exclude: Tuple[type...]
-    :param factory: the type of iterable to wrap
-    :type factory: type
-    :return: o wrapped in an iterable
-    :rtype: {factory}
-    """
-    if isinstance(o, collections.abc.Iterable) or isinstance(o, exclude):
-        return o
-    else:
-        return factory((o,))
-
-
 def error(message, exc_type=click.Abort, raise_exc=True, prefix=None, **kwargs):
     """
     Prints an error message and abort execution by raising an error

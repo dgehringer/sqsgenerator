@@ -34,7 +34,7 @@ class Structure(Structure_):
 
         """
         super(Structure, self).__init__(lattice, frac_coords, symbols, pbc)
-        self._symbols = np.array(list(map(attr('symbol'), self.species)))
+        self._symbols = np.array(list(map(attr('symbol'), self.species)), dtype='<U3')  # Uut is the longest symbol
         self._numbers = np.fromiter(map(attr('Z'), self.species), dtype=int, count=self.num_atoms)
         self._unique_species = set(np.unique(self._symbols))
 
@@ -77,6 +77,15 @@ class Structure(Structure_):
         :rtype: Set[``str``]
         """
         return self._unique_species
+
+    def without_vacancies(self):
+        """
+        Removes vacancies from the structure. Removes all lattice sites which are occupied by the "0" species
+
+        :return: a structure with no vacancies
+        :rtype: Structure
+        """
+        return self[~(self.numbers == 0)]
 
     def __len__(self):
         return self.num_atoms
@@ -172,6 +181,7 @@ class Structure(Structure_):
 
 
 def structure_to_dict(structure: Structure):
+    structure = structure.without_vacancies()
     return dict(
         lattice=structure.lattice.tolist(),
         coords=structure.frac_coords.tolist(),
