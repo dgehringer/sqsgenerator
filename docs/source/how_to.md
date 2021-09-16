@@ -109,7 +109,7 @@ sqsgen params check --parameter composition
 #### moving to different compositions $\text{Re}_{0.333}\text{W}_{0.667}$
 
 Suppose we want to move on different compositions, and want to distribute different numbers of tungsten and rhenium.
-In this case we have to explicitly specify a `composition` {ref}`parameter <input-param-composition>`. Using this 
+In this case we have to explicitly specify a {ref}`composition <input-param-composition>` parameter. Using this 
 directive we can exactly specify **which** and **how many** atoms should be distributed. We will slightly modify the 
 example from above.
 
@@ -125,12 +125,39 @@ caption: |
     Download the {download}`YAML file <examples/re-w.second.yaml>` and the {download}`B2 structure file <examples/b2.vasp>`
 ---
 structure:
-  supercell: [3, 3, 3]
   file: b2.vasp
+  supercell: [3, 3, 3]
 iterations: 1e9
 shell_weights:
   1: 1.0
 composition:
   Re: 18
   W: 36
+```
+
+Again let's analyse the difference in the input file and what it is actually doing under the hood
+
+  - **Line 2:** read the file **b2.vasp** from the disk. By default `ase` will be used to read the structure file.
+    For more information see the {ref}`structure <input-param-structure>` parameter documentation
+  - **Lines 7-9** distribute 18 Rhenium and 36 Tungsten atoms on the lattice positions. 
+    1. the B2 structure file contains 2 lattice position
+    2. in **Line 3** we replicate it three times in all directions
+    3. one needs to distribute $2 \times 3 \times 3 \times 3 = 54$ atoms on the lattice positions
+    4. the number of distributed atoms **must match** the number lattice positions to occupy
+
+The using `composition` parameter you can distribute any arbitrary sequence of atomic elements.
+Suppose we want to create cells with a even more complicated composition e. g. 
+$\text{Re}_{12}\text{W}_{14}\text{Mo}_{14}\text{Ta}_{14}$ simple change `composition` section in the above example to:
+
+```{code-block} yaml
+---
+lineno-start: 7
+caption: |
+    B2 structure with $\text{Re}_{12}\text{W}_{14}\text{Mo}_{14}\text{Ta}_{14}$ stochiometry
+---
+composition:
+  Re: 12
+  W: 14
+  Mo: 14
+  Ta: 14
 ```

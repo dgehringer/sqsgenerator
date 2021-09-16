@@ -1,7 +1,6 @@
 structure:
   supercell: [3, 3, 3]
   file: b2.vasp
-  reader: pymatgen
 iterations: 1e9
 shell_weights:
   1: 1.0
