@@ -17,7 +17,8 @@ from sqsgenerator.core import total_permutations as total_permutations_, default
 @click.command('total-permutations', help=c_help.compute.total_permutations)
 @click_settings_file({'structure', 'mode', 'iterations', 'composition'})
 def total_permutations(settings):
-    permutations = total_permutations_(settings.structure) \
+    structure = settings.structure.slice_with_species(settings.composition, which=settings.which)
+    permutations = total_permutations_(structure) \
         if settings.mode == IterationMode.systematic else settings.iterations
     pretty_print(permutations)
     return permutations
@@ -79,7 +80,8 @@ def format_seconds(seconds: float) -> str:
 @click_settings_file('all')
 def estimate_time(settings, verbose):
     have_random_mode = settings.mode == IterationMode.random
-    num_iterations = settings.iterations if have_random_mode else total_permutations_(settings.structure)
+    structure = settings.structure.slice_with_species(settings.composition, which=settings.which)
+    num_iterations = settings.iterations if have_random_mode else total_permutations_(structure)
     num_test_iterations = 100000
     default_guess_settings = dict(iterations=num_test_iterations, mode=IterationMode.random)
     settings.update(default_guess_settings)

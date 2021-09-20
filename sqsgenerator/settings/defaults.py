@@ -44,7 +44,7 @@ def default_shell_weights(settings: AttrDict):
 
 def default_pair_weights(settings: AttrDict):
     structure = settings.structure.slice_with_species(settings.composition, settings.which)
-    per_shell_weights = (~np.eye(structure.num_unique_species, dtype=bool)).astype(float)
+    per_shell_weights = (~np.eye(structure.num_unique_species, dtype=bool)).astype(float) * 0.5
     stack = [weight*per_shell_weights for _, weight in sorted(settings.shell_weights.items(), key=item(0))]
     return np.stack(stack)
 
