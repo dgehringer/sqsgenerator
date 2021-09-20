@@ -1,0 +1,11 @@
+structure:
+  supercell: [3, 3, 3]
+  file: gamma-iron-octahedral.vasp
+iterations: 1e8
+shell_weights:
+  1: 1.0
+which: H
+composition:
+  C: 9
+  0: 99
+max_output_conigurations: 10

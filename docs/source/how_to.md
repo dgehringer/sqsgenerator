@@ -53,9 +53,9 @@ This applies to nearly all commands, except `sqsgen analyse` which by default ex
 
 ````
 
-### Refactory metals
+### Simple SQS
 
-#### an ideal $\text{Re}_{0.5}\text{W}_{0.5}$ solution
+#### Refactory metals - an ideal $\text{Re}_{0.5}\text{W}_{0.5}$ solution
 
 In the following example we use a **Monte-Carlo** approach using by probing **one billion** different configurations.
 Only **the first** coordination shell should be taken into account. We create super-cell with 54 atoms, by replicating
@@ -161,3 +161,42 @@ composition:
   Mo: 14
   Ta: 14
 ```
+
+### A note on the number of `iterations`
+
+Actually it is very hard to tell what is a "**sufficiently**" large enough number for the `iteration` parameter. As the 
+configurational space is growing extremly fast (factorial), it is anyway not possible to sample it properly in case the
+sructures get large enough.
+
+To get a feeling how many structures are there, set `mode` to **systematic** and hit
+
+```{code-block} bash
+sqsgen compute total-permutations
+```
+
+This will print you the number of different structures one can construct. This number might be really huge, 
+however lots of the might be symmetrically equivalent.
+
+A few rules over the thumb, and what you can do if you deal with "*large*" systems
+
+  - Check how long it would take to compute your current settings
+  
+    ```{code-block} bash
+    sqsgen compute estimated-time
+    ```
+
+    You can tune the number of permutations to a computing time you can afford. The above command gives only a estimate
+    for the current machine.
+    
+  - Reduce the number of shells. This has two-fold advantage
+    1. In contrast to old versions of `sqsgenerator`, the current implementations profit greatly from a decreased number
+       of coordination shells. The actual speedup depends on the input structure but might be up to an order of 
+       magnitude when compared to the default value (all shells are considered)
+       ```{image} images/time_vs_shells.svg
+       :alt: Estimated time vs. number of coordination shells
+       :width: 67%
+       :align: center
+       ```
+    3. The image size of the objective function is drastically reduced. In other words a lot of different structures are 
+       mapped onto the same value of the objective function.
+
