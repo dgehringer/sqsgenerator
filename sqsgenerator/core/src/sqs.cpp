@@ -262,7 +262,7 @@ namespace sqsgenerator {
                     /*
                      * We check (at one thread at a time) if any of the other ranks, has populated a better objective.
                      * Therefore we check if any messages have, arrived at our own rank. If, so we read all messages
-                     * , in case more than one rank has found something, and upate your rank, and thread internal
+                     * , in case more than one rank has found something, and update your rank, and thread internal
                      * "best_objective" value.
                      */
                     #pragma omp critical

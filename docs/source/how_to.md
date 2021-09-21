@@ -162,6 +162,10 @@ composition:
   Ta: 14
 ```
 
+### Perform SQS only on selected sites
+
+#### $\gamma$-iron (austenite) - Partial random occupancy of interstitial atoms
+
 ### A note on the number of `iterations`
 
 Actually it is very hard to tell what is a "**sufficiently**" large enough number for the `iteration` parameter. As the 
