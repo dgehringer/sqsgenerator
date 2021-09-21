@@ -34,7 +34,7 @@ In case you get some distances which are really close e. g. 4.12345 and 4.12346 
 ````
 
 ### `max_output_configurations`
-
+(input-param-max-output-configurations)=
 The maximum number of output configurations. 
 
 - **Required:** No
