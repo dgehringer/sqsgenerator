@@ -1,0 +1,10 @@
+structure:
+  supercell: [2, 2, 2]
+  file: ti-n.cif
+mode: systematic
+shell_weights:
+  1: 1.0
+which: N
+composition:
+  B: 16
+  N: 16

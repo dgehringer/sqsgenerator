@@ -55,7 +55,7 @@ myst_enable_extensions = [
     'replacements',
     'smartquotes',
     'substitution',
-    'tasklist',
+    'tasklist'
 ]
 
 extensions = [

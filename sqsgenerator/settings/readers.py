@@ -196,6 +196,8 @@ def read_composition(settings: AttrDict):
     else:
         species = list(settings.composition)
 
+    # in case 0 - a vacancy is present, the parser might return it as a number rather than as "0"
+    species = list(map(str, species))
     if not all(map(lambda s: s in allowed_symbols, species)):
             raise BadSettings(f'You composition contains unkown elements. Please use a real chemical elements!')
 
