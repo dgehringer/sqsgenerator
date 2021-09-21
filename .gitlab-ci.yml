@@ -13,7 +13,7 @@ build-wheels:
     - build
   script:
     - echo $(pwd)
-    - cp examples/cs-cl.sqs.yaml sqs.yaml
+    - cp docs/source/example/re-w.first.yaml sqs.yaml
     - bash $HOME/bin/sqs-build-wheel.sh
   artifacts:
     paths:
