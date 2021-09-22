@@ -24,6 +24,10 @@
   - :baby_bottle: Intuitive to use
   - :pager: command line interface
 
+## Documentation
+
+  - You can find the online documentation [here](https://sqsgenerator.readthedocs.io/en/latest/)
+  - Learn how to [get started](https://sqsgenerator.readthedocs.io/en/latest/how_to.html)
 
 ## Requirements
 

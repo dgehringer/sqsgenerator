@@ -61,7 +61,8 @@ myst_enable_extensions = [
 extensions = [
     'sphinx.ext.autodoc',
     'myst_parser',
-    'sphinx_click'
+    'sphinx_click',
+    'sphinx_togglebutton'
 ]
 
 

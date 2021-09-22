@@ -24,7 +24,9 @@ relative tolerance for calculating the default distances of the coordination she
 - **Default**: `1e-5`
 - **Accepted:** positive floating point numbers (`float`)
 
-````{hint}
+````{admonition} Which shell distances are computed?
+:class: tip, dropdown
+
 Have a look on the `shell_distances` parameter, by entering:
 
   ```{code-block} bash
@@ -41,7 +43,9 @@ The maximum number of output configurations.
 - **Default:** 10
 - **Accepted:** positive finite integer number (`int`)
 
-```{note}
+```{admonition} Behaviour when running with MPI parallelization
+:class: note, dropdown
+
 In case the code runs with MPI parallelization, **each MPI rank** will generate at most `max_output_configurations` which are gathered at the head rank.
 ```
 
@@ -97,7 +101,7 @@ Used to select a sublattice (collection of lattice sites) from the specified inp
   - either *all* or a chemical symbol specified in the input structure (`str`)
   - list of indices to choose from the input structure (`list[int]`)
 
-```{note} 
+```{note}
 The sum of the atoms distributed must **exactly** match the number of **selected** lattice positions. 
 ```
 
@@ -254,8 +258,10 @@ $$
 - **Default:** *random*
 - **Accepted:** *random* or *systematic* (`str`)
 
-````{hint}
-- In case you use the *systematic* make sure that the total number of configurations to check is a number a computer can check in finite times. To compute the total number of permutations you can use:
+````{admonition} How long will you calculation run?
+:class: tip, dropdown
+
+- In case you use the *systematic* mode make sure that the total number of configurations to check is a number a computer can check in finite times. To compute the total number of iterations you can use:
 ```{code-block} bash
 sqsgenerator compute total-permutations
 ```
@@ -298,7 +304,9 @@ to $w^i$ {eq}`eqn:objective` in the objective function.
 - **Default**: $\frac{1}{i}$ where $i$ is the index of the coordination shell. Automatically determined by `sqsgenerator`
 - **Accepted:** a dictionary where keys are the shell indices and the values $w^i$ parameters (`dict[int, float]`)
 
-````{note}
+````{admonition} Further information
+:class: note, dropdown
+
 - If nothing is specified **all available** coordination shells are used
 - You can improve the performace of `sqsgenerator` by neglecting some coordination shells
 - If you specify a shell index which does not exist a `BadSettings` error will be raised
@@ -365,7 +373,9 @@ the target objective $\alpha'_{\eta\xi}$ {eq}`eqn:objective`, which the SRO para
   - a 2D matrix of shape $\left( N_{\text{species}}, N_{\text{species}} \right)$ the matrix will be stacked along the first dimension $N_{\text{shells}}$ times to generate the $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ array (`np.ndarray`)
   - a 3D array of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ (`np.ndarray`)
 
-````{note}
+````{admonition} a note on the value interpretation
+:class: note, dropdown
+
 -  because of $\alpha'_{\eta\xi} = \alpha'_{\xi\eta}$ the `target_objective` is a **symmetric** quantity. Thus in case an  $\alpha_{\eta\xi}^{'T} \neq \alpha'_{\xi\eta}$ an `BadSettings` error is raised
 -  the atomic species specified in `strcuture` by their ordinal number in **ascending order** 
     - In case of the $\text{CsCl}$ the actual ordering is $\text{Cl}(Z=17), \text{Cs}(Z=55)$.

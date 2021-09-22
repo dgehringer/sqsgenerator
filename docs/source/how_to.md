@@ -36,7 +36,8 @@ all commands which require a settings file also do have an `--input-fomat` (`-if
 to use different file-formats. For more infos please have look at the {ref}`CLI Reference <cli_reference>`.
 
 
-````{note}
+````{admonition} *sqsgenerator* searches for a *sqs.yaml* file
+:class: note, dropdown
 
 Most of `sqsgen`'s subcommands need such an input file to obtain the parameters.
 
@@ -97,7 +98,8 @@ So let's go together through this configuration:
 In the unit cell we do have a 50-50 composition. Replication does not change to chemistry, thus we end up with 27 
 tungsten atoms and 27 rhenium atoms in the final configuration.
 
-````{note} 
+````{admonition} Check which species are actually distributed
+:class: tip, dropdown
 
 You can always check, which atomic species are distributed on the lattice sites using the `params show` command
 
@@ -149,7 +151,7 @@ discarded in the post-processing step. This "*degeneracy*" decreases by includin
 
 
 ````{admonition} Include objective function $\mathcal{O}(\sigma)$ and SRO parameters $\alpha^i_{\xi\eta}$
-:class: tip
+:class: tip, dropdown
 
 To dump the also the objective function $\mathcal{O}(\sigma)$ {eq}`eqn:objective` and SRO parameters 
 $\alpha^i_{\xi\eta}$ {eq}`eqn:wc-sro-multi` you can use the `--dump-include`/`-di` switches. You need to explicitly 
@@ -182,7 +184,7 @@ will export all the structures in **cif** format.
   - To gather the structure files in an archive use the `--compress`/`-c` switch
 
 ````{admonition} Directly export the structure
-:class: tip
+:class: tip, dropdown
 
 The `export` command is optional. Structures can be exported directly using the `run iteration` command if 
 a `--export`/`-e` switch is passed.
@@ -332,7 +334,7 @@ composition:
 ### Advanced topics
 
 ```{admonition} This section will come in future
-:class: note
+:class: note, dropdown
 
 This section needs still to be done
  - Custom `target_objective`
