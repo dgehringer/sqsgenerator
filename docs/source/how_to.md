@@ -300,6 +300,45 @@ It will take me roughly 14 minutes and 23.576 seconds to compute 601080390 itera
 
 #### $\gamma$-iron (austenite) - Partial random occupancy of interstitial atoms
 
+The `sqsgenerator` also knows a fictitious atomic species "**0**", representing a vacancy. During the optimization
+ vacancies will be treated as atoms. When exporting the structures the vacancies are deleted. 
+
+The following example constructs a $\gamma$-iron cell, where carbon is distributed on the **octahedral interstitial** 
+sites. Therefore, the {download}`structure file <examples/gamma-iron-octahedral.vasp>` contains four iron atoms and
+four hydrogen (H) atoms on the octahedral sites. 
+
+```{code-block} yaml
+---
+lineno-start: 1
+emphasize-lines: 7, 10
+caption: |
+    Download the {download}`YAML file <examples/gamma-iron.yaml>` and the {download}`iron structure file <examples/gamma-iron-octahedral.vasp>`
+---
+structure:
+  supercell: [3, 3, 3]
+  file: gamma-iron-octahedral.vasp
+iterations: 1e8
+shell_weights:
+  1: 1.0
+which: H
+composition:
+  C: 9
+  0: 99
+```
+
+  - **Line 7:** hydrogen works here as a **dummy** species. We select those interstitial sites
+  - **Line 10:** distribute nine carbon atoms and 99 vacancies
+
+### Advanced topics
+
+```{admonition} This section will come in future
+:class: note
+
+This section needs still to be done
+ - Custom `target_objective`
+ - Maybe MPI enabled version
+```
+
 ### A note on the number of `iterations`
 
 Actually it is very hard to tell what is a "**sufficiently**" large enough number for the `iteration` parameter. As the 
