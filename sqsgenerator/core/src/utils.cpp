@@ -63,10 +63,23 @@ namespace sqsgenerator::utils {
          return m >> 32;
     }
     // Simple Knuth-Fisher-Yates shuffle with random generator
-    void shuffle_configuration(configuration_t &configuration, uint64_t *seed) {
+    void shuffle_configuration_(configuration_t &configuration, uint64_t *seed) {
         for (uint32_t i=configuration.size(); i > 1; i--) {
             uint32_t p = random_bounded(i, seed); // number in [0,i)
             std::swap(configuration[i-1], configuration[p]); // swap the values at i-1 and p
         }
+    }
+
+    // Simple Knuth-Fisher-Yates shuffle with random generator
+    void shuffle_configuration(configuration_t &configuration, uint64_t *seed, const shuffling_bounds_t &bounds) {
+        for (auto &bound : bounds) {
+            auto [lower_bound, upper_bound] = bound;
+            auto window_size = upper_bound - lower_bound;
+            for (uint32_t i = window_size; i > 1; i--) {
+                uint32_t p = random_bounded(i, seed); // number in [0,i)
+                std::swap(configuration[i-1+lower_bound], configuration[p+lower_bound]); // swap the values at i-1 and p
+            }
+        }
+
     }
 }

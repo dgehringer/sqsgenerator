@@ -110,7 +110,10 @@ class Structure(Structure_):
         :return: the sorted Structure
         :rtype: Structure
         """
-        return self.from_extension_class(super().sorted())
+        return self.from_extension_class(super(Structure, self).sorted())
+
+    def rearranged(self, order):
+        return self.from_extension_class(super(Structure, self).rearranged(order))
 
     def __getitem__(self, item):
         if isinstance(item, numbers.Integral):

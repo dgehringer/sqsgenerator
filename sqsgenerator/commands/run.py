@@ -29,7 +29,7 @@ from sqsgenerator.commands.help import command_help as c_help, parameter_help as
 @click_settings_file('all')
 def iteration(settings, minimal, similar, log_level, dump, dump_params, do_export, format, writer, output_file,
               dump_format, dump_include, compress):
-    sqs_results, timings = pair_sqs_iteration(settings, minimal=minimal, similar=similar, log_level=log_level)
+    sqs_results, timings = pair_sqs_iteration(settings, minimal=minimal, similar=similar, log_level='info')
 
     final_document = expand_sqs_results(settings, sqs_results, timings, include=dump_include, inplace=dump_params)
     output_prefix = output_file \

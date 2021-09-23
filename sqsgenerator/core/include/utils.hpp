@@ -238,7 +238,7 @@ namespace sqsgenerator::utils {
 
         // random number generator
         uint32_t random_bounded(uint32_t range, uint64_t *seed);
-        void shuffle_configuration(configuration_t &configuration, uint64_t *seed);
+        void shuffle_configuration(configuration_t &configuration, uint64_t *seed, const shuffling_bounds_t &bounds);
 };
 
 

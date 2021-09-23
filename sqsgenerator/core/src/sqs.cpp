@@ -167,6 +167,8 @@ namespace sqsgenerator {
         size_t nspecies {settings.num_species()};
         size_t nparams {nshells * nspecies * nspecies};
 
+        shuffling_bounds_t shuffling_bounds (settings.shuffling_bounds());
+
         parameter_storage_t target_objectives (boost::to_flat_vector(settings.target_objective()));
         parameter_storage_t parameter_weights (boost::to_flat_vector(settings.parameter_weights()));
         parameter_storage_t parameter_prefactors (boost::to_flat_vector(settings.parameter_prefactors()));
@@ -239,8 +241,8 @@ namespace sqsgenerator {
                         random_seed_local = std::rand() * (thread_id + 1);
                         BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::random_seed = " << random_seed_local;
                     }
-                    get_next_configuration = [&random_seed_local](configuration_t &c) {
-                        shuffle_configuration(c, &random_seed_local);
+                    get_next_configuration = [&random_seed_local, &shuffling_bounds](configuration_t &c) {
+                        shuffle_configuration(c, &random_seed_local, shuffling_bounds);
                         return true;
                     };
                 } break;
