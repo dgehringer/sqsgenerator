@@ -38,8 +38,29 @@ namespace sqsgenerator {
 
     public:
 
-        IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_3d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<double> shell_distances, std::vector<int> threads_per_rank, double atol=1.0e-5, double rtol=1.05e-8, iteration_mode mode = iteration_mode::random);
-        IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_3d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<int> threads_per_rank, double atol=1.0e-5, double rtol=1.05e-8, iteration_mode mode = iteration_mode::random);
+        IterationSettings(
+                Structure &structure,
+                const_array_3d_ref_t target_objective,
+                const_array_3d_ref_t parameter_weights,
+                pair_shell_weights_t shell_weights,
+                int iterations,
+                int output_configurations,
+                std::vector<double> shell_distances,
+                std::vector<int> threads_per_rank,
+                double atol=1.0e-5,
+                double rtol=1.05e-8,
+                iteration_mode mode = iteration_mode::random);
+
+        IterationSettings(
+                Structure &structure,
+                const_array_3d_ref_t target_objective,
+                const_array_3d_ref_t parameter_weights,
+                pair_shell_weights_t shell_weights, int iterations,
+                int output_configurations,
+                std::vector<int> threads_per_rank,
+                double atol=1.0e-5,
+                double rtol=1.05e-8,
+                iteration_mode mode = iteration_mode::random);
 
         [[nodiscard]] double atol() const;
         [[nodiscard]] double rtol() const;
@@ -58,8 +79,8 @@ namespace sqsgenerator {
         [[nodiscard]] const_array_3d_ref_t parameter_weights() const;
         [[nodiscard]] const_array_3d_ref_t target_objective() const;
         [[nodiscard]] const_array_3d_ref_t parameter_prefactors() const;
-        [[nodiscard]] configuration_t unpack_configuration(const configuration_t &conf) const;
         [[nodiscard]] const_pair_shell_matrix_ref_t shell_matrix() const;
+        [[nodiscard]] configuration_t unpack_configuration(const configuration_t &conf) const;
         [[nodiscard]] std::tuple<std::vector<shell_t>, std::vector<double>> shell_indices_and_weights() const;
     };
 }

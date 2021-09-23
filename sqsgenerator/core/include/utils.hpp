@@ -175,6 +175,62 @@ namespace sqsgenerator::utils {
             return result;
         }
 
+        template<typename T>
+        std::vector<size_t> argsort(const std::vector<T> &array) {
+            std::vector<size_t> indices(array.size());
+            std::iota(indices.begin(), indices.end(), 0);
+            std::sort(indices.begin(), indices.end(),
+                      [&array](int left, int right) -> bool {
+                          // sort indices according to corresponding array element
+                          return array[left] < array[right];
+                      });
+
+            return indices;
+        }
+
+    template<typename Iterable>
+    class enumerate_object
+    {
+    private:
+        Iterable _iter;
+        std::size_t _size;
+        decltype(std::begin(_iter)) _begin;
+        const decltype(std::end(_iter)) _end;
+
+        public:
+            enumerate_object(Iterable iter):
+                    _iter(iter),
+                    _size(0),
+                    _begin(std::begin(iter)),
+                    _end(std::end(iter))
+            {}
+
+            const enumerate_object& begin() const { return *this; }
+            const enumerate_object& end()   const { return *this; }
+
+            bool operator!=(const enumerate_object&) const
+            {
+                return _begin != _end;
+            }
+
+            void operator++()
+            {
+                ++_begin;
+                ++_size;
+            }
+
+            auto operator*() const-> std::pair<std::size_t, decltype(*_begin)>
+            {
+                return { _size, *_begin };
+            }
+        };
+
+        template<typename Iterable>
+        auto enumerate(Iterable&& iter)-> enumerate_object<Iterable>
+        {
+            return { std::forward<Iterable>(iter) };
+        }
+
         configuration_t unique_species(configuration_t conf);
         std::vector<size_t> configuration_histogram(const configuration_t &conf);
         std::tuple<configuration_t, configuration_t> pack_configuration(const configuration_t &configuration);

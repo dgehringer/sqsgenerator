@@ -181,8 +181,7 @@ namespace sqsgenerator::utils::atomistics {
           : m_lattice(lattice),
             m_frac_coords(frac_coords),
             m_pbc(pbc),
-            m_species(species)
-            {
+            m_species(species) {
         typedef array_2d_t::index index_t;
         index_t natoms {static_cast<index_t>(species.size())};
         auto frac_coords_shape {shape_from_multi_array(frac_coords)};
@@ -259,6 +258,23 @@ namespace sqsgenerator::utils::atomistics {
 
     size_t Structure::num_atoms() const {
         return m_natoms;
+    }
+
+    Structure Structure::sorted() const {
+        return this->rearranged(argsort(configuration()));
+    }
+
+    Structure Structure::rearranged(const std::vector<size_t> &order) const {
+        if (order.size() != m_natoms) throw std::invalid_argument("Rearrange list's length does not match this structure");
+        auto tmp_frac_coords(m_frac_coords);
+        configuration_t tmp_conf(m_natoms);
+
+        for (auto&& pack: enumerate(order)) {
+            auto[index, sort_index] = pack;
+            tmp_frac_coords[index] = m_frac_coords[sort_index];
+            tmp_conf[index] = m_species[sort_index].Z;
+        }
+        return Structure(this->m_lattice, tmp_frac_coords, tmp_conf, m_pbc);
     }
 
 }

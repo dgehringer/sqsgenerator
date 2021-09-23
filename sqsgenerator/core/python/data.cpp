@@ -97,3 +97,13 @@ size_t StructurePythonWrapper::num_atoms() {
 std::shared_ptr<atomistics::Structure> StructurePythonWrapper::handle(){
     return m_handle;
 }
+
+StructurePythonWrapper StructurePythonWrapper::sorted() {
+    auto s = m_handle->sorted();
+    return StructurePythonWrapper(s.lattice(), s.frac_coords(), s.configuration(), s.pbc());
+}
+
+StructurePythonWrapper StructurePythonWrapper::rearranged(py::object order) {
+    auto s = m_handle->rearranged(helpers::list_to_vector<size_t>(order));
+    return StructurePythonWrapper(s.lattice(), s.frac_coords(), s.configuration(), s.pbc());
+}

@@ -170,7 +170,9 @@ BOOST_PYTHON_MODULE(core) {
             .def_readonly("distance_matrix", &StructurePythonWrapper::distance_matrix)
             //.def<np::ndarray(StructurePythonWrapper::*)(const py::list&, double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
             //.def<np::ndarray(StructurePythonWrapper::*)(double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
-            .def_readonly("pbc", &StructurePythonWrapper::pbc);
+            .def_readonly("pbc", &StructurePythonWrapper::pbc)
+            .def("sorted", &StructurePythonWrapper::sorted)
+            .def("rearranged", &StructurePythonWrapper::rearranged);
 
         py::class_<SQSResultCollection>("SQSResultCollection")
         .def("__len__", &SQSResultCollection::size)

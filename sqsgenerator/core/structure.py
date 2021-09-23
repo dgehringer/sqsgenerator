@@ -14,6 +14,10 @@ class Structure(Structure_):
     represent structural information.
     """
 
+    @classmethod
+    def from_extension_class(cls, o: Structure_):
+        return cls(o.lattice.copy(), o.frac_coords.copy(), map(attr('symbol'), o.species), o.pbc)
+
     def __init__(self, lattice: np.ndarray, frac_coords: np.ndarray, symbols: T.List[str],
                  pbc: T.Tuple[bool, bool, bool] = (True, True, True)):
         """
@@ -106,7 +110,7 @@ class Structure(Structure_):
         :return: the sorted Structure
         :rtype: Structure
         """
-        return self[np.argsort(self._numbers)]
+        return self.from_extension_class(super().sorted())
 
     def __getitem__(self, item):
         if isinstance(item, numbers.Integral):
