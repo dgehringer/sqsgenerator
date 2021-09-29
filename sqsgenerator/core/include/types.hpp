@@ -22,6 +22,7 @@ namespace sqsgenerator {
     typedef boost::multiprecision::cpp_int rank_t;
     typedef std::map<int, std::vector<double>> timing_map_t;
     typedef boost::multi_array<shell_t, 2> pair_shell_matrix_t;
+    typedef std::vector<std::tuple<size_t, size_t>> shuffling_bounds_t;
     typedef boost::const_multi_array_ref<shell_t, 2> const_pair_shell_matrix_ref_t;
     typedef boost::multi_array_ref<shell_t, 2> pair_shell_matrix_ref_t;
     typedef boost::multi_array<double, 2> array_2d_t;

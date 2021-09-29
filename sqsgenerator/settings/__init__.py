@@ -41,7 +41,8 @@ def construct_settings(settings: AttrDict, process: T.Optional[bool] = True, **o
         list(settings.threads_per_rank),
         settings.atol,
         settings.rtol,
-        settings.mode
+        settings.mode,
+        []  # TODO: remove empty list here []
     )
 
 

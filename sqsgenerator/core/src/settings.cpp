@@ -11,7 +11,19 @@ namespace sqsgenerator {
 
     typedef array_3d_t::index index_t;
 
-    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_3d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<double> shell_distances, std::vector<int> threads_per_rank, double atol, double rtol, iteration_mode mode) :
+    IterationSettings::IterationSettings(
+            Structure &structure,
+            const_array_3d_ref_t target_objective,
+            const_array_3d_ref_t parameter_weights,
+            pair_shell_weights_t shell_weights,
+            int iterations,
+            int output_configurations,
+            std::vector<double> shell_distances,
+            std::vector<int> threads_per_rank,
+            double atol,
+            double rtol,
+            shuffling_bounds_t bounds,
+            iteration_mode mode) :
         m_structure(structure),
         m_atol(atol),
         m_rtol(rtol),
@@ -24,6 +36,7 @@ namespace sqsgenerator {
         m_parameter_prefactors(boost::extents[static_cast<index_t>(shell_weights.size())][static_cast<index_t>(m_nspecies)][static_cast<index_t>(m_nspecies)]),
         m_shell_distances(shell_distances),
         m_threads_per_rank(threads_per_rank),
+        m_bounds(std::move(bounds)),
         m_shell_matrix(m_structure.shell_matrix(m_shell_distances, m_atol, m_rtol))
     {
         auto shell_m(shell_matrix());
@@ -38,11 +51,47 @@ namespace sqsgenerator {
         if (m_shell_weights.empty()) throw std::invalid_argument("None of the shells you have specified are available");
         std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(structure.configuration());
         init_prefactors();
+        // check if bounds are ok [0, num_atoms)
+        if (m_bounds.empty()) {
+            BOOST_LOG_TRIVIAL(info) << "IterationSettings::ctor::bounds = {" << 0 << ", " << num_atoms() << "}";
+            m_bounds.push_back(std::make_tuple(0, num_atoms()));
+        }
+        if (m_bounds.size() == 1) {
+            // in case bounds has just one element it must cover the whole range
+            auto [lower_bound, upper_bound] = m_bounds[0];
+            if (lower_bound != 0) throw std::invalid_argument("bound as just one entry and the lower bound is != 0");
+            if (upper_bound != num_atoms()) throw std::invalid_argument("bound as just one entry and the upper bound is != num_atoms");
+        } else {
+            if (mode == systematic) throw std::invalid_argument("constraint iterations can only be used in \"random\" mode yet");
+        }
+
     }
 
-    IterationSettings::IterationSettings(Structure &structure, const_array_3d_ref_t target_objective, const_array_3d_ref_t parameter_weights,  pair_shell_weights_t shell_weights, int iterations, int output_configurations, std::vector<int> threads_per_rank, double atol, double rtol, iteration_mode mode) :
-            IterationSettings(structure, target_objective, parameter_weights, shell_weights, iterations, output_configurations,
-                              default_shell_distances(structure.distance_matrix(), atol, rtol), threads_per_rank, atol, rtol, mode)
+    IterationSettings::IterationSettings(
+            Structure &structure,
+            const_array_3d_ref_t target_objective,
+            const_array_3d_ref_t parameter_weights,
+            pair_shell_weights_t shell_weights,
+            int iterations,
+            int output_configurations,
+            std::vector<int> threads_per_rank,
+            double atol,
+            double rtol,
+            shuffling_bounds_t bounds,
+            iteration_mode mode) :
+            IterationSettings(
+                    structure,
+                    target_objective,
+                    parameter_weights,
+                    shell_weights,
+                    iterations,
+                    output_configurations,
+                    default_shell_distances(structure.distance_matrix(), atol, rtol),
+                    threads_per_rank,
+                    atol,
+                    rtol,
+                    bounds,
+                    mode)
     { }
 
 
@@ -154,6 +203,10 @@ namespace sqsgenerator {
 
     [[nodiscard]] double IterationSettings::atol() const {
         return m_atol;
+    }
+
+    [[nodiscard]] shuffling_bounds_t IterationSettings::shuffling_bounds() const {
+        return m_bounds;
     }
 
     [[nodiscard]] double IterationSettings::rtol() const {
