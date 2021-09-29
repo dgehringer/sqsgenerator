@@ -187,10 +187,15 @@ def read_composition(settings: AttrDict):
 
     print(settings.structure.numbers)
     composition = {
-        5: {-1: 32},
-        13: {-1: 32}
+        5: {7: 8, 22: 8},
+        7: {7: 16},
+        22: {22: 16},
+        13: {22: 8, 7: 8},
     }
-    print(build_configuration(settings.structure.numbers.tolist(), composition))
+    fwd, bckwd, conf = build_configuration(settings.structure.numbers.tolist(), composition)
+    # print(settings.structure.numbers[fwd], "\n", settings.structure.numbers[fwd][bckwd])
+    print(np.array(conf)[fwd])
+    print(np.array(conf))
 
     # in case it is a dictionary we expand it
     allowed_symbols = set(map(attr('symbol'), available_species()))
