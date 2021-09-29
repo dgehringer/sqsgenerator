@@ -20,7 +20,7 @@ from sqsgenerator.settings.exceptions import BadSettings
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature
 from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure
 from sqsgenerator.settings.functional import parameter as parameter_, if_, isa, star
-from sqsgenerator.core import IterationMode, available_species, Structure, make_supercell
+from sqsgenerator.core import IterationMode, available_species, Structure, make_supercell, build_configuration
 from sqsgenerator.settings.defaults import defaults, random_mode, num_shells, num_species
 
 __parameter_registry = collections.OrderedDict({})
@@ -184,6 +184,13 @@ def read_composition(settings: AttrDict):
 
     if not isinstance(settings.composition, (dict, collections.abc.Iterable)):
         raise BadSettings(f'Cannot interpret "composition" setting. I expect a dictionary or an iterable of strings')
+
+    print(settings.structure.numbers)
+    composition = {
+        5: {-1: 32},
+        13: {-1: 32}
+    }
+    print(build_configuration(settings.structure.numbers.tolist(), composition))
 
     # in case it is a dictionary we expand it
     allowed_symbols = set(map(attr('symbol'), available_species()))

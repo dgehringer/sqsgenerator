@@ -9,7 +9,7 @@ from sqsgenerator.core.core import set_log_level, pair_sqs_iteration, pair_analy
 from sqsgenerator.core.core import IterationMode, IterationSettings, BoostLogLevel
 from sqsgenerator.core.structure import Structure, structure_to_dict, Atom, make_supercell
 from sqsgenerator.core.core import default_shell_distances, total_permutations, rank_structure, atoms_from_numbers, \
-    atoms_from_symbols, available_species, symbols_from_z
+    atoms_from_symbols, available_species, symbols_from_z, build_configuration
 
 __all__ = [
     '__version__',
@@ -32,7 +32,8 @@ __all__ = [
     'atoms_from_numbers',
     'atoms_from_symbols',
     'available_species',
-    'symbols_from_z'
+    'symbols_from_z',
+    'build_configuration'
 ]
 
 attr = operator.attrgetter

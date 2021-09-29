@@ -117,9 +117,7 @@ namespace sqsgenerator::utils {
 
     bool need_sublattice_bounds(const composition_t &composition) {
         auto used_sublattices(compute_occupied_sublattices(composition));
-        if (used_sublattices.size() == 1) {
-            return *used_sublattices.begin() != ALL_SITES;
-        }
+        if (used_sublattices.size() == 1) return *used_sublattices.begin() != ALL_SITES;
         return true;
     }
 
@@ -141,10 +139,13 @@ namespace sqsgenerator::utils {
                 throw std::invalid_argument("composition spec for element \"Z=" +
                 std::to_string(distribute_species)+"\" cannot be an empty map");
             for (auto const &[destination_sublattice, distribute_num_atoms]: sublattice_spec) {
-                if (is_constrained && destination_sublattice == ALL_SITES) throw std::invalid_argument(
+                if (is_constrained && destination_sublattice == ALL_SITES)
+                    throw std::invalid_argument(
                         "constrained composition specs, thus I cannot distribute \"Z=" +
-                        std::to_string(distribute_species)+
-                        "\" on all available sites. You must explicitly specify on which sublattice those atoms must be placed");
+                        std::to_string(distribute_species) +
+                        "\" on all available sites. "
+                        "You must explicitly specify on which sublattice those atoms must be placed"
+                    );
                 int index {destination_sublattice == ALL_SITES ? 0 : get_index(unique_spec_initial, destination_sublattice)};
                 if (index < 0)
                     throw std::runtime_error("The sublattice \"Z=" + std::to_string(destination_sublattice) +
@@ -155,14 +156,28 @@ namespace sqsgenerator::utils {
         // There might be the case that there is a sublattice on which no atoms were distributes
         // In this case we fill it up with the species itself
         configuration_t final_configuration;
-        for (auto i = 0; i < unique_spec_initial.size(); i++) {
-            auto conf = sublattice_configurations[i];
-            if (conf.empty()) conf.resize(hist_initial[i], unique_spec_initial[i]);
-            if (conf.size() != hist_initial[i])
-                throw std::invalid_argument("Wrong number of atoms distributed on sublattice "
-                                            "\"Z=" + std::to_string(unique_spec_initial[i]) + "\" Should " +
-                                            std::to_string(hist_initial[i]) + " is " + std::to_string(conf.size()));
-            final_configuration.insert(final_configuration.end(), conf.begin(), conf.end());
+        if (is_constrained) {
+            for (auto i = 0; i < unique_spec_initial.size(); i++) {
+                auto conf = sublattice_configurations[i];
+                if (conf.empty()) conf.resize(hist_initial[i], unique_spec_initial[i]);
+                if (conf.size() != hist_initial[i]) {
+                    throw std::runtime_error(
+                        "Wrong number of atoms distributed on sublattice "
+                         "\"Z=" + std::to_string(unique_spec_initial[i]) + "\". Should be " +
+                         std::to_string(hist_initial[i]) + " but is " +
+                         std::to_string(conf.size())
+                     );
+                }
+                final_configuration.insert(final_configuration.end(), conf.begin(), conf.end());
+            }
+        }
+        else {
+            final_configuration.assign(sublattice_configurations[0].begin(), sublattice_configurations[0].end());
+            if (final_configuration.size() != initial.size())
+                throw std::runtime_error(
+                    "Wrong number of atoms on lattice positions. Should be " +
+                    std::to_string(initial.size()) + " but is " + std::to_string(final_configuration.size())
+                );
         }
 
         // the configuration is intrinsically sorted, therefore we have to sort it backwards

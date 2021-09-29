@@ -176,7 +176,6 @@ namespace sqsgenerator::utils::atomistics {
         return Atoms::m_elements;
     }
 
-
     Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc)
           : m_lattice(lattice),
             m_frac_coords(frac_coords),
@@ -190,7 +189,7 @@ namespace sqsgenerator::utils::atomistics {
         // Make sure the number of atoms in the species vector match the number of fractional coordinates provided
         if(frac_coords_shape[0] != species.size()) throw std::invalid_argument("The number of fractional coords does not match the number of atoms. Expected: (" + std::to_string(natoms) + "x3) - Found: (" + std::to_string(frac_coords_shape[0]) + "x" + std::to_string(frac_coords_shape[1])+")" );
         if(frac_coords_shape[1] != 3) throw std::invalid_argument("You have not supplied 3D fractional coordinates. Expected: (" + std::to_string(natoms) + "x3) - Found: (" + std::to_string(natoms) + "x" + std::to_string(frac_coords_shape[1])+")" );
-        if(lattice_shape[0] != 3 || lattice_shape[1] != 3) throw std::invalid_argument("A lattice must be specied by supplying a (3x3) matrix. Expected: (3x3) - Found: (" + std::to_string(lattice_shape[0]) + "x" + std::to_string(lattice_shape[1])+")");
+        if(lattice_shape[0] != 3 || lattice_shape[1] != 3) throw std::invalid_argument("A lattice must be specified by supplying a (3x3) matrix. Expected: (3x3) - Found: (" + std::to_string(lattice_shape[0]) + "x" + std::to_string(lattice_shape[1])+")");
 
         m_pbc_vecs.resize(boost::extents[natoms][natoms][3]);
         m_pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(boost::matrix_from_multi_array(m_lattice),
@@ -242,7 +241,6 @@ namespace sqsgenerator::utils::atomistics {
     pair_shell_matrix_t Structure::shell_matrix(const std::vector<double> &shell_distances, double atol, double rtol) const {
         return sqsgenerator::utils::shell_matrix(m_distance_matrix, shell_distances, atol, rtol);
     }
-
 
     configuration_t Structure::configuration() const {
         configuration_t conf;
