@@ -188,6 +188,11 @@ namespace sqsgenerator::utils {
             return indices;
         }
 
+        template<typename T>
+        std::vector<T> rearrange(const std::vector<T> &input, const std::vector<size_t> &by) {
+            return apply<T, size_t>(by, [&input](const size_t index) -> T { return input[index]; });
+        }
+
     template<typename Iterable>
     class enumerate_object
     {
@@ -235,7 +240,7 @@ namespace sqsgenerator::utils {
         std::vector<size_t> configuration_histogram(const configuration_t &conf);
         std::tuple<configuration_t, configuration_t> pack_configuration(const configuration_t &configuration);
         configuration_t unpack_configuration(const configuration_t &indices, const configuration_t &packed);
-        auto build_configuration(const configuration_t &initial, const composition_t &composition);
+        std::tuple<arrangement_t, arrangement_t, configuration_t, shuffling_bounds_t> build_configuration(const configuration_t &initial, const composition_t &composition);
 
         // random number generator
         uint32_t random_bounded(uint32_t range, uint64_t *seed);

@@ -123,7 +123,7 @@ namespace sqsgenerator::utils {
         return true;
     }
 
-    auto build_configuration(const configuration_t &initial, const composition_t &composition) {
+    std::tuple<arrangement_t, arrangement_t, configuration_t, shuffling_bounds_t> build_configuration(const configuration_t &initial, const composition_t &composition) {
         if (composition.empty()) throw std::invalid_argument("composition map cannot be empty");
 
         auto rearrange_forward = sqsgenerator::utils::argsort(initial);
@@ -137,14 +137,18 @@ namespace sqsgenerator::utils {
         std::vector<configuration_t> sublattice_configurations(is_constrained ? unique_spec_initial.size() : 1);
 
         for (auto const&[distribute_species, sublattice_spec]: composition) {
-            if (sublattice_spec.empty()) throw std::invalid_argument("composition spec for element \"Z="+std::to_string(distribute_species)+"\" cannot be an empty map");
+            if (sublattice_spec.empty())
+                throw std::invalid_argument("composition spec for element \"Z=" +
+                std::to_string(distribute_species)+"\" cannot be an empty map");
             for (auto const &[destination_sublattice, distribute_num_atoms]: sublattice_spec) {
                 if (is_constrained && destination_sublattice == ALL_SITES) throw std::invalid_argument(
                         "constrained composition specs, thus I cannot distribute \"Z=" +
                         std::to_string(distribute_species)+
                         "\" on all available sites. You must explicitly specify on which sublattice those atoms must be placed");
                 int index {destination_sublattice == ALL_SITES ? 0 : get_index(unique_spec_initial, destination_sublattice)};
-                if (index < 0) throw std::runtime_error("The sublattice \"Z=" + std::to_string(destination_sublattice) + "\" is not specified in the initial structure");
+                if (index < 0)
+                    throw std::runtime_error("The sublattice \"Z=" + std::to_string(destination_sublattice) +
+                    "\" is not specified in the initial structure");
                 for (auto i = 0; i < distribute_num_atoms; i++) sublattice_configurations[index].push_back(distribute_species);
             }
         }
@@ -161,6 +165,8 @@ namespace sqsgenerator::utils {
             final_configuration.insert(final_configuration.end(), conf.begin(), conf.end());
         }
 
-        return std::make_tuple(rearrange_forward, rearrange_backward, final_configuration, bounds);
+        // the configuration is intrinsically sorted, therefore we have to sort it backwards
+        auto rearranged_configuration(sqsgenerator::utils::rearrange(final_configuration, rearrange_backward));
+        return std::make_tuple(rearrange_forward, rearrange_backward, rearranged_configuration, bounds);
     }
 }

@@ -25,6 +25,7 @@ namespace sqsgenerator::python {
 
         IterationSettingsPythonWrapper(
                 StructurePythonWrapper structure,
+                py::dict composition,
                 np::ndarray target_objective,
                 np::ndarray parameter_weights,
                 py::dict shell_weights,
@@ -33,11 +34,11 @@ namespace sqsgenerator::python {
                 py::list threads_per_rank,
                 double atol,
                 double rtol,
-                iteration_mode iteration_mode,
-                py::list bounds);
+                iteration_mode iteration_mode);
 
         IterationSettingsPythonWrapper(
                 StructurePythonWrapper structure,
+                py::dict composition,
                 np::ndarray target_objective,
                 np::ndarray parameter_weights,
                 py::dict shell_weights,
@@ -47,8 +48,8 @@ namespace sqsgenerator::python {
                 py::list threads_per_rank,
                 double atol,
                 double rtol,
-                iteration_mode iteration_mode,
-                py::list bounds);
+                iteration_mode iteration_mode);
+
         IterationSettingsPythonWrapper(const IterationSettingsPythonWrapper &other) = default;
 
         double atol() const;

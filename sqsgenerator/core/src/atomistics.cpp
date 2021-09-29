@@ -144,7 +144,7 @@ namespace sqsgenerator::utils::atomistics {
         if (!Atoms::m_symbol_map.count(symbol)) {
             throw std::invalid_argument("No elements known with \"" + symbol + "\"");
         }
-        size_t index = {Atoms::m_symbol_map.at(symbol)};
+        int index = {Atoms::m_symbol_map.at(symbol)};
         return Atoms::m_elements[index];
     }
 
@@ -265,7 +265,8 @@ namespace sqsgenerator::utils::atomistics {
     }
 
     Structure Structure::rearranged(const std::vector<size_t> &order) const {
-        if (order.size() != m_natoms) throw std::invalid_argument("Rearrange list's length does not match this structure");
+        if (order.size() != m_natoms)
+            throw std::invalid_argument("Rearrange list's length does not match this structure");
         auto tmp_frac_coords(m_frac_coords);
         configuration_t tmp_conf(m_natoms);
 

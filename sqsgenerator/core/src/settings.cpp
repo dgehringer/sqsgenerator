@@ -40,7 +40,7 @@ namespace sqsgenerator {
         m_shell_matrix(m_structure.shell_matrix(m_shell_distances, m_atol, m_rtol))
     {
         auto shell_m(shell_matrix());
-        auto num_elements {num_atoms()*num_atoms()};
+        auto num_elements {num_atoms() * num_atoms()};
         std::set<shell_t> unique(shell_m.data(), shell_m.data() + num_elements);
         m_available_shells = std::vector<shell_t>(unique.begin(), unique.end());
         std::sort(m_available_shells.begin(), m_available_shells.end());
@@ -49,7 +49,14 @@ namespace sqsgenerator {
             if (shell_weights.count(s)) m_shell_weights.emplace(std::make_pair(s, shell_weights.at(s)));
         }
         if (m_shell_weights.empty()) throw std::invalid_argument("None of the shells you have specified are available");
-        std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(structure.configuration());
+        configuration_t configuration;
+        std::tie(m_arrange_forward, m_arrange_backward, configuration, m_shuffling_bounds) = build_configuration(m_structure.configuration(), composition);
+        std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(configuration);
+
+        BOOST_LOG_TRIVIAL(debug) << "IterationSettings::ctor::built_configuration = " << format_vector(configuration);
+        BOOST_LOG_TRIVIAL(debug) << "IterationSettings::ctor::packed_configuration = " << format_vector(m_packed_configuration);
+        BOOST_LOG_TRIVIAL(debug) << "IterationSettings::ctor::initial_configuration = " << format_vector(m_structure.configuration());
+
         init_prefactors();
     }
 
@@ -197,5 +204,17 @@ namespace sqsgenerator {
 
     [[nodiscard]] double IterationSettings::rtol() const {
         return m_rtol;
+    }
+
+    [[nodiscard]] arrangement_t IterationSettings::arrange_forward() const {
+        return m_arrange_forward;
+    }
+
+    [[nodiscard]] arrangement_t IterationSettings::arrange_backward() const {
+        return m_arrange_backward;
+    }
+
+    [[nodiscard]] shuffling_bounds_t IterationSettings::shuffling_bounds() const {
+        return m_shuffling_bounds;
     }
 }
