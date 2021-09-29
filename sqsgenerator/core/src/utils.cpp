@@ -23,7 +23,6 @@ namespace sqsgenerator::utils {
     }
 
     std::tuple<configuration_t, configuration_t> pack_configuration(const configuration_t &configuration) {
-
         auto unique_spec { unique_species(configuration) };
         std::sort(unique_spec.begin(), unique_spec.end());
         configuration_t remapped(configuration);
@@ -77,9 +76,91 @@ namespace sqsgenerator::utils {
             auto window_size = upper_bound - lower_bound;
             for (uint32_t i = window_size; i > 1; i--) {
                 uint32_t p = random_bounded(i, seed); // number in [0,i)
-                std::swap(configuration[i-1+lower_bound], configuration[p+lower_bound]); // swap the values at i-1 and p
+                std::swap(configuration[lower_bound+i-1], configuration[p+lower_bound]); // swap the values at i-1 and p
             }
         }
 
+    }
+
+    std::set<species_t> compute_occupied_sublattices(const composition_t &composition) {
+        std::set<species_t> used_sublattices;
+        for (auto const&[_, sublattice_spec]: composition)
+            for (auto const &[destination_sublattice, __]: sublattice_spec)
+                used_sublattices.insert(destination_sublattice);
+        return used_sublattices;
+    }
+
+    shuffling_bounds_t compute_shuffling_bounds(const configuration_t &initial, const composition_t &composition) {
+        auto unique_spec_initial(unique_species(initial));
+        auto hist_initial(configuration_histogram(initial));
+        auto used_sublattices(compute_occupied_sublattices(composition));
+
+        shuffling_bounds_t bounds;
+
+        size_t lower_bound = 0;
+        for (auto i = 0; i < unique_spec_initial.size(); i++) {
+            size_t num_atoms_on_sublattice {hist_initial[i]};
+            size_t upper_bound {lower_bound + num_atoms_on_sublattice};
+            // if the current sublattice is not occupied we do not shuffle this region of the configuration array
+            // therefore, we check if the current sublattice is used at all
+            if (used_sublattices.count(unique_spec_initial[i]))
+                bounds.emplace_back(std::make_tuple(lower_bound, upper_bound));
+            lower_bound += num_atoms_on_sublattice;
+        }
+
+        return bounds;
+    }
+
+    shuffling_bounds_t default_shuffling_bounds(const configuration_t &initial) {
+        return { {0, initial.size()} };
+    }
+
+    bool need_sublattice_bounds(const composition_t &composition) {
+        auto used_sublattices(compute_occupied_sublattices(composition));
+        if (used_sublattices.size() == 1) {
+            return *used_sublattices.begin() != ALL_SITES;
+        }
+        return true;
+    }
+
+    auto build_configuration(const configuration_t &initial, const composition_t &composition) {
+        if (composition.empty()) throw std::invalid_argument("composition map cannot be empty");
+
+        auto rearrange_forward = sqsgenerator::utils::argsort(initial);
+        auto rearrange_backward = sqsgenerator::utils::argsort(rearrange_forward);
+        auto unique_spec_initial(unique_species(initial));
+        auto hist_initial(configuration_histogram(initial));
+        auto is_constrained = need_sublattice_bounds(composition);
+        auto bounds (is_constrained ? compute_shuffling_bounds(initial, composition) : default_shuffling_bounds(initial));
+
+        std::set<size_t> used_sublattices;
+        std::vector<configuration_t> sublattice_configurations(is_constrained ? unique_spec_initial.size() : 1);
+
+        for (auto const&[distribute_species, sublattice_spec]: composition) {
+            if (sublattice_spec.empty()) throw std::invalid_argument("composition spec for element \"Z="+std::to_string(distribute_species)+"\" cannot be an empty map");
+            for (auto const &[destination_sublattice, distribute_num_atoms]: sublattice_spec) {
+                if (is_constrained && destination_sublattice == ALL_SITES) throw std::invalid_argument(
+                        "constrained composition specs, thus I cannot distribute \"Z=" +
+                        std::to_string(distribute_species)+
+                        "\" on all available sites. You must explicitly specify on which sublattice those atoms must be placed");
+                int index {destination_sublattice == ALL_SITES ? 0 : get_index(unique_spec_initial, destination_sublattice)};
+                if (index < 0) throw std::runtime_error("The sublattice \"Z=" + std::to_string(destination_sublattice) + "\" is not specified in the initial structure");
+                for (auto i = 0; i < distribute_num_atoms; i++) sublattice_configurations[index].push_back(distribute_species);
+            }
+        }
+        // There might be the case that there is a sublattice on which no atoms were distributes
+        // In this case we fill it up with the species itself
+        configuration_t final_configuration;
+        for (auto i = 0; i < unique_spec_initial.size(); i++) {
+            auto conf = sublattice_configurations[i];
+            if (conf.empty()) conf.resize(hist_initial[i], unique_spec_initial[i]);
+            if (conf.size() != hist_initial[i])
+                throw std::invalid_argument("Wrong number of atoms distributed on sublattice "
+                                            "\"Z=" + std::to_string(unique_spec_initial[i]) + "\" Should " +
+                                            std::to_string(hist_initial[i]) + " is " + std::to_string(conf.size()));
+            final_configuration.insert(final_configuration.end(), conf.begin(), conf.end());
+        }
+
+        return std::make_tuple(rearrange_forward, rearrange_backward, final_configuration, bounds);
     }
 }

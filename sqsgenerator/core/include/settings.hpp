@@ -29,7 +29,7 @@ namespace sqsgenerator {
         array_3d_t m_parameter_weights;
         array_3d_t m_target_objective;
         array_3d_t m_parameter_prefactors;
-        shuffling_bounds_t m_bounds;
+        composition_t m_composition;
         std::vector<shell_t> m_available_shells;
         std::vector<double> m_shell_distances;
         std::vector<int> m_threads_per_rank;
@@ -40,6 +40,7 @@ namespace sqsgenerator {
 
         IterationSettings(
                 Structure &structure,
+                composition_t composition,
                 const_array_3d_ref_t target_objective,
                 const_array_3d_ref_t parameter_weights,
                 pair_shell_weights_t shell_weights,
@@ -49,19 +50,19 @@ namespace sqsgenerator {
                 std::vector<int> threads_per_rank,
                 double atol=1.0e-5,
                 double rtol=1.05e-8,
-                shuffling_bounds_t bounds = shuffling_bounds_t(),
                 iteration_mode mode = iteration_mode::random);
 
         IterationSettings(
                 Structure &structure,
+                composition_t composition,
                 const_array_3d_ref_t target_objective,
                 const_array_3d_ref_t parameter_weights,
-                pair_shell_weights_t shell_weights, int iterations,
+                pair_shell_weights_t shell_weights,
+                int iterations,
                 int output_configurations,
                 std::vector<int> threads_per_rank,
                 double atol=1.0e-5,
                 double rtol=1.05e-8,
-                shuffling_bounds_t bounds = shuffling_bounds_t(),
                 iteration_mode mode = iteration_mode::random);
 
         [[nodiscard]] double atol() const;
@@ -77,7 +78,7 @@ namespace sqsgenerator {
         [[nodiscard]] int num_output_configurations() const;
         [[nodiscard]] pair_shell_weights_t shell_weights() const;
         [[nodiscard]] configuration_t packed_configuraton() const;
-        [[nodiscard]] shuffling_bounds_t shuffling_bounds() const;
+        [[nodiscard]] composition_t composition() const;
         [[nodiscard]] std::vector<shell_t> available_shells() const;
         [[nodiscard]] const_array_3d_ref_t parameter_weights() const;
         [[nodiscard]] const_array_3d_ref_t target_objective() const;

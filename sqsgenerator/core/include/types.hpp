@@ -17,12 +17,14 @@
 #include <boost/numeric/ublas/storage.hpp>
 
 namespace sqsgenerator {
+
     typedef int species_t;
     typedef int shell_t;
     typedef boost::multiprecision::cpp_int rank_t;
     typedef std::map<int, std::vector<double>> timing_map_t;
-    typedef boost::multi_array<shell_t, 2> pair_shell_matrix_t;
+    typedef std::map<species_t, std::map<species_t, int>> composition_t;
     typedef std::vector<std::tuple<size_t, size_t>> shuffling_bounds_t;
+    typedef boost::multi_array<shell_t, 2> pair_shell_matrix_t;
     typedef boost::const_multi_array_ref<shell_t, 2> const_pair_shell_matrix_ref_t;
     typedef boost::multi_array_ref<shell_t, 2> pair_shell_matrix_ref_t;
     typedef boost::multi_array<double, 2> array_2d_t;
@@ -46,5 +48,6 @@ namespace sqsgenerator {
     // The array consists of {size_t i, size_t j, size_t shell, size_t shell_index}
     typedef std::array<pair_shell_matrix_t::index, 4> AtomPair;
 
+    constexpr species_t ALL_SITES = -1;
 }
 #endif //SQSGENERATOR_TYPES_HPP
