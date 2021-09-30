@@ -176,7 +176,7 @@ class Structure(Structure_):
         :rtype: Structure
         :raises ValueError: if length of which is < 1 or length of {which} and {species} does not match
         """
-        which = which or tuple(range)
+        which = which or tuple(range(len(self)))
         species = list(species)
         if len(species) < 1:
             raise ValueError('Cannot create an empty structure')

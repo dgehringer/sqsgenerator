@@ -3,8 +3,9 @@ import typing as T
 from attrdict import AttrDict
 from sqsgenerator.core import IterationSettings
 from sqsgenerator.settings.defaults import defaults
+from sqsgenerator.settings.utils import build_structure
 from sqsgenerator.settings.exceptions import BadSettings
-from sqsgenerator.settings.readers import process_settings, parameter_list
+from sqsgenerator.settings.readers import process_settings, parameter_list, to_internal_composition_specs
 
 
 def construct_settings(settings: AttrDict, process: T.Optional[bool] = True, **overloads) -> IterationSettings:
@@ -32,6 +33,7 @@ def construct_settings(settings: AttrDict, process: T.Optional[bool] = True, **o
 
     return IterationSettings(
         settings.structure,
+        to_internal_composition_specs(settings.composition, settings.structure),
         settings.target_objective,
         settings.pair_weights,
         dict(settings.shell_weights),
@@ -41,8 +43,7 @@ def construct_settings(settings: AttrDict, process: T.Optional[bool] = True, **o
         list(settings.threads_per_rank),
         settings.atol,
         settings.rtol,
-        settings.mode,
-        []  # TODO: remove empty list here []
+        settings.mode
     )
 
 
@@ -51,5 +52,6 @@ __all__ = [
     'parameter_list',
     'process_settings',
     'construct_settings',
-    'defaults'
+    'defaults',
+    'build_structure'
 ]

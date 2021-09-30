@@ -9,7 +9,7 @@ from sqsgenerator.core.core import set_log_level, pair_sqs_iteration, pair_analy
 from sqsgenerator.core.core import IterationMode, IterationSettings, BoostLogLevel
 from sqsgenerator.core.structure import Structure, structure_to_dict, Atom, make_supercell
 from sqsgenerator.core.core import default_shell_distances, total_permutations, rank_structure, atoms_from_numbers, \
-    atoms_from_symbols, available_species, symbols_from_z, build_configuration
+    atoms_from_symbols, available_species, symbols_from_z, z_from_symbols, build_configuration, ALL_SITES
 
 __all__ = [
     '__version__',
@@ -33,7 +33,9 @@ __all__ = [
     'atoms_from_symbols',
     'available_species',
     'symbols_from_z',
-    'build_configuration'
+    'z_from_symbols',
+    'build_configuration',
+    'ALL_SITES'
 ]
 
 attr = operator.attrgetter
@@ -53,7 +55,7 @@ log_levels = frozendict.frozendict(
 )
 
 
-def set_core_log_level(level: int = logging.WARNING) -> T.NoReturn:
+def set_core_log_level(level: int = TRACE) -> T.NoReturn:
     level_map = {
         TRACE: BoostLogLevel.trace,
         logging.DEBUG: BoostLogLevel.debug,
@@ -69,3 +71,4 @@ def get_function_logger(f: T.Callable) -> logging.Logger:
 
 
 set_core_log_level()
+

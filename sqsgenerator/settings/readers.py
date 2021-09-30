@@ -19,48 +19,17 @@ from sqsgenerator.io import read_structure_from_file
 from sqsgenerator.settings.exceptions import BadSettings
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature
 from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure
-from sqsgenerator.settings.functional import parameter as parameter_, if_, isa, star
-from sqsgenerator.core import IterationMode, available_species, Structure, make_supercell, build_configuration
+from sqsgenerator.settings.functional import parameter as parameter_, if_, isa
 from sqsgenerator.settings.defaults import defaults, random_mode, num_shells, num_species
+from sqsgenerator.core import IterationMode, Structure, make_supercell
+from sqsgenerator.settings.utils import ensure_array_shape, ensure_array_symmetric, convert, int_safe, \
+    to_internal_composition_specs, build_structure
 
 __parameter_registry = collections.OrderedDict({})
 
 # the parameter decorator registers all the "processor" function with their names in __parameter_registry
 # the ordering will be according to their definition in this file
 parameter = partial(parameter_, registry=__parameter_registry)
-
-
-def ensure_array_shape(o: np.ndarray, shape: tuple, msg: T.Optional[str] = None):
-    if o.shape != shape:
-        raise (BadSettings(msg) if msg is not None else BadSettings)
-
-
-def ensure_array_symmetric(o: np.ndarray, msg: T.Optional[str] = None):
-    error = BadSettings(msg) if msg is not None else BadSettings
-    if o.ndim == 2:
-        if not np.allclose(o, o.T):
-            raise error
-    elif o.ndim == 3:
-        for i, oo in enumerate(o, start=1):
-            if not np.allclose(oo, oo.T):
-                raise error
-    return True
-
-
-def int_safe(x):
-    return int(float(x))
-
-
-def convert(o, to=int, converter=None, on_fail=BadSettings, message=None):
-    if isinstance(o, to):
-        return o
-    try:
-        r = (to if converter is None else converter)(o)
-    except (ValueError, TypeError):
-        if on_fail is not None:
-            raise on_fail(message) if message is not None else on_fail()
-    else:
-        return r
 
 
 @parameter('atol', default=defaults.atol)
@@ -180,47 +149,13 @@ def read_which(settings: AttrDict):
 
 @parameter('composition', default=defaults.composition, required=True)
 def read_composition(settings: AttrDict):
-    which = settings.which
+    structure = settings.structure[settings.which]
+    if not isinstance(settings.composition, dict):
+        raise BadSettings(f'Cannot interpret "composition" settings. I expect a dictionary')
 
-    if not isinstance(settings.composition, (dict, collections.abc.Iterable)):
-        raise BadSettings(f'Cannot interpret "composition" setting. I expect a dictionary or an iterable of strings')
-
-    print(settings.structure.numbers)
-    composition = {
-        5: {7: 8, 22: 8},
-        7: {7: 16},
-        22: {22: 16},
-        13: {22: 8, 7: 8},
-    }
-    fwd, bckwd, conf = build_configuration(settings.structure.numbers.tolist(), composition)
+    build_structure(settings.composition, structure)
     # print(settings.structure.numbers[fwd], "\n", settings.structure.numbers[fwd][bckwd])
-    print(np.array(conf)[fwd])
-    print(np.array(conf))
-
-    # in case it is a dictionary we expand it
-    allowed_symbols = set(map(attr('symbol'), available_species()))
-    if isinstance(settings.composition, dict):
-        for species, amount in settings.composition.items():
-            if not isinstance(amount, int) or amount < 1:
-                raise BadSettings(f'I can only distribute an integer number of atoms '
-                                  f'on the "{species}" sublattice. You specified "{amount}"')
-        species = list(chain(*map(star(repeat), settings.composition.items())))
-    else:
-        species = list(settings.composition)
-
-    # in case 0 - a vacancy is present, the parser might return it as a number rather than as "0"
-    species = list(map(str, species))
-    if not all(map(lambda s: s in allowed_symbols, species)):
-            raise BadSettings(f'You composition contains unkown elements. Please use a real chemical elements!')
-
-    num_distributed_atoms = len(species)
-    num_atoms_on_sublattice = len(which)
-
-    if num_distributed_atoms != num_atoms_on_sublattice:
-        raise BadSettings(f'The sublattice has {num_atoms_on_sublattice} '
-                          f'but you tried to distribute {num_distributed_atoms} atoms')
-
-    return species
+    return settings.composition
 
 
 @parameter('shell_distances', default=defaults.shell_distances, required=True)
