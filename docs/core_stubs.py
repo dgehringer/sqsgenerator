@@ -7,6 +7,7 @@ is linked against is not found, this module fakes the core.so such that imports 
 __version__ = (1, 2, 3, 4)
 __features__ = {}
 
+ALL_SITES = -1
 
 class SQSResult:
     pass
@@ -77,4 +78,12 @@ def available_species(*args, **kwargs):
 
 
 def symbols_from_z(*args, **kwargs):
+    pass
+
+
+def z_from_symbols(*args, **kwargs):
+    pass
+
+
+def build_configuration(*args, **kwargs):
     pass

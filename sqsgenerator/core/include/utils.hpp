@@ -16,6 +16,7 @@ using namespace boost;
 using namespace boost::numeric::ublas;
 
 namespace boost{
+
     template<class MultiArray>
     void extent_to(MultiArray & ma, const MultiArray & other){ //this function is adapted from
         auto& otherShape = reinterpret_cast<boost::array<size_t, MultiArray::dimensionality> const&>(*other.shape());
@@ -97,12 +98,22 @@ namespace boost{
         return message.str();
     }
 
+    template<typename T1>
+    using formatter_t = std::function<std::string(const T1&)>;
+
     template<typename T1, typename T1Cast = T1>
-    std::string format_vector(std::vector<T1> values) {
+    std::function<std::string(const T1&)> make_default_formatter() {
+        return [](const T1 &v) {
+          return std::to_string(static_cast<T1Cast>(v));
+        };
+    }
+
+    template<typename T1, typename T1Cast = T1>
+    std::string format_vector(std::vector<T1> values, formatter_t<T1> formatter = make_default_formatter<T1, T1Cast>()) {
         std::stringstream message;
         message << "{";
-        for (auto it = values.begin(); it != values.end() - 1; ++it) message << static_cast<T1Cast>(*it) << ", ";
-        message << static_cast<T1Cast>(values.back()) << "}";
+        for (auto it = values.begin(); it != values.end() - 1; ++it) message << formatter(*it) << ", ";
+        message << formatter(values.back()) << "}";
         return message.str();
     }
 
@@ -129,9 +140,6 @@ namespace boost{
         }
         return message.str();
     }
-
-
-
 }
 
 namespace sqsgenerator::utils {
@@ -175,14 +183,76 @@ namespace sqsgenerator::utils {
             return result;
         }
 
+        template<typename T>
+        std::vector<size_t> argsort(const std::vector<T> &array) {
+            std::vector<size_t> indices(array.size());
+            std::iota(indices.begin(), indices.end(), 0);
+            std::sort(indices.begin(), indices.end(),
+                      [&array](int left, int right) -> bool {
+                          // sort indices according to corresponding array element
+                          return array[left] < array[right];
+                      });
+
+            return indices;
+        }
+
+        template<typename T>
+        std::vector<T> rearrange(const std::vector<T> &input, const std::vector<size_t> &by) {
+            return apply<T, size_t>(by, [&input](const size_t index) -> T { return input[index]; });
+        }
+
+    template<typename Iterable>
+    class enumerate_object
+    {
+    private:
+        Iterable _iter;
+        std::size_t _size;
+        decltype(std::begin(_iter)) _begin;
+        const decltype(std::end(_iter)) _end;
+
+        public:
+            enumerate_object(Iterable iter):
+                    _iter(iter),
+                    _size(0),
+                    _begin(std::begin(iter)),
+                    _end(std::end(iter))
+            {}
+
+            const enumerate_object& begin() const { return *this; }
+            const enumerate_object& end()   const { return *this; }
+
+            bool operator!=(const enumerate_object&) const
+            {
+                return _begin != _end;
+            }
+
+            void operator++()
+            {
+                ++_begin;
+                ++_size;
+            }
+
+            auto operator*() const-> std::pair<std::size_t, decltype(*_begin)>
+            {
+                return { _size, *_begin };
+            }
+        };
+
+        template<typename Iterable>
+        auto enumerate(Iterable&& iter)-> enumerate_object<Iterable>
+        {
+            return { std::forward<Iterable>(iter) };
+        }
+
         configuration_t unique_species(configuration_t conf);
         std::vector<size_t> configuration_histogram(const configuration_t &conf);
         std::tuple<configuration_t, configuration_t> pack_configuration(const configuration_t &configuration);
         configuration_t unpack_configuration(const configuration_t &indices, const configuration_t &packed);
+        std::tuple<arrangement_t, arrangement_t, configuration_t, shuffling_bounds_t> build_configuration(const configuration_t &initial, const composition_t &composition);
 
         // random number generator
         uint32_t random_bounded(uint32_t range, uint64_t *seed);
-        void shuffle_configuration(configuration_t &configuration, uint64_t *seed);
+        void shuffle_configuration(configuration_t &configuration, uint64_t *seed, const shuffling_bounds_t &bounds);
 };
 
 

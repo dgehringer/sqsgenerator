@@ -135,16 +135,16 @@ namespace sqsgenerator::utils::atomistics {
 
     Atom Atoms::from_z(species_t Z) {
         if (static_cast<species_t>(Z) > Atoms::m_elements.size() - 1) {
-            throw std::invalid_argument("No elements known with Z=" + std::to_string(Z));
+            throw std::invalid_argument("No element known with Z=" + std::to_string(Z));
         }
         return Atoms::m_elements[Z];
     }
 
     Atom Atoms::from_symbol(const std::string &symbol) {
         if (!Atoms::m_symbol_map.count(symbol)) {
-            throw std::invalid_argument("No elements known with \"" + symbol + "\"");
+            throw std::invalid_argument("No element is known with a chemical symbol \"" + symbol + "\"");
         }
-        size_t index = {Atoms::m_symbol_map.at(symbol)};
+        int index = {Atoms::m_symbol_map.at(symbol)};
         return Atoms::m_elements[index];
     }
 
@@ -176,13 +176,11 @@ namespace sqsgenerator::utils::atomistics {
         return Atoms::m_elements;
     }
 
-
     Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc)
           : m_lattice(lattice),
             m_frac_coords(frac_coords),
             m_pbc(pbc),
-            m_species(species)
-            {
+            m_species(species) {
         typedef array_2d_t::index index_t;
         index_t natoms {static_cast<index_t>(species.size())};
         auto frac_coords_shape {shape_from_multi_array(frac_coords)};
@@ -191,7 +189,7 @@ namespace sqsgenerator::utils::atomistics {
         // Make sure the number of atoms in the species vector match the number of fractional coordinates provided
         if(frac_coords_shape[0] != species.size()) throw std::invalid_argument("The number of fractional coords does not match the number of atoms. Expected: (" + std::to_string(natoms) + "x3) - Found: (" + std::to_string(frac_coords_shape[0]) + "x" + std::to_string(frac_coords_shape[1])+")" );
         if(frac_coords_shape[1] != 3) throw std::invalid_argument("You have not supplied 3D fractional coordinates. Expected: (" + std::to_string(natoms) + "x3) - Found: (" + std::to_string(natoms) + "x" + std::to_string(frac_coords_shape[1])+")" );
-        if(lattice_shape[0] != 3 || lattice_shape[1] != 3) throw std::invalid_argument("A lattice must be specied by supplying a (3x3) matrix. Expected: (3x3) - Found: (" + std::to_string(lattice_shape[0]) + "x" + std::to_string(lattice_shape[1])+")");
+        if(lattice_shape[0] != 3 || lattice_shape[1] != 3) throw std::invalid_argument("A lattice must be specified by supplying a (3x3) matrix. Expected: (3x3) - Found: (" + std::to_string(lattice_shape[0]) + "x" + std::to_string(lattice_shape[1])+")");
 
         m_pbc_vecs.resize(boost::extents[natoms][natoms][3]);
         m_pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(boost::matrix_from_multi_array(m_lattice),
@@ -204,13 +202,25 @@ namespace sqsgenerator::utils::atomistics {
 
     Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords,
                          std::vector<std::string> species, std::array<bool, 3> pbc) :
-            Structure(lattice, frac_coords, Atoms::from_symbol(species), pbc) {}
+        Structure(lattice, frac_coords, Atoms::from_symbol(species), pbc) {}
 
-            Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords,
-                         configuration_t species,
+    Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, configuration_t species,
                          std::array<bool, 3> pbc) :
-            Structure(lattice, frac_coords, Atoms::from_z(species), pbc) {}
+        Structure(lattice, frac_coords, Atoms::from_z(species), pbc) {}
 
+
+    Structure::Structure(const Structure& other) :
+        Structure(other.m_lattice, other.m_frac_coords, other.m_species, other.m_pbc) { }
+
+    Structure::Structure(Structure&& other) :
+            m_natoms(other.m_natoms),
+            m_lattice(std::move(other.m_lattice)),
+            m_frac_coords(std::move(other.m_frac_coords)),
+            m_distance_matrix(std::move(other.m_distance_matrix)),
+            m_pbc_vecs(std::move(other.m_pbc_vecs)),
+            m_pbc(std::move(other.m_pbc)),
+            m_species(std::move(other.m_species))
+    {}
 
     const_array_2d_ref_t Structure::lattice() const {
         return m_lattice;
@@ -244,7 +254,6 @@ namespace sqsgenerator::utils::atomistics {
         return sqsgenerator::utils::shell_matrix(m_distance_matrix, shell_distances, atol, rtol);
     }
 
-
     configuration_t Structure::configuration() const {
         configuration_t conf;
         for (auto &atom : m_species) conf.push_back(atom.Z);
@@ -261,4 +270,27 @@ namespace sqsgenerator::utils::atomistics {
         return m_natoms;
     }
 
+    Structure Structure::sorted() const {
+        return this->rearranged(argsort(configuration()));
+    }
+
+    Structure Structure::rearranged(const arrangement_t &order) const {
+        if (order.size() != m_natoms)
+            throw std::invalid_argument("Rearrange list's length does not match the length of this structure");
+        auto tmp_frac_coords(m_frac_coords);
+        configuration_t tmp_conf(m_natoms);
+
+        for (auto&& pack: enumerate(order)) {
+            auto[index, sort_index] = pack;
+            tmp_frac_coords[index] = m_frac_coords[sort_index];
+            tmp_conf[index] = m_species[sort_index].Z;
+        }
+        return Structure(this->m_lattice, tmp_frac_coords, tmp_conf, this->m_pbc);
+    }
+
+    Structure Structure::with_species(const configuration_t &species) const {
+        if (species.size() != m_natoms)
+            throw std::invalid_argument("Species list's length does not match the length of this structure");
+        return Structure(this->m_lattice, this->m_frac_coords, species, this->m_pbc);
+    }
 }

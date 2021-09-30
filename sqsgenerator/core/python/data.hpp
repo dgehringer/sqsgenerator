@@ -48,6 +48,8 @@ namespace sqsgenerator::python {
 //        np::ndarray shell_matrix(const py::list &distances, double atol=1.0e-5, double rtol=1.0e-8);
         size_t num_atoms();
         std::shared_ptr<atomistics::Structure> handle();
+        StructurePythonWrapper sorted();
+        StructurePythonWrapper rearranged(py::object order);
     };
 
     typedef std::vector<SQSResultPythonWrapper> SQSResultCollection;

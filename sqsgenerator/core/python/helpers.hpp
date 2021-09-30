@@ -148,5 +148,7 @@ namespace sqsgenerator::python::helpers {
         }
         return dictionary;
     }
+
+    composition_t convert_composition(const py::dict &composition);
 }
 #endif //SQSGENERATOR_HELPERS_HPP

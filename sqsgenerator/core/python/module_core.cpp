@@ -133,6 +133,12 @@ py::list symbols_from_z(const py::object &iterable) {
     return helpers::vector_to_list(symbols);
 }
 
+py::list z_from_symbols(const py::object &iterable) {
+    auto symbols = helpers::list_to_vector<std::string>(iterable);
+    std::vector<species_t> ordinals = atomistics::Atoms::symbol_to_z(symbols);
+    return helpers::vector_to_list(ordinals);
+}
+
 py::list available_species() {
     return helpers::vector_to_list(atomistics::Atoms::all_elements());
 }
@@ -141,6 +147,18 @@ py::list default_shell_distances_wrapped(StructurePythonWrapper &s, double atol=
     return helpers::vector_to_list(sqsgenerator::utils::default_shell_distances(s.handle()->distance_matrix(), atol, rtol));
 }
 
+py::tuple build_configuration_wrapped(py::object configuration, py::dict composition) {
+    configuration_t conf(helpers::list_to_vector<species_t>(configuration));
+    composition_t comp(helpers::convert_composition(composition));
+    auto [arrange_forward, arrange_backward, built_configuration, _] = build_configuration(conf, comp);
+    return py::make_tuple(
+        helpers::vector_to_list(arrange_forward),
+        helpers::vector_to_list(arrange_backward),
+        helpers::vector_to_list(built_configuration)
+    );
+}
+
+
 BOOST_PYTHON_MODULE(core) {
         Py_Initialize();
         np::initialize();
@@ -148,10 +166,10 @@ BOOST_PYTHON_MODULE(core) {
         initialize_converters();
 
         py::class_<SQSResultPythonWrapper>("SQSResult", py::no_init)
-        .def_readonly("objective", &SQSResultPythonWrapper::objective)
-        .def_readonly("rank", &SQSResultPythonWrapper::rank)
-        .def_readonly("configuration", &SQSResultPythonWrapper::configuration)
-        .def("parameters", &SQSResultPythonWrapper::parameters);
+            .def_readonly("objective", &SQSResultPythonWrapper::objective)
+            .def_readonly("rank", &SQSResultPythonWrapper::rank)
+            .def_readonly("configuration", &SQSResultPythonWrapper::configuration)
+            .def("parameters", &SQSResultPythonWrapper::parameters);
 
 
         py::class_<atomistics::Atom>("Atom", py::no_init)
@@ -170,44 +188,45 @@ BOOST_PYTHON_MODULE(core) {
             .def_readonly("distance_matrix", &StructurePythonWrapper::distance_matrix)
             //.def<np::ndarray(StructurePythonWrapper::*)(const py::list&, double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
             //.def<np::ndarray(StructurePythonWrapper::*)(double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
-            .def_readonly("pbc", &StructurePythonWrapper::pbc);
+            .def_readonly("pbc", &StructurePythonWrapper::pbc)
+            .def("sorted", &StructurePythonWrapper::sorted)
+            .def("rearranged", &StructurePythonWrapper::rearranged);
 
         py::class_<SQSResultCollection>("SQSResultCollection")
-        .def("__len__", &SQSResultCollection::size)
-        .def("__getitem__", &helpers::std_item<SQSResultCollection>::get,
-            py::return_value_policy<py::copy_non_const_reference>())
-        .def("__iter__", py::iterator<SQSResultCollection>());
+            .def("__len__", &SQSResultCollection::size)
+            .def("__getitem__", &helpers::std_item<SQSResultCollection>::get,
+                py::return_value_policy<py::copy_non_const_reference>())
+            .def("__iter__", py::iterator<SQSResultCollection>());
 
         py::enum_<iteration_mode>("IterationMode")
-        .value("random", sqsgenerator::random)
-        .value("systematic", sqsgenerator::systematic);
+            .value("random", sqsgenerator::random)
+            .value("systematic", sqsgenerator::systematic);
 
         py::enum_<boost::log::trivial::severity_level>("BoostLogLevel")
-        .value("trace", boost::log::trivial::trace)
-        .value("debug", boost::log::trivial::debug)
-        .value("info", boost::log::trivial::info)
-        .value("warning", boost::log::trivial::warning)
-        .value("error", boost::log::trivial::error)
-        .value("fatal", boost::log::trivial::fatal);
+            .value("trace", boost::log::trivial::trace)
+            .value("debug", boost::log::trivial::debug)
+            .value("info", boost::log::trivial::info)
+            .value("warning", boost::log::trivial::warning)
+            .value("error", boost::log::trivial::error)
+            .value("fatal", boost::log::trivial::fatal);
 
         py::class_<pair_shell_weights_t>("ShellWeights")
-        .def(py::map_indexing_suite<pair_shell_weights_t>());
+            .def(py::map_indexing_suite<pair_shell_weights_t>());
         //StructurePythonWrapper wrapper, double target_objective, np::ndarray parameter_weights, pair_shell_weights_t shell_weights, int iterations, int output_configurations, int iteration_mode, uint8_t prec
-        py::class_<IterationSettingsPythonWrapper>("IterationSettings",py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, py::list, iteration_mode>())
-        .def(py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, py::list, double, double, iteration_mode>())
-        .def(py::init<StructurePythonWrapper, np::ndarray, np::ndarray, py::dict, int, int, py::list, py::list, double, double, iteration_mode>())
-        .def_readonly("num_atoms", &IterationSettingsPythonWrapper::num_atoms)
-        .def_readonly("num_shells", &IterationSettingsPythonWrapper::num_shells)
-        .def_readonly("num_iterations", &IterationSettingsPythonWrapper::num_iterations)
-        .def_readonly("num_species", &IterationSettingsPythonWrapper::num_species)
-        .def_readonly("num_output_configurations", &IterationSettingsPythonWrapper::num_output_configurations)
-        .def_readonly("mode", &IterationSettingsPythonWrapper::mode)
-        .def_readonly("structure", &IterationSettingsPythonWrapper::structure)
-        .def_readonly("target_objective", &IterationSettingsPythonWrapper::target_objective)
-        .def_readonly("shell_weights", &IterationSettingsPythonWrapper::shell_weights)
-        .def_readonly("parameter_weights", &IterationSettingsPythonWrapper::parameter_weights)
-        .def_readonly("atol", &IterationSettingsPythonWrapper::atol)
-        .def_readonly("rtol", &IterationSettingsPythonWrapper::rtol);
+        py::class_<IterationSettingsPythonWrapper>("IterationSettings", py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, int, int, py::list, double, double, iteration_mode>())
+            .def(py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, int, int, py::list, py::list, double, double, iteration_mode>())
+            .def_readonly("num_atoms", &IterationSettingsPythonWrapper::num_atoms)
+            .def_readonly("num_shells", &IterationSettingsPythonWrapper::num_shells)
+            .def_readonly("num_iterations", &IterationSettingsPythonWrapper::num_iterations)
+            .def_readonly("num_species", &IterationSettingsPythonWrapper::num_species)
+            .def_readonly("num_output_configurations", &IterationSettingsPythonWrapper::num_output_configurations)
+            .def_readonly("mode", &IterationSettingsPythonWrapper::mode)
+            .def_readonly("structure", &IterationSettingsPythonWrapper::structure)
+            .def_readonly("target_objective", &IterationSettingsPythonWrapper::target_objective)
+            .def_readonly("shell_weights", &IterationSettingsPythonWrapper::shell_weights)
+            .def_readonly("parameter_weights", &IterationSettingsPythonWrapper::parameter_weights)
+            .def_readonly("atol", &IterationSettingsPythonWrapper::atol)
+            .def_readonly("rtol", &IterationSettingsPythonWrapper::rtol);
 
         py::def("set_log_level", &set_log_level);
         py::def("pair_sqs_iteration", &pair_sqs_iteration);
@@ -228,8 +247,13 @@ BOOST_PYTHON_MODULE(core) {
         py::def("atoms_from_symbols", &atoms_from_symbols);
 
         py::def("symbols_from_z", &symbols_from_z);
+        py::def("z_from_symbols", &z_from_symbols);
 
         py::def("available_species", &available_species);
+
+        py::def("build_configuration", &build_configuration_wrapped);
+
+        py::scope().attr("ALL_SITES") = ALL_SITES;
 
         py::list features;
 #ifdef _OPENMP

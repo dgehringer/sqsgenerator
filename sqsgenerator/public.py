@@ -4,7 +4,7 @@ import typing as T
 from attrdict import AttrDict
 from operator import attrgetter as attr
 from sqsgenerator.settings.readers import read_structure
-from sqsgenerator.settings import construct_settings, process_settings
+from sqsgenerator.settings import construct_settings, process_settings, build_structure
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
     SQSResult, symbols_from_z, Structure, pair_analysis, available_species, make_supercell, IterationMode
 
@@ -109,8 +109,7 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
     :return: the minimal configuration and the corresponding Short-range-order parameters as well as timing information
     :rtype: Tuple[Iterable[:py:class:`sqsgenerator.public.SQSResult`], Dict[``int``, ``float``]]
     """
-    structure = settings.structure.slice_with_species(settings.composition, settings.which)
-    iteration_settings = construct_settings(settings, False, structure=structure)
+    iteration_settings = construct_settings(settings, False, structure=settings.structure[settings.which])
     set_core_log_level(log_levels.get(log_level))
     sqs_results, timings = pair_sqs_iteration_core(iteration_settings)
 

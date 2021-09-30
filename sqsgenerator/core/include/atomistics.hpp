@@ -22,6 +22,7 @@ namespace sqsgenerator::utils::atomistics {
      * functions of `Atoms`.
      */
     class Atom {
+
     public:
         const species_t Z; /**< The ordinal number of the element in the periodic table */
         const std::string name; /**< The full english name of the element. E. g. "Iron" */
@@ -39,6 +40,7 @@ namespace sqsgenerator::utils::atomistics {
     class Atoms {
 
     private:
+        friend class Structure;
         const static std::vector<Atom> m_elements; /** < the list of elements available */
         static std::map<std::string , species_t> make_symbol_map() {
             static std::map<std::string, species_t> symbol_map;
@@ -105,7 +107,12 @@ namespace sqsgenerator::utils::atomistics {
         Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc);
         Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, std::vector<std::string> species, std::array<bool, 3> pbc);
         Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, configuration_t species, std::array<bool, 3> pbc);
+        Structure(const Structure& other);
+        Structure(Structure&& other);
 
+        [[nodiscard]] Structure sorted() const;
+        [[nodiscard]] Structure rearranged(const arrangement_t &order) const;
+        [[nodiscard]] Structure with_species(const configuration_t &species) const;
         [[nodiscard]] size_t num_atoms() const;
         [[nodiscard]] const_array_2d_ref_t lattice() const;
         [[nodiscard]] const_array_2d_ref_t frac_coords() const;
@@ -121,7 +128,6 @@ namespace sqsgenerator::utils::atomistics {
         static std::vector<AtomPair> create_pair_list(pair_shell_matrix_t shell_matrix, const std::map<shell_t, double> &weights) {
             return sqsgenerator::utils::create_pair_list(shell_matrix, weights);
         }
-
 
     };
 }

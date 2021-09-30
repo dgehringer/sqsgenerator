@@ -8,6 +8,7 @@ from sqsgenerator.cli import cli
 from cli import inject_config_file
 from sqsgenerator.io import read_settings_file
 from sqsgenerator.public import process_settings
+from sqsgenerator.settings import build_structure
 from sqsgenerator.core import rank_structure, default_shell_distances
 
 
@@ -35,7 +36,7 @@ class TestComputeCommand(unittest.TestCase):
     @inject_config_file()
     def test_compute_distances(self):
         settings = process_settings(read_settings_file('sqs.yaml'))
-        structure = settings.structure.slice_with_species(settings.composition, settings.which)
+        structure = build_structure(settings.composition, settings.structure[settings.which])
         r = self.cli_runner.invoke(cli, ['compute', 'shell-distances'])
         np.testing.assert_array_almost_equal(eval(r.output), default_shell_distances(structure, settings.atol, settings.rtol))
         self.assertEqual(r.exit_code, 0)
