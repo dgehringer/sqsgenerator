@@ -48,10 +48,6 @@ namespace sqsgenerator {
     typedef boost::const_multi_array_ref<shell_t, 2> const_pair_shell_matrix_ref_t;
     typedef boost::multi_array_ref<shell_t, 2> pair_shell_matrix_ref_t;
 
-
-
-
-
     using get_next_configuration_t = std::function<bool(configuration_t&)>;
     using get_next_configuration_ptr_t = std::function<bool(species_t*, size_t)>;
     template<size_t NDims>

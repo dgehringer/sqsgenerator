@@ -55,7 +55,7 @@ log_levels = frozendict.frozendict(
 )
 
 
-def set_core_log_level(level: int = TRACE) -> T.NoReturn:
+def set_core_log_level(level: int = logging.WARNING) -> T.NoReturn:
     level_map = {
         TRACE: BoostLogLevel.trace,
         logging.DEBUG: BoostLogLevel.debug,
@@ -63,7 +63,8 @@ def set_core_log_level(level: int = TRACE) -> T.NoReturn:
         logging.WARNING: BoostLogLevel.warning,
         logging.ERROR: BoostLogLevel.error
     }
-    set_log_level(level_map.get(level))
+    # set_log_level(level_map.get(level))
+    set_log_level(BoostLogLevel.debug)
 
 
 def get_function_logger(f: T.Callable) -> logging.Logger:

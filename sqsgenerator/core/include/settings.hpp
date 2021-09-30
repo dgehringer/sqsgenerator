@@ -16,7 +16,7 @@ namespace sqsgenerator {
     class IterationSettings {
 
     private:
-        Structure &m_structure;
+        Structure m_structure;
         composition_t m_composition;
         double m_atol;
         double m_rtol;
@@ -42,7 +42,7 @@ namespace sqsgenerator {
     public:
 
         IterationSettings(
-                Structure &structure,
+                Structure structure,
                 composition_t composition,
                 const_array_3d_ref_t target_objective,
                 const_array_3d_ref_t parameter_weights,
@@ -56,7 +56,7 @@ namespace sqsgenerator {
                 iteration_mode mode = iteration_mode::random);
 
         IterationSettings(
-                Structure &structure,
+                Structure structure,
                 composition_t composition,
                 const_array_3d_ref_t target_objective,
                 const_array_3d_ref_t parameter_weights,

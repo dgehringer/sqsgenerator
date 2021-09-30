@@ -2,8 +2,10 @@
 // Created by dominik on 08.07.21.
 //
 #include "settings.hpp"
-#include <stdexcept>
+#include <cassert>
 #include <utility>
+#include <stdexcept>
+
 
 using namespace sqsgenerator::utils;
 
@@ -11,8 +13,13 @@ namespace sqsgenerator {
 
     typedef array_3d_t::index index_t;
 
+    Structure build_structure_from_composition(const Structure &structure, const composition_t &composition) {
+        auto [arrange_forward, _, configuration, __] =  build_configuration(structure.configuration(), composition);
+        return structure.with_species(configuration).rearranged(arrange_forward);
+    }
+
     IterationSettings::IterationSettings(
-            Structure &structure,
+            Structure structure,
             composition_t composition,
             const_array_3d_ref_t target_objective,
             const_array_3d_ref_t parameter_weights,
@@ -24,13 +31,13 @@ namespace sqsgenerator {
             double atol,
             double rtol,
             iteration_mode mode) :
-        m_structure(structure),
+        m_structure(build_structure_from_composition(structure, composition)),
         m_composition(composition),
         m_atol(atol),
         m_rtol(rtol),
         m_niterations(iterations),
         m_noutput_configurations(output_configurations),
-        m_nspecies(unique_species(structure.configuration()).size()),
+        m_nspecies(unique_species(m_structure.configuration()).size()),
         m_mode(mode),
         m_parameter_weights(parameter_weights),
         m_target_objective(target_objective),
@@ -50,18 +57,19 @@ namespace sqsgenerator {
         }
         if (m_shell_weights.empty()) throw std::invalid_argument("None of the shells you have specified are available");
         configuration_t configuration;
-        std::tie(m_arrange_forward, m_arrange_backward, configuration, m_shuffling_bounds) = build_configuration(m_structure.configuration(), composition);
+        std::tie(m_arrange_forward, m_arrange_backward, configuration, m_shuffling_bounds) = build_configuration(structure.configuration(), composition);
+        // build_structure arranges the structure in forward arrangement (sorted by species)
+        // we have to do the same with the configuration
+        configuration = rearrange(configuration, m_arrange_forward);
+        assert(configuration.size() == m_structure.num_atoms());
+
+        for (auto i = 0; i < m_structure.num_atoms(); i++) assert(m_structure.configuration()[i] == configuration[i]);
         std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(configuration);
-
-        BOOST_LOG_TRIVIAL(debug) << "IterationSettings::ctor::built_configuration = " << format_vector(configuration);
-        BOOST_LOG_TRIVIAL(debug) << "IterationSettings::ctor::packed_configuration = " << format_vector(m_packed_configuration);
-        BOOST_LOG_TRIVIAL(debug) << "IterationSettings::ctor::initial_configuration = " << format_vector(m_structure.configuration());
-
         init_prefactors();
     }
 
     IterationSettings::IterationSettings(
-            Structure &structure,
+            Structure structure,
             composition_t composition,
             const_array_3d_ref_t target_objective,
             const_array_3d_ref_t parameter_weights,

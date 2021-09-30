@@ -16,6 +16,7 @@ using namespace boost;
 using namespace boost::numeric::ublas;
 
 namespace boost{
+
     template<class MultiArray>
     void extent_to(MultiArray & ma, const MultiArray & other){ //this function is adapted from
         auto& otherShape = reinterpret_cast<boost::array<size_t, MultiArray::dimensionality> const&>(*other.shape());
@@ -97,12 +98,22 @@ namespace boost{
         return message.str();
     }
 
+    template<typename T1>
+    using formatter_t = std::function<std::string(const T1&)>;
+
     template<typename T1, typename T1Cast = T1>
-    std::string format_vector(std::vector<T1> values) {
+    std::function<std::string(const T1&)> make_default_formatter() {
+        return [](const T1 &v) {
+          return std::to_string(static_cast<T1Cast>(v));
+        };
+    }
+
+    template<typename T1, typename T1Cast = T1>
+    std::string format_vector(std::vector<T1> values, formatter_t<T1> formatter = make_default_formatter<T1, T1Cast>()) {
         std::stringstream message;
         message << "{";
-        for (auto it = values.begin(); it != values.end() - 1; ++it) message << static_cast<T1Cast>(*it) << ", ";
-        message << static_cast<T1Cast>(values.back()) << "}";
+        for (auto it = values.begin(); it != values.end() - 1; ++it) message << formatter(*it) << ", ";
+        message << formatter(values.back()) << "}";
         return message.str();
     }
 
@@ -129,9 +140,6 @@ namespace boost{
         }
         return message.str();
     }
-
-
-
 }
 
 namespace sqsgenerator::utils {

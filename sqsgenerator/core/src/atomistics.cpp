@@ -202,13 +202,25 @@ namespace sqsgenerator::utils::atomistics {
 
     Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords,
                          std::vector<std::string> species, std::array<bool, 3> pbc) :
-            Structure(lattice, frac_coords, Atoms::from_symbol(species), pbc) {}
+        Structure(lattice, frac_coords, Atoms::from_symbol(species), pbc) {}
 
-            Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords,
-                         configuration_t species,
+    Structure::Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, configuration_t species,
                          std::array<bool, 3> pbc) :
-            Structure(lattice, frac_coords, Atoms::from_z(species), pbc) {}
+        Structure(lattice, frac_coords, Atoms::from_z(species), pbc) {}
 
+
+    Structure::Structure(const Structure& other) :
+        Structure(other.m_lattice, other.m_frac_coords, other.m_species, other.m_pbc) { }
+
+    Structure::Structure(Structure&& other) :
+            m_natoms(other.m_natoms),
+            m_lattice(std::move(other.m_lattice)),
+            m_frac_coords(std::move(other.m_frac_coords)),
+            m_distance_matrix(std::move(other.m_distance_matrix)),
+            m_pbc_vecs(std::move(other.m_pbc_vecs)),
+            m_pbc(std::move(other.m_pbc)),
+            m_species(std::move(other.m_species))
+    {}
 
     const_array_2d_ref_t Structure::lattice() const {
         return m_lattice;
@@ -262,9 +274,9 @@ namespace sqsgenerator::utils::atomistics {
         return this->rearranged(argsort(configuration()));
     }
 
-    Structure Structure::rearranged(const std::vector<size_t> &order) const {
+    Structure Structure::rearranged(const arrangement_t &order) const {
         if (order.size() != m_natoms)
-            throw std::invalid_argument("Rearrange list's length does not match this structure");
+            throw std::invalid_argument("Rearrange list's length does not match the length of this structure");
         auto tmp_frac_coords(m_frac_coords);
         configuration_t tmp_conf(m_natoms);
 
@@ -273,7 +285,12 @@ namespace sqsgenerator::utils::atomistics {
             tmp_frac_coords[index] = m_frac_coords[sort_index];
             tmp_conf[index] = m_species[sort_index].Z;
         }
-        return Structure(this->m_lattice, tmp_frac_coords, tmp_conf, m_pbc);
+        return Structure(this->m_lattice, tmp_frac_coords, tmp_conf, this->m_pbc);
     }
 
+    Structure Structure::with_species(const configuration_t &species) const {
+        if (species.size() != m_natoms)
+            throw std::invalid_argument("Species list's length does not match the length of this structure");
+        return Structure(this->m_lattice, this->m_frac_coords, species, this->m_pbc);
+    }
 }

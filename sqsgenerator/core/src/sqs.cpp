@@ -38,6 +38,14 @@ namespace sqsgenerator {
         BOOST_LOG_TRIVIAL(info) << function_name << "::settings::num_iterations = " << settings.num_iterations();
         BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::num_output_configurations = " << settings.num_output_configurations();
         BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::num_pairs = " << settings.pair_list().size();
+        BOOST_LOG_TRIVIAL(trace) << function_name << "::settings::built_configuration = " << format_vector(settings.structure().rearranged(settings.arrange_backward()).configuration());
+        BOOST_LOG_TRIVIAL(trace) << function_name << "::settings::built_configuration_internal = " << format_vector(settings.structure().configuration());
+        BOOST_LOG_TRIVIAL(trace) << function_name << "::settings::packed_configuration = " << format_vector(settings.packed_configuraton());
+        formatter_t<std::tuple<size_t, size_t>> bounds_formatter = [](const std::tuple<size_t, size_t> &v) {
+            return "(" + std::to_string(static_cast<int>(std::get<0>(v)))
+                       + ", " + std::to_string(static_cast<int>(std::get<1>(v))) + ")";
+        };
+        BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::shuffling_bounds = " << format_vector(settings.shuffling_bounds(), bounds_formatter);
     }
 
     inline
@@ -407,10 +415,15 @@ namespace sqsgenerator {
 #endif
         std::unordered_set<rank_t> ranks;
         for (auto &r : tmp_results) {
-            // rank computation is relatively demanding, in the main loop we only set it to {-1}
-            rank_t rank = rank_permutation(r.configuration(), settings.num_species());
+            /* rank computation is relatively demanding, in the main loop we only set it to {-1}
+             * internally the structure's lattice positions are ordered by the ordinal numbers of the occupying
+             * species therefore we have to arrange it into the initial positions
+             */
+            configuration_t ordered_configuration(rearrange(r.configuration(), settings.arrange_backward()));
+            // we compute the rank after rearranging
+            rank_t rank = rank_permutation(ordered_configuration, settings.num_species());
             r.set_rank(rank);
-            r.set_configuration(settings.unpack_configuration(r.configuration()));
+            r.set_configuration(settings.unpack_configuration(ordered_configuration));
             BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::conf = " << format_sqs_result(r);
             if (settings.mode() == random && !ranks.insert(rank).second) {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::duplicate_configuration = " << rank;

@@ -154,7 +154,6 @@ def read_composition(settings: AttrDict):
         raise BadSettings(f'Cannot interpret "composition" settings. I expect a dictionary')
 
     build_structure(settings.composition, structure)
-    # print(settings.structure.numbers[fwd], "\n", settings.structure.numbers[fwd][bckwd])
     return settings.composition
 
 

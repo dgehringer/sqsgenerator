@@ -4,8 +4,7 @@ from attrdict import AttrDict
 from operator import itemgetter as item
 from sqsgenerator.settings.utils import build_structure
 from sqsgenerator.settings.functional import const, if_
-from sqsgenerator.core import IterationMode, Structure, default_shell_distances as default_shell_distances_core, \
-    build_configuration
+from sqsgenerator.core import IterationMode, Structure, default_shell_distances as default_shell_distances_core
 
 
 ATOL = 1e-3
@@ -17,7 +16,7 @@ def num_shells(settings: AttrDict):
 
 
 def num_species(settings: AttrDict):
-    return settings.structure.slice_with_species(settings.composition, settings.which).num_unique_species
+    return build_structure(settings.composition, settings.structure[settings.which]).num_unique_species
 
 
 def random_mode(settings) -> bool:
