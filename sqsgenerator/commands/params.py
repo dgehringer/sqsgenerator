@@ -7,7 +7,7 @@ import click
 from sqsgenerator.io import dumps, to_dict
 from sqsgenerator.commands.common import pretty_print, click_settings_file
 from sqsgenerator.commands.help import command_help as c_help, parameter_help as help
-from sqsgenerator.settings import process_settings, parameter_list, construct_settings
+from sqsgenerator.settings import process_settings, parameter_list, construct_settings, build_structure
 
 
 @click.command('show', help=c_help.params.show)
@@ -41,7 +41,11 @@ def show(settings, param=None, output_format='yaml', inplace=False):
 @click.command('check', help=c_help.params.check)
 @click_settings_file('all')
 def check(settings):
-    construct_settings(settings, process=False)
+    construct_settings(
+        settings,
+        process=False,
+        structure=build_structure(settings.composition, settings.structure[settings.which])
+    )
 
 
 @click.group('params', help=c_help.params.command)

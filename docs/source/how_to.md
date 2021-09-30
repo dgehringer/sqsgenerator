@@ -193,7 +193,7 @@ If the `--export` switch is passed, the above mentioned switches
 (`--format`/`-f`, `--writer`/`-w` and `--compress`/`-c`) can be using in combination with the `run iteration` command
 
 ```{code-block} bash
-sqsgen run iteration -e -f vasp -c xz -w pymatgen
+sqsgen run iteration -e -f poscar -c xz -w pymatgen
 ```
 will run an iteration and export all computed structures in **POSCAR** format using **pymatgen** in an archive 
 **sqs.results.tar.xz**

@@ -38,6 +38,14 @@ namespace sqsgenerator {
         BOOST_LOG_TRIVIAL(info) << function_name << "::settings::num_iterations = " << settings.num_iterations();
         BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::num_output_configurations = " << settings.num_output_configurations();
         BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::num_pairs = " << settings.pair_list().size();
+        BOOST_LOG_TRIVIAL(trace) << function_name << "::settings::built_configuration = " << format_vector(settings.structure().rearranged(settings.arrange_backward()).configuration());
+        BOOST_LOG_TRIVIAL(trace) << function_name << "::settings::built_configuration_internal = " << format_vector(settings.structure().configuration());
+        BOOST_LOG_TRIVIAL(trace) << function_name << "::settings::packed_configuration = " << format_vector(settings.packed_configuraton());
+        formatter_t<std::tuple<size_t, size_t>> bounds_formatter = [](const std::tuple<size_t, size_t> &v) {
+            return "(" + std::to_string(static_cast<int>(std::get<0>(v)))
+                       + ", " + std::to_string(static_cast<int>(std::get<1>(v))) + ")";
+        };
+        BOOST_LOG_TRIVIAL(debug) << function_name << "::settings::shuffling_bounds = " << format_vector(settings.shuffling_bounds(), bounds_formatter);
     }
 
     inline
@@ -53,7 +61,7 @@ namespace sqsgenerator {
             auto sj {configuration[*(it + 1)]};
             auto shell{*(it + 2)};
             bonds[shell * num_sro_params + sj * nspecies + si]++;
-            // write to (sj,si) only if si != sj
+            // std::cout << "pair=(" << (int) (*it) << ", " << (int) (*(it + 1)) << "), species=(" << (int) si << ", " << (int) sj << ")" << std::endl;
             if (si != sj) bonds[shell * num_sro_params + si * nspecies + sj]++;
         }
     }
@@ -167,6 +175,8 @@ namespace sqsgenerator {
         size_t nspecies {settings.num_species()};
         size_t nparams {nshells * nspecies * nspecies};
 
+        shuffling_bounds_t shuffling_bounds (settings.shuffling_bounds());
+
         parameter_storage_t target_objectives (boost::to_flat_vector(settings.target_objective()));
         parameter_storage_t parameter_weights (boost::to_flat_vector(settings.parameter_weights()));
         parameter_storage_t parameter_prefactors (boost::to_flat_vector(settings.parameter_prefactors()));
@@ -239,8 +249,8 @@ namespace sqsgenerator {
                         random_seed_local = std::rand() * (thread_id + 1);
                         BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::random_seed = " << random_seed_local;
                     }
-                    get_next_configuration = [&random_seed_local](configuration_t &c) {
-                        shuffle_configuration(c, &random_seed_local);
+                    get_next_configuration = [&random_seed_local, &shuffling_bounds](configuration_t &c) {
+                        shuffle_configuration(c, &random_seed_local, shuffling_bounds);
                         return true;
                     };
                 } break;
@@ -405,10 +415,15 @@ namespace sqsgenerator {
 #endif
         std::unordered_set<rank_t> ranks;
         for (auto &r : tmp_results) {
-            // rank computation is relatively demanding, in the main loop we only set it to {-1}
-            rank_t rank = rank_permutation(r.configuration(), settings.num_species());
+            /* rank computation is relatively demanding, in the main loop we only set it to {-1}
+             * internally the structure's lattice positions are ordered by the ordinal numbers of the occupying
+             * species therefore we have to arrange it into the initial positions
+             */
+            configuration_t ordered_configuration(rearrange(r.configuration(), settings.arrange_backward()));
+            // we compute the rank after rearranging
+            rank_t rank = rank_permutation(ordered_configuration, settings.num_species());
             r.set_rank(rank);
-            r.set_configuration(settings.unpack_configuration(r.configuration()));
+            r.set_configuration(settings.unpack_configuration(ordered_configuration));
             BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::conf = " << format_sqs_result(r);
             if (settings.mode() == random && !ranks.insert(rank).second) {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::duplicate_configuration = " << rank;
@@ -426,7 +441,18 @@ namespace sqsgenerator {
                 nspecies{settings.num_species()},
                 nparams {nshells * nspecies * nspecies};
         configuration_t configuration(settings.packed_configuraton());
-        std::vector<size_t> pair_list(convert_pair_list(settings.pair_list()));
+        /*
+         * the structure in IterationSettings::ctor was orderd with ascending species with have manually undo that here
+         * we have to do the following steps.
+         *   - rearrange structure
+         *   - recalculate shell_matrix
+         *   - recalculate pair_list
+         */
+        auto real_structure = settings.structure().rearranged(settings.arrange_backward());
+        auto real_shell_matrix = real_structure.shell_matrix(settings.atol(), settings.rtol());
+        auto real_pair_list = Structure::create_pair_list(real_shell_matrix, settings.shell_weights());
+        configuration = rearrange(configuration, settings.arrange_backward());
+        std::vector<size_t> pair_list(convert_pair_list(real_pair_list));
         std::vector<size_t> hist(utils::configuration_histogram(settings.packed_configuraton()));
 
         parameter_storage_t target_objectives (boost::to_flat_vector(settings.target_objective()));

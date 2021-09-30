@@ -107,9 +107,12 @@ namespace sqsgenerator::utils::atomistics {
         Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, std::vector<Atom> species, std::array<bool, 3> pbc);
         Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, std::vector<std::string> species, std::array<bool, 3> pbc);
         Structure(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, configuration_t species, std::array<bool, 3> pbc);
+        Structure(const Structure& other);
+        Structure(Structure&& other);
 
         [[nodiscard]] Structure sorted() const;
-        [[nodiscard]] Structure rearranged(const std::vector<size_t> &order) const;
+        [[nodiscard]] Structure rearranged(const arrangement_t &order) const;
+        [[nodiscard]] Structure with_species(const configuration_t &species) const;
         [[nodiscard]] size_t num_atoms() const;
         [[nodiscard]] const_array_2d_ref_t lattice() const;
         [[nodiscard]] const_array_2d_ref_t frac_coords() const;

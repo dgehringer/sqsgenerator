@@ -1,3 +1,4 @@
+
 import functools
 import io
 import random
@@ -22,7 +23,7 @@ from sqsgenerator.settings.readers import read_atol, \
     read_target_objective, \
     read_threads_per_rank, \
     read_max_output_configurations, \
-    BadSettings, IterationMode, Structure, process_settings
+    BadSettings, IterationMode, Structure, process_settings, build_structure
 
 
 def settings(recursive=True, **kwargs):
@@ -188,22 +189,6 @@ class TestSettingReaders(unittest.TestCase):
             ff(composition=dict(Fr=27, Na='asdf'))
 
         with self.assertRaises(BadSettings):
-            # wrong number of atoms on sublattice
-            f(structure=self.structure, composition=dict(Fr=27, Kf=27), which='Cs')
-
-        with self.assertRaises(BadSettings):
-            # non existing sublattice
-            f(structure=self.structure, composition=dict(Fr=14, K=13), which='Na')
-
-        with self.assertRaises(BadSettings):
-            # index out of bounds in sublattice specification
-            f(structure=self.structure, composition=dict(Fr=2, Na=2), which=(0,1,2,4, self.structure.num_atoms+4))
-
-        with self.assertRaises(BadSettings):
-            # index out of bounds in sublattice specification
-            f(structure=self.structure, composition=dict(Fr=2, Na=2), which=(0, 1, 2, 4, 'g'))
-
-        with self.assertRaises(BadSettings):
             # too few atoms on sublattice
             f(structure=self.structure, composition=dict(Fr=0, Na=1), which=(0,))
 
@@ -299,7 +284,7 @@ class TestSettingReaders(unittest.TestCase):
         ns = self.structure.num_unique_species
 
         def make_actual_structure(settings):
-            return settings.structure[settings.which].slice_with_species(settings.composition)
+            return build_structure(settings.composition, settings.structure[settings.which])
 
         ns = make_actual_structure(self.processed).num_unique_species
         num_shells = len(self.processed.shell_weights)

@@ -23,6 +23,7 @@ add_library(core SHARED
         module_core.cpp
         data.cpp
         iteration.cpp
+        helpers.cpp
         ${SQSGENERATOR_SOURCE_DIR}/sqs.cpp
         ${SQSGENERATOR_SOURCE_DIR}/settings.cpp
         ${SQSGENERATOR_SOURCE_DIR}/atomistics.cpp
