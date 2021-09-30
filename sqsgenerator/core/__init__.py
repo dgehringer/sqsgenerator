@@ -63,13 +63,12 @@ def set_core_log_level(level: int = logging.WARNING) -> T.NoReturn:
         logging.WARNING: BoostLogLevel.warning,
         logging.ERROR: BoostLogLevel.error
     }
-    # set_log_level(level_map.get(level))
-    set_log_level(BoostLogLevel.debug)
+    set_log_level(level_map.get(level))
 
 
 def get_function_logger(f: T.Callable) -> logging.Logger:
     return logging.getLogger(f.__module__ + '.' + f.__name__)
 
 
-set_core_log_level()
+set_core_log_level(logging.WARNING)
 

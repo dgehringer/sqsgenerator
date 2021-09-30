@@ -55,6 +55,8 @@ def to_internal_composition_specs(composition: dict, structure: Structure):
     def parse_value(v: T.Union[int, dict]):
         if isinstance(v, numbers.Number):
             v = parse_number_of_atoms(v)
+            if v < 1:
+                raise BadSettings('You have distribute at least one atom')
             return {ALL_SITES: v}
         elif isinstance(v, dict):
             if not all(s in initial_species for s in v.keys()):

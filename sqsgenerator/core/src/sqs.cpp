@@ -61,7 +61,7 @@ namespace sqsgenerator {
             auto sj {configuration[*(it + 1)]};
             auto shell{*(it + 2)};
             bonds[shell * num_sro_params + sj * nspecies + si]++;
-            // write to (sj,si) only if si != sj
+            // std::cout << "pair=(" << (int) (*it) << ", " << (int) (*(it + 1)) << "), species=(" << (int) si << ", " << (int) sj << ")" << std::endl;
             if (si != sj) bonds[shell * num_sro_params + si * nspecies + sj]++;
         }
     }
@@ -441,7 +441,18 @@ namespace sqsgenerator {
                 nspecies{settings.num_species()},
                 nparams {nshells * nspecies * nspecies};
         configuration_t configuration(settings.packed_configuraton());
-        std::vector<size_t> pair_list(convert_pair_list(settings.pair_list()));
+        /*
+         * the structure in IterationSettings::ctor was orderd with ascending species with have manually undo that here
+         * we have to do the following steps.
+         *   - rearrange structure
+         *   - recalculate shell_matrix
+         *   - recalculate pair_list
+         */
+        auto real_structure = settings.structure().rearranged(settings.arrange_backward());
+        auto real_shell_matrix = real_structure.shell_matrix(settings.atol(), settings.rtol());
+        auto real_pair_list = Structure::create_pair_list(real_shell_matrix, settings.shell_weights());
+        configuration = rearrange(configuration, settings.arrange_backward());
+        std::vector<size_t> pair_list(convert_pair_list(real_pair_list));
         std::vector<size_t> hist(utils::configuration_histogram(settings.packed_configuraton()));
 
         parameter_storage_t target_objectives (boost::to_flat_vector(settings.target_objective()));
