@@ -7,9 +7,9 @@ import click
 import numpy as np
 import collections
 from math import isclose
-from sqsgenerator.settings import construct_settings
-from sqsgenerator.commands.common import click_settings_file, pretty_print
 from sqsgenerator.commands.help import command_help as c_help
+from sqsgenerator.settings import construct_settings, build_structure
+from sqsgenerator.commands.common import click_settings_file, pretty_print
 from sqsgenerator.core import total_permutations as total_permutations_, default_shell_distances, \
     rank_structure as rank_structure_core, IterationMode, pair_sqs_iteration
 
@@ -17,7 +17,7 @@ from sqsgenerator.core import total_permutations as total_permutations_, default
 @click.command('total-permutations', help=c_help.compute.total_permutations)
 @click_settings_file({'structure', 'mode', 'iterations', 'composition'})
 def total_permutations(settings):
-    structure = settings.structure.slice_with_species(settings.composition, which=settings.which)
+    structure = build_structure(settings.composition, settings.structure[settings.which])
     permutations = total_permutations_(structure) \
         if settings.mode == IterationMode.systematic else settings.iterations
     pretty_print(permutations)
@@ -27,7 +27,7 @@ def total_permutations(settings):
 @click.command('shell-distances', help=c_help.compute.shell_distances)
 @click_settings_file({'atol', 'rtol', 'structure', 'which', 'composition'})
 def shell_distances(settings):
-    structure = settings.structure.slice_with_species(settings.composition, settings.which)
+    structure = build_structure(settings.composition, settings.structure[settings.which])
     distances = default_shell_distances(structure, settings.atol, settings.rtol)
     pretty_print(distances)
     return distances
@@ -80,12 +80,12 @@ def format_seconds(seconds: float) -> str:
 @click_settings_file('all')
 def estimate_time(settings, verbose):
     have_random_mode = settings.mode == IterationMode.random
-    structure = settings.structure.slice_with_species(settings.composition, which=settings.which)
+    structure = build_structure(settings.composition, settings.structure[settings.which])
     num_iterations = settings.iterations if have_random_mode else total_permutations_(structure)
     num_test_iterations = 100000
     default_guess_settings = dict(iterations=num_test_iterations, mode=IterationMode.random)
     settings.update(default_guess_settings)
-    iteration_settings = construct_settings(settings, False)
+    iteration_settings = construct_settings(settings, False, structure=structure)
 
     t0 = time.time()
     _, timings = pair_sqs_iteration(iteration_settings)
