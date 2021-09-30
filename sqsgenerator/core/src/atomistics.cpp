@@ -135,14 +135,14 @@ namespace sqsgenerator::utils::atomistics {
 
     Atom Atoms::from_z(species_t Z) {
         if (static_cast<species_t>(Z) > Atoms::m_elements.size() - 1) {
-            throw std::invalid_argument("No elements known with Z=" + std::to_string(Z));
+            throw std::invalid_argument("No element known with Z=" + std::to_string(Z));
         }
         return Atoms::m_elements[Z];
     }
 
     Atom Atoms::from_symbol(const std::string &symbol) {
         if (!Atoms::m_symbol_map.count(symbol)) {
-            throw std::invalid_argument("No elements known with \"" + symbol + "\"");
+            throw std::invalid_argument("No element is known with a chemical symbol \"" + symbol + "\"");
         }
         int index = {Atoms::m_symbol_map.at(symbol)};
         return Atoms::m_elements[index];

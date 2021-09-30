@@ -133,6 +133,12 @@ py::list symbols_from_z(const py::object &iterable) {
     return helpers::vector_to_list(symbols);
 }
 
+py::list z_from_symbols(const py::object &iterable) {
+    auto symbols = helpers::list_to_vector<std::string>(iterable);
+    std::vector<species_t> ordinals = atomistics::Atoms::symbol_to_z(symbols);
+    return helpers::vector_to_list(ordinals);
+}
+
 py::list available_species() {
     return helpers::vector_to_list(atomistics::Atoms::all_elements());
 }
@@ -241,10 +247,13 @@ BOOST_PYTHON_MODULE(core) {
         py::def("atoms_from_symbols", &atoms_from_symbols);
 
         py::def("symbols_from_z", &symbols_from_z);
+        py::def("z_from_symbols", &z_from_symbols);
 
         py::def("available_species", &available_species);
 
         py::def("build_configuration", &build_configuration_wrapped);
+
+        py::scope().attr("ALL_SITES") = ALL_SITES;
 
         py::list features;
 #ifdef _OPENMP
