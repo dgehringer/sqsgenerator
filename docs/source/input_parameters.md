@@ -55,15 +55,18 @@ In case the code runs with MPI parallelization, **each MPI rank** will generate 
 The composition of the output configuration, defined as an dictionary.  Keys are symbols of chemical elements, 
 whereas values are the number of atoms of the corresponding species. The number in the dict-values or the length of the 
 specified **match** the number of specified positions on the sublattice. See {ref}`which <input-param-which>` input
-parameter
+parameter. The composition parameter might be also used to pin atomic species on current sublattices
 
 - **Required:** Yes
-- **Accepted:** 
-  - a list with chemical symbols (`list[str]`)
-  - a dictionary with chemical symbols as keys (`dict[str, int]`) 
+- **Accepted:**
+  - a dictionary with chemical symbols as keys and numbers as values (`dict[str, int]`)
+  - a dictionary with chemical symbols as keys and dict as values (`dict[str, dict[str, int]]`)
 
 ```{note}
-The sum of the atoms distributed must **exactly** match the number of positions on the lattice 
+ - The sum of the atoms distributed must **exactly** match the number of positions on the lattice
+   In combination with {ref}`which <input-param-which>` the number must match, the amount of selected sites
+ - If you explicitly pin atomic species on certain sublattices (see examples below) you have to specify it for all
+   - If you do that the number of distributed atoms must match the number of lattice positions on the specified sublattice
 ```
 
 #### Examples
@@ -84,11 +87,22 @@ The sum of the atoms distributed must **exactly** match the number of positions 
       0: 8
     ```
 
-- consider a $\text{W}_{0.5}\text{Re}_{0.5}$ alloy with only 16 atoms. In this case we can also
-  use a slightly more verbose notation to specify the composition
+- consider a $\text{Ti}_{0.5}\text{N}_{0.5}$ supercell with 64 atoms. 
+  Let's $(\text{Ti}_{0.25}\text{Al}_{0.25})(\text{B}_{0.25}\text{N}_{0.25})$ create an alloy from this cell.
+  The input structure provides us with 32 lattice position of Ti and 32 positions of N. However boron will sit only on 
+  the nitrogen sites, while aluminium will most likely occupy only titanium sites. Therefore, we can constrain how 
+  `sqsgenerator` will distribute the atoms 
 
     ```{code-block} yaml
-    composition: [W, W, W, W, W, W, W, W, Re, Re, Re, Re, Re, Re, Re, Re]
+    composition: 
+      Ti:
+        Ti: 16 # distribute 16 Ti atoms on the Ti occupied lattice positions of the input structure
+      Al:
+        Ti: 16 # occupy remaining Ti sublattice positions with 16 aluminum atoms
+      N: # occupy the initial 32 nitrogen sites with 16 B and 16 N atoms
+        N: 16
+      B:
+        N: 16      
     ```
 
 ### `which`
