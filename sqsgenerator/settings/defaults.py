@@ -35,7 +35,7 @@ def default_composition(settings: AttrDict):
 
 
 def default_shell_distances(settings: AttrDict):
-    structure = settings.structure[settings.which]
+    structure = settings.structure[settings.which].sorted()
     return default_shell_distances_core(structure, settings.atol, settings.rtol)
 
 

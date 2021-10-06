@@ -90,43 +90,6 @@ namespace sqsgenerator::utils {
             return d2;
         }
 
-        template<typename MultiArray>
-        std::vector<typename MultiArray::element> default_shell_distances(const MultiArray &distance_matrix, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
-            typedef typename MultiArray::index index_t;
-            typedef typename MultiArray::element T;
-            auto shape(shape_from_multi_array(distance_matrix));
-            auto num_atoms {static_cast<index_t>(shape[0])};
-            multi_array<T, 2> rounded(boost::extents[num_atoms][num_atoms]);
-            std::map<T, std::vector<T>> shell_dists;
-
-            auto is_close_tol = [=] (T a, T b) {
-                return is_close(a, b, atol, rtol);
-            };
-
-            std::function<std::tuple<bool, T>(T)> is_shell_border_nearby = [&] (T distance) {
-                for (const auto &found_dist : shell_dists) {if (is_close_tol(distance, found_dist.first)) return std::make_tuple(true, found_dist.first); }
-                return std::make_tuple(false, -1.0);
-            };
-
-
-            for (index_t i = 0; i < num_atoms; i++) {
-                for (index_t j = i; j < num_atoms; j++) {
-                    T distance {distance_matrix[i][j]};
-                    auto [has_shell_nearby, shell_dist] = is_shell_border_nearby(distance);
-                    if (has_shell_nearby) shell_dists[shell_dist].push_back(distance);
-                    else shell_dists[distance].push_back(distance);
-                }
-            }
-
-            std::vector<T> result;
-            for (const auto &pair : shell_dists) result.push_back(*std::max_element(pair.second.begin(), pair.second.end()));
-            std::sort(result.begin(), result.end());
-
-            BOOST_LOG_TRIVIAL(info) << "structure_utils::default_shell_distances::num_distances  = " + std::to_string(result.size());
-            BOOST_LOG_TRIVIAL(info) << "structure_utils::default_shell_distances::distances  = " + format_vector(result);
-
-            return result;
-        }
 
         template<typename MultiArray>
         pair_shell_matrix_t shell_matrix(const MultiArray &distance_matrix, const std::vector<typename MultiArray::element> &distances, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
@@ -136,7 +99,6 @@ namespace sqsgenerator::utils {
             auto shape(shape_from_multi_array(distance_matrix));
             auto num_atoms {static_cast<index_t>(shape[0])};
             pair_shell_matrix_t shells(boost::extents[num_atoms][num_atoms]);
-
             auto is_close_tol = [&atol, &rtol] (T a, T b) {
                 return is_close(a, b, atol, rtol);
             };
@@ -168,6 +130,40 @@ namespace sqsgenerator::utils {
             }
             return shells;
         }
+
+    template<typename MultiArray>
+    std::vector<typename MultiArray::element> default_shell_distances(const MultiArray &distance_matrix, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
+        typedef typename MultiArray::index index_t;
+        typedef typename MultiArray::element T;
+        auto shape(shape_from_multi_array(distance_matrix));
+        auto num_atoms {static_cast<index_t>(shape[0])};
+        multi_array<T, 2> rounded(boost::extents[num_atoms][num_atoms]);
+        std::map<T, std::vector<T>> shell_dists;
+
+        auto is_close_tol = [=] (T a, T b) {
+            return is_close(a, b, atol, rtol);
+        };
+
+        std::function<std::tuple<bool, T>(T)> is_shell_border_nearby = [&] (T distance) {
+            for (const auto &found_dist : shell_dists) {if (is_close_tol(distance, found_dist.first)) return std::make_tuple(true, found_dist.first); }
+            return std::make_tuple(false, -1.0);
+        };
+
+        for (index_t i = 0; i < num_atoms; i++) {
+            for (index_t j = i; j < num_atoms; j++) {
+                T distance {distance_matrix[i][j]};
+                auto [has_shell_nearby, shell_dist] = is_shell_border_nearby(distance);
+                if (has_shell_nearby) shell_dists[shell_dist].push_back(distance);
+                else shell_dists[distance].push_back(distance);
+            }
+        }
+
+        std::vector<T> shell_distances;
+        for (const auto &pair : shell_dists) shell_distances.push_back(*std::max_element(pair.second.begin(), pair.second.end()));
+        std::sort(shell_distances.begin(), shell_distances.end());
+
+        return shell_distances;
+    }
 
         std::map<shell_t, index_t> shell_index_map(const pair_shell_weights_t &weights);
 

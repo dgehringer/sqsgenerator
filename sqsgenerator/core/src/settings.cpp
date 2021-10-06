@@ -118,6 +118,18 @@ namespace sqsgenerator {
             auto neighbor_shell {shell_mat[0][i]};
             if (neighbor_count.count(neighbor_shell)) neighbor_count[neighbor_shell]++;
         }
+
+        auto sum_neighbors {0};
+        for (const auto&[shell_index, shell_atoms] : neighbor_count) {
+            BOOST_LOG_TRIVIAL(debug) << "IterationSettings::ctor::init_prefactors::shell::" << shell_index << "::radius = " << m_shell_distances[shell_index];
+            BOOST_LOG_TRIVIAL(debug) << "IterationSettings::ctor::init_prefactors::shell::" << shell_index << "::num_atoms = " << shell_atoms;
+            if (shell_atoms < 2) BOOST_LOG_TRIVIAL(warning) <<"The coordination shell " + std::to_string(shell_index) + R"( contains no or only one lattice position(s) increase either "atol" or "rtol" or to set the "shell_distances" parameter manually)";
+            if (shell_atoms < 1) throw std::invalid_argument("The coordination shell " + std::to_string(shell_index) + R"( contains no lattice positions. Please increase either "atol" or "rtol" or set the "shell_distances" parameter manually)");
+
+            sum_neighbors += shell_atoms;
+        }
+        BOOST_LOG_TRIVIAL(trace) << "IterationSettings::ctor::init_prefactors::sum_neighbors = " << sum_neighbors;
+
         auto hist = configuration_histogram(m_packed_configuration);
         for (index_t i = 0; i < nshells; i++) {
             double M_i {static_cast<double>(neighbor_count[shells[i]])};
