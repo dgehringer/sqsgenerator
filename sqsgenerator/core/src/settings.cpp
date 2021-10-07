@@ -113,10 +113,29 @@ namespace sqsgenerator {
         std::vector<shell_t> shells = std::get<0>(shell_indices_and_weights());
         std::map<shell_t, size_t> neighbor_count;
         for (const auto &shell: shells) neighbor_count.emplace(std::make_pair(shell, 0));
+
         auto shell_mat = shell_matrix();
-        for (index_t i = 1; i < natoms; i++) {
+        for (auto i = 1; i < natoms; i++) {
             auto neighbor_shell {shell_mat[0][i]};
             if (neighbor_count.count(neighbor_shell)) neighbor_count[neighbor_shell]++;
+        }
+
+        BOOST_LOG_TRIVIAL(warning) << "shell_matrix";
+        for (auto i = 0; i < natoms; i++) {
+            std::map<shell_t, size_t> site_histogram;
+            for (const auto &shell: shells) site_histogram.emplace(std::make_pair(shell, 0));
+
+            for (auto j = 0; j < natoms; j++) {
+                auto neighbor_shell {shell_mat[i][j]};
+                if (site_histogram.count(neighbor_shell)) site_histogram[neighbor_shell]++;
+            }
+            std::vector<shell_t> keys;
+            std::vector<size_t> values;
+            for (const auto &[k, v] : site_histogram) {
+                keys.push_back(k);
+                values.push_back(v);
+            }
+            BOOST_LOG_TRIVIAL(warning) << format_dict(keys, values);
         }
 
         auto sum_neighbors {0};
