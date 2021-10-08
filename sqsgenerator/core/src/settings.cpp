@@ -41,10 +41,9 @@ namespace sqsgenerator {
         m_mode(mode),
         m_parameter_weights(parameter_weights),
         m_target_objective(target_objective),
-        m_parameter_prefactors(boost::extents[static_cast<index_t>(shell_weights.size())][static_cast<index_t>(m_nspecies)][static_cast<index_t>(m_nspecies)]),
+        m_shell_matrix(m_structure.shell_matrix(m_shell_distances, m_atol, m_rtol)),
         m_shell_distances(shell_distances),
-        m_threads_per_rank(threads_per_rank),
-        m_shell_matrix(m_structure.shell_matrix(m_shell_distances, m_atol, m_rtol))
+        m_threads_per_rank(threads_per_rank)
     {
         auto shell_m(shell_matrix());
         auto num_elements {num_atoms() * num_atoms()};
@@ -66,6 +65,9 @@ namespace sqsgenerator {
         for (auto i = 0; i < m_structure.num_atoms(); i++) assert(m_structure.configuration()[i] == configuration[i]);
         std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(configuration);
         init_prefactors();
+        auto prefactors = calculate_prefactors(m_shell_matrix, m_shell_weights, m_packed_configuration);
+        m_parameter_prefactors.resize(prefactors.shape());
+        m_parameter_prefactors = prefactors;
     }
 
     IterationSettings::IterationSettings(
@@ -102,66 +104,6 @@ namespace sqsgenerator {
 
     [[nodiscard]] std::vector<int> IterationSettings::threads_per_rank() const {
         return m_threads_per_rank;
-    }
-
-    void IterationSettings::init_prefactors() {
-        auto nshells {static_cast<index_t>(num_shells())};
-        auto nspecies {static_cast<index_t>(num_species())};
-        auto natoms {static_cast<index_t>(num_atoms())};
-        auto natoms_d {static_cast<double>(num_atoms())};
-
-        std::vector<shell_t> shells = std::get<0>(shell_indices_and_weights());
-        std::map<shell_t, size_t> neighbor_count;
-        for (const auto &shell: shells) neighbor_count.emplace(std::make_pair(shell, 0));
-
-        auto shell_mat = shell_matrix();
-        for (auto i = 1; i < natoms; i++) {
-            auto neighbor_shell {shell_mat[0][i]};
-            if (neighbor_count.count(neighbor_shell)) neighbor_count[neighbor_shell]++;
-        }
-
-        BOOST_LOG_TRIVIAL(warning) << "shell_matrix";
-        for (auto i = 0; i < natoms; i++) {
-            std::map<shell_t, size_t> site_histogram;
-            for (const auto &shell: shells) site_histogram.emplace(std::make_pair(shell, 0));
-
-            for (auto j = 0; j < natoms; j++) {
-                auto neighbor_shell {shell_mat[i][j]};
-                if (site_histogram.count(neighbor_shell)) site_histogram[neighbor_shell]++;
-            }
-            std::vector<shell_t> keys;
-            std::vector<size_t> values;
-            for (const auto &[k, v] : site_histogram) {
-                keys.push_back(k);
-                values.push_back(v);
-            }
-            BOOST_LOG_TRIVIAL(warning) << format_dict(keys, values);
-        }
-
-        auto sum_neighbors {0};
-        for (const auto&[shell_index, shell_atoms] : neighbor_count) {
-            BOOST_LOG_TRIVIAL(debug) << "IterationSettings::ctor::init_prefactors::shell::" << shell_index << "::radius = " << m_shell_distances[shell_index];
-            BOOST_LOG_TRIVIAL(debug) << "IterationSettings::ctor::init_prefactors::shell::" << shell_index << "::num_atoms = " << shell_atoms;
-            if (shell_atoms < 2) BOOST_LOG_TRIVIAL(warning) <<"The coordination shell " + std::to_string(shell_index) + R"( contains no or only one lattice position(s) increase either "atol" or "rtol" or to set the "shell_distances" parameter manually)";
-            if (shell_atoms < 1) throw std::invalid_argument("The coordination shell " + std::to_string(shell_index) + R"( contains no lattice positions. Please increase either "atol" or "rtol" or set the "shell_distances" parameter manually)");
-
-            sum_neighbors += shell_atoms;
-        }
-        BOOST_LOG_TRIVIAL(trace) << "IterationSettings::ctor::init_prefactors::sum_neighbors = " << sum_neighbors;
-
-        auto hist = configuration_histogram(m_packed_configuration);
-        for (index_t i = 0; i < nshells; i++) {
-            double M_i {static_cast<double>(neighbor_count[shells[i]])};
-            for (index_t a = 0; a < nspecies; a++) {
-                double x_a {static_cast<double>(hist[a])/natoms_d};
-                for (index_t b = a; b < nspecies; b++) {
-                    double x_b {static_cast<double>(hist[b])/natoms_d};
-                    double prefactor {1.0/(M_i*x_a*x_b*natoms_d)};
-                    m_parameter_prefactors[i][a][b] = prefactor;
-                    m_parameter_prefactors[i][b][a] = prefactor;
-                }
-            }
-        }
     }
 
     const_pair_shell_matrix_ref_t IterationSettings::shell_matrix() const {
@@ -217,12 +159,7 @@ namespace sqsgenerator {
     }
 
     [[nodiscard]] std::tuple<std::vector<shell_t>, std::vector<double>> IterationSettings::shell_indices_and_weights() const {
-        std::vector<shell_t> shells;
-        std::vector<double> sorted_shell_weights;
-        for (const auto &weight: m_shell_weights) shells.push_back(weight.first);
-        std::sort(shells.begin(), shells.end());
-        for (const auto &shell: shells) sorted_shell_weights.push_back(m_shell_weights.at(shell));
-        return std::make_tuple(shells, sorted_shell_weights);
+        return compute_shell_indices_and_weights(m_shell_weights);
     }
 
     [[nodiscard]] const_array_3d_ref_t IterationSettings::parameter_prefactors() const {

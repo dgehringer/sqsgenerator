@@ -161,14 +161,14 @@ namespace sqsgenerator::utils {
         std::vector<T> shell_distances;
         for (const auto &pair : shell_dists) shell_distances.push_back(*std::max_element(pair.second.begin(), pair.second.end()));
         std::sort(shell_distances.begin(), shell_distances.end());
-
+        BOOST_LOG_TRIVIAL(warning) << "default_shell_distance_num= " << (int) shell_distances.size();
         return shell_distances;
     }
 
-        std::map<shell_t, index_t> shell_index_map(const pair_shell_weights_t &weights);
-
-        std::vector<AtomPair> create_pair_list(const pair_shell_matrix_t &shell_matrix, const std::map<shell_t, double> &weights);
-
-    }
+    std::map<shell_t, index_t> shell_index_map(const pair_shell_weights_t &weights);
+    std::vector<AtomPair> create_pair_list(const pair_shell_matrix_t &shell_matrix, const std::map<shell_t, double> &weights);
+    std::tuple<std::vector<shell_t>, std::vector<double>> compute_shell_indices_and_weights(const pair_shell_weights_t &shell_weights);
+    array_3d_t compute_prefactors(const_pair_shell_matrix_ref_t shell_matrix, const pair_shell_weights_t &shell_weights, const configuration_t &configuration);
+}
 
 #endif //SQSGENERATOR_STRUCTURE_UTILS_HPP
