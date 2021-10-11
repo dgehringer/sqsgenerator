@@ -110,9 +110,7 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
     :rtype: Tuple[Iterable[:py:class:`sqsgenerator.public.SQSResult`], Dict[``int``, ``float``]]
     """
     set_core_log_level(log_levels.get(log_level))
-    print('CREATING SETTINGS')
     iteration_settings = construct_settings(settings, False, structure=settings.structure[settings.which])
-    print(iteration_settings)
     sqs_results, timings = pair_sqs_iteration_core(iteration_settings)
 
     best_result = min(sqs_results, key=attr('objective'))
