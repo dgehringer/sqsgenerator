@@ -44,13 +44,23 @@ def symbol_to_z(symbol: str):
     try:
         return next(iter(z_from_symbols([symbol])))
     except ValueError as e:
-        # is raised by the extension, howver we forward it as BadSettings Error
+        # is raised by the extension, however we forward it as BadSettings Error
         raise BadSettings(e)
 
 
 def to_internal_composition_specs(composition: dict, structure: Structure):
     initial_species = structure.unique_species
     parse_number_of_atoms = partial(convert, to=int, message='Failed to interpret "{0}" as a number of atoms')
+    # there is the chance that a parser returns "0" species as integer, we have to consider this responsibilities
+
+    def symbol_to_z_with_zero(k: T.Union[str, int]):
+        if isinstance(k, int):
+            if k == 0:
+                return k
+            else:
+                raise BadSettings('I can only iterpret "0" as an atomic species')
+        else:
+            return symbol_to_z(k)
 
     def parse_value(v: T.Union[int, dict]):
         if isinstance(v, numbers.Number):
@@ -62,11 +72,11 @@ def to_internal_composition_specs(composition: dict, structure: Structure):
             if not all(s in initial_species for s in v.keys()):
                 raise BadSettings('You cannot distribute atoms on a sublattice which is not specified in the initial '
                                   'structure')
-            return {symbol_to_z(s): parse_number_of_atoms(n) for s, n in v.items()}
+            return {symbol_to_z_with_zero(s): parse_number_of_atoms(n) for s, n in v.items()}
         else:
             raise BadSettings('Cannot interpret composition specification')
 
-    return {symbol_to_z(s): parse_value(v) for s, v in composition.items()}
+    return {symbol_to_z_with_zero(s): parse_value(v) for s, v in composition.items()}
 
 
 def build_structure(composition: dict, structure: Structure):

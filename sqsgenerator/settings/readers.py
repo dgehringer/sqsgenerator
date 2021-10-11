@@ -12,18 +12,17 @@ import collections
 import collections.abc
 from functools import partial
 from attrdict import AttrDict
-from itertools import repeat, chain
-from operator import attrgetter as attr, itemgetter as item
+from operator import itemgetter as item
 
 from sqsgenerator.io import read_structure_from_file
 from sqsgenerator.settings.exceptions import BadSettings
+from sqsgenerator.core import IterationMode, Structure, make_supercell
 from sqsgenerator.compat import Feature, have_mpi_support, have_feature
 from sqsgenerator.adapters import from_ase_atoms, from_pymatgen_structure
 from sqsgenerator.settings.functional import parameter as parameter_, if_, isa
 from sqsgenerator.settings.defaults import defaults, random_mode, num_shells, num_species
-from sqsgenerator.core import IterationMode, Structure, make_supercell
 from sqsgenerator.settings.utils import ensure_array_shape, ensure_array_symmetric, convert, int_safe, \
-    to_internal_composition_specs, build_structure
+    build_structure, to_internal_composition_specs
 
 __parameter_registry = collections.OrderedDict({})
 

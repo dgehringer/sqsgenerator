@@ -82,7 +82,5 @@ class TestRunIterationCommand(unittest.TestCase):
             np.testing.assert_array_almost_equal(iteration['parameters'], analyse['parameters'])
 
 
-
-
 if __name__ == '__main__':
     unittest.main()

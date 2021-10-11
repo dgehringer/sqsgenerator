@@ -31,20 +31,23 @@ def construct_settings(settings: AttrDict, process: T.Optional[bool] = True, **o
         settings[overload] = value
     settings = process_settings(settings) if process else settings
 
-    return IterationSettings(
-        settings.structure,
-        to_internal_composition_specs(settings.composition, settings.structure),
-        settings.target_objective,
-        settings.pair_weights,
-        dict(settings.shell_weights),
-        settings.iterations,
-        settings.max_output_configurations,
-        list(settings.shell_distances),
-        list(settings.threads_per_rank),
-        settings.atol,
-        settings.rtol,
-        settings.mode
-    )
+    try:
+        return IterationSettings(
+            settings.structure,
+            to_internal_composition_specs(settings.composition, settings.structure),
+            settings.target_objective,
+            settings.pair_weights,
+            dict(settings.shell_weights),
+            settings.iterations,
+            settings.max_output_configurations,
+            list(settings.shell_distances),
+            list(settings.threads_per_rank),
+            settings.atol,
+            settings.rtol,
+            settings.mode
+        )
+    except (ValueError, RuntimeError) as e:
+        raise BadSettings(e)
 
 
 __all__ = [
