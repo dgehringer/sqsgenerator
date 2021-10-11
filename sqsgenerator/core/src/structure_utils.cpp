@@ -67,7 +67,7 @@ namespace sqsgenerator::utils {
 
         for (const auto& [shell_index, num_neighbors] : neighbor_count) neighbor_count[shell_index] /= natoms_d;
 
-        BOOST_LOG_TRIVIAL(warning) << "structure_utils::calculate_prefactors= " << format_map(neighbor_count);
+        BOOST_LOG_TRIVIAL(warning) << "structure_utils::calculate_prefactors::neighbor_count= " << format_map(neighbor_count);
 
         auto sum_neighbors {0};
         for (const auto&[shell_index, shell_atoms] : neighbor_count) {

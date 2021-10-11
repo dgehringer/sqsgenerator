@@ -148,8 +148,9 @@ namespace boost{
                 if (j != shape[1] - 1) message << ", ";
             }
             message << "]";
-            if (i != shape[0] -1) message << std::endl;
+            if (i != shape[0] -1) message << "," << std::endl;
         }
+        message << "]";
         return message.str();
     }
 }

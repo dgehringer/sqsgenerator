@@ -37,7 +37,6 @@ namespace sqsgenerator {
         arrangement_t m_arrange_forward;
         arrangement_t m_arrange_backward;
         shuffling_bounds_t m_shuffling_bounds;
-        void init_prefactors();
 
     public:
 

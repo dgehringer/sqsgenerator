@@ -41,13 +41,15 @@ namespace sqsgenerator {
         m_mode(mode),
         m_parameter_weights(parameter_weights),
         m_target_objective(target_objective),
-        m_shell_matrix(m_structure.shell_matrix(m_shell_distances, m_atol, m_rtol)),
         m_shell_distances(shell_distances),
         m_threads_per_rank(threads_per_rank)
     {
-        auto shell_m(shell_matrix());
+
+        m_shell_matrix.resize(boost::extents[num_atoms()][num_atoms()]);
+        m_shell_matrix = m_structure.shell_matrix(m_shell_distances, m_atol, m_rtol);
+
         auto num_elements {num_atoms() * num_atoms()};
-        std::set<shell_t> unique(shell_m.data(), shell_m.data() + num_elements);
+        std::set<shell_t> unique(m_shell_matrix.data(), m_shell_matrix.data() + num_elements);
         m_available_shells = std::vector<shell_t>(unique.begin(), unique.end());
         std::sort(m_available_shells.begin(), m_available_shells.end());
         m_available_shells.erase(m_available_shells.begin());
@@ -64,10 +66,12 @@ namespace sqsgenerator {
 
         for (auto i = 0; i < m_structure.num_atoms(); i++) assert(m_structure.configuration()[i] == configuration[i]);
         std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(configuration);
-        init_prefactors();
-        auto prefactors = calculate_prefactors(m_shell_matrix, m_shell_weights, m_packed_configuration);
-        m_parameter_prefactors.resize(prefactors.shape());
-        m_parameter_prefactors = prefactors;
+
+        m_parameter_prefactors.resize(boost::extents[num_shells()][num_species()][num_species()]);
+        m_parameter_prefactors = compute_prefactors(m_shell_matrix, m_shell_weights, m_packed_configuration);
+
+        BOOST_LOG_TRIVIAL(warning) << "prefactor_matrix::shape = (" << m_parameter_prefactors.shape()[0] << ", " << m_parameter_prefactors.shape()[1] << ", " << m_parameter_prefactors.shape()[2] << ")";
+        BOOST_LOG_TRIVIAL(warning) << "prefactor_matrix::num_shells = " << num_shells();
     }
 
     IterationSettings::IterationSettings(

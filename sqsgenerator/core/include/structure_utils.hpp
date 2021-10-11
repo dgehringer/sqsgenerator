@@ -161,7 +161,6 @@ namespace sqsgenerator::utils {
         std::vector<T> shell_distances;
         for (const auto &pair : shell_dists) shell_distances.push_back(*std::max_element(pair.second.begin(), pair.second.end()));
         std::sort(shell_distances.begin(), shell_distances.end());
-        BOOST_LOG_TRIVIAL(warning) << "default_shell_distance_num= " << (int) shell_distances.size();
         return shell_distances;
     }
 

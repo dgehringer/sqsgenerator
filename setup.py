@@ -1,4 +1,5 @@
 import re
+import re
 import os
 import sys
 import pprint
@@ -61,6 +62,7 @@ class CMakeBuildExt(build_ext):
         for ext in self.extensions:
             extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
             cfg = 'Debug' if ext.debug else 'Release'
+            cfg = 'Debug'
             cmake_args = [
                 f'-DCMAKE_BUILD_TYPE={cfg}',
                 # Ask CMake to place the resulting library in the directory
