@@ -52,7 +52,6 @@ namespace sqsgenerator {
         std::set<shell_t> unique(m_shell_matrix.data(), m_shell_matrix.data() + num_elements);
         m_available_shells = std::vector<shell_t>(unique.begin(), unique.end());
         std::sort(m_available_shells.begin(), m_available_shells.end());
-        m_available_shells.erase(m_available_shells.begin());
         for (const auto &s : m_available_shells) {
             if (shell_weights.count(s)) m_shell_weights.emplace(std::make_pair(s, shell_weights.at(s)));
         }
@@ -69,9 +68,6 @@ namespace sqsgenerator {
 
         m_parameter_prefactors.resize(boost::extents[num_shells()][num_species()][num_species()]);
         m_parameter_prefactors = compute_prefactors(m_shell_matrix, m_shell_weights, m_packed_configuration);
-
-        BOOST_LOG_TRIVIAL(warning) << "prefactor_matrix::shape = (" << m_parameter_prefactors.shape()[0] << ", " << m_parameter_prefactors.shape()[1] << ", " << m_parameter_prefactors.shape()[2] << ")";
-        BOOST_LOG_TRIVIAL(warning) << "prefactor_matrix::num_shells = " << num_shells();
     }
 
     IterationSettings::IterationSettings(

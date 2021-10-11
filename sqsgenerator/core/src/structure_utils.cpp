@@ -67,7 +67,8 @@ namespace sqsgenerator::utils {
 
         for (const auto& [shell_index, num_neighbors] : neighbor_count) neighbor_count[shell_index] /= natoms_d;
 
-        BOOST_LOG_TRIVIAL(warning) << "structure_utils::calculate_prefactors::neighbor_count= " << format_map(neighbor_count);
+        BOOST_LOG_TRIVIAL(debug) << "structure_utils::calculate_prefactors::shell_weights= " << format_map(shell_weights);
+        BOOST_LOG_TRIVIAL(debug) << "structure_utils::calculate_prefactors::neighbor_count= " << format_map(neighbor_count);
 
         auto sum_neighbors {0};
         for (const auto&[shell_index, shell_atoms] : neighbor_count) {
@@ -75,9 +76,10 @@ namespace sqsgenerator::utils {
 
             auto is_integer { is_close(shell_atoms, static_cast<double>(static_cast<shell_t>(shell_atoms))) };
             if (!is_integer) BOOST_LOG_TRIVIAL(warning) << "structure_utils::calculate_prefactors::shell::" << shell_index << "::no_integer_coordination_shell = " << shell_atoms;
+            else BOOST_LOG_TRIVIAL(info) << "structure_utils::calculate_prefactors::shell::" << shell_index << "::is_integer_coordination_shell = " << shell_atoms;
             sum_neighbors += shell_atoms;
         }
-        BOOST_LOG_TRIVIAL(trace) << "structure_utils::calculate_prefactors::sum_neighbors = " << sum_neighbors;
+        BOOST_LOG_TRIVIAL(debug) << "structure_utils::calculate_prefactors::sum_neighbors = " << sum_neighbors;
 
         auto hist = configuration_histogram(configuration);
         array_3d_t parameter_prefactors(boost::extents[static_cast<index_t>(nshells)][static_cast<index_t>(nspecies)][static_cast<index_t>(nspecies)]);
