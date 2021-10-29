@@ -12,6 +12,7 @@ from rich.text import Text
 from rich.table import Table
 from attrdict import AttrDict
 from sqsgenerator.io import dumps, to_dict
+from sqsgenerator.core import rank_structure
 from operator import attrgetter as attr, itemgetter as item
 from sqsgenerator.commands.help import parameter_help as help, command_help
 from sqsgenerator.settings import construct_settings, process_settings, defaults
@@ -59,7 +60,13 @@ def format_parameters(settings, result):
 @click_settings_file(process={'structure'}, ignore={'which'}, default_name='sqs.result.yaml')
 def analyse(settings, output_format, params):
     if 'configurations' not in settings:
-        error('The input document must contain a "configurations" key', prefix='KeyError')
+        # in this case we use the input from the loaded structure
+        settings['configurations'] = {
+            rank_structure(settings.structure): settings.structure.symbols.tolist()
+        }
+    # we do not want to override "which" upon parsing therefore we add it only once we it is not present
+    if 'which' not in settings:
+        settings['which'] = list(range(len(settings.structure)))
     num_configurations = len(settings.configurations)
 
     if num_configurations < 1:
