@@ -1,4 +1,6 @@
 import functools
+import pprint
+
 import numpy as np
 import typing as T
 from attrdict import AttrDict
@@ -131,16 +133,24 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
 
 
 def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
-                       timings: T.Optional[TimingDictionary] = None, include=('configuration',),
+                       timings: T.Optional[TimingDictionary] = None, fields: T.Tuple[str, ...]=('configuration',),
                        inplace: bool = False) -> Settings:
     """
-    Serializes a list of :py:class:`sqsgenerator.public.SQSResult` into a JSON/YAML serializable string
+    Serializes a list of :py:class:`sqsgenerator.public.SQSResult` into a JSON/YAML serializable dictionary
 
     :param settings: the settings used to compute the {sqs_results}
     :type settings: AttrDict
-    :param sqs_results:
+    :param sqs_results: a iterable (list) of :py:class:`sqsgenerator.public.SQSResult`
+    :type sqs_results: Iterable[:py:class:`sqsgenerator.public.SQSResult`]
+    :param timings: a dict like information about the performance of the core routines. Keys refer to thread numbers.
+        the values represent the average time the thread needed to analyse one configuration in **µs** (default is ``None``)
+    :type timings: Dict[`ìnt``, ``float``]
+    :param fields: a tuple of fields to include. Allowed fields are "*configuration*", "*objective*", and
+        "*parameters*" (default is ``('configuration',)`)
+    :type fields: Tuple[str, ...]
+    :param inplace: update the the input ``settings`` document instead of creating a new one (default is ``False``)
     """
-    dump_include = list(include)
+    dump_include = list(fields)
     if 'configuration' not in dump_include:
         dump_include += ['configuration']
     result_document = make_result_document(settings, sqs_results, fields=dump_include, timings=timings)
@@ -157,3 +167,24 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
         final_document = result_document
 
     return Settings(final_document)
+
+def merge(a: dict, b: T.Optional[dict]=None, **kwargs):
+    if b is None:
+        b = {}
+    return {**a, **b, **kwargs}
+
+
+def sqs_optimize(settings: T.Union[Settings, dict], process: bool = True, minimal: bool = True, similar: bool = False, log_level: str = 'warning', fields: T.Tuple[str, ...]=('configuration', 'parameters', 'objective')) -> Settings:
+
+    settings = settings if isinstance(settings, Settings) else AttrDict(settings)
+    settings = process_settings(settings) if process else settings
+
+    results, timings = pair_sqs_iteration(settings, minimal=minimal, similar=similar, log_level=log_level)
+
+    result_document = make_result_document(settings, results, timings=timings, fields=fields)
+    structure_document = extract_structures(result_document)
+    result_document = result_document.get('configurations')
+
+    result_document = {rank: merge(result, structure=structure_document[rank]) for rank, result in result_document.items()}
+    pprint.pprint(timings)
+    pprint.pprint(result_document)
