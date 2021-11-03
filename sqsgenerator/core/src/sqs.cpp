@@ -12,14 +12,23 @@
 #define TAG_COLLECT 2
 #define HEAD_RANK 0
 #endif
+#include <atomic>
 #include <chrono>
+#include <unistd.h>
+#include <signal.h>
 #include <unordered_set>
 #include <boost/circular_buffer.hpp>
 #include <boost/log/trivial.hpp>
 
 namespace sqsgenerator {
 
-
+    // The signal handling code was taken from: https://thomastrapp.com/blog/signal-handler-for-multithreaded-c++/
+    // In the GNUC Library, sig_atomic_t is a typedef for int,
+    // which is atomic on all systems that are supported by the
+    // GNUC Library
+    volatile sig_atomic_t do_shutdown = 0;
+    std::atomic<bool> shutdown_requested = false;
+    static_assert( std::atomic<bool>::is_always_lock_free );
 
     std::string format_sqs_result(const sqsgenerator::SQSResult &result) {
         std::stringstream message;
@@ -123,10 +132,23 @@ namespace sqsgenerator {
         return result;
     }
 
+    void handle_signal_sigint(int) {
+        do_shutdown = 1;
+        shutdown_requested = true;
+    }
 
     std::tuple<std::vector<SQSResult>, timing_map_t> do_pair_iterations(const IterationSettings &settings) {
         typedef boost::circular_buffer<SQSResult> result_buffer_t; // this typedef is an implementation detail and used just in this method
         auto threads_per_rank {settings.threads_per_rank()};
+
+        // setup the signal handler
+        {
+            struct sigaction action;
+            action.sa_handler = handle_signal_sigint;
+            sigemptyset(&action.sa_mask);
+            action.sa_flags = 0x0;
+            sigaction(SIGINT, &action, NULL);
+        }
 
 #if defined(USE_MPI)
         int mpi_all_gather_err, mpi_initialized, mpi_thread_level_support_provided, mpi_thread_level_support_required {MPI_THREAD_SERIALIZED};
@@ -261,6 +283,7 @@ namespace sqsgenerator {
             }
 
             time_point_t start_time = std::chrono::high_resolution_clock::now();
+            rank_t actual_iterations = 0;
             for (rank_t i = start_it; i < end_it; i++) {
                 get_next_configuration(configuration_local);
                 count_pairs(configuration_local, pair_list, parameters_local, nspecies, true);
@@ -327,9 +350,20 @@ namespace sqsgenerator {
 #endif
                     }
                 }
+                if (do_shutdown && shutdown_requested.load() ) {
+                    #pragma omp critical
+                    {
+                        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::finished_iterations = " << i;
+                        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::sigint_received = true";
+                    }
+                    actual_iterations = i;
+                    break;
+                }
+
             } // for
+            rank_t actual_iterations_done = (do_shutdown && shutdown_requested.load()) ? actual_iterations - start_it : end_it - start_it;
             time_point_t end_time = std::chrono::high_resolution_clock::now();
-            auto avg_loop_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count()) /(long)(end_it - start_it);
+            auto avg_loop_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count()) /(long)(actual_iterations_done);
             #pragma omp critical
             {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::avg_loop_time = " << avg_loop_time;
