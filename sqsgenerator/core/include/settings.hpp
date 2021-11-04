@@ -29,15 +29,14 @@ namespace sqsgenerator {
         iteration_mode m_mode;
         array_3d_t m_parameter_weights;
         array_3d_t m_target_objective;
+        pair_shell_matrix_t m_shell_matrix;
         array_3d_t m_parameter_prefactors;
         std::vector<shell_t> m_available_shells;
         std::vector<double> m_shell_distances;
         std::vector<int> m_threads_per_rank;
-        pair_shell_matrix_t m_shell_matrix;
         arrangement_t m_arrange_forward;
         arrangement_t m_arrange_backward;
         shuffling_bounds_t m_shuffling_bounds;
-        void init_prefactors();
 
     public:
 

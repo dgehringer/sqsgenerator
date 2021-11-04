@@ -88,15 +88,6 @@ namespace boost{
         return boost::multi_array<T, sizeof...(dims)>(mar);
     }
 
-    template<typename T1, typename T2, typename T1Cast = T1, typename T2Cast = T2>
-    std::string format_dict(std::vector<T1> keys, std::vector<T2> values) {
-        assert(keys.size() == values.size());
-        std::stringstream message;
-        message << "{";
-        for (size_t i = 0; i < keys.size()-1 ; i++) message << static_cast<T1Cast>(keys[i]) << ": " << static_cast<T2Cast>(values[i]) << ", ";
-        message << static_cast<T1Cast>(keys.back()) << ": " << static_cast<T2Cast>(values.back()) << "}";
-        return message.str();
-    }
 
     template<typename T1>
     using formatter_t = std::function<std::string(const T1&)>;
@@ -104,7 +95,7 @@ namespace boost{
     template<typename T1, typename T1Cast = T1>
     std::function<std::string(const T1&)> make_default_formatter() {
         return [](const T1 &v) {
-          return std::to_string(static_cast<T1Cast>(v));
+            return std::to_string(static_cast<T1Cast>(v));
         };
     }
 
@@ -122,6 +113,27 @@ namespace boost{
         return std::vector<typename MultiArray::element>(array.data(), array.data() + array.num_elements());
     }
 
+    template<typename T1, typename T2, typename T1Cast = T1, typename T2Cast = T2>
+    std::string format_dict(const std::vector<T1> &keys, const std::vector<T2> &values, formatter_t<T1> key_formatter = make_default_formatter<T1, T1Cast>(), formatter_t<T2> value_formatter = make_default_formatter<T2, T2Cast>()) {
+        assert(keys.size() == values.size());
+        std::stringstream message;
+        message << "{";
+        for (size_t i = 0; i < keys.size()-1 ; i++) message << key_formatter(keys[i]) << ": " << value_formatter(values[i]) << ", ";
+        message << key_formatter(keys.back()) << ": " << value_formatter(values.back()) << "}";
+        return message.str();
+    }
+
+    template<typename T1, typename T2, typename T1Cast = T1, typename T2Cast = T2>
+    std::string format_map(const std::map<T1, T2> &map, formatter_t<T1> key_formatter = make_default_formatter<T1, T1Cast>(), formatter_t<T2> value_formatter = make_default_formatter<T2, T2Cast>()) {
+        std::vector<T1> keys;
+        std::vector<T2> values;
+        for (const auto&[key, value] : map) {
+            keys.push_back(key);
+            values.push_back(value);
+        }
+        return format_dict<T1, T2, T1Cast, T2Cast>(keys, values, key_formatter, value_formatter);
+    }
+
     template<typename MultiArray, typename T1 = typename MultiArray::element>
     std::string format_matrix(MultiArray array) {
         typedef typename MultiArray::index index_t;
@@ -136,8 +148,9 @@ namespace boost{
                 if (j != shape[1] - 1) message << ", ";
             }
             message << "]";
-            if (i != shape[0] -1) message << std::endl;
+            if (i != shape[0] -1) message << "," << std::endl;
         }
+        message << "]";
         return message.str();
     }
 }

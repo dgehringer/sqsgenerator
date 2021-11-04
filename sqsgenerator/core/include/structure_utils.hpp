@@ -90,43 +90,6 @@ namespace sqsgenerator::utils {
             return d2;
         }
 
-        template<typename MultiArray>
-        std::vector<typename MultiArray::element> default_shell_distances(const MultiArray &distance_matrix, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
-            typedef typename MultiArray::index index_t;
-            typedef typename MultiArray::element T;
-            auto shape(shape_from_multi_array(distance_matrix));
-            auto num_atoms {static_cast<index_t>(shape[0])};
-            multi_array<T, 2> rounded(boost::extents[num_atoms][num_atoms]);
-            std::map<T, std::vector<T>> shell_dists;
-
-            auto is_close_tol = [=] (T a, T b) {
-                return is_close(a, b, atol, rtol);
-            };
-
-            std::function<std::tuple<bool, T>(T)> is_shell_border_nearby = [&] (T distance) {
-                for (const auto &found_dist : shell_dists) {if (is_close_tol(distance, found_dist.first)) return std::make_tuple(true, found_dist.first); }
-                return std::make_tuple(false, -1.0);
-            };
-
-
-            for (index_t i = 0; i < num_atoms; i++) {
-                for (index_t j = i; j < num_atoms; j++) {
-                    T distance {distance_matrix[i][j]};
-                    auto [has_shell_nearby, shell_dist] = is_shell_border_nearby(distance);
-                    if (has_shell_nearby) shell_dists[shell_dist].push_back(distance);
-                    else shell_dists[distance].push_back(distance);
-                }
-            }
-
-            std::vector<T> result;
-            for (const auto &pair : shell_dists) result.push_back(*std::max_element(pair.second.begin(), pair.second.end()));
-            std::sort(result.begin(), result.end());
-
-            BOOST_LOG_TRIVIAL(info) << "structure_utils::default_shell_distances::num_distances  = " + std::to_string(result.size());
-            BOOST_LOG_TRIVIAL(info) << "structure_utils::default_shell_distances::distances  = " + format_vector(result);
-
-            return result;
-        }
 
         template<typename MultiArray>
         pair_shell_matrix_t shell_matrix(const MultiArray &distance_matrix, const std::vector<typename MultiArray::element> &distances, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
@@ -136,7 +99,6 @@ namespace sqsgenerator::utils {
             auto shape(shape_from_multi_array(distance_matrix));
             auto num_atoms {static_cast<index_t>(shape[0])};
             pair_shell_matrix_t shells(boost::extents[num_atoms][num_atoms]);
-
             auto is_close_tol = [&atol, &rtol] (T a, T b) {
                 return is_close(a, b, atol, rtol);
             };
@@ -145,9 +107,9 @@ namespace sqsgenerator::utils {
                 if (distance < 0 ) return -1;
                 if (is_close_tol(distance, 0.0)) return 0;
                 else {
-                    for (size_t i = 0; i < distances.size() -1; i++) {
+                    for (size_t i = 0; i < distances.size() - 1; i++) {
                         T lower_bound {distances[i]}, upper_bound {distances[i+1]};
-                        if ((is_close_tol(distance, lower_bound) or lower_bound < distance) and (is_close_tol(distance, upper_bound) or upper_bound > distance)) {
+                        if ((is_close_tol(distance, lower_bound) or distance > lower_bound) and (is_close_tol(distance, upper_bound) or upper_bound > distance)) {
                             return static_cast<int>(i+1);
                         }
                     }
@@ -169,10 +131,49 @@ namespace sqsgenerator::utils {
             return shells;
         }
 
-        std::map<shell_t, index_t> shell_index_map(const pair_shell_weights_t &weights);
+    template<typename MultiArray>
+    std::vector<typename MultiArray::element> default_shell_distances(const MultiArray &distance_matrix, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
+        typedef typename MultiArray::index index_t;
+        typedef typename MultiArray::element T;
+        auto shape(shape_from_multi_array(distance_matrix));
+        auto num_atoms {static_cast<index_t>(shape[0])};
+        std::vector<T> all_distances(distance_matrix.data(), distance_matrix.data() + distance_matrix.num_elements());
+        std::sort(all_distances.begin(), all_distances.end());
+        std::vector<T> shell_dists;
 
-        std::vector<AtomPair> create_pair_list(const pair_shell_matrix_t &shell_matrix, const std::map<shell_t, double> &weights);
 
+        auto is_close_tol = [=] (T a, T b) {
+            return is_close(a, b, atol, rtol);
+        };
+
+        std::function<int(T)> get_shell_index  = [&](T distance){
+            for (auto i = 0; i < shell_dists.size(); i++)  if (is_close_tol(distance, shell_dists[i])) return i;
+            return -1;
+        };
+
+        for (const auto& distance : all_distances) {
+            auto shell_dist_index {get_shell_index(distance)};
+            // We average the distances
+            if (shell_dist_index >= 0) shell_dists[shell_dist_index] = 0.5 * (shell_dists[shell_dist_index] + distance);
+            else shell_dists.push_back(distance);
+            std::sort(shell_dists.begin(), shell_dists.end());
+        }
+
+        // make a sanity check -> we check here that each of the computed coordination shell occurs at least once
+        pair_shell_matrix_t current_shell_matrix(shell_matrix(distance_matrix, shell_dists, atol, rtol));
+        std::set<shell_t> unique_shells(current_shell_matrix.data(), current_shell_matrix.data() + current_shell_matrix.num_elements());
+        if (unique_shells.size() < shell_dists.size()) {
+            auto message = "The number of of computed (default) shells does not match the occuring shells in the shell matrix (computed: " + std::to_string(shell_dists.size()) + " !=" + " shell_matrix: " + std::to_string(unique_shells.size()) + ")";
+            BOOST_LOG_TRIVIAL(warning) << message;
+            throw std::runtime_error(message);
+        }
+        return shell_dists;
     }
+
+    std::map<shell_t, index_t> shell_index_map(const pair_shell_weights_t &weights);
+    std::vector<AtomPair> create_pair_list(const pair_shell_matrix_t &shell_matrix, const std::map<shell_t, double> &weights);
+    std::tuple<std::vector<shell_t>, std::vector<double>> compute_shell_indices_and_weights(const pair_shell_weights_t &shell_weights);
+    array_3d_t compute_prefactors(const_pair_shell_matrix_ref_t shell_matrix, const pair_shell_weights_t &shell_weights, const configuration_t &configuration);
+}
 
 #endif //SQSGENERATOR_STRUCTURE_UTILS_HPP

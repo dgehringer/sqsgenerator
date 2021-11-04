@@ -24,15 +24,22 @@ relative tolerance for calculating the default distances of the coordination she
 - **Default**: `1e-5`
 - **Accepted:** positive floating point numbers (`float`)
 
-````{admonition} Which shell distances are computed?
+````{admonition} What are **atol** and **rtol** used for?
 :class: tip, dropdown
 
+The `atol` and `rtol` parameters are used to determine if two floating point numbers are close. We use an implementation
+ similar to Python [`math.isclose`](https://docs.python.org/3/library/math.html#math.isclose).
+
+`atol` and `rtol` parameters are used to compute the default values for the `shell_distances` parameter.
 Have a look on the `shell_distances` parameter, by entering:
 
   ```{code-block} bash
   sqsgenerator params show input.yaml --param shell_distances
   ```
-In case you get some distances which are really close e. g. 4.12345 and 4.12346 it is maybe a good idea to increase `rtol` and/or `atol` such that `sqsgenerator` groups them into the same coordination shell
+In case you get some distances which are really close e. g. 4.12345 and 4.12346 it is maybe a good idea to increase 
+`rtol` and/or `atol` such that `sqsgenerator` groups them into the same coordination shell
+
+Changing `atol` and/or `rtol` parameters will change the number and radii of the computed coordination shells
 ````
 
 ### `max_output_configurations`
@@ -261,7 +268,6 @@ Instructs `sqsgenerator` to create a supercell of the the specified structure
 The iteration mode specifies how new structures are generated. 
 
 - *random* the configuration will be shuffled randomly
-
 - *systematic* will instruct the code generate configurations in lexicographical order and to scan the **complete configurational space**. In case *systematic* is specified the `iterations` parameter will be ignored, since the number of permutations is predefined. Therefore for a system with $N$ atoms with $M$ species, will lead to
 
 $$
@@ -294,7 +300,34 @@ number of configurations to check. This parameter is ignored if `mode` was set t
 
 ### `shell_distances`
 (input-param-shell-distances)=
-the radii of the coordination shells in Angstrom. All lattice positions will be binned into the specified coordination shells
+the radii of the coordination shells in Angstrom. All lattice positions will be binned into the specified coordination 
+shells. The default distances are computed in the following way:
+
+```{code-block} python
+---
+caption: |
+    This is just a Python implementation which behaves the same
+---
+shell_distances = []
+
+# In the following atol and rtol represent the input parameters of atol and rtol
+
+def get_closest_shell(r_ij: float) -> int:
+    predicate = functools.partial(math.isclose, r_ij, abs_tol=atol, rel_tol=rtol)
+    return next(filter(predicate, shell_distances), None)
+
+# Let Rij be the distance matrix of the input structure as np.ndarray
+for r_ij in sorted(Rij.flat):
+    closest_shell = get_closest_shell(r_ij)
+    if closest_shell: # we compute a roling average, to estimate a mean value
+        shell_distances[closest_shell] = (shell_distances[closest_shell] + r_ij) / 2.0
+    else: # no value similar to r_ij exists, we create a new shell
+        shell_distances.append(r_ij)
+    shell_distances = sorted(shell_distances)
+    
+```
+
+
 
 - **Required:** No
 - **Default:** automatically determined by `sqsgenerator`
