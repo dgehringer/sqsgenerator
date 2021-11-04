@@ -31,7 +31,7 @@ def iteration(settings, minimal, similar, log_level, dump, dump_params, do_expor
               dump_format, dump_include, compress):
     sqs_results, timings = pair_sqs_iteration(settings, minimal=minimal, similar=similar, log_level=log_level)
 
-    final_document = expand_sqs_results(settings, sqs_results, timings, include=dump_include, inplace=dump_params)
+    final_document = expand_sqs_results(settings, sqs_results, timings, fields=dump_include, inplace=dump_params)
     output_prefix = output_file \
         if output_file is not None \
         else (os.path.splitext(settings.file_name)[0] if 'file_name' in settings else 'sqs')
