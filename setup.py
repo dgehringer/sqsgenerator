@@ -13,7 +13,7 @@ WITH_MPI = False
 
 opt_flags = {
     'Release': {
-        'unix': ['-O3', '-DNDEBUG', '-march=native', '-mtune=native', '-ffast-math']
+        'unix': ['-O3', '-DNDEBUG', '-march=native', '-mtune=native', '-ffast-math', '-fvisibility=hidden']
     },
     'Debug': {
         'unix': ['-g']
