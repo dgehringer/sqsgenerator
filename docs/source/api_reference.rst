@@ -2,6 +2,8 @@
 API Reference
 =============
 
+.. autofunction:: sqsgenerator.public.sqs_optimize
+
 .. autoclass:: sqsgenerator.public.IterationMode
 
     .. attribute:: random
