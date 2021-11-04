@@ -1,11 +1,11 @@
-import functools
-import pprint
-
+import signal
+import warnings
 import numpy as np
 import typing as T
 from attrdict import AttrDict
 from operator import attrgetter as attr
 from sqsgenerator.settings.readers import read_structure
+from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms
 from sqsgenerator.settings import construct_settings, process_settings, build_structure
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
     SQSResult, symbols_from_z, Structure, pair_analysis, available_species, make_supercell, IterationMode
@@ -112,9 +112,23 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
     :rtype: Tuple[Iterable[:py:class:`sqsgenerator.public.SQSResult`], Dict[``int``, ``float``]]
     """
     set_core_log_level(log_levels.get(log_level))
-    iteration_settings = construct_settings(settings, False, structure=settings.structure[settings.which])
-    sqs_results, timings = pair_sqs_iteration_core(iteration_settings)
 
+    iteration_settings = construct_settings(settings, False, structure=settings.structure[settings.which])
+
+    interrupted = False
+
+    def handle_sigint(signumber, *_):
+        assert signumber == signal.SIGINT
+        nonlocal interrupted
+        interrupted = True
+
+    original_handler = signal.getsignal(signal.SIGINT)
+    signal.signal(signal.SIGINT, handle_sigint)
+    sqs_results, timings = pair_sqs_iteration_core(iteration_settings)
+    signal.signal(signal.SIGINT, original_handler)  # restore the old signal handler
+
+    if interrupted:
+        warnings.warn('SIGINT received: SQS results may be incomplete')
     best_result = min(sqs_results, key=attr('objective'))
     if minimal:
         sqs_results = list(filter(lambda r: np.isclose(r.objective, best_result.objective), sqs_results))
@@ -168,23 +182,57 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
 
     return Settings(final_document)
 
-def merge(a: dict, b: T.Optional[dict]=None, **kwargs):
+
+def merge(a: dict, b: T.Optional[dict]=None, **kwargs) -> dict:
     if b is None:
         b = {}
     return {**a, **b, **kwargs}
 
 
-def sqs_optimize(settings: T.Union[Settings, dict], process: bool = True, minimal: bool = True, similar: bool = False, log_level: str = 'warning', fields: T.Tuple[str, ...]=('configuration', 'parameters', 'objective')) -> Settings:
+def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, minimal: bool = True, similar: bool = False, log_level: str = 'warning', fields: T.Tuple[str, ...]=('configuration', 'parameters', 'objective'), make_structures: bool = False, structure_format: str ='default') -> T.Tuple[T.Dict[int, T.Dict[str, T.Any]], T.Dict[int, T.Union[float, T.List[float]]]]:
+    """
+    This function allows to simply generate SQS structures
 
+    Performs a SQS optimization loop. This function is meant for using sqsgenerator through Python. Prefer this function
+    over :py:func:`sqsgenerator.public.pair_sqs_iteration`. It combines the functionalities of several low-level utility
+    function.
+
+        1. Generate default values for ``settings`` (:py:func:`sqsgenerator.public.process_settings`)
+        2. Execute the actual SQS optimization loop (:py:func:`sqsgenerator.public.pair_sqs_iteration`)
+        3. Process, convert the results (:py:func:`sqsgenerator.public.make_result_document`)
+        4. Build the structures from the optimization results (:py:func:`sqsgenerator.public.extract_structures`)
+
+    An example output might look like the following:
+
+        .. code-block:: python
+
+            {
+                654984: {
+                    'configuration': ['Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W']
+                    'objective': 0.0,
+                    # only present if make_structures=True
+                    # Atoms object if structure_format='ase'
+                    'structure': Atoms(symbols='ReWReWReWReWReWReWReWReW', pbc=True, cell=[6.33, 6.33, 6.33])
+                }
+            }
+
+    :param settings: the settings used for the SQS optimization
+    :type settings: AttrDict or Dict
+    """
     settings = settings if isinstance(settings, Settings) else AttrDict(settings)
     settings = process_settings(settings) if process else settings
 
     results, timings = pair_sqs_iteration(settings, minimal=minimal, similar=similar, log_level=log_level)
 
     result_document = make_result_document(settings, results, timings=timings, fields=fields)
-    structure_document = extract_structures(result_document)
-    result_document = result_document.get('configurations')
+    if make_structures:
+        structure_document = extract_structures(result_document)
+        converters = dict(default=lambda _: _, ase=to_ase_atoms, pymatgen=to_pymatgen_structure)
+        converter = converters.get(structure_format)
+        structure_document = {k: converter(v) for k, v in structure_document.items()}
 
-    result_document = {rank: merge(result, structure=structure_document[rank]) for rank, result in result_document.items()}
-    pprint.pprint(timings)
-    pprint.pprint(result_document)
+    result_document = result_document.get('configurations')
+    if make_structures:
+        result_document = {rank: merge(result, structure=structure_document[rank]) for rank, result in result_document.items()}
+
+    return result_document, timings

@@ -16,7 +16,7 @@ class Feature(Enum):
     pymatgen = 'pymatgen'
     rich = 'rich'
     pyiron = 'pyiron'
-    # mpi4py = 'mpi4py'
+    mpi4py = 'mpi4py'
     json = 'json'
     yaml = 'yaml'
     pickle = 'pickle'
