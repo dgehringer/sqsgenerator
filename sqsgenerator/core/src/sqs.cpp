@@ -137,25 +137,53 @@ namespace sqsgenerator {
         shutdown_requested = true;
     }
 
+#if defined(USE_MPI)
+
+    void handle_signal_sigterm(int) {
+        do_shutdown = 1;
+        shutdown_requested = true;
+    }
+#endif
+
     std::tuple<std::vector<SQSResult>, timing_map_t> do_pair_iterations(const IterationSettings &settings) {
         typedef boost::circular_buffer<SQSResult> result_buffer_t; // this typedef is an implementation detail and used just in this method
         auto threads_per_rank {settings.threads_per_rank()};
 
         // setup the signal handler
+
+        struct sigaction old_sigint_handler;
         {
-            struct sigaction action;
-            action.sa_handler = handle_signal_sigint;
-            sigemptyset(&action.sa_mask);
-            action.sa_flags = 0x0;
-            sigaction(SIGINT, &action, NULL);
+            struct sigaction new_sigint_handler;
+            new_sigint_handler.sa_handler = handle_signal_sigint;
+            sigemptyset(&new_sigint_handler.sa_mask);
+            new_sigint_handler.sa_flags = 0x0;
+            sigaction(SIGINT, &new_sigint_handler, &old_sigint_handler);
         }
+#if defined(USE_MPI)
+        /*
+         * Upon hitting Ctrl+C Python has registered it's own signal handler which raises the Keyboard interrupt
+         * For the multi-threaded-only version SIGINT can be caught. When this routine is executed using "mpirun" or
+         * "mpiexec" a SIGTERM is propagated to all child processes, therefore we also put a handler for this signal
+         * See: https://www.open-mpi.org/doc/v3.0/man1/mpirun.1.php#sect15
+         */
+        struct sigaction old_sigterm_handler;
+        {
+            struct sigaction new_sigterm_handler;
+            new_sigterm_handler.sa_handler = handle_signal_sigterm;
+            sigemptyset(&new_sigterm_handler.sa_mask);
+            new_sigterm_handler.sa_flags = 0x0;
+            sigaction(SIGTERM, &new_sigterm_handler, &old_sigterm_handler);
+        }
+#endif
 
 #if defined(USE_MPI)
+        bool mpi_initialized_in_current_context = false;
         int mpi_all_gather_err, mpi_initialized, mpi_thread_level_support_provided, mpi_thread_level_support_required {MPI_THREAD_SERIALIZED};
         MPI_Initialized(&mpi_initialized);
         if (!mpi_initialized) { // Initialize MPI runtime in case we have none yet
             BOOST_LOG_TRIVIAL(info) << "do_pair_iterations:: MPI Runtime was not initialized. I'm going to do that!";
             MPI_Init_thread(nullptr, nullptr, mpi_thread_level_support_required, &mpi_thread_level_support_provided);
+            mpi_initialized_in_current_context = true;
         }
         else MPI_Query_thread(&mpi_thread_level_support_provided); // Ensure that we can use the MPI runtime in the multi-threaded-section
         if (mpi_thread_level_support_provided < mpi_thread_level_support_required) throw std::runtime_error("MPI threading level support is not fulfilling the requirements. I need at least 'MPI_THREAD_SERIALIZED'");
@@ -353,8 +381,9 @@ namespace sqsgenerator {
                 if (do_shutdown && shutdown_requested.load() ) {
                     #pragma omp critical
                     {
-                        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::finished_iterations = " << i;
                         BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::sigint_received = true";
+                        BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::finished_iterations::" << (i - start_it) << "::out_of::" << (end_it - start_it);
+
                     }
                     actual_iterations = i;
                     break;
@@ -369,8 +398,26 @@ namespace sqsgenerator {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::avg_loop_time = " << avg_loop_time;
                 thread_timings[mpi_rank][thread_id] = avg_loop_time;
             };
+            // spit out a warning if SIGINT was encountered
         } // pragma omp parallel
 
+        // Restore the the old sigaction handler
+        sigaction(SIGINT, &old_sigint_handler, NULL);
+
+#if defined(USE_MPI)
+        // For the MPI-version we also have to restore the SIGTERM handler
+        sigaction(SIGTERM, &old_sigterm_handler, NULL);
+#endif
+
+        if ((do_shutdown && shutdown_requested.load())) {
+            BOOST_LOG_TRIVIAL(warning) << "do_pair_iterations::interrupt_message = \"Received SIGINT/SIGTERM results may be incomplete\"";
+            /*
+             * if shutdown was requested our SIGINT or SIGTERM (MPI) handler was invoked
+             * after restoring the previous handler we propagate SIGINT only, such that it can be handled by the old handler
+             * This is necessary that Python parent process also receives the signal
+             */
+            raise(SIGINT);
+        }
         // After the main loop has finished, we copy (move) the values from the circular buffer into a vector
         std::vector<SQSResult> tmp_results, final_results;
         for (auto &r : results) tmp_results.push_back(std::move(r));
@@ -417,18 +464,19 @@ namespace sqsgenerator {
                 for (int j = 0; j < num_sqs_results_of_rank; j++) {
                     MPI_Status status;
                     MPI_Recv(&buf_par[0], static_cast<int>(nparams), MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
-                    MPI_Recv(&buf_conf[0], static_cast<int>(settings.num_atoms()), MPI_UINT8_T, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&buf_conf[0], static_cast<int>(settings.num_atoms()), MPI_INT, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
                     MPI_Recv(&buf_obj, 1, MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status);
-                    BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::got_result::" << j << "::from::" << other_rank;
+
                     SQSResult collected(buf_obj, {-1}, configuration_t(&buf_conf[0], &buf_conf[0]+settings.num_atoms()), parameter_storage_t(&buf_par[0], &buf_par[0] + nparams));
+                    BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::got_result::" << j << "::from::" << other_rank << "::which_is = " << format_sqs_result(collected);
                     tmp_results.push_back(collected);
                 }
                 // Recieve also timing information from the other ranks
                 MPI_Status status_recv_timing;
                 int threads_on_other_rank = num_actual_threads_on_rank[other_rank];
                 MPI_Recv(&buf_timings[0], threads_on_other_rank, MPI_DOUBLE, other_rank, TAG_COLLECT, MPI_COMM_WORLD, &status_recv_timing);
-                BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::received_thread_timings::from::" << other_rank;
                 thread_timings.emplace(other_rank, std::vector<double>(&buf_timings[0], &buf_timings[0]+threads_on_other_rank));
+                BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::received_thread_timings::from::" << other_rank;
             }
         }
         else {
@@ -438,21 +486,24 @@ namespace sqsgenerator {
                 std::copy(r.configuration().begin(), r.configuration().end(), buf_conf);
                 buf_obj = r.objective();
                 MPI_Send(&buf_par[0], static_cast<int>(nparams), MPI_DOUBLE, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
-                MPI_Send(&buf_conf[0], static_cast<int>(settings.num_atoms()), MPI_UINT8_T, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
+                MPI_Send(&buf_conf[0], static_cast<int>(settings.num_atoms()), MPI_INT, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
                 MPI_Send(&buf_obj, 1, MPI_DOUBLE, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
+                BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::send_result_to::" << HEAD_RANK << "::which_is = " << format_sqs_result(r);
             }
             // Send thread timing information over to head rank
             std::copy(thread_timings[mpi_rank].begin(), thread_timings[mpi_rank].end(), buf_timings);
             MPI_Send(&buf_timings[0], actual_threads_on_rank, MPI_DOUBLE, HEAD_RANK, TAG_COLLECT, MPI_COMM_WORLD);
+            BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::finished_sending_results";
         }
-        if (!mpi_initialized) MPI_Finalize();
 #endif
         std::unordered_set<rank_t> ranks;
+        int count = 0;
         for (auto &r : tmp_results) {
             /* rank computation is relatively demanding, in the main loop we only set it to {-1}
              * internally the structure's lattice positions are ordered by the ordinal numbers of the occupying
              * species therefore we have to arrange it into the initial positions
              */
+            count++;
             configuration_t ordered_configuration(rearrange(r.configuration(), settings.arrange_backward()));
             // we compute the rank after rearranging
             rank_t rank = rank_permutation(ordered_configuration, settings.num_species());
@@ -460,12 +511,17 @@ namespace sqsgenerator {
             r.set_configuration(settings.unpack_configuration(ordered_configuration));
             BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::conf = " << format_sqs_result(r);
             if (settings.mode() == random && !ranks.insert(rank).second) {
-                BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::duplicate_configuration = " << rank;
+                BOOST_LOG_TRIVIAL(trace) << "do_pair_iterations::rank::" << mpi_rank << "::duplicate_configuration = " << rank;
                 continue;
             }
             else final_results.push_back(std::move(r));
         }
         BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::num_results = " << final_results.size();
+
+#if defined(USE_MPI)
+        // In case we initialized the MPI runtime ourselves, we make sure that it is finalized again
+        if (mpi_initialized_in_current_context) MPI_Finalize();
+#endif
         return std::make_tuple(final_results, thread_timings);
     }
 
