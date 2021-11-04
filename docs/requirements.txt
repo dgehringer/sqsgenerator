@@ -8,3 +8,4 @@ myst-parser==0.15.1
 sphinx-click==3.0.1
 pydata-sphinx-theme==0.6.3
 sphinx-togglebutton==0.2.3
+sphinx-copybutton==0.4.0
