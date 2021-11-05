@@ -4,6 +4,7 @@ import numpy as np
 import typing as T
 from attrdict import AttrDict
 from operator import attrgetter as attr
+from sqsgenerator.io import read_settings_file
 from sqsgenerator.settings import construct_settings, process_settings
 from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms, from_pymatgen_structure, from_ase_atoms
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
@@ -21,7 +22,8 @@ __all__ = [
     'from_pymatgen_structure',
     'from_ase_atoms',
     'pair_analysis',
-    'available_species'
+    'available_species',
+    'read_settings_file'
 ]
 
 TimingDictionary = T.Dict[int, T.List[float]]
