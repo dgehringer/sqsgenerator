@@ -7,6 +7,8 @@ API Reference
 
 .. autofunction:: sqsgenerator.public.process_settings
 
+.. autofunction:: sqsgenerator.public.read_settings_file
+
 .. autoclass:: sqsgenerator.public.IterationMode
 
     .. attribute:: random
