@@ -62,9 +62,9 @@ extensions = [
     'sphinx.ext.autodoc',
     'myst_parser',
     'sphinx_click',
-    'sphinx_togglebutton'
+    'sphinx_togglebutton',
+    'sphinx_copybutton'
 ]
-
 
 
 # Add any paths that contain templates here, relative to this directory.

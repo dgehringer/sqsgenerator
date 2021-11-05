@@ -2,7 +2,10 @@
 API Reference
 =============
 
+
 .. autofunction:: sqsgenerator.public.sqs_optimize
+
+.. autofunction:: sqsgenerator.public.process_settings
 
 .. autoclass:: sqsgenerator.public.IterationMode
 
@@ -41,14 +44,14 @@ API Reference
         The number of atoms in the structure
 
         :return: the number of atoms
-        :rtype: ``int``
+        :rtype: int
 
     .. property:: distance_matrix
 
         The distance matrix with dimensions {num_atoms} times {num_atoms}
 
         :return: the distance matrix
-        :rtype: ``np.ndarray``
+        :rtype: np.ndarray
 
     .. property:: distance_vecs
 
@@ -56,21 +59,37 @@ API Reference
         The distance matrix is computed from this property.
 
         :return: the vector of of shortest distances
-        :rtype: ``np.ndarray``
+        :rtype: np.ndarray
 
     .. property:: frac_coords
 
         A ``np.ndarray`` storing the position of the lattice position in **fractional space**.
 
         :return: the fractional coordinates
-        :rtype: ``np.ndarray``
+        :rtype: np.ndarray
 
+
+functions for compatibility with other packages
+###############################################
+
+.. autofunction:: sqsgenerator.public.to_ase_atoms
+
+.. autofunction:: sqsgenerator.public.from_ase_atoms
+
+.. autofunction:: sqsgenerator.public.to_pymatgen_structure
+
+.. autofunction:: sqsgenerator.public.from_pymatgen_structure
+
+low-level utility functions
+###########################
 
 .. autofunction:: sqsgenerator.public.make_supercell
-
-.. autofunction:: sqsgenerator.public.process_settings
 
 .. autofunction:: sqsgenerator.public.make_result_document
 
 .. autofunction:: sqsgenerator.public.pair_sqs_iteration
+
+.. autofunction:: sqsgenerator.public.extract_structures
+
+.. autofunction:: sqsgenerator.public.expand_sqs_results
 
