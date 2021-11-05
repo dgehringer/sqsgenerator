@@ -41,5 +41,5 @@ parameter_help = AttrDict(dict(
     log_level='log level of the core extension. Should be "trace" used for error reporting',
     export='Export the results obtained from the SQS iteration as structure files',
     minimal='Include only configurations with minimum objective function in the results',
-    similar='If the minimum objective is degenerate include also ranks with same parameters but different rank'
+    similar='If the minimum objective is degenerate include also results with same parameters but different configuration'
 ))
