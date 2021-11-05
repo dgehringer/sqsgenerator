@@ -331,6 +331,11 @@ composition:
   - **Line 7:** hydrogen works here as a **dummy** species. We select those interstitial sites
   - **Line 10:** distribute nine carbon atoms and 99 vacancies
 
+## Using Python API
+Of course you can also directly use sqsgenerator directly from your Python interpreter. The package is designed in such
+such a way that all public function are gathered int the `sqsgenerator.public` module. Those which are needed to 
+generate and analyze structure are forwarded to the `sqsgenerator` module itself and can be imported there
+
 ### Advanced topics
 
 ```{admonition} This section will come in future
@@ -341,7 +346,7 @@ This section needs still to be done
  - Maybe MPI enabled version
 ```
 
-### A note on the number of `iterations`
+## A note on the number of `iterations`
 
 Actually it is very hard to tell what is a "**sufficiently**" large enough number for the `iteration` parameter. As the 
 configurational space is growing extremely fast (factorial), it is anyway not possible to sample it properly in case the
@@ -379,3 +384,8 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
     3. The image size of the objective function is drastically reduced. In other words a lot of different structures are 
        mapped onto the same value of the objective function.
 
+
+
+
+
+## Graceful exits
