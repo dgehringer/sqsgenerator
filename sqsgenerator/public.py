@@ -4,12 +4,10 @@ import numpy as np
 import typing as T
 from attrdict import AttrDict
 from operator import attrgetter as attr
-from sqsgenerator.settings.readers import read_structure
-from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms
-from sqsgenerator.settings import construct_settings, process_settings, build_structure
+from sqsgenerator.settings import construct_settings, process_settings
+from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms, from_pymatgen_structure, from_ase_atoms
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
-    SQSResult, symbols_from_z, Structure, pair_analysis, available_species, make_supercell, IterationMode
-
+    SQSResult, symbols_from_z, Structure, make_supercell, IterationMode, pair_analysis, available_species
 
 __all__ = [
     'IterationMode',
@@ -18,7 +16,12 @@ __all__ = [
     'make_supercell',
     'process_settings',
     'make_result_document',
-    'pair_sqs_iteration'
+    'pair_sqs_iteration',
+    'sqs_optimize',
+    'from_pymatgen_structure',
+    'from_ase_atoms',
+    'pair_analysis',
+    'available_species'
 ]
 
 TimingDictionary = T.Dict[int, T.List[float]]
@@ -28,7 +31,7 @@ SQSResultCollection = T.Iterable[SQSResult]
 
 def make_result_document(settings: Settings, sqs_results: T.Iterable[SQSResult],
                          timings: T.Optional[TimingDictionary] = None,
-                         fields: T.Iterable[str] = ('configuration',)) -> Settings:
+                         fields: T.Tuple[str, ...] = ('configuration',)) -> Settings:
     """
     Converts the ``sqsgenerator.core.SQSResults`` obtained from ``pair_sqs_results`` into a JSON/YAML serializable
     dictionary
@@ -38,9 +41,10 @@ def make_result_document(settings: Settings, sqs_results: T.Iterable[SQSResult],
     :param sqs_results: the ``sqsgenerator.core.SQSResults`` calculated by ``pair_sqs_results``
     :type sqs_results: iterable of ``sqsgenerator.core.SQSResults``
     :param timings: a dictionary of thread timing information (default is ``None``)
-    :type timings: dict with int as keys and float as values
+    :type timings: Dict[int, float]
     :param fields: the fields to include in the document. Can be either *configuration*, *objective* and/or
         *parameters* (default is ``('configuration',)``)
+    :type fields: Tuple[str, ...]
     :return: the JSON/YAML serializable document
     :rtype: AttrDict
     """
@@ -75,9 +79,11 @@ def extract_structures(results: Settings) -> T.Dict[int, Structure]:
     :param results: the dict-like iteration results
     :type results:  AttrDict
     :return: a dictionary with ranks structure objects as values
-    :rtype: dict with ``int`` as keys and ``Structure`` as values
+    :rtype: Dict[int, :py:class:`sqsgenerator.public.Structure`]
     """
     structure: Structure = results.structure
+
+    raw_data = results['configuration'] if 'configuration' in results else results
 
     def get_configuration(conf):
         return conf if not isinstance(conf, dict) else conf['configuration']
@@ -85,7 +91,7 @@ def extract_structures(results: Settings) -> T.Dict[int, Structure]:
     structures = {
         rank:
             structure.with_species(get_configuration(conf), which=results.which)
-        for rank, conf in results['configurations'].items()
+        for rank, conf in raw_data.items()
     }
     return structures
 
@@ -109,7 +115,7 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
         (default is ``"warning"``)
     :type log_level: str
     :return: the minimal configuration and the corresponding Short-range-order parameters as well as timing information
-    :rtype: Tuple[Iterable[:py:class:`sqsgenerator.public.SQSResult`], Dict[``int``, ``float``]]
+    :rtype: Tuple[Iterable[:py:class:`sqsgenerator.public.SQSResult`], Dict[int, float]]
     """
     set_core_log_level(log_levels.get(log_level))
 
@@ -147,7 +153,7 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
 
 
 def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
-                       timings: T.Optional[TimingDictionary] = None, fields: T.Tuple[str, ...]=('configuration',),
+                       timings: T.Optional[TimingDictionary] = None, fields: T.Tuple[str, ...] = ('configuration',),
                        inplace: bool = False) -> Settings:
     """
     Serializes a list of :py:class:`sqsgenerator.public.SQSResult` into a JSON/YAML serializable dictionary
@@ -158,16 +164,17 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
     :type sqs_results: Iterable[:py:class:`sqsgenerator.public.SQSResult`]
     :param timings: a dict like information about the performance of the core routines. Keys refer to thread numbers.
         the values represent the average time the thread needed to analyse one configuration in **µs** (default is ``None``)
-    :type timings: Dict[`ìnt``, ``float``]
+    :type timings: Dict[int, float]
     :param fields: a tuple of fields to include. Allowed fields are "*configuration*", "*objective*", and
-        "*parameters*" (default is ``('configuration',)`)
+        "*parameters*" (default is ``('configuration',)``)
     :type fields: Tuple[str, ...]
     :param inplace: update the the input ``settings`` document instead of creating a new one (default is ``False``)
+
     """
     dump_include = list(fields)
     if 'configuration' not in dump_include:
         dump_include += ['configuration']
-    result_document = make_result_document(settings, sqs_results, fields=dump_include, timings=timings)
+    result_document = make_result_document(settings, sqs_results, fields=tuple(dump_include), timings=timings)
 
     if inplace:
         settings.update(result_document)
@@ -183,13 +190,17 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
     return Settings(final_document)
 
 
-def merge(a: dict, b: T.Optional[dict]=None, **kwargs) -> dict:
+def merge(a: dict, b: T.Optional[dict] = None, **kwargs) -> dict:
     if b is None:
         b = {}
     return {**a, **b, **kwargs}
 
 
-def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, minimal: bool = True, similar: bool = False, log_level: str = 'warning', fields: T.Tuple[str, ...]=('configuration', 'parameters', 'objective'), make_structures: bool = False, structure_format: str ='default') -> T.Tuple[T.Dict[int, T.Dict[str, T.Any]], T.Dict[int, T.Union[float, T.List[float]]]]:
+def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, minimal: bool = True,
+                 similar: bool = False, log_level: str = 'warning',
+                 fields: T.Tuple[str, ...] = ('configuration', 'parameters', 'objective'),
+                 make_structures: bool = False, structure_format: str = 'default') \
+        -> T.Tuple[T.Dict[int, T.Dict[str, T.Any]], T.Dict[int, T.Union[float, T.List[float]]]]:
     """
     This function allows to simply generate SQS structures
 
@@ -218,21 +229,48 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
 
     :param settings: the settings used for the SQS optimization
     :type settings: AttrDict or Dict
+    :param process: process the input {settings} dictionary (default is ``True``)
+    :type process: bool
+    :param minimal: Include only configurations with minimum objective function in the results (default is ``True``)
+    :type minimal: bool
+    :param similar: If the minimum objective is degenerate include also results with same parameters but
+        different configuration (default is ``False``)
+    :type similar: bool
+    :param log_level: set's the log level for the core C++ extension. Possible fields are "*trace*", "*debug*",
+        "*info*", "*warning*" and "*error*" (default is ``'warning'``)
+    :type log_level: str
+    :param fields: output fields included in the result document. Possible fields are "*configuration*", "*parameters*",
+        "*objective*" and "*parameters*" (default is ``('configuration',)``)
+    :type fields: Tuple[str, ...]
+    :param make_structures: build structure objects from the optimization results (default is ``False``
+    :type make_structures: bool
+    :param structure_format: if {make_structures} was set to ``True`` it specifies the format of the build structures
+        (default is ``'default'``)
+
+            - "*default*": :py:class:`sqsgenerator.public.Structure`
+            - "*pymatgen*" :py:class:`pymatgen.core.Structure`
+            - "*ase*": :py:class:`ase.atoms.Atoms`
+
+    :type structure_format: str
+    :return: a dictionary with the specified fields as well as timing information. The keys of the result dictionary are
+        the permutation ranks of the generated configuration.
+    :rtype: T.Tuple[T.Dict[int, T.Dict[str, T.Any]], T.Dict[int, T.Union[float, T.List[float]]]]
+
     """
     settings = settings if isinstance(settings, Settings) else AttrDict(settings)
     settings = process_settings(settings) if process else settings
 
     results, timings = pair_sqs_iteration(settings, minimal=minimal, similar=similar, log_level=log_level)
 
-    result_document = make_result_document(settings, results, timings=timings, fields=fields)
+    result_document = make_result_document(settings, results, timings=timings, fields=fields).get('configurations')
     if make_structures:
         structure_document = extract_structures(result_document)
         converters = dict(default=lambda _: _, ase=to_ase_atoms, pymatgen=to_pymatgen_structure)
         converter = converters.get(structure_format)
         structure_document = {k: converter(v) for k, v in structure_document.items()}
 
-    result_document = result_document.get('configurations')
     if make_structures:
-        result_document = {rank: merge(result, structure=structure_document[rank]) for rank, result in result_document.items()}
+        result_document = {rank: merge(result, structure=structure_document[rank]) for rank, result in
+                           result_document.items()}
 
     return result_document, timings
