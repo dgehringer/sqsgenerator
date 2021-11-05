@@ -24,7 +24,7 @@ namespace sqsgenerator {
             const_array_3d_ref_t target_objective,
             const_array_3d_ref_t parameter_weights,
             pair_shell_weights_t shell_weights,
-            int iterations,
+            rank_t iterations,
             int output_configurations,
             std::vector<double> shell_distances,
             std::vector<int> threads_per_rank,
@@ -76,7 +76,7 @@ namespace sqsgenerator {
             const_array_3d_ref_t target_objective,
             const_array_3d_ref_t parameter_weights,
             pair_shell_weights_t shell_weights,
-            int iterations,
+            rank_t iterations,
             int output_configurations,
             std::vector<int> threads_per_rank,
             double atol,
@@ -122,7 +122,7 @@ namespace sqsgenerator {
         return m_structure.num_atoms();
     }
 
-    [[nodiscard]] int IterationSettings::num_iterations() const {
+    [[nodiscard]] rank_t IterationSettings::num_iterations() const {
         return m_niterations;
     }
 

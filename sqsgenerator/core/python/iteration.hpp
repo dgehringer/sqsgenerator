@@ -29,7 +29,7 @@ namespace sqsgenerator::python {
                 np::ndarray target_objective,
                 np::ndarray parameter_weights,
                 py::dict shell_weights,
-                int iterations,
+                rank_t iterations,
                 int output_configurations,
                 py::list threads_per_rank,
                 double atol,
@@ -42,7 +42,7 @@ namespace sqsgenerator::python {
                 np::ndarray target_objective,
                 np::ndarray parameter_weights,
                 py::dict shell_weights,
-                int iterations,
+                rank_t iterations,
                 int output_configurations,
                 py::list distances,
                 py::list threads_per_rank,
@@ -56,7 +56,7 @@ namespace sqsgenerator::python {
         double rtol() const;
         size_t num_atoms() const;
         size_t num_shells() const;
-        int num_iterations() const;
+        rank_t num_iterations() const;
         size_t num_species() const;
         iteration_mode mode() const;
         py::dict shell_weights() const;

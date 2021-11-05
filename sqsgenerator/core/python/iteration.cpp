@@ -23,7 +23,7 @@ namespace sqsgenerator::python {
             np::ndarray target_objective,
             np::ndarray parameter_weights,
             py::dict shell_weights,
-            int iterations,
+            rank_t iterations,
             int output_configurations,
             py::list threads_per_rank,
             double atol,
@@ -50,7 +50,7 @@ namespace sqsgenerator::python {
             np::ndarray target_objective,
             np::ndarray parameter_weights,
             py::dict shell_weights,
-            int iterations,
+            rank_t iterations,
             int output_configurations,
             py::list distances,
             py::list threads_per_rank,
@@ -89,7 +89,7 @@ namespace sqsgenerator::python {
         return m_handle->num_shells();
     }
 
-    int IterationSettingsPythonWrapper::num_iterations() const {
+    rank_t IterationSettingsPythonWrapper::num_iterations() const {
         return m_handle->num_iterations();
     }
 

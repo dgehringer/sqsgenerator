@@ -20,7 +20,7 @@ namespace sqsgenerator {
         composition_t m_composition;
         double m_atol;
         double m_rtol;
-        int m_niterations;
+        rank_t m_niterations;
         int m_noutput_configurations;
         size_t m_nspecies;
         configuration_t m_configuration_packing_indices;
@@ -46,7 +46,7 @@ namespace sqsgenerator {
                 const_array_3d_ref_t target_objective,
                 const_array_3d_ref_t parameter_weights,
                 pair_shell_weights_t shell_weights,
-                int iterations,
+                rank_t iterations,
                 int output_configurations,
                 std::vector<double> shell_distances,
                 std::vector<int> threads_per_rank,
@@ -60,7 +60,7 @@ namespace sqsgenerator {
                 const_array_3d_ref_t target_objective,
                 const_array_3d_ref_t parameter_weights,
                 pair_shell_weights_t shell_weights,
-                int iterations,
+                rank_t iterations,
                 int output_configurations,
                 std::vector<int> threads_per_rank,
                 double atol=1.0e-5,
@@ -71,7 +71,7 @@ namespace sqsgenerator {
         [[nodiscard]] double rtol() const;
         [[nodiscard]] size_t num_atoms() const;
         [[nodiscard]] size_t num_shells() const;
-        [[nodiscard]] int num_iterations() const;
+        [[nodiscard]] rank_t num_iterations() const;
         [[nodiscard]] size_t num_species() const;
         [[nodiscard]] iteration_mode mode() const;
         [[nodiscard]] composition_t composition() const;

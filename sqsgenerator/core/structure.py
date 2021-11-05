@@ -25,15 +25,15 @@ class Structure(Structure_):
 
         :param lattice: the (3x3) lattice matrix. The three **rows** are interpreted as the lattice vectors **a**,
             **b** and **c**.
-        :type lattice: ``np.ndarray``
+        :type lattice: np.ndarray
         :param frac_coords: the **fractional coordinates** of the lattice positions as (3xN) array. Each **row**
             will be treated as a lattice position
-        :type frac_coords: ``np.ndarray``
-        :param symbols: a list of strings of length N specifiyng the atomic species which occupy the lattice positions
-        :type symbols: List[``str``]
-        :param pbc: the coodinate axes for which **periodic boundary conditions** should be applied.
+        :type frac_coords: np.ndarray
+        :param symbols: a list of strings of length N specifying the atomic species which occupy the lattice positions
+        :type symbols: List[str]
+        :param pbc: the coordinate axes for which **periodic boundary conditions** should be applied.
             **Do not pass a value here**. This feature is not yet implemented (default is ``(True, True, True)``)
-        :type pbc: Tuple[``bool``, ``bool``, ``bool``]
+        :type pbc: Tuple[bool, bool, bool]
         :raises ValueError: if length of {frac_coords} and length of {symbols} do not match
 
         """
@@ -48,7 +48,7 @@ class Structure(Structure_):
         A ``numpy.ndarray`` storing the symbols of the atomic species. E.g "*Fe*", "*Cr*", "*Ni*"
 
         :return: the array of symbols
-        :rtype: ``numpy.ndarray``
+        :rtype: numpy.ndarray
         """
         return self._symbols
 
@@ -58,7 +58,7 @@ class Structure(Structure_):
         The ordinal numbers of the atoms sitting on the lattice positions
 
         :return: array of ordinal numbers
-        :rtype: ``numpy.ndarray``
+        :rtype: numpy.ndarray
         """
         return self._numbers
 
@@ -68,7 +68,7 @@ class Structure(Structure_):
         The number of unique elements in the structure object
 
         :return: the number of elements
-        :rtype: ``int``
+        :rtype: int
         """
         return len(self._unique_species)
 
@@ -78,7 +78,7 @@ class Structure(Structure_):
         A set of symbols of the occurring species
 
         :return: a set containing the symbol of the occurring species
-        :rtype: Set[``str``]
+        :rtype: Set[str]
         """
         return self._unique_species
 
@@ -151,9 +151,9 @@ class Structure(Structure_):
         in {which}.
 
         :param species: the atomic species specified by their symbols
-        :type species: Iterable[``str``]
+        :type species: Iterable[str]
         :param which: the indices of the lattice positions to choose (default is ``None``)
-        :type which: Optional[Iterable[``int``]]
+        :type which: Optional[Iterable[int]]
         :return: the (subset) structure with new species
         :rtype: Structure
         :raises ValueError: if length of which is < 1 or length of {which} and {species} does not match
@@ -169,9 +169,9 @@ class Structure(Structure_):
         current structure, while on the positions specified by {which} are occipied with {species}
 
         :param species: the atomic species specified by their symbols
-        :type species: Iterable[``str``]
+        :type species: Iterable[str]
         :param which: the indices of the lattice positions to choose (default is ``None``)
-        :type which: Optional[Iterable[``int``]]
+        :type which: Optional[Iterable[int]]
         :return: the structure with new species
         :rtype: Structure
         :raises ValueError: if length of which is < 1 or length of {which} and {species} does not match

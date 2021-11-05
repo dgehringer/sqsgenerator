@@ -11,7 +11,7 @@ if __name__ == '__main__':
                        supercell=(2,2,2)),
         composition=dict(W=8, Re=8),
         shell_weights={1: 1.0},
-        iterations=1e7
+        iterations=1e10
     )
 
-    sqs_optimize(configuration)
+    print(sqs_optimize(configuration))
