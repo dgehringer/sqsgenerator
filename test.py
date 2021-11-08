@@ -1,8 +1,6 @@
 import pprint
-
-import attrdict
-
-from sqsgenerator import sqs_optimize
+from operator import itemgetter as item
+from sqsgenerator import sqs_optimize, export_structures
 
 
 if __name__ == '__main__':
@@ -14,4 +12,6 @@ if __name__ == '__main__':
         iterations=1e10
     )
 
-    print(sqs_optimize(configuration))
+    result, timings = sqs_optimize(configuration, make_structures=True)
+    print(result)
+    export_structures(result, writer='pymatgen', functor=item('structure'))
