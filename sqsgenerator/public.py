@@ -4,7 +4,7 @@ import numpy as np
 import typing as T
 from attrdict import AttrDict
 from operator import attrgetter as attr
-from sqsgenerator.io import read_settings_file
+from sqsgenerator.io import read_settings_file, export_structures
 from sqsgenerator.settings import construct_settings, process_settings
 from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms, from_pymatgen_structure, from_ase_atoms
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
@@ -23,7 +23,8 @@ __all__ = [
     'from_ase_atoms',
     'pair_analysis',
     'available_species',
-    'read_settings_file'
+    'read_settings_file',
+    'export_structures'
 ]
 
 TimingDictionary = T.Dict[int, T.List[float]]
@@ -74,25 +75,29 @@ def make_result_document(settings: Settings, sqs_results: T.Iterable[SQSResult],
     return Settings(result_document)
 
 
-def extract_structures(results: Settings) -> T.Dict[int, Structure]:
+def extract_structures(results: Settings, base_structure: T.Optional[Structure] = None) -> T.Dict[int, Structure]:
     """
     Parses a dictionary of results and replaces the generated configuration with the actual structure
 
     :param results: the dict-like iteration results
     :type results:  AttrDict
+    :param base_structure: the structure to which the individual configuration are applied to. If ``None`` it tries
+        to extract it from the results document by calling the "structure" attribute (default is ``None``)
     :return: a dictionary with ranks structure objects as values
-    :rtype: Dict[int, :py:class:`sqsgenerator.public.Structure`]
+    :rtype: Dict[int, :py:class:`Structure`]
     """
-    structure: Structure = results.structure
 
-    raw_data = results['configuration'] if 'configuration' in results else results
+    structure = results.structure if base_structure is None else base_structure
+    which = results.which if base_structure is None else tuple(range(len(structure)))
+
+    raw_data = results['configurations'] if 'configurations' in results else results
 
     def get_configuration(conf):
         return conf if not isinstance(conf, dict) else conf['configuration']
 
     structures = {
         rank:
-            structure.with_species(get_configuration(conf), which=results.which)
+            structure.with_species(get_configuration(conf), which=which)
         for rank, conf in raw_data.items()
     }
     return structures
@@ -117,7 +122,7 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
         (default is ``"warning"``)
     :type log_level: str
     :return: the minimal configuration and the corresponding Short-range-order parameters as well as timing information
-    :rtype: Tuple[Iterable[:py:class:`sqsgenerator.public.SQSResult`], Dict[int, float]]
+    :rtype: Tuple[Iterable[:py:class:`SQSResult`], Dict[int, float]]
     """
     set_core_log_level(log_levels.get(log_level))
 
@@ -158,12 +163,12 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
                        timings: T.Optional[TimingDictionary] = None, fields: T.Tuple[str, ...] = ('configuration',),
                        inplace: bool = False) -> Settings:
     """
-    Serializes a list of :py:class:`sqsgenerator.public.SQSResult` into a JSON/YAML serializable dictionary
+    Serializes a list of :py:class:`SQSResult` into a JSON/YAML serializable dictionary
 
     :param settings: the settings used to compute the {sqs_results}
     :type settings: AttrDict
-    :param sqs_results: a iterable (list) of :py:class:`sqsgenerator.public.SQSResult`
-    :type sqs_results: Iterable[:py:class:`sqsgenerator.public.SQSResult`]
+    :param sqs_results: a iterable (list) of :py:class:`SQSResult`
+    :type sqs_results: Iterable[:py:class:`SQSResult`]
     :param timings: a dict like information about the performance of the core routines. Keys refer to thread numbers.
         the values represent the average time the thread needed to analyse one configuration in **µs** (default is ``None``)
     :type timings: Dict[int, float]
@@ -207,13 +212,13 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
     This function allows to simply generate SQS structures
 
     Performs a SQS optimization loop. This function is meant for using sqsgenerator through Python. Prefer this function
-    over :py:func:`sqsgenerator.public.pair_sqs_iteration`. It combines the functionalities of several low-level utility
+    over :py:func:`pair_sqs_iteration`. It combines the functionalities of several low-level utility
     function.
 
-        1. Generate default values for ``settings`` (:py:func:`sqsgenerator.public.process_settings`)
-        2. Execute the actual SQS optimization loop (:py:func:`sqsgenerator.public.pair_sqs_iteration`)
-        3. Process, convert the results (:py:func:`sqsgenerator.public.make_result_document`)
-        4. Build the structures from the optimization results (:py:func:`sqsgenerator.public.extract_structures`)
+        1. Generate default values for ``settings`` (:py:func:`process_settings`)
+        2. Execute the actual SQS optimization loop (:py:func:`pair_sqs_iteration`)
+        3. Process, convert the results (:py:func:`make_result_document`)
+        4. Build the structures from the optimization results (:py:func:`extract_structures`)
 
     An example output might look like the following:
 
@@ -249,7 +254,7 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
     :param structure_format: if {make_structures} was set to ``True`` it specifies the format of the build structures
         (default is ``'default'``)
 
-            - "*default*": :py:class:`sqsgenerator.public.Structure`
+            - "*default*": :py:class:`Structure`
             - "*pymatgen*" :py:class:`pymatgen.core.Structure`
             - "*ase*": :py:class:`ase.atoms.Atoms`
 
@@ -266,7 +271,7 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
 
     result_document = make_result_document(settings, results, timings=timings, fields=fields).get('configurations')
     if make_structures:
-        structure_document = extract_structures(result_document)
+        structure_document = extract_structures(result_document, base_structure=settings.structure)
         converters = dict(default=lambda _: _, ase=to_ase_atoms, pymatgen=to_pymatgen_structure)
         converter = converters.get(structure_format)
         structure_document = {k: converter(v) for k, v in structure_document.items()}

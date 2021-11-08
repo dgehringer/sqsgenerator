@@ -27,6 +27,11 @@ output_formats = {
     F.pymatgen: {'cif', 'mcif', 'poscar', 'cssr', 'json', 'xsf', 'prismatic', 'yaml'}
 }
 
+
+def identity(x: T.Any) -> T.Any:
+    return x
+
+
 if have_feature(F.ase):
     from ase.io.formats import all_formats, get_ioformat
 
@@ -267,6 +272,7 @@ def to_dict(settings: dict) -> T.Dict[str, T.Any]:
     :return: a serializable dict
     :rtype: dict
     """
+
     identity = lambda _: _  # although bad practice this is readable =)
     converters = {
         int: identity,
@@ -293,14 +299,15 @@ def to_dict(settings: dict) -> T.Dict[str, T.Any]:
     return _generic_to_dict(settings)
 
 
-def export_structures(structures: T.Dict[T.Any, Structure], format: str = 'cif', output_file: str = 'sqs.result',
-                      writer: str = 'ase', compress: T.Optional[str] = None) -> T.NoReturn:
+def export_structures(structures: T.Dict[T.Any, T.Any], format: str = 'cif', output_file: str = 'sqs.result',
+                      writer: T.Union[Feature,str] = 'ase', compress: T.Optional[str] = None,
+                      functor: T.Callable[[T.Any], str] = identity) -> T.NoReturn:
     """
     Writes structures into files. The filename is specified by the keys of {structure} argument. The structures stored
     in the values will be written using the {writer} backend in {format}. If compress is specified the structures will
     be dumped into an archive with name {output_file}. The file-extension is chosen automatically.
 
-    :param structures: a mapping of filenames and Structures
+    :param structures: a mapping of filenames and :py:class:`Structures`
     :type structures: dict[T.Any, Structure]
     :param format: output file format (default is ``"cif"``)
     :param output_file: the prefix of the output archive name. File extension is chosen automatically.
@@ -311,8 +318,12 @@ def export_structures(structures: T.Dict[T.Any, Structure], format: str = 'cif',
     :param compress: compression algorithm (``zip``, ``gz``, ``bz2`` or ``xz``) used to store the structure files. If ``None``
         the structures are written to plain files (default is ``None``)
     :type compress: str or None
+    :param functor: a callable which maps the values of {structures} on a :py:class:`Structure` (default is **identity** = `lambda x: x`)
+    :type functor: Callable[[Any], :py:class:`Structure`]
 
     """
+
+    writer = Feature(writer) if isinstance(writer, str) else writer
 
     output_prefix = output_file
     if compress:
@@ -340,6 +351,7 @@ def export_structures(structures: T.Dict[T.Any, Structure], format: str = 'cif',
                     tar_info.size = len(data)
                     archive_handle.addfile(tar_info, buf)
 
+    structures = {k: functor(v) for k, v in structures.items()}
     for rank, structure in structures.items():
         filename = f'{rank}.{format}'
         data = dumps_structure(structure, format, writer=writer)  # capture the output from the {writer} backend
