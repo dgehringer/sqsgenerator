@@ -9,6 +9,8 @@ API Reference
 
 .. autofunction:: sqsgenerator.public.read_settings_file
 
+.. autofunction:: sqsgenerator.public.export_structures
+
 .. autoclass:: sqsgenerator.public.IterationMode
 
     .. attribute:: random
@@ -17,7 +19,7 @@ API Reference
 
     .. attribute:: systematic
 
-        Will cause sqsgenrator to systematically sample the configurational space. This setting is recommended only
+        Will cause sqsgenerator to systematically sample the configurational space. This setting is recommended only
         for relatively "*small*" structures. We strongly encourage you to use:
 
             .. highlight:: bash

@@ -346,6 +346,27 @@ This section needs still to be done
  - Maybe MPI enabled version
 ```
 
+       
+## Graceful exits
+
+As the SQS optimization may require a large number of iterations, it is sometimes desirable to stop the process 
+(e. g. because of time limits on HPC clusters). When sending a signal to `sqsgenerator` it does not crash but rather 
+exit and write out the current state of the optimization.
+`sqsgenerator`'s core routine installs a temporary signal *SIGINT* handler which replaces Pythons default 
+`KeyboardInterrupt`. Thus while executing the optimization you can always interrupt it by hitting **Ctrl+C**. You should 
+get a warning that the program was interrupted
+
+```{code-block} bash
+[warning]:do_pair_iterations::interrupt_message = "Received SIGINT/SIGTERM results may be incomplete"
+/media/DATA/drive/projects/sqsgenerator-core/sqsgenerator/public.py:137: UserWarning: SIGINT received: SQS results may be incomplete
+  warnings.warn('SIGINT received: SQS results may be incomplete')
+```
+
+In case of MPI parallel both *SIGINT* and *SIGTERM* handlers are overwritten. Therefore, if you run `sqsgenerator`
+interactively using the `mpirun` command you can also gracefully terminate the process using **Ctrl+C**. How to 
+terminate the program if executed with a queuing system behind, is documented in the 
+[parallelization guide](parallelization.md).
+
 ## A note on the number of `iterations`
 
 Actually it is very hard to tell what is a "**sufficiently**" large enough number for the `iteration` parameter. As the 
@@ -370,7 +391,7 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
     ```
 
     You can tune the number of permutations to a computing time you can afford. The above command gives only an estimate
-    for the current machine.
+    for the current machine. The above command analyzes $10^5$ random configurations and 
     
   - Reduce the number of shells. This has two-fold advantage
     1. In contrast to old versions of `sqsgenerator`, the current implementations profit greatly from a decreased number
@@ -383,9 +404,3 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
        ```
     3. The image size of the objective function is drastically reduced. In other words a lot of different structures are 
        mapped onto the same value of the objective function.
-
-
-
-
-
-## Graceful exits
