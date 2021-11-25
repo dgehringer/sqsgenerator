@@ -87,3 +87,11 @@ def z_from_symbols(*args, **kwargs):
 
 def build_configuration(*args, **kwargs):
     pass
+
+
+def make_rank(*args, **kwargs):
+    pass
+
+
+def sqs_analyse(*args, **kwargs):
+    pass
