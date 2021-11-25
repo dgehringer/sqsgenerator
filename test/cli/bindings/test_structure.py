@@ -63,5 +63,6 @@ class TestStructure(unittest.TestCase):
         length = len(self.structure)
         self.assertTrue(f'len={length}', repr(self.structure))
 
+
 if __name__ == '__main__':
     unittest.main()
