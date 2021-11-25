@@ -154,11 +154,12 @@ def dumps(o: dict, output_format: str = 'yaml') -> bytes:
 @require(F.yaml, F.json, condition=any)
 def read_settings_file(path: str, format: str = 'yaml') -> AttrDict:
     """
-    Reads a file expecting {format} as the file type
+    Reads a file expecting {format} as the file type. This method does not process the input paramters, but rather
+    just reads, them from. To obtain default values for all parameters use :py:func:`process_settings`
 
     :param path: the file path
     :type path: str
-    :param format: the input file-type (default is ``"yaml"``)
+    :param format: the input file-type. Possible formats are *yaml*, *json* and *pickle* (default is ``'yaml'``)
     :type format: str
     :return: the parsed settings
     :rtype: AttrDict
@@ -308,18 +309,18 @@ def export_structures(structures: T.Dict[T.Any, T.Any], format: str = 'cif', out
     be dumped into an archive with name {output_file}. The file-extension is chosen automatically.
 
     :param structures: a mapping of filenames and :py:class:`Structures`
-    :type structures: dict[T.Any, Structure]
-    :param format: output file format (default is ``"cif"``)
+    :type structures: dict[Any, Structure]
+    :param format: output file format (default is ``'cif'``)
     :param output_file: the prefix of the output archive name. File extension is chosen automatically.
-        If {compress} is ``None`` this option is ignored (default is ``"sqs.result"``)
+        If {compress} is ``None`` this option is ignored (default is ``'sqs.result'``)
     :type output_file: str
-    :param writer: the writer backend (default is ``"ase"``)
+    :param writer: the writer backend (default is ``'ase'``)
     :type writer: str
-    :param compress: compression algorithm (``zip``, ``gz``, ``bz2`` or ``xz``) used to store the structure files. If ``None``
-        the structures are written to plain files (default is ``None``)
+    :param compress: compression algorithm (``'zip'``, ``'gz'``, ``'bz2'`` or ``'xz'``) used to store the structure
+        files. If ``None`` the structures are written to plain files (default is ``None``)
     :type compress: str or None
-    :param functor: a callable which maps the values of {structures} on a :py:class:`Structure` (default is **identity** = `lambda x: x`)
-    :type functor: Callable[[Any], :py:class:`Structure`]
+    :param functor: a callable which maps the values of {structures} on a :py:class:`Structure` (default is ``identity = lambda x: x``)
+    :type functor: Callable[[Any], Structure]
 
     """
 

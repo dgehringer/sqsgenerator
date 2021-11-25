@@ -9,13 +9,12 @@ import rich
 import click
 import functools
 import typing as T
-import collections.abc
 from sqsgenerator.io import read_settings_file
 from sqsgenerator.commands.help import parameter_help as help
 from sqsgenerator.settings import process_settings, parameter_list, BadSettings
 
 
-def error(message, exc_type=click.Abort, raise_exc=True, prefix=None, **kwargs):
+def error(message: str, exc_type=click.Abort, raise_exc: bool = True, prefix: T.Optional[str] = None, **kwargs):
     """
     Prints an error message and abort execution by raising an error
     :param message: the error message to print
@@ -37,7 +36,7 @@ def error(message, exc_type=click.Abort, raise_exc=True, prefix=None, **kwargs):
         raise exc_type(message)
 
 
-def pretty_print(*objects, show=True, paginate='auto', **kwargs):
+def pretty_print(*objects: T.Any, show: bool = True, paginate: str = 'auto', **kwargs):
     """
     Formats an object nicely. Tries to use "rich" if available. Falls back to pprint.pprint alternatively
     :param objects: the objects to print
@@ -102,7 +101,7 @@ def exit_on_input_parameter_error(f):
 def click_settings_file(process=None, default_name='sqs.yaml', ignore=()):
     """
     Decorator-Factory: A lot of the commands need an input YAML file -> creates a a decorator which parses a settings
-    file and takes an input format as parameter. The decorater prcesses the specified file
+    file and takes an input format as parameter. The decorator processes the specified file
     :param process: process (parsed) the settings dictionary with sqsgenerator.core (default is `None`)
     :type process: Iterable[str] or None
     :param default_name: if no file path is specified the function will search {default_name} (default is `"sqs.yaml"`)
