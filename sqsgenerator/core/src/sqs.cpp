@@ -79,15 +79,14 @@ namespace sqsgenerator {
     double calculate_pair_objective(parameter_storage_t &bonds, const parameter_storage_t &prefactors,
                                            const parameter_storage_t &parameter_weights,
                                            const parameter_storage_t &target_objectives) {
-        double total_objective {0.0};
-        size_t nparams {bonds.size()};
+        double total_objective{0.0};
+        size_t nparams{bonds.size()};
         for (size_t i = 0; i < nparams; i++) {
             // std::cout << "\tparam[" << i << "], num_bonds=" << bonds[i] << ", prefactors=" << prefactors[i];
-            bonds[i] =  (1.0 - bonds[i] * prefactors[i]);
+            bonds[i] = (1.0 - bonds[i] * prefactors[i]);
             // std::cout << ", sro=" << bonds[i] << ", target=" << target_objectives[i] << ", weight=" << parameter_weights[i] << ", contribution=" << parameter_weights[i] * std::abs(bonds[i] - target_objectives[i]) <<std::endl;
             total_objective += parameter_weights[i] * std::abs(bonds[i] - target_objectives[i]);
         }
-        // std::cout << "total_objective=" << total_objective << std::endl;
         return total_objective;
     }
 

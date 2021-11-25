@@ -3,13 +3,14 @@ import operator
 import functools
 import frozendict
 import typing as T
-from sqsgenerator.core.core import SQSResult
+from sqsgenerator.core.core import SQSResult, Atom
 from sqsgenerator.core.core import __version__, __features__
 from sqsgenerator.core.core import set_log_level, pair_sqs_iteration, pair_analysis
 from sqsgenerator.core.core import IterationMode, IterationSettings, BoostLogLevel
-from sqsgenerator.core.structure import Structure, structure_to_dict, Atom, make_supercell
-from sqsgenerator.core.core import default_shell_distances, total_permutations, rank_structure, atoms_from_numbers, \
-    atoms_from_symbols, available_species, symbols_from_z, z_from_symbols, build_configuration, ALL_SITES
+from sqsgenerator.core.structure import Structure, structure_to_dict, make_supercell
+from sqsgenerator.core.core import default_shell_distances, atoms_from_numbers, atoms_from_symbols, available_species, \
+    symbols_from_z, z_from_symbols, build_configuration, ALL_SITES, make_rank as make_rank_, \
+    rank_structure as rank_structure_, total_permutations as total_permutations_
 
 __all__ = [
     '__version__',
@@ -35,7 +36,9 @@ __all__ = [
     'symbols_from_z',
     'z_from_symbols',
     'build_configuration',
-    'ALL_SITES'
+    'ALL_SITES',
+    'make_rank',
+    'rank_structure',
 ]
 
 attr = operator.attrgetter
@@ -72,3 +75,78 @@ def get_function_logger(f: T.Callable) -> logging.Logger:
 
 set_core_log_level(logging.WARNING)
 
+
+def total_permutations(struct: Structure, which: T.Optional[T.Iterable[int]] = None) -> int:
+    """
+    Compute the total number of total permutations, by looking at the configuration of {struct}. The number of
+    of permutations are given by the multinomial coefficient. Let :math:`N_1, N_2, \ldots, N_m` the number of the
+    atoms of the :math:`m^{\\text{th}}` species. Therefore, one can generate
+
+    .. math::
+
+        N_{\\text{perms}} = \dfrac{N!}{\prod_m^M N_m} \quad \\text{where} \quad \sum_m^M N_m = N
+
+    permutations in total
+
+    :param struct: the structure with the configuration to calculate the number of total permutations
+    :type struct: Structure
+    :param which: the indices of the lattice positions to choose (default is ``None``)
+    :type which: Optional[Iterable[int]]
+    :return: the rank of the structure of the sub-lattice selected by {which}
+    :rtype: int
+    """
+    which = tuple(range(len(struct))) if which is None else which
+
+    return total_permutations_(struct[which])
+
+
+def make_rank(struct: Structure, configuration: T.Iterable[str], rank: int,
+              which: T.Optional[T.Iterable[int]] = None) -> Structure:
+    """
+    Uses the lattice and positions from {struct} and generates the {rank}-th permutation (in lexicographical order)
+    of {configuration} and and creates a new structure with it. If {which} is given we the selected lattices positions
+    are used, therefore the length of {configuration} must match the length of {which}
+
+    :param struct: the basis structure from which the new structure will be created
+    :type struct: Structure
+    :param configuration: the species sequence from which the {rank}-th permutation sequence
+    :type configuration: Iterable[str]
+    :param rank: the index of the permutation sequence
+    :type rank: int
+    :param which: the indices of the lattice positions to choose (default is ``None``)
+    :type which: Optional[Iterable[int]]
+    :raises IndexError: if the length of {which} does not match the length of {configuration}
+    :raises ValueError: if the rank is less than 1 or greater than the number of :py:func:`total_permutations`
+    :return: the structure with {rank}-th permutation sequence as configuration
+    :rtype: Structure
+    """
+
+    msg = f"the rank of a configuration must me 1 <= rank <= total_permutations() = " \
+          f"{total_permutations(struct.slice_with_species(configuration, which))}"
+    if rank <= 0:
+        raise ValueError(msg)
+
+    which = tuple(range(len(struct))) if which is None else which
+    try:
+        unranked_configuration = make_rank_(configuration, rank)
+    except IndexError:
+        # the C++ extension raises an IndexError, we want to propagate it as an domain error
+        raise ValueError(msg)
+
+    return struct.with_species(unranked_configuration, which=which)
+
+
+def rank_structure(struct: Structure, which: T.Optional[T.Iterable[int]] = None) -> int:
+    """
+    Computes the index (in lexicographical order) of the configuration sequence.
+    If {which} is specified only those sites are selected to compute the permutation rank
+
+    :param struct: the structure which carries the configuration sequence
+    :type struct: Structure
+    :param which: the indices of the lattice positions to choose (default is ``None``)
+    :type which: Optional[Iterable[int]]
+    :return: the index of the configuration sequence
+    :rtype: int
+    """
+    which = tuple(range(len(struct))) if which is None else which
+    return rank_structure_(struct[which])

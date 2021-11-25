@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 import typing as T
 from operator import attrgetter as attr
-from sqsgenerator.core.core import Structure as Structure_, Atom
+from sqsgenerator.core.core import Structure as Structure_
 
 
 class Structure(Structure_):
@@ -16,7 +16,7 @@ class Structure(Structure_):
 
     @classmethod
     def from_extension_class(cls, o: Structure_):
-        return cls(o.lattice.copy(), o.frac_coords.copy(), map(attr('symbol'), o.species), o.pbc)
+        return cls(o.lattice.copy(), o.frac_coords.copy(), list(map(attr('symbol'), o.species)), o.pbc)
 
     def __init__(self, lattice: np.ndarray, frac_coords: np.ndarray, symbols: T.List[str],
                  pbc: T.Tuple[bool, bool, bool] = (True, True, True)):
@@ -103,6 +103,14 @@ class Structure(Structure_):
         formula = ''.join(group_symbols())
         return f'Structure({formula}, len={self.num_atoms})'
 
+    def __eq__(self, other):
+        if not isinstance(other, Structure):
+            return False
+        same_species = all(this_num == other_num for this_num, other_num in zip(self.numbers.flat, other.numbers.flat))
+        same_lattice = np.allclose(self.lattice, other.lattice)
+        same_coords = np.allclose(self.frac_coords, other.frac_coords)
+        return all((same_species, same_lattice, same_coords))
+
     def sorted(self):
         """
         Creates a new structure, where the lattice positions are ordered by the ordinal numbers of the occupying species
@@ -127,7 +135,7 @@ class Structure(Structure_):
                 indices = np.argwhere(indices).flatten()
             elif indices.dtype != int:
                 raise TypeError('Only integer numbers cann be used for slicing')
-             # boolean mask slice
+                # boolean mask slice
         elif isinstance(item, slice):
             indices = np.arange(self.num_atoms)[item]
         else:
@@ -139,11 +147,11 @@ class Structure(Structure_):
         Serializes the object into JSON/YAML serializable dictionary
 
         :return: the JSON/YAML serializable dictionary
-        :rtype: Dict[``str``, Any]
+        :rtype: Dict[str, Any]
         """
         return structure_to_dict(self)
 
-    def slice_with_species(self, species: T.Iterable[str], which: T.Optional[T.Iterable[int]]=None):
+    def slice_with_species(self, species: T.Iterable[str], which: T.Optional[T.Iterable[int]] = None):
         """
         Creates a new structure containing the lattice positions specified by {which}. The new structure
         is occupied by the atomic elements specified in {species}. In case {which} is ``None`` all lattice positions
@@ -166,7 +174,7 @@ class Structure(Structure_):
         Creates a new structure containing the lattice positions specified by {which}. The new structure
         is occupied by the atomic elements specified in {species}. In case {which} is ``None`` all lattice positions
         are assumed to be occupied with a new {species}. The new structure will only all lattice positions of the
-        current structure, while on the positions specified by {which} are occipied with {species}
+        current structure, while on the positions specified by {which} are occupied with {species}
 
         :param species: the atomic species specified by their symbols
         :type species: Iterable[str]
@@ -197,7 +205,7 @@ def structure_to_dict(structure: Structure):
     )
 
 
-def make_supercell(structure: Structure, sa: int = 1, sb: int = 1, sc : int = 1) -> Structure:
+def make_supercell(structure: Structure, sa: int = 1, sb: int = 1, sc: int = 1) -> Structure:
     """
     Creates a supercell of structure, which is repeated {sa}, {sb} and {sc} times
 

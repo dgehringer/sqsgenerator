@@ -1,14 +1,17 @@
+import itertools
+import pprint
 import signal
 import warnings
 import numpy as np
 import typing as T
 from attrdict import AttrDict
-from operator import attrgetter as attr
+from operator import attrgetter as attr, itemgetter as item
 from sqsgenerator.io import read_settings_file, export_structures
-from sqsgenerator.settings import construct_settings, process_settings
+from sqsgenerator.settings import construct_settings, process_settings, defaults
 from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms, from_pymatgen_structure, from_ase_atoms
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
-    SQSResult, symbols_from_z, Structure, make_supercell, IterationMode, pair_analysis, available_species
+    SQSResult, symbols_from_z, Structure, make_supercell, IterationMode, pair_analysis, available_species, make_rank, \
+    rank_structure, total_permutations
 
 __all__ = [
     'IterationMode',
@@ -24,7 +27,13 @@ __all__ = [
     'pair_analysis',
     'available_species',
     'read_settings_file',
-    'export_structures'
+    'export_structures',
+    'make_rank',
+    'rank_structure',
+    'total_permutations',
+    'extract_structures',
+    'expand_sqs_results',
+    'sqs_analyse'
 ]
 
 TimingDictionary = T.Dict[int, T.List[float]]
@@ -130,8 +139,8 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
 
     interrupted = False
 
-    def handle_sigint(signumber, *_):
-        assert signumber == signal.SIGINT
+    def handle_sigint(signum, *_):
+        assert signum == signal.SIGINT
         nonlocal interrupted
         interrupted = True
 
@@ -170,7 +179,8 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
     :param sqs_results: a iterable (list) of :py:class:`SQSResult`
     :type sqs_results: Iterable[:py:class:`SQSResult`]
     :param timings: a dict like information about the performance of the core routines. Keys refer to thread numbers.
-        the values represent the average time the thread needed to analyse one configuration in **µs** (default is ``None``)
+        The values represent the average time the thread needed to analyse one configuration in **µs**
+        (default is ``None``)
     :type timings: Dict[int, float]
     :param fields: a tuple of fields to include. Allowed fields are "*configuration*", "*objective*", and
         "*parameters*" (default is ``('configuration',)``)
@@ -184,13 +194,11 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
     result_document = make_result_document(settings, sqs_results, fields=tuple(dump_include), timings=timings)
 
     if inplace:
+        settings = settings.copy()
         settings.update(result_document)
         keys_to_remove = {'file_name', 'input_format', 'composition', 'iterations', 'max_output_configurations',
-                          'mode', 'threads_per_rank', 'is_sublattice'}
+                          'mode', 'threads_per_rank'}
         final_document = {k: v for k, v in settings.items() if k not in keys_to_remove}
-        if 'sublattice' in final_document:
-            final_document.update(final_document['sublattice'])
-            del final_document['sublattice']
     else:
         final_document = result_document
 
@@ -215,7 +223,7 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
     over :py:func:`pair_sqs_iteration`. It combines the functionalities of several low-level utility
     function.
 
-        1. Generate default values for ``settings`` (:py:func:`process_settings`)
+        1. Generate default values for {settings} (:py:func:`process_settings`)
         2. Execute the actual SQS optimization loop (:py:func:`pair_sqs_iteration`)
         3. Process, convert the results (:py:func:`make_result_document`)
         4. Build the structures from the optimization results (:py:func:`extract_structures`)
@@ -226,11 +234,11 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
 
             {
                 654984: {
-                    'configuration': ['Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W']
+                    'configuration': ['Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W']
                     'objective': 0.0,
                     # only present if make_structures=True
                     # Atoms object if structure_format='ase'
-                    'structure': Atoms(symbols='ReWReWReWReWReWReWReWReW', pbc=True, cell=[6.33, 6.33, 6.33])
+                    'structure': Atoms(symbols='ReWReWReWReWReWReWReW', pbc=True, cell=[6.33, 6.33, 6.33])
                 }
             }
 
@@ -261,7 +269,7 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
     :type structure_format: str
     :return: a dictionary with the specified fields as well as timing information. The keys of the result dictionary are
         the permutation ranks of the generated configuration.
-    :rtype: T.Tuple[T.Dict[int, T.Dict[str, T.Any]], T.Dict[int, T.Union[float, T.List[float]]]]
+    :rtype: Tuple[Dict[int, Dict[str, Any]], Dict[int, Union[float, List[float]]]]
 
     """
     settings = settings if isinstance(settings, Settings) else AttrDict(settings)
@@ -269,15 +277,47 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
 
     results, timings = pair_sqs_iteration(settings, minimal=minimal, similar=similar, log_level=log_level)
 
-    result_document = make_result_document(settings, results, timings=timings, fields=fields).get('configurations')
+    result_document = expand_sqs_results(settings, results, timings=timings, fields=fields)
     if make_structures:
-        structure_document = extract_structures(result_document, base_structure=settings.structure)
-        converters = dict(default=lambda _: _, ase=to_ase_atoms, pymatgen=to_pymatgen_structure)
-        converter = converters.get(structure_format)
+        structure_document = extract_structures(result_document)
+        converter = dict(default=lambda _: _, ase=to_ase_atoms, pymatgen=to_pymatgen_structure).get(structure_format)
         structure_document = {k: converter(v) for k, v in structure_document.items()}
 
-    if make_structures:
+        result_document = result_document.get('configurations')
         result_document = {rank: merge(result, structure=structure_document[rank]) for rank, result in
                            result_document.items()}
 
     return result_document, timings
+
+
+def sqs_analyse(settings: T.Union[Settings, T.Dict], structures: T.Iterable[Structure], process: bool = True,
+                fields: T.Tuple[str, ...] = ('configuration', 'parameters', 'objective'),
+                structure_format: str = 'default', append_structures: bool = False) -> dict:
+
+    settings = settings if isinstance(settings, Settings) else AttrDict(settings)
+    settings = process_settings(settings) if process else settings
+
+    converter = dict(default=lambda _: _, ase=from_ase_atoms, pymatgen=from_pymatgen_structure).get(structure_format)
+    slicer = item(settings.which)
+
+    # convert the structures to Structure object and extract the sublattice if needed
+    structures = map(lambda st: slicer(converter(st)), structures)
+    first_structure = next(iter(structures), None)
+    if first_structure is None:
+        raise ValueError('The structure input iterable contains no structure')
+
+    analyse_settings = AttrDict(settings.copy())
+    analyse_settings.update(structure=first_structure)
+    analyse_settings.update(which=defaults.which(analyse_settings))
+
+    # we have consubed the first element of the {structure} iterator we again assemble it
+    structures = itertools.chain((first_structure,), structures)
+
+    analysed = {
+        rank_structure(st): pair_analysis(construct_settings(analyse_settings, False, structure=st))
+        for st in structures
+    }
+
+    document = expand_sqs_results(analyse_settings, list(analysed.values()), fields=fields).get('configurations')
+
+    return document
