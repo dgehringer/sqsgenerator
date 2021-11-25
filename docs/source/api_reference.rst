@@ -11,7 +11,16 @@ API Reference
 
 .. autofunction:: sqsgenerator.public.export_structures
 
+.. autofunction:: sqsgenerator.public.make_rank
+
+.. autofunction:: sqsgenerator.public.total_permutations
+
+.. autofunction:: sqsgenerator.public.rank_structure
+
+
 .. autoclass:: sqsgenerator.public.IterationMode
+
+    The IterationMode is a simple enum class which indicates how ``sqsgenerator`` should sample the configurational space
 
     .. attribute:: random
 
@@ -34,8 +43,6 @@ API Reference
             .. code-block:: bash
 
                 sqsgen compute estimated-time
-
-.. autoclass:: sqsgenerator.public.SQSResult
 
 .. autoclass:: sqsgenerator.public.Structure
     :members: numbers, symbols, num_unique_species, unique_species, to_dict, sorted, slice_with_species, with_species
@@ -73,8 +80,8 @@ API Reference
         :rtype: np.ndarray
 
 
-functions for compatibility with other packages
-###############################################
+Compatibility functions
+#######################
 
 .. autofunction:: sqsgenerator.public.to_ase_atoms
 
@@ -96,4 +103,6 @@ low-level utility functions
 .. autofunction:: sqsgenerator.public.extract_structures
 
 .. autofunction:: sqsgenerator.public.expand_sqs_results
+
+.. autoclass:: sqsgenerator.public.SQSResult
 
