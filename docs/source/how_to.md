@@ -331,11 +331,6 @@ composition:
   - **Line 7:** hydrogen works here as a **dummy** species. We select those interstitial sites
   - **Line 10:** distribute nine carbon atoms and 99 vacancies
 
-## Using Python API
-Of course you can also directly use sqsgenerator directly from your Python interpreter. The package is designed in such
-such a way that all public function are gathered int the `sqsgenerator.public` module. Those which are needed to 
-generate and analyze structure are forwarded to the `sqsgenerator` module itself and can be imported there
-
 ### Advanced topics
 
 ```{admonition} This section will come in future
@@ -345,6 +340,70 @@ This section needs still to be done
  - Custom `target_objective`
  - Maybe MPI enabled version
 ```
+
+#### multiple independent sublattices - From $\text{TiN} \rightarrow \left(\text{Ti}_{0.25} \text{Al}_{0.25} \right) \left( \text{B}_{0.25} \text{N}_{0.25} \right)$
+
+Now we want to enhance the above examples, and want to distribute both Ti and Al on the original Ti sublattice. 
+Furthermore, additionally, we want to distribute B and N on the original nitrogen sublattice. Before going into detail,
+please download the example input files, the {download}`B2 structure <examples/ti-n.cif>` 
+as well as the {download}`YAML input <examples/ti-al-b-n.yaml>`.
+
+Before we start let's investigate the coordination shells of the input structure
+
+```{code-block} bash
+>>> sqsgen compute shell-distances ti-al-b-n.yaml
+[0.0, 2.126767, 3.0077027354075403, 3.6836684998608384, 4.253534, 4.755595584303295, 5.209493951789751, 6.015405470815081, 6.380301, 7.367336999721677]
+```
+
+we can interpret this number is the following way
+
+```{image} images/ti-n.svg
+:alt: Cooridnation shells in the TiN structure
+:width: 33%
+:align: center
+```
+
+Within the sphere of the first coordination shell ($R_1 \approx 2.12\; \mathring A$) of a Ti atom there are only N atoms.
+While versa holds true too, within the second coordination shell ($R_2 \approx 3.08\; \mathring A$) there are only 
+atoms of the same type.
+
+```{code-block} yaml
+---
+lineno-start: 1
+emphasize-lines: 6,8-15
+caption: |
+    Download the {download}`YAML file <examples/ti-al-b-n.yaml>` and the {download}`B2 structure <examples/ti-n.cif>` 
+---
+structure:
+  supercell: [2, 2, 2]
+  file: ti-n.cif
+iterations: 5e5
+shell_weights:
+  2: 1.0
+composition:
+  B:
+    N: 16
+  N:
+    N: 16
+  Ti:
+    Ti: 16
+  Al:
+    Ti: 16
+```
+
+The specification of the `composition` tag now differs from the previous examples
+
+  - **Line 6:** Only consider second shell. Therefore we automatically eliminate the Ti-B, Ti-N, Al-Ti and Al-V 
+    interactions
+  - **Line 8-12:** Deals with the (original) N sublattice, you can interpret the input int the following way
+    - **Line 8-10:** Distribute **B** atoms on the original **N** sublattice and put **16** of there 
+    - **Line 10-12:** Distribute **N** atoms on the original **N** sublattice and put **16** of there 
+
+## Using Python API
+Of course you can also directly use sqsgenerator directly from your Python interpreter. The package is designed in such
+such a way that all public function are gathered int the `sqsgenerator.public` module. Those which are needed to 
+generate and analyze structure are forwarded to the `sqsgenerator` module itself and can be imported there
+
 
        
 ## Graceful exits
