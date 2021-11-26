@@ -22,6 +22,7 @@ is found [here](https://github.com/dgehringer/sqsgenerator)
   - Light dependency footprint 
   - Intuitive to use
   - Command line interface
+  - Simple to use Python API
 
 ## Table of contents
 
