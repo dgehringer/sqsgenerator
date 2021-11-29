@@ -414,7 +414,15 @@ namespace sqsgenerator {
              * if shutdown was requested our SIGINT or SIGTERM (MPI) handler was invoked
              * after restoring the previous handler we propagate SIGINT only, such that it can be handled by the old handler
              * This is necessary that Python parent process also receives the signal
+             *
+             * Moreover, we have to reset do_shutdown and shutdown_requested, as otherwise consecutive calls to this
+             * pair_sqs_iteration will fail, as the aforementioned represent global state
+             *
+             * We raise SIGINT afterwards
              */
+
+            do_shutdown = 0;
+            shutdown_requested = false;
             raise(SIGINT);
         }
         // After the main loop has finished, we copy (move) the values from the circular buffer into a vector
