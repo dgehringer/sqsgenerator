@@ -351,7 +351,7 @@ as well as the {download}`YAML input <examples/ti-al-b-n.yaml>`.
 Before we start let's investigate the coordination shells of the input structure
 
 ```{code-block} bash
->>> sqsgen compute shell-distances ti-al-b-n.yaml
+sqsgen compute shell-distances ti-al-b-n.yaml
 [0.0, 2.126767, 3.0077027354075403, 3.6836684998608384, 4.253534, 4.755595584303295, 5.209493951789751, 6.015405470815081, 6.380301, 7.367336999721677]
 ```
 
@@ -393,15 +393,103 @@ composition:
 
 The specification of the `composition` tag now differs from the previous examples
 
-  - **Line 6:** Only consider second shell. Therefore we automatically eliminate the Ti-B, Ti-N, Al-Ti and Al-V 
+  - **Line 6:** Only consider second shell. Therefore, we automatically eliminate the Ti-B, Ti-N, Al-Ti and Al-V 
     interactions
-  - **Line 8-12:** Deals with the (original) N sublattice, you can interpret the input int the following way
-    - **Line 8-10:** Distribute **B** atoms on the original **N** sublattice and put **16** of there 
-    - **Line 10-12:** Distribute **N** atoms on the original **N** sublattice and put **16** of there 
+  - **Line 8-11:** Deals with the (original) N sublattice, you can interpret the input int the following way
+    - **Line 8-9:** Distribute **B** atoms on the original **N** sublattice and put **16** of there 
+    - **Line 10-11:** Distribute **N** atoms on the original **N** sublattice and put **16** of there 
+  - **Line 12-15:** Deals with the (original) Ti sublattice, you can interpret the input int the following way
+    - **Line 12-13:** Distribute **Ti** atoms on the original **Ti** sublattice and put **16** of there 
+    - **Line 10-11:** Distribute **Al** atoms on the original **Ti** sublattice and put **16** of there 
+
+Since in the example above we care only about the second coordination shell, we eliminate all interactions between the 
+two sublattices. Let's examine the output, therefore run the above example with
+
+```{code-block} bash
+sqsgen run iteration --dump-include objective --dump-include parameters ti-al-b-n.yaml
+```
+
+Using those options will also store the Short-Range-Order parameters $\alpha^i_{\xi\eta}$ and the value of the objective
+function $\mathcal{O}(\sigma)$ in the resulting yaml file.
+
+Those parameters should look something like this
+
+```{code-block} yaml
+objective: 5.4583
+parameters:
+- - [-0.0625, -0.875, 1.0, 1.0]
+  - [-0.875, -0.0625, 1.0, 1.0]
+  - [1.0, 1.0, -0.2083, -0.583]
+  - [1.0, 1.0, -0.583, -0.2083]
+```
+
+in the `ti-al-b-n.result.yaml` file.
+
+The atomic species are in ascending order with respect to their ordinal number. For this example it is B, N, Al, Ti
+The above SRO parameters are arranged in the following way 
+(see {ref}`target-objective parameter <input-param-target-objective>`).
+
+```{math}
+\boldsymbol{\alpha} = \left[
+\begin{array}{cccc}
+\alpha_{\text{B-B}} & \alpha_{\text{B-N}} & \alpha_{\text{B-Al}} & \alpha_{\text{B-Ti}} \\
+\alpha_{\text{N-B}} & \alpha_{\text{N-N}} & \alpha_{\text{N-Al}} & \alpha_{\text{N-Ti}} \\
+\alpha_{\text{Al-B}} & \alpha_{\text{Al-N}} & \alpha_{\text{Al-Al}} & \alpha_{\text{Al-Ti}} \\
+\alpha_{\text{Ti-B}} & \alpha_{\text{Ti-N}} & \alpha_{\text{Ti-Al}} & \alpha_{\text{Ti-Ti}} \\
+\end{array}
+\right]
+```
+
+We immediately see that the SRO is 1.0 if the constituting elements sit on different sublattices. This is because
+there are no pairs there $N_{\xi\eta}^2 = 0$. 
+
+##### fine-tuning the optimization
+Note that although, the aforementioned SRO's remain constant they contribute to the objective function
+$\mathcal{O}(\sigma)$. One can avoid this by setting the {ref}`pair-weights parameter <input-param-pair-weights>`
+($\tilde{p}_{\xi\eta}^i=0$ in Eq. {eq}`eqn:objective-actual`). Anyway the minimization will work.
+
+We refine the above example in the following way
+
+```{code-block} yaml
+---
+lineno-start: 1
+emphasize-lines: 16-21
+caption: |
+    Download the enhanced {download}`YAML file <examples/ti-al-b-n-weights.yaml>` 
+---
+structure:
+  supercell: [2, 2, 2]
+  file: ti-n.cif
+iterations: 5e5
+shell_weights:
+  2: 1.0
+composition:
+  B:
+    N: 16
+  N:
+    N: 16
+  Ti:
+    Ti: 16
+  Al:
+    Ti: 16
+pair_weights:
+  #   B    N    Al   Ti
+  - [ 0.0, 0.5, 0.0, 0.0 ] # B
+  - [ 0.5, 0.0, 0.0, 0.0 ] # N
+  - [ 0.0, 0.0, 0.0, 0.5 ] # Al
+  - [ 0.0, 0.0, 0.5, 0.0 ] # Ti
+```
+
+  - **Line 16-21:** set the pair-weight coefficients $\tilde{p}_{\xi\eta}^i$.
+    - The main diagonal is set to zero, meaning we do not include same species pairs
+    - We set parameters of species on different sublattices ($\alpha_{\text{B-Al}} = \alpha_{\text{N-Al}} = \alpha_{\text{B-Ti}} = \alpha_{\text{N-Ti}} = 0$) to zero. This will result in a more "*correct*" value for the objective function
+
+Note, that this modification has no influence on the SRO parameters itself, but only on the value of the objective
+function
 
 ## Using Python API
-Of course you can also directly use sqsgenerator directly from your Python interpreter. The package is designed in such
-such a way that all public function are gathered int the `sqsgenerator.public` module. Those which are needed to 
+Of course, you can also directly use sqsgenerator directly from your Python interpreter. The package is designed in such
+a way that all public function are gathered int the `sqsgenerator.public` module. Those which are needed to 
 generate and analyze structure are forwarded to the `sqsgenerator` module itself and can be imported there
 
 
