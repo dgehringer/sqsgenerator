@@ -264,9 +264,9 @@ dumps_structure = capture(write_structure_file)
 def to_dict(settings: dict) -> T.Dict[str, T.Any]:
     """
     Utility method to recursively turn a general dictionary into an JSON/YAML serializable dictionary.
-    If a non trivial object is encountered the function searches for a ``to_dict()`` function. If it has no method
-    available to serialize the object a ``TypeError`` is raised. **Attention:** the function serializes ``np.ndarray`` by
-    calling ``tolist()``. This is not a good idea but fits the needs in this project
+    If a non-trivial object is encountered the function searches for a ``to_dict()`` function. If it has no method
+    available to serialize the object a ``TypeError`` is raised. **Attention:** the function serializes ``np.ndarray``
+    by calling ``tolist()``. This is not a good idea but fits the needs in this project
 
     :param settings: a generic dictionary object
     :type settings: dict
