@@ -2,8 +2,15 @@
 API Reference
 =============
 
+Most important functions
+########################
 
 .. autofunction:: sqsgenerator.public.sqs_optimize
+
+.. autofunction:: sqsgenerator.public.sqs_analyse
+
+Helper functions
+################
 
 .. autofunction:: sqsgenerator.public.process_settings
 
@@ -17,6 +24,20 @@ API Reference
 
 .. autofunction:: sqsgenerator.public.rank_structure
 
+Conversion functions
+####################
+
+.. autofunction:: sqsgenerator.public.to_ase_atoms
+
+.. autofunction:: sqsgenerator.public.from_ase_atoms
+
+.. autofunction:: sqsgenerator.public.to_pymatgen_structure
+
+.. autofunction:: sqsgenerator.public.from_pymatgen_structure
+
+
+low-level API reference
+#######################
 
 .. autoclass:: sqsgenerator.public.IterationMode
 
@@ -78,21 +99,6 @@ API Reference
 
         :return: the fractional coordinates
         :rtype: np.ndarray
-
-
-Compatibility functions
-#######################
-
-.. autofunction:: sqsgenerator.public.to_ase_atoms
-
-.. autofunction:: sqsgenerator.public.from_ase_atoms
-
-.. autofunction:: sqsgenerator.public.to_pymatgen_structure
-
-.. autofunction:: sqsgenerator.public.from_pymatgen_structure
-
-low-level utility functions
-###########################
 
 .. autofunction:: sqsgenerator.public.make_supercell
 
