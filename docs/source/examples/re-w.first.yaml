@@ -8,6 +8,6 @@ structure:
     - [0.0, 0.0, 0.0]
     - [0.5, 0.5, 0.5]
   species: [W, Re]
-iterations: 1e7
+iterations: 1e6
 shell_weights:
   1: 1.0

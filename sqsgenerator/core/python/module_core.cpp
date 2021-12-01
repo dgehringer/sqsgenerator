@@ -107,11 +107,19 @@ configuration_t make_rank_internal(const configuration_t &conf, rank_t &rank) {
 
 
 py::list make_rank_iterable(const py::object &iterable, rank_t rank) {
-    return helpers::vector_to_list(sqsgenerator::utils::atomistics::Atoms::z_to_symbol(make_rank_internal(sqsgenerator::utils::atomistics::Atoms::symbol_to_z(helpers::list_to_vector<std::string>(iterable)), rank)));
+    return helpers::vector_to_list(
+            sqsgenerator::utils::atomistics::Atoms::z_to_symbol(
+                    make_rank_internal(
+                            sqsgenerator::utils::atomistics::Atoms::symbol_to_z(
+                                    helpers::list_to_vector<std::string>(iterable)), rank)));
 }
 
 StructurePythonWrapper make_rank_structure(StructurePythonWrapper &s, rank_t rank) {
-    return {s.handle()->lattice(), s.handle()->frac_coords(), make_rank_internal(s.handle()->configuration(), rank), s.handle()->pbc()};
+    return {s.handle()->lattice(),
+            s.handle()->frac_coords(),
+            make_rank_internal(s.handle()->configuration(), rank),
+            s.handle()->pbc()
+    };
 }
 
 
@@ -186,8 +194,6 @@ BOOST_PYTHON_MODULE(core) {
             .def_readonly("frac_coords", &StructurePythonWrapper::frac_coords)
             .def_readonly("distance_vecs", &StructurePythonWrapper::distance_vecs)
             .def_readonly("distance_matrix", &StructurePythonWrapper::distance_matrix)
-            //.def<np::ndarray(StructurePythonWrapper::*)(const py::list&, double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
-            //.def<np::ndarray(StructurePythonWrapper::*)(double, double)>("shell_matrix", &StructurePythonWrapper::shell_matrix)
             .def_readonly("pbc", &StructurePythonWrapper::pbc)
             .def("sorted", &StructurePythonWrapper::sorted)
             .def("rearranged", &StructurePythonWrapper::rearranged);
@@ -212,9 +218,9 @@ BOOST_PYTHON_MODULE(core) {
 
         py::class_<pair_shell_weights_t>("ShellWeights")
             .def(py::map_indexing_suite<pair_shell_weights_t>());
-        //StructurePythonWrapper wrapper, double target_objective, np::ndarray parameter_weights, pair_shell_weights_t shell_weights, int iterations, int output_configurations, int iteration_mode, uint8_t prec
-        py::class_<IterationSettingsPythonWrapper>("IterationSettings", py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, int, int, py::list, double, double, iteration_mode>())
-            .def(py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, int, int, py::list, py::list, double, double, iteration_mode>())
+
+        py::class_<IterationSettingsPythonWrapper>("IterationSettings", py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, double, double, iteration_mode>())
+            .def(py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode>())
             .def_readonly("num_atoms", &IterationSettingsPythonWrapper::num_atoms)
             .def_readonly("num_shells", &IterationSettingsPythonWrapper::num_shells)
             .def_readonly("num_iterations", &IterationSettingsPythonWrapper::num_iterations)

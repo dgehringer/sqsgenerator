@@ -85,7 +85,7 @@ the use of a custom boost version. Therefore to build `sqsgenerator` with your o
 
 
    ```{code-block} bash
-   SQS_BOOST_ROOT=/path/to/own/boost python setup.py install # --with-mpi
+   SQS_BOOST_ROOT=/path/to/own/boost pip install # add SQS_USE_MPI=ON for MPI enabled build
    ```
 
 The above code will under-the-hood call **cmake** with a `-DBOOST_ROOT=/path/to/own/boost` option.
@@ -131,16 +131,32 @@ With `conda` it is easy to install the needed toolchain, and thus get to a quick
     **cmake** a hint, where to find them. The same is true if you want to use Anacondas C++ compiler (`CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++"`)
 
     ```{code-block} bash
+    pushd sqsgenerator
+    SQS_Boost_USE_STATIC_LIBS=ON \ # optional
+    SQS_Boost_INCLUDE_DIR="${CONDA_PREFIX}/include" \
+    SQS_Boost_LIBRARY_DIR_RELEASE="${CONDA_PREFIX}/lib" \
+    CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++" \
+    pip install .
+    popd
+    ```
+   
+    In case you want to build a MPI build version you have to add `SQS_USE_MPI=ON` to the installation instructions.
+    In case you also want to link it against a specifiy MPI implementation (e. g. on a HPC cluster) you can instruct
+    *cmake* to so, by adding `SQS_MPI_HOME` which points the installation directory 
+
+    ```{code-block} bash
+    pushd sqsgenerator
+    # SQS_MPI_HOME=/path/to/mpi/implementation/root
+    SQS_USE_MPI=ON \
     SQS_Boost_USE_STATIC_LIBS=ON \
     SQS_Boost_INCLUDE_DIR="${CONDA_PREFIX}/include" \
     SQS_Boost_LIBRARY_DIR_RELEASE="${CONDA_PREFIX}/lib" \
     CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++" \
-    python setup.py install
-    # or for a MPI build
-    python setup.py install --with-mpi
+    pip install .
+    popd
     ```
 
-5. **Remove build dependencies**
+6. **Remove build dependencies**
 
     This step is only optional. In case you have compiled the core modules with `SQS_Boost_USE_STATIC_LIBS=ON` the created
     library does not depend any more on the `boost` libraries.

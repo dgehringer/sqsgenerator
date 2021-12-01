@@ -202,6 +202,8 @@ will run an iteration and export all computed structures in **POSCAR** format us
 
 #### Specifying you own compositions - $\text{Re}_{0.333}\text{W}_{0.667}$
 
+(example-two)=
+
 Suppose we want to move on different compositions, and want to distribute different numbers of tungsten and rhenium.
 In this case we have to explicitly specify a {ref}`composition <input-param-composition>` parameter. Using this 
 directive we can exactly specify **which** and **how many** atoms should be distributed. We will slightly modify the 
@@ -341,7 +343,349 @@ This section needs still to be done
  - Maybe MPI enabled version
 ```
 
-### A note on the number of `iterations`
+#### multiple independent sublattices - From $\text{TiN} \rightarrow \left(\text{Ti}_{0.25} \text{Al}_{0.25} \right) \left( \text{B}_{0.25} \text{N}_{0.25} \right)$
+
+Now we want to enhance the above examples, and want to distribute both Ti and Al on the original Ti sublattice. 
+Furthermore, additionally, we want to distribute B and N on the original nitrogen sublattice. Before going into detail,
+please download the example input files, the {download}`B2 structure <examples/ti-n.cif>` 
+as well as the {download}`YAML input <examples/ti-al-b-n.yaml>`.
+
+Before we start let's investigate the coordination shells of the input structure
+
+```{code-block} bash
+sqsgen compute shell-distances ti-al-b-n.yaml
+[0.0, 2.126767, 3.0077027354075403, 3.6836684998608384, 4.253534, 4.755595584303295, 5.209493951789751, 6.015405470815081, 6.380301, 7.367336999721677]
+```
+
+we can interpret this number is the following way
+
+```{image} images/ti-n.svg
+:alt: Cooridnation shells in the TiN structure
+:width: 33%
+:align: center
+```
+
+Within the sphere of the first coordination shell ($R_1 \approx 2.12\; \mathring A$) of a Ti atom there are only N atoms.
+While versa holds true too, within the second coordination shell ($R_2 \approx 3.08\; \mathring A$) there are only 
+atoms of the same type.
+
+```{code-block} yaml
+---
+lineno-start: 1
+emphasize-lines: 6,8-15
+caption: |
+    Download the {download}`YAML file <examples/ti-al-b-n.yaml>` and the {download}`B2 structure <examples/ti-n.cif>` 
+---
+structure:
+  supercell: [2, 2, 2]
+  file: ti-n.cif
+iterations: 5e5
+shell_weights:
+  2: 1.0
+composition:
+  B:
+    N: 16
+  N:
+    N: 16
+  Ti:
+    Ti: 16
+  Al:
+    Ti: 16
+```
+
+The specification of the `composition` tag now differs from the previous examples
+
+  - **Line 6:** Only consider second shell. Therefore, we automatically eliminate the Ti-B, Ti-N, Al-Ti and Al-V 
+    interactions
+  - **Line 8-11:** Deals with the (original) N sublattice, you can interpret the input int the following way
+    - **Line 8-9:** Distribute **B** atoms on the original **N** sublattice and put **16** of there 
+    - **Line 10-11:** Distribute **N** atoms on the original **N** sublattice and put **16** of there 
+  - **Line 12-15:** Deals with the (original) Ti sublattice, you can interpret the input int the following way
+    - **Line 12-13:** Distribute **Ti** atoms on the original **Ti** sublattice and put **16** of there 
+    - **Line 10-11:** Distribute **Al** atoms on the original **Ti** sublattice and put **16** of there 
+
+Since in the example above we care only about the second coordination shell, we eliminate all interactions between the 
+two sublattices. Let's examine the output, therefore run the above example with
+
+```{code-block} bash
+sqsgen run iteration --dump-include objective --dump-include parameters ti-al-b-n.yaml
+```
+
+Using those options will also store the Short-Range-Order parameters $\alpha^i_{\xi\eta}$ and the value of the objective
+function $\mathcal{O}(\sigma)$ in the resulting yaml file.
+
+Those parameters should look something like this
+
+```{code-block} yaml
+objective: 5.4583
+parameters:
+- - [-0.0625, -0.875, 1.0, 1.0]
+  - [-0.875, -0.0625, 1.0, 1.0]
+  - [1.0, 1.0, -0.2083, -0.583]
+  - [1.0, 1.0, -0.583, -0.2083]
+```
+
+in the `ti-al-b-n.result.yaml` file.
+
+The atomic species are in ascending order with respect to their ordinal number. For this example it is B, N, Al, Ti
+The above SRO parameters are arranged in the following way 
+(see {ref}`target-objective parameter <input-param-target-objective>`).
+
+```{math}
+\boldsymbol{\alpha} = \left[
+\begin{array}{cccc}
+\alpha_{\text{B-B}} & \alpha_{\text{B-N}} & \alpha_{\text{B-Al}} & \alpha_{\text{B-Ti}} \\
+\alpha_{\text{N-B}} & \alpha_{\text{N-N}} & \alpha_{\text{N-Al}} & \alpha_{\text{N-Ti}} \\
+\alpha_{\text{Al-B}} & \alpha_{\text{Al-N}} & \alpha_{\text{Al-Al}} & \alpha_{\text{Al-Ti}} \\
+\alpha_{\text{Ti-B}} & \alpha_{\text{Ti-N}} & \alpha_{\text{Ti-Al}} & \alpha_{\text{Ti-Ti}} \\
+\end{array}
+\right]
+```
+
+We immediately see that the SRO is 1.0 if the constituting elements sit on different sublattices. This is because
+there are no pairs there $N_{\xi\eta}^2 = 0$. 
+
+##### fine-tuning the optimization
+Note that although, the aforementioned SRO's remain constant they contribute to the objective function
+$\mathcal{O}(\sigma)$. One can avoid this by setting the {ref}`pair-weights parameter <input-param-pair-weights>`
+($\tilde{p}_{\xi\eta}^i=0$ in Eq. {eq}`eqn:objective-actual`). Anyway the minimization will work.
+
+We refine the above example in the following way
+
+```{code-block} yaml
+---
+lineno-start: 1
+emphasize-lines: 16-21
+caption: |
+    Download the enhanced {download}`YAML file <examples/ti-al-b-n-weights.yaml>` 
+---
+structure:
+  supercell: [2, 2, 2]
+  file: ti-n.cif
+iterations: 5e5
+shell_weights:
+  2: 1.0
+composition:
+  B:
+    N: 16
+  N:
+    N: 16
+  Ti:
+    Ti: 16
+  Al:
+    Ti: 16
+pair_weights:
+  #   B    N    Al   Ti
+  - [ 0.0, 0.5, 0.0, 0.0 ] # B
+  - [ 0.5, 0.0, 0.0, 0.0 ] # N
+  - [ 0.0, 0.0, 0.0, 0.5 ] # Al
+  - [ 0.0, 0.0, 0.5, 0.0 ] # Ti
+```
+
+  - **Line 16-21:** set the pair-weight coefficients $\tilde{p}_{\xi\eta}^i$.
+    - The main diagonal is set to zero, meaning we do not include same species pairs
+    - We set parameters of species on different sublattices ($\alpha_{\text{B-Al}} = \alpha_{\text{N-Al}} = \alpha_{\text{B-Ti}} = \alpha_{\text{N-Ti}} = 0$) to zero. This will result in a more "*correct*" value for the objective function
+
+Note, that this modification has no influence on the SRO parameters itself, but only on the value of the objective
+function
+
+## Using Python API
+Of course, you can also directly use sqsgenerator directly from your Python interpreter. The package is designed in such
+a way that all public function are gathered int the `sqsgenerator.public` module. Those which are needed to 
+generate and analyze structure are forwarded to the `sqsgenerator` module itself and can be imported from there
+
+Basically the API is build around two functions
+
+  - {py:func}`sqsgenerator.public.sqs_optimize` - to perform SQS optimizations
+  - {py:func}`sqsgenerator.public.sqs_analyse` - to compute objective function and SRO parameters
+
+Both functions take a `dict` as their main input. The YAML inputs above are just a file-based representation of those 
+settings.
+
+### Introduction
+
+To read a settings file and obtain a `dict`-like configuration use the {py:func}`sqsgenerator.public.read_settings_file`
+function. The examples shown above, can be easily executed in the following way using a Python script:
+
+```{code-block} python
+# we use the first example shown in the CLI - How to -> re-w.first.yaml
+from sqsgenerator import read_settings_file, sqs_optimize
+
+configuration = read_settings_file('re-w.first.yaml')
+results, timings = sqs_optimize(configuration)
+```
+
+(optimization-output)=
+{py:func}`sqsgenerator.public.sqs_optimize` outputs a tuple of **two** values. Where the first one are the actual 
+results, and the latter one are runtime information
+
+  - `results` will contain a dictionary with integer keys. The integer key is the index of the permutation sequence.
+     As this key is in decimal representation it might be a very long one. The value behind each key is a
+     `dict` again, containing the following keys
+    - `configuration`: a list of strings
+    - `objective`: the value of the objective function
+    - `parameters`: the SRO parameters as numpy array
+
+### Again - $\text{Re}_{0.333}\text{W}_{0.667}$ - but from scratch
+We now want to show how the {ref}`second example <example-two>` would look, like if it was built with Python functions
+
+```{code-block}
+from sqsgenerator import sqs_optimize
+
+configuration = dict(
+    structure=dict(file='b2.vasp', supercell=(3,3,3)),
+    iterations=1e9,
+    shell_weights={1: 1.0},
+    composition=dict(Re=18, W=36)
+)
+
+results, timings = sqs_optimize(configuration)
+```
+
+### Exporting the generated structures
+
+#### Construct the generated structures
+By default, {py:func}`sqsgenerator.public.sqs_optimize` does not construct the {py:class}`Structure` objects from the 
+generated configurations. You have to explicitly tell it using the `make_structures` keyword
+
+Therefore, the last line in the previous example becomes
+
+```{code-block} python
+results, timings = sqs_optimize(configuration, make_structures=True)
+```
+
+This switch only affects post-processing, and adds a `structure` key to the `results` dictionary, which then becomes
+
+```{code-block} python
+{
+    24002613167337: {
+        'configuration': ['W', 'W', 'W', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'W', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'Re', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'W', 'W', 'W', 'W', 'W', 'Re', 'W', 'W', 'W', 'W', 'Re', 'W', 'W', 'Re', 'W', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'W', 'W', 'W', 'W', 'W'],
+        'objective': 5.551115123125783e-17,
+        'parameters': array([[[5.00000000e-01, 5.55111512e-17], [5.55111512e-17, 5.00000000e-01]]]),
+        'structure': Structure(W3ReWRe2W3ReWRe2W2Re2WRe2W7ReW4ReW2ReW2ReWReWReWRe2W7, len=54)
+    }
+}
+
+```
+
+````{admonition} Specify the type of the output structure using *structure_format* keyword
+:class: tip, dropdown
+
+In case you have set the `make_structures` keyword to `True` you additionally can specify the output type of the
+structure objects using the `structure_format` keyword. Of course to use this you need 
+[ase](https://wiki.fysik.dtu.dk/ase/) and/or [pymatgen](https://pymatgen.org/) installed to use this features.
+You can pass three different values to `structure_format`:
+
+  - **default** $\rightarrow$ {py:class}`sqsgenerator.public.Structure`
+  - **ase** $\rightarrow$ {py:class}`ase.atoms.Atoms`
+  - **pymatgen** $\rightarrow$ {py:class}`pymatgen.core.Structure`
+
+````
+
+#### Writing generated structures to file
+In order to export the generated structures to files and/or archives using the 
+{py:func}`sqsgenerator.public.export_structures` you need to set `make_structures=True` to advise the program to 
+construct the structure. Moreover, `structure_format` must be set to `default` (which is anyway the default value).
+
+Exporting the generated structures might look like that
+
+```{code-block} python
+from operator import itemgetter
+from sqsgenerator import sqs_optimize, export_structures, read_settings_file
+
+configuration = read_settings_file('sqs.yaml')
+results, timings = sqs_optimize(configuration, make_structures=True)
+export_structures(results, functor=itemgetter('structure'))
+```
+
+### Computing the SRO parameters $\alpha_{\xi\eta}^i$ and objective function $\mathcal{O}(\sigma)$ of existing structures
+
+It is also possible to compute the SRO parameters of existing structure. Thus, the API exports the 
+{py:func}`sqsgenerator.public.sqs_analyse`, which computes those quantities.
+
+{py:func}`sqsgenerator.public.sqs_analyse` takes a dict-like configuration as well as an iterable of structures, which 
+will be analysed. The output-format is exactly the same as for {py:func}`sqsgenerator.public.sqs_optimize` 
+(see {ref}`above <optimization-output>`)
+
+```{code-block} python
+import numpy.testing
+from operator import itemgetter
+from sqsgenerator import sqs_optimize, read_settings_file, sqs_analyse
+
+configuration = read_settings_file('sqs.yaml')
+results, timings = sqs_optimize(configuration, make_structures=True, minimal=False, similar=True)  # same as --no-minimal --similar
+structures = map(itemgetter('structure'), results.values())  # for this we need make_structures=True
+analysed = sqs_analyse(configuration, structures, append_structures=True)
+
+for rank in results:
+    # we check that we obatin the same results with sqs_analyse
+    assert rank in analysed
+    assert results[rank]['objective'] == analysed[rank]['objective']
+    assert results[rank]['structure'] == analysed[rank]['structure']
+    assert results[rank]['configuration'] == analysed[rank]['configuration']
+    numpy.testing.assert_array_almost_equal(results[rank]['parameters'], analysed[rank]['parameters'])
+
+```
+
+### Other (maybe) useful examples
+
+#### Conversion between structure types
+`sqsgenerator`'s API export function to convert internal {py:class}`sqsgenerator.public.Structure` objects to types
+employed by larger projects ([ase](https://wiki.fysik.dtu.dk/ase/) and [pymatgen](https://pymatgen.org/))
+
+```{admonition} Packages must be available
+:class: warning
+
+In order to convert structure objects back and fourth you need to have this packages installed otherwise
+sqsgenerator will raise a `FeatureError`
+```
+
+The compatibility functions are:
+    
+  - **pymatgen**: 
+    - {py:func}`sqsgenerator.public.to_pymatgen_structure`
+    - {py:func}`sqsgenerator.public.from_pymatgen_structure`
+  - **ase**:
+    - {py:func}`sqsgenerator.public.to_ase_atoms`
+    - {py:func}`sqsgenerator.public.from_ase_atoms`
+
+```{code-block} python
+import numpy as np
+import ase.atoms
+import pymatgen.core
+from sqsgenerator import to_pymatgen_structure, from_pymatgen_structure, to_ase_atoms, from_ase_atoms, Structure
+
+fcc_al = Structure(4.05*np.eye(3), np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5]]), ['Al']*4)
+
+fcc_al_ase = to_ase_atoms(fcc_al)
+fcc_al_pymatgen = to_pymatgen_structure(fcc_al)
+
+assert isinstance(fcc_al_ase, ase.atoms.Atoms)
+assert isinstance(fcc_al_pymatgen, pymatgen.core.Structure)
+assert fcc_al == from_ase_atoms(fcc_al_ase)
+assert fcc_al == from_pymatgen_structure(fcc_al_pymatgen)
+```
+## Graceful exits
+
+As the SQS optimization may require a large number of iterations, it is sometimes desirable to stop the process 
+(e. g. because of time limits on HPC clusters). When sending a signal to `sqsgenerator` it does not crash but rather 
+exit and write out the current state of the optimization.
+`sqsgenerator`'s core routine installs a temporary signal *SIGINT* handler which replaces Pythons default 
+`KeyboardInterrupt`. Thus while executing the optimization you can always interrupt it by hitting **Ctrl+C**. You should 
+get a warning that the program was interrupted
+
+```{code-block} bash
+[warning]:do_pair_iterations::interrupt_message = "Received SIGINT/SIGTERM results may be incomplete"
+/media/DATA/drive/projects/sqsgenerator-core/sqsgenerator/public.py:137: UserWarning: SIGINT received: SQS results may be incomplete
+  warnings.warn('SIGINT received: SQS results may be incomplete')
+```
+
+In case of MPI parallel both *SIGINT* and *SIGTERM* handlers are overwritten. Therefore, if you run `sqsgenerator`
+interactively using the `mpirun` command you can also gracefully terminate the process using **Ctrl+C**. How to 
+terminate the program if executed with a queuing system behind, is documented in the 
+[parallelization guide](parallelization.md).
+
+## A note on the number of `iterations`
 
 Actually it is very hard to tell what is a "**sufficiently**" large enough number for the `iteration` parameter. As the 
 configurational space is growing extremely fast (factorial), it is anyway not possible to sample it properly in case the
@@ -365,7 +709,7 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
     ```
 
     You can tune the number of permutations to a computing time you can afford. The above command gives only an estimate
-    for the current machine.
+    for the current machine. The above command analyzes $10^5$ random configurations and 
     
   - Reduce the number of shells. This has two-fold advantage
     1. In contrast to old versions of `sqsgenerator`, the current implementations profit greatly from a decreased number
@@ -378,4 +722,3 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
        ```
     3. The image size of the objective function is drastically reduced. In other words a lot of different structures are 
        mapped onto the same value of the objective function.
-

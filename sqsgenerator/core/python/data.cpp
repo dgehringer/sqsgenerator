@@ -27,8 +27,7 @@ np::ndarray SQSResultPythonWrapper::configuration() {
 
 np::ndarray SQSResultPythonWrapper::parameters(py::tuple const &shape) {
     return helpers::to_flat_numpy_array<double>(
-            m_handle->storage().data(),
-            m_handle->storage().size()).reshape(shape);
+            m_handle->storage()).reshape(shape);
 }
 
 

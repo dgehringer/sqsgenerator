@@ -261,14 +261,14 @@ def process_settings(settings: AttrDict, params: T.Optional[T.Set[str]] = None, 
     `Input parameter documentation <https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html>`_. This function
     should be used for processing user input. Therefore, exports the parser functions defined in 
     ``sqsgenerator.settings.readers``. To specify a specify subset of parameters the {params} argument is used.
-    To {ignore} specifc parameters pass a list of parameter names
+    To {ignore} specific parameters pass a list of parameter names
 
     :param settings: the dict-like user configuration
     :type settings: AttrDict
     :param params: If specified only the subset of {params} is processed (default is ``None``)
-    :type params: Optional[Set[``None``]]
+    :type params: Optional[Set, None]
     :param ignore: a list/iterable of params to ignore (default is ``()``)
-    :type ignore: Iterable[``str``]
+    :type ignore: Iterable[str]
     :return: the processed settings dictionary
     :rtype: AttrDict
     """

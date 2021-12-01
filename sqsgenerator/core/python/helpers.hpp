@@ -58,11 +58,18 @@ namespace sqsgenerator::python::helpers {
 
     template<typename T>
     np::ndarray to_flat_numpy_array(const T *array, size_t num_elements) {
-        return np::from_data(array,
-                             np::dtype::get_builtin<T>(),
-                             py::make_tuple(num_elements),
-                             py::make_tuple(sizeof(T)),
-                             py::object());
+        Py_intptr_t shape[1] = { static_cast<Py_intptr_t>(num_elements) };
+        np::ndarray result = np::empty(1, shape, np::dtype::get_builtin<T>());
+        std::copy(array, array + num_elements, reinterpret_cast<T*>(result.get_data()));
+        return result;
+    }
+
+    template<typename T>
+    np::ndarray to_flat_numpy_array(const std::vector<T> &data) {
+        Py_intptr_t shape[1] = { static_cast<Py_intptr_t>(data.size()) };
+        np::ndarray result = np::empty(1, shape, np::dtype::get_builtin<T>());
+        std::copy(data.begin(), data.end(), reinterpret_cast<T*>(result.get_data()));
+        return result;
     }
 
 

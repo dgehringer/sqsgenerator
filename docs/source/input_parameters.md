@@ -383,6 +383,8 @@ To consider all coordination shells, simply do not specify any value
   ```
   
 ### `pair_weights`
+(input-param-pair-weights)=
+
 thr "*pair weights*" $\tilde{p}_{\xi\eta}^i$  {eq}`eqn:objective-actual` used to differentiate bonds between atomic species.
 Note that `sqsgenerator` sorts the atomic species interally in ascending order by their ordinal number.
 Please refer to the `target_objective` parameter documentation for further details regarding the internal reordering.
@@ -411,6 +413,8 @@ in case of a 3D input array is not symmetric a `BadSettings` exception is raised
   - a 3D array of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$. The input is interpreted as $\tilde{p}_{\xi\eta}^i$ (`np.ndarray`)
 
 ### `target_objective`
+(input-param-target-objective)=
+
 the target objective $\alpha'_{\eta\xi}$ {eq}`eqn:objective`, which the SRO parameters {eq}`eqn:wc-sro-multi` are minimzed against. It is an array of three-dimensions of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$. By passing custom values you can fine-tune the individual SRO paramters.
 
 - **Requrired:** No

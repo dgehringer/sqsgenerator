@@ -1,5 +1,5 @@
 """
-Because on the ReadTheDocs Server we cannot import the core extension, because a libpython*so which the core.so
+Because on the ReadTheDocs Server we cannot import the core extension, because of libpython*so which the core.so
 is linked against is not found, this module fakes the core.so such that imports works
 """
 
@@ -8,6 +8,7 @@ __version__ = (1, 2, 3, 4)
 __features__ = {}
 
 ALL_SITES = -1
+
 
 class SQSResult:
     pass
@@ -86,4 +87,12 @@ def z_from_symbols(*args, **kwargs):
 
 
 def build_configuration(*args, **kwargs):
+    pass
+
+
+def make_rank(*args, **kwargs):
+    pass
+
+
+def sqs_analyse(*args, **kwargs):
     pass

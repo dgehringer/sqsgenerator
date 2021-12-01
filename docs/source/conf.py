@@ -60,12 +60,15 @@ myst_enable_extensions = [
 
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.viewcode',
     'myst_parser',
     'sphinx_click',
-    'sphinx_togglebutton'
+    'sphinx_togglebutton',
+    'sphinx_copybutton'
 ]
 
-
+html_show_sourcelink = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

@@ -72,7 +72,7 @@ def analyse(settings, output_format, params):
     if num_configurations < 1:
         error('Your input does not contain any input configurations')
 
-    # extract the defines sublattice from the total structure
+    # extract the defines sublattice from the merged structure
     structures = map_values(lambda s: s[settings.which], extract_structures(settings))
 
     # set one of the actual computes structures into settings, to get proper default values
@@ -87,7 +87,7 @@ def analyse(settings, output_format, params):
     analyse_settings = process_settings(analyse_settings)
     # carry out the actual pair analysis by overwriting the structure in the current settings
     analyzed = map_values(lambda s: pair_analysis(construct_settings(analyse_settings, False, structure=s)), structures)
-    document = expand_sqs_results(analyse_settings, list(analyzed.values()), include=include_fields, inplace=params)
+    document = expand_sqs_results(analyse_settings, list(analyzed.values()), fields=include_fields, inplace=params)
 
     if 'structure' in document:
         del document['structure']
