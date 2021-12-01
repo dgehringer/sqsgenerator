@@ -202,6 +202,8 @@ will run an iteration and export all computed structures in **POSCAR** format us
 
 #### Specifying you own compositions - $\text{Re}_{0.333}\text{W}_{0.667}$
 
+(example-two)=
+
 Suppose we want to move on different compositions, and want to distribute different numbers of tungsten and rhenium.
 In this case we have to explicitly specify a {ref}`composition <input-param-composition>` parameter. Using this 
 directive we can exactly specify **which** and **how many** atoms should be distributed. We will slightly modify the 
@@ -490,10 +492,179 @@ function
 ## Using Python API
 Of course, you can also directly use sqsgenerator directly from your Python interpreter. The package is designed in such
 a way that all public function are gathered int the `sqsgenerator.public` module. Those which are needed to 
-generate and analyze structure are forwarded to the `sqsgenerator` module itself and can be imported there
+generate and analyze structure are forwarded to the `sqsgenerator` module itself and can be imported from there
 
+Basically the API is build around two functions
 
-       
+  - {py:func}`sqsgenerator.public.sqs_optimize` - to perform SQS optimizations
+  - {py:func}`sqsgenerator.public.sqs_analyse` - to compute objective function and SRO parameters
+
+Both functions take a `dict` as their main input. The YAML inputs above are just a file-based representation of those 
+settings.
+
+### Introduction
+
+To read a settings file and obtain a `dict`-like configuration use the {py:func}`sqsgenerator.public.read_settings_file`
+function. The examples shown above, can be easily executed in the following way using a Python script:
+
+```{code-block} python
+# we use the first example shown in the CLI - How to -> re-w.first.yaml
+from sqsgenerator import read_settings_file, sqs_optimize
+
+configuration = read_settings_file('re-w.first.yaml')
+results, timings = sqs_optimize(configuration)
+```
+
+(optimization-output)=
+{py:func}`sqsgenerator.public.sqs_optimize` outputs a tuple of **two** values. Where the first one are the actual 
+results, and the latter one are runtime information
+
+  - `results` will contain a dictionary with integer keys. The integer key is the index of the permutation sequence.
+     As this key is in decimal representation it might be a very long one. The value behind each key is a
+     `dict` again, containing the following keys
+    - `configuration`: a list of strings
+    - `objective`: the value of the objective function
+    - `parameters`: the SRO parameters as numpy array
+
+### Again - $\text{Re}_{0.333}\text{W}_{0.667}$ - but from scratch
+We now want to show how the {ref}`second example <example-two>` would look, like if it was built with Python functions
+
+```{code-block}
+from sqsgenerator import sqs_optimize
+
+configuration = dict(
+    structure=dict(file='b2.vasp', supercell=(3,3,3)),
+    iterations=1e9,
+    shell_weights={1: 1.0},
+    composition=dict(Re=18, W=36)
+)
+
+results, timings = sqs_optimize(configuration)
+```
+
+### Exporting the generated structures
+
+#### Construct the generated structures
+By default, {py:func}`sqsgenerator.public.sqs_optimize` does not construct the {py:class}`Structure` objects from the 
+generated configurations. You have to explicitly tell it using the `make_structures` keyword
+
+Therefore, the last line in the previous example becomes
+
+```{code-block} python
+results, timings = sqs_optimize(configuration, make_structures=True)
+```
+
+This switch only affects post-processing, and adds a `structure` key to the `results` dictionary, which then becomes
+
+```{code-block} python
+{
+    24002613167337: {
+        'configuration': ['W', 'W', 'W', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'W', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'Re', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'W', 'W', 'W', 'W', 'W', 'Re', 'W', 'W', 'W', 'W', 'Re', 'W', 'W', 'Re', 'W', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'W', 'W', 'W', 'W', 'W'],
+        'objective': 5.551115123125783e-17,
+        'parameters': array([[[5.00000000e-01, 5.55111512e-17], [5.55111512e-17, 5.00000000e-01]]]),
+        'structure': Structure(W3ReWRe2W3ReWRe2W2Re2WRe2W7ReW4ReW2ReW2ReWReWReWRe2W7, len=54)
+    }
+}
+
+```
+
+````{admonition} Specify the type of the output structure using *structure_format* keyword
+:class: tip, dropdown
+
+In case you have set the `make_structures` keyword to `True` you additionally can specify the output type of the
+structure objects using the `structure_format` keyword. Of course to use this you need 
+[ase](https://wiki.fysik.dtu.dk/ase/) and/or [pymatgen](https://pymatgen.org/) installed to use this features.
+You can pass three different values to `structure_format`:
+
+  - **default** $\rightarrow$ {py:class}`sqsgenerator.public.Structure`
+  - **ase** $\rightarrow$ {py:class}`ase.atoms.Atoms`
+  - **pymatgen** $\rightarrow$ {py:class}`pymatgen.core.Structure`
+
+````
+
+#### Writing generated structures to file
+In order to export the generated structures to files and/or archives using the 
+{py:func}`sqsgenerator.public.export_structures` you need to set `make_structures=True` to advise the program to 
+construct the structure. Moreover, `structure_format` must be set to `default` (which is anyway the default value).
+
+Exporting the generated structures might look like that
+
+```{code-block} python
+from operator import itemgetter
+from sqsgenerator import sqs_optimize, export_structures, read_settings_file
+
+configuration = read_settings_file('sqs.yaml')
+results, timings = sqs_optimize(configuration, make_structures=True)
+export_structures(results, functor=itemgetter('structure'))
+```
+
+### Computing the SRO parameters $\alpha_{\xi\eta}^i$ and objective function $\mathcal{O}(\sigma)$ of existing structures
+
+It is also possible to compute the SRO parameters of existing structure. Thus, the API exports the 
+{py:func}`sqsgenerator.public.sqs_analyse`, which computes those quantities.
+
+{py:func}`sqsgenerator.public.sqs_analyse` takes a dict-like configuration as well as an iterable of structures, which 
+will be analysed. The output-format is exactly the same as for {py:func}`sqsgenerator.public.sqs_optimize` 
+(see {ref}`above <optimization-output>`)
+
+```{code-block} python
+import numpy.testing
+from operator import itemgetter
+from sqsgenerator import sqs_optimize, read_settings_file, sqs_analyse
+
+configuration = read_settings_file('sqs.yaml')
+results, timings = sqs_optimize(configuration, make_structures=True, minimal=False, similar=True)  # same as --no-minimal --similar
+structures = map(itemgetter('structure'), results.values())  # for this we need make_structures=True
+analysed = sqs_analyse(configuration, structures, append_structures=True)
+
+for rank in results:
+    # we check that we obatin the same results with sqs_analyse
+    assert rank in analysed
+    assert results[rank]['objective'] == analysed[rank]['objective']
+    assert results[rank]['structure'] == analysed[rank]['structure']
+    assert results[rank]['configuration'] == analysed[rank]['configuration']
+    numpy.testing.assert_array_almost_equal(results[rank]['parameters'], analysed[rank]['parameters'])
+
+```
+
+### Other (maybe) useful examples
+
+#### Conversion between structure types
+`sqsgenerator`'s API export function to convert internal {py:class}`sqsgenerator.public.Structure` objects to types
+employed by larger projects ([ase](https://wiki.fysik.dtu.dk/ase/) and [pymatgen](https://pymatgen.org/))
+
+```{admonition} Packages must be available
+:class: warning
+
+In order to convert structure objects back and fourth you need to have this packages installed otherwise
+sqsgenerator will raise a `FeatureError`
+```
+
+The compatibility functions are:
+    
+  - **pymatgen**: 
+    - {py:func}`sqsgenerator.public.to_pymatgen_structure`
+    - {py:func}`sqsgenerator.public.from_pymatgen_structure`
+  - **ase**:
+    - {py:func}`sqsgenerator.public.to_ase_atoms`
+    - {py:func}`sqsgenerator.public.from_ase_atoms`
+
+```{code-block} python
+import numpy as np
+import ase.atoms
+import pymatgen.core
+from sqsgenerator import to_pymatgen_structure, from_pymatgen_structure, to_ase_atoms, from_ase_atoms, Structure
+
+fcc_al = Structure(4.05*np.eye(3), np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5]]), ['Al']*4)
+
+fcc_al_ase = to_ase_atoms(fcc_al)
+fcc_al_pymatgen = to_pymatgen_structure(fcc_al)
+
+assert isinstance(fcc_al_ase, ase.atoms.Atoms)
+assert isinstance(fcc_al_pymatgen, pymatgen.core.Structure)
+assert fcc_al == from_ase_atoms(fcc_al_ase)
+assert fcc_al == from_pymatgen_structure(fcc_al_pymatgen)
+```
 ## Graceful exits
 
 As the SQS optimization may require a large number of iterations, it is sometimes desirable to stop the process 
