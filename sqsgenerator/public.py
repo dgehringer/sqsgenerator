@@ -1,7 +1,7 @@
-import itertools
-import pprint
+
 import signal
 import warnings
+import itertools
 import numpy as np
 import typing as T
 from attrdict import AttrDict
@@ -286,13 +286,42 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
         result_document = result_document.get('configurations')
         result_document = {rank: merge(result, structure=structure_document[rank]) for rank, result in
                            result_document.items()}
+    else:
+        result_document = result_document.get('configurations')
 
     return result_document, timings
 
 
 def sqs_analyse(settings: T.Union[Settings, T.Dict], structures: T.Iterable[Structure], process: bool = True,
                 fields: T.Tuple[str, ...] = ('configuration', 'parameters', 'objective'),
-                structure_format: str = 'default', append_structures: bool = False) -> dict:
+                structure_format: str = 'default', append_structures: bool = False) -> T.Dict[int, T.Dict[str, T.Any]]:
+    """
+    Uses the given settings {settings} and an iterable of :py:func:`Structure` and compute the short-range-order
+    parameters, objective function. By default the {fields} = ('configuration', 'parameters', 'objective') are
+    included.
+
+    :param settings: the settings used for the SQS optimization
+    :type settings: AttrDict or Dict
+    :param structures: an iterable of structures to analyse
+    :type structures: Iterable[Union[Structure, :py:class`ase.atoms.Atoms`, :py:class:`pymatgen.core.Structure`]]
+    :param process: process the input {settings} dictionary (default is ``True``)
+    :type process: bool
+    :param fields: output fields included in the result document. Possible fields are "*configuration*", "*parameters*",
+        "*objective*" and "*parameters*" (default is ``('configuration', 'parameters', 'objective')``)
+    :type fields: Tuple[str, ...]
+    :param structure_format: the input format of the items in {structures}
+        (default is ``'default'``)
+
+            - "*default*": :py:class:`Structure`
+            - "*pymatgen*" :py:class:`pymatgen.core.Structure`
+            - "*ase*": :py:class:`ase.atoms.Atoms`
+    :type structure_format: str
+    :param append_structures: append the initial {structures} to the analysed results (default is ``False``)
+    :type append_structures: bool
+    :return: a dictionary with the specified fields as well as timing information. The keys of the result dictionary are
+        the permutation ranks of the {structures}.
+    :rtype: Dict[int, Dict[str, Any]]
+    """
 
     settings = settings if isinstance(settings, Settings) else AttrDict(settings)
     settings = process_settings(settings) if process else settings
@@ -310,14 +339,20 @@ def sqs_analyse(settings: T.Union[Settings, T.Dict], structures: T.Iterable[Stru
     analyse_settings.update(structure=first_structure)
     analyse_settings.update(which=defaults.which(analyse_settings))
 
-    # we have consubed the first element of the {structure} iterator we again assemble it
-    structures = itertools.chain((first_structure,), structures)
+    # we have consumed the first element of the {structure} iterator we again assemble it
+    # we create a copy of the iterator
+    structures, structures_copy = itertools.tee(itertools.chain((first_structure,), structures))
 
     analysed = {
         rank_structure(st): pair_analysis(construct_settings(analyse_settings, False, structure=st))
         for st in structures
     }
-
     document = expand_sqs_results(analyse_settings, list(analysed.values()), fields=fields).get('configurations')
+
+    if append_structures:
+        for structure in structures_copy:
+            rank = rank_structure(structure)
+            assert rank in document
+            document[rank]['structure'] = structure
 
     return document
