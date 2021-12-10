@@ -379,7 +379,7 @@ caption: |
 structure:
   supercell: [2, 2, 2]
   file: ti-n.cif
-iterations: 5e5
+iterations: 5e6
 shell_weights:
   2: 1.0
 composition:
@@ -429,7 +429,7 @@ in the `ti-al-b-n.result.yaml` file.
 
 The atomic species are in ascending order with respect to their ordinal number. For this example it is B, N, Al, Ti
 The above SRO parameters are arranged in the following way 
-(see {ref}`target-objective parameter <input-param-target-objective>`).
+(see {ref}`target_objective <input-param-target-objective>` parameter).
 
 ```{math}
 \boldsymbol{\alpha} = \left[
@@ -445,24 +445,45 @@ The above SRO parameters are arranged in the following way
 We immediately see that the SRO is 1.0 if the constituting elements sit on different sublattices. This is because
 there are no pairs there $N_{\xi\eta}^2 = 0$. 
 
-##### fine-tuning the optimization
-Note that although, the aforementioned SRO's remain constant they contribute to the objective function
-$\mathcal{O}(\sigma)$. One can avoid this by setting the {ref}`pair-weights parameter <input-param-pair-weights>`
-($\tilde{p}_{\xi\eta}^i=0$ in Eq. {eq}`eqn:objective-actual`). Anyway the minimization will work.
+```{admonition} "*Wrong*" SRO parameters
+:class: warning
 
-We refine the above example in the following way
+Although the above example works and computes results, it does it not in a way we would expect it. Your can clearly 
+observe this by $\alpha_{\text{N-B}} < 0$ and $\alpha_{\text{Al-Ti}} < 0$
+
+The SRO parameters are not wrong but mean something differently. We have restricted each of the species to only half 
+of the lattice positions. In other words from the 64 initial positions Ti and Al are only free to choose 32 two of them
+(the former Ti sublattice). 
+
+Let's consider Ti and Al for this particular example. According to Eq. {eq}`eqn:wc-sro` the SRO $\alpha_{\text{Al-Ti}}$
+is defined as
+
+$$
+\alpha_{\text{Al-Ti}} = 1 - \dfrac{N_{\text{Al-Ti}}}{NMx_{\text{Al}}x_{\text{Ti}}} = 1 - \dfrac{\text{actual number of pairs}}{\text{expected number of pairs}}
+$$
+
+In the example above $N=64$ and $M^2=12$ while $x_{\text{Al}} = x_{\text{Ti}}=\frac{1}{4}$ which leads to 48 **expected** 
+Al-Ti pairs
+
+However, Al and Ti are not allowed to occupy all $N$ sites but only rather $\frac{N}{2}$ (Same is also true for B and N)
+In addition the $\frac{N}{2}$ sites, are allowed to be occupied only by Al and Ti, consequently we have to change
+$x_{\text{Al}} = x_{\text{Ti}}=\frac{1}{2}$. This however leads to **96 expected bonds**.
+
+```
+
+To fix this problem the above example need to be modified in the following way
 
 ```{code-block} yaml
 ---
 lineno-start: 1
-emphasize-lines: 16-21
+emphasize-lines: 16,17
 caption: |
-    Download the enhanced {download}`YAML file <examples/ti-al-b-n-weights.yaml>` 
+    Download the fixed {download}`YAML file <examples/ti-al-b-n-prefactors.yaml>` and the {download}`B2 structure <examples/ti-n.cif>` 
 ---
 structure:
   supercell: [2, 2, 2]
   file: ti-n.cif
-iterations: 5e5
+iterations: 5e6
 shell_weights:
   2: 1.0
 composition:
@@ -474,6 +495,47 @@ composition:
     Ti: 16
   Al:
     Ti: 16
+prefactors: 0.5
+prefactor_mode: mul
+```
+
+- **Line 16:** As the number of expected bonds changes, in the case of independent sublattices from 48 to 96. The
+  "*prefactors*" $f_{\xi\eta}^i$ (see Eq. {eq}`eqn:prefactors`) represent the **reciprocal** value of the number of 
+  expected bonds and therefore need to be multiplied by $\frac{1}{2}$ as $\frac{1}{2}\cdot \frac{1}{48} \rightarrow \frac{1}{96}$
+- **Line 17:** "*mul*" means that the **default values** of $f_{\xi\eta}^i$ are **mul**tiplied with the values supplied
+  from the {ref}`prefactor <input-param-prefactors>` parameters. $\tilde{f}^i_{\xi\eta} = \frac{1}{2}f_{\xi\eta}^i$
+
+##### fine-tuning the optimization
+Note that although, the aforementioned SRO's remain constant they contribute to the objective function
+$\mathcal{O}(\sigma)$. One can avoid this by setting the {ref}`pair-weights parameter <input-param-pair-weights>`
+($\tilde{p}_{\xi\eta}^i=0$ in Eq. {eq}`eqn:objective-actual`). Anyway the minimization will work.
+
+We refine the above example in the following way 
+
+```{code-block} yaml
+---
+lineno-start: 1
+emphasize-lines: 18-23
+caption: |
+    Download the enhanced {download}`YAML file <examples/ti-al-b-n-prefactors-weights.yaml>` 
+---
+structure:
+  supercell: [2, 2, 2]
+  file: ti-n.cif
+iterations: 5e6
+shell_weights:
+  2: 1.0
+composition:
+  B:
+    N: 16
+  N:
+    N: 16
+  Ti:
+    Ti: 16
+  Al:
+    Ti: 16
+prefactor_mode: mul
+prefactors: 0.5
 pair_weights:
   #   B    N    Al   Ti
   - [ 0.0, 0.5, 0.0, 0.0 ] # B
@@ -482,7 +544,7 @@ pair_weights:
   - [ 0.0, 0.0, 0.5, 0.0 ] # Ti
 ```
 
-  - **Line 16-21:** set the pair-weight coefficients $\tilde{p}_{\xi\eta}^i$.
+  - **Line 18-23:** set the pair-weight coefficients $\tilde{p}_{\xi\eta}^i$.
     - The main diagonal is set to zero, meaning we do not include same species pairs
     - We set parameters of species on different sublattices ($\alpha_{\text{B-Al}} = \alpha_{\text{N-Al}} = \alpha_{\text{B-Ti}} = \alpha_{\text{N-Ti}} = 0$) to zero. This will result in a more "*correct*" value for the objective function
 

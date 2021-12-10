@@ -44,7 +44,7 @@ $$
 $$ (eqn:objective)
 
 where $w^i$ are the coordination shell weighting factor, to take into account the decreasing influence of shells which are farther away.  $\alpha'_{\xi\eta}$ are the "*target objective*" parameters. Those can be used to optimize pairs between different species differently.
-$p_{\xi\eta}$ are *pair weights* and allows the user to weight pair types differently.
+$p_{\xi\eta}$ are "*pair weights*" and allows the user to weight pair types differently.
 
 However for the sake of computational efficiency we merge $p_{\xi\eta}$ and $w^i$ into $\tilde{p}_{\xi\eta}^i$ where
 
@@ -52,22 +52,42 @@ $$
     \tilde{p}_{\xi\eta}^i = w^i p_{\xi\eta}
 $$ (eqn:parameter-weight-efficient)
 
-such that the objective function becomes
+Moreover, the $\dfrac{1}{NM^i x_\xi x_\eta}$ term does not depend on a specific configuration $\sigma$ therefore it can
+be computed before the actual optimization process. Hence we gather those and name them "*prefactors*" $f_{\xi\eta}^i$ 
+where
 
 $$
-\mathcal{O}(\sigma) = \sum_{i,\xi,\eta} \tilde{p}_{\xi\eta}^i | \alpha'_{\xi\eta}-\alpha^i_{\xi\eta} |
+f_{\xi\eta}^i = (NM^ix_\xi x_\eta)^{-1}
+$$ (eqn:prefactors)
+
+such that Eq. {eq}`eqn:wc-sro-multi` can be factored to
+
+$$
+\alpha^i_{\xi\eta} = 1 - f_{\xi\eta}^i N^i_{\xi\eta}
+$$
+
+
+Employing the above definition the objective function $\mathcal{O}(\sigma)$ can be written as
+
+$$
+\mathcal{O}(\sigma) &= \sum_{i,\xi,\eta} \tilde{p}_{\xi\eta}^i | \alpha'_{\xi\eta}-\alpha^i_{\xi\eta} |  \\
+ &=\sum_{i,\xi,\eta} \underbrace{\tilde{p}_{\xi\eta}^i}_{\texttt{pair_weights}} | \overbrace{\alpha'_{\xi\eta}}^{\texttt{target_objective}}- \overbrace{(1 - \underbrace{f^i_{\xi\eta}}_{\texttt{prefactors}}N^i_{\xi\eta})}^{\alpha^i_{\xi\eta}} |
 $$ (eqn:objective-actual)
 
-The `sqsgenerator` tries different atomic configurations $\sigma$ by "*randomly shuffling*" or "*systematically*" (in lexicographical order) to filter out those configuration which **minimize** $\mathcal{O}(\sigma)$.
+`sqsgenerator` tries different atomic configurations $\sigma$ by "*randomly shuffling*" or "*systematically*" (in lexicographical order) to filter out those configuration which **minimize** $\mathcal{O}(\sigma)$.
 
+```{note}
+In the technical part of the documentation we refer to $w^i$ as the 
+{ref}`shell_weights <input-param-shell-weights>`, 
+$\alpha'_{\xi\eta}$  as the {ref}`target_objective <input-param-target-objective>`, $\tilde{p}^i_{\xi\eta}$ as the {ref}`pair_weights <input-param-pair-weights>` and $f_{\xi\eta}^i$ as the
+{ref}`prefactors <input-param-prefactors>`
+
+```
 
 ```{note}
 The mapping of an atomic configuration $\sigma$ on a scalar values via $\mathcal{O}(\sigma)$ is non-injective, thus you might end up with quite a lot of configurations, which are "*equal*" in the here presented formalism.
 ```
 
-```{note}
-In the technical part of the documentation we refer to $w^i$ as the `shell_weights` and to  $\alpha'_{\xi\eta}$  as the `target_objective`.
-```
 
 ## Triplet-based Short-Range-Order
 

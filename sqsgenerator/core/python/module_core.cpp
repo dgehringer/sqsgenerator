@@ -166,6 +166,17 @@ py::tuple build_configuration_wrapped(py::object configuration, py::dict composi
     );
 }
 
+Structure build_structure_from_composition(const Structure &structure, const composition_t &composition) {
+    auto [arrange_forward, _, configuration, __] =  build_configuration(structure.configuration(), composition);
+    return structure.with_species(configuration).rearranged(arrange_forward);
+}
+
+np::ndarray compute_prefactors_wrapper(StructurePythonWrapper &s, py::dict composition, py::dict shell_weights, double atol, double rtol) {
+    auto structure = build_structure_from_composition(*s.handle(), helpers::convert_composition(composition));
+    auto weights = helpers::dict_to_map<shell_t, double>(shell_weights);
+    auto prefactors = sqsgenerator::utils::compute_prefactors(structure.shell_matrix(atol, rtol), weights, std::get<1>(pack_configuration(structure.configuration())));
+    return helpers::multi_array_to_ndarray(prefactors);
+}
 
 BOOST_PYTHON_MODULE(core) {
         Py_Initialize();
@@ -219,8 +230,10 @@ BOOST_PYTHON_MODULE(core) {
         py::class_<pair_shell_weights_t>("ShellWeights")
             .def(py::map_indexing_suite<pair_shell_weights_t>());
 
-        py::class_<IterationSettingsPythonWrapper>("IterationSettings", py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, double, double, iteration_mode>())
-            .def(py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode>())
+                                                                                      // StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode
+        py::class_<IterationSettingsPythonWrapper>("IterationSettings", py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode>())
+                              // StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, double, double, iteration_mode
+            .def(py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, double, double, iteration_mode>())
             .def_readonly("num_atoms", &IterationSettingsPythonWrapper::num_atoms)
             .def_readonly("num_shells", &IterationSettingsPythonWrapper::num_shells)
             .def_readonly("num_iterations", &IterationSettingsPythonWrapper::num_iterations)
@@ -258,6 +271,8 @@ BOOST_PYTHON_MODULE(core) {
         py::def("available_species", &available_species);
 
         py::def("build_configuration", &build_configuration_wrapped);
+
+        py::def("compute_prefactors", &compute_prefactors_wrapper);
 
         py::scope().attr("ALL_SITES") = ALL_SITES;
 

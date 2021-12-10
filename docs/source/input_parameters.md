@@ -306,7 +306,7 @@ shells. The default distances are computed in the following way:
 ```{code-block} python
 ---
 caption: |
-    This is just a Python implementation which behaves the same
+    This is just a Python implementation which demonstrates what is happening
 ---
 shell_distances = []
 
@@ -341,6 +341,8 @@ sqsgenerator params show input.yaml -p shell_distances
 ````
 
 ### `shell_weights`
+(input-param-shell-weights)=
+
 accounts for the fact that coodination shells which are farther away are less important. This parameter also determines 
 **which** shells should be taken into account. The `shell_weights` are a mapping (dictionary). It assigns the 
 **shell index** it corresponding shell weight $w^i$. The keys represent the indices of the calculated shell distances 
@@ -473,6 +475,36 @@ the target objective $\alpha'_{\eta\xi}$ {eq}`eqn:objective`, which the SRO para
     - [-1,  1, 0]
     - [ 0,  0, 1]
   ``` 
+
+### `prefactors`
+(input-param-prefactors)=
+
+The bond prefactors $f_{\xi\eta}^i$ as defined in Eq. {eq}`eqn:prefactors`. The input representation and options are the
+same as for the {ref}`target_objective <input-param-target-objective>` parameter. The 
+{ref}`prefactor_mode <input-param-prefactor-mode>` parameter determines whether the default values are overridden or 
+modified. One can think of the prefactors $f^i_{\xi\eta}$ as the reciprocal value of the expected number $\xi - \eta$ 
+pairs in the $i^{\text{th}}$ coordination shell
+
+- **Requrired:** No
+- **Default:** an array of **zeros** of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$
+- **Accepted:**
+  - a single scalar value. An array filled with the scalar value of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ will be created (`float`)
+  - a 2D matrix of shape $\left( N_{\text{species}}, N_{\text{species}} \right)$ the matrix will be stacked along the first dimension $N_{\text{shells}}$ times to generate the $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ array (`np.ndarray`)
+  - a 3D array of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ (`np.ndarray`)
+
+
+### `prefactor_mode`
+(input-param-prefactor-mode)
+
+Specifies how the {ref}`prefactors <input-param-prefactors>` parameter is interpreted
+
+- *set*  uses the values from {ref}`prefactors <input-param-prefactors>` and interprets them directly as $f^i_{\xi\eta}$
+- *mul* multiplies the input array **element-wise** with the default values of {ref}`prefactors <input-param-prefactors>`
+  and uses the result as $f^i_{\xi\eta}$
+
+- **Requrired:** No
+- **Default:** *set*
+- **Accepted:** *set* or *mul* (`str`)
 
  ### `threads_per_rank`
 

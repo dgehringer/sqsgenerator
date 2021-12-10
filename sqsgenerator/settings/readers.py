@@ -193,52 +193,63 @@ def read_shell_weights(settings: AttrDict):
     return settings.shell_weights
 
 
-@parameter('pair_weights', default=defaults.pair_weights, required=True)
-def read_pair_weights(settings: AttrDict):
+def read_parameter_shaped_array(settings: AttrDict, parameter_name: str, constructor: T.Callable[[np.ndarray], np.ndarray]):
     nums = num_species(settings)
     nshells = num_shells(settings)
 
-    if isinstance(settings.pair_weights, (list, tuple, np.ndarray)):
-        w = np.array(settings.pair_weights).astype(float)
+    if isinstance(settings.get(parameter_name), (list, tuple, np.ndarray)):
+        w = np.array(settings.get(parameter_name)).astype(float)
         if w.ndim in {2, 3}:
             expected_shape = (nshells, nums, nums) if w.ndim == 3 else (nums, nums)
 
-            ensure_array_shape(w, expected_shape, f'The 3D "pair_weights" you have specified '
+            ensure_array_shape(w, expected_shape, f'The 3D "{parameter_name}" you have specified '
                                                   f'has a wrong shape ({w.shape}). Expected {expected_shape}')
-            ensure_array_symmetric(w, f'The "pair_weights" parameters are not symmetric')
+            ensure_array_symmetric(w, f'The "{parameter_name}" parameters are not symmetric')
+            return constructor(w)
 
-            sorted_weights = sorted(settings.shell_weights.items(), key=item(0))
-            weights = w if w.ndim == 3 else np.stack([w * shell_weight for _, shell_weight in sorted_weights])
-            return weights
+    raise BadSettings(f'As "{parameter_name}" I do expect a {nums}x{nums} matrix, '
+                      f'since your structure contains {nums} different species')
 
-        raise BadSettings(f'As "pair_weights" I do expect a {nums}x{nums} matrix, '
-                          f'since your structure contains {nums} different species')
+
+@parameter('pair_weights', default=defaults.pair_weights, required=True)
+def read_pair_weights(settings: AttrDict):
+    sorted_weights = sorted(settings.shell_weights.items(), key=item(0))
+
+    return read_parameter_shaped_array(settings, 'pair_weights',
+                                       lambda w: w if w.ndim == 3
+                                       else np.stack([w * shell_weight for _, shell_weight in sorted_weights]))
 
 
 @parameter('target_objective', default=defaults.target_objective, required=True)
 def read_target_objective(settings: AttrDict):
-    nums = num_species(settings)
-    nshells = num_shells(settings)
-
     if isinstance(settings.target_objective, (int, float)):
-        return np.ones((nshells, nums, nums)).astype(float) * float(settings.target_objective)
+        target_objective = np.ones((num_shells(settings), num_species(settings), num_species(settings))) * settings.target_objective
+        settings['target_objective'] = target_objective
+    return read_parameter_shaped_array(settings, 'target_objective',
+                                       lambda w: w if w.ndim == 3 else np.stack([w] * num_shells(settings)))
 
-    if isinstance(settings.target_objective, (list, tuple, np.ndarray)):
-        o = np.array(settings.target_objective).astype(float)
-        if o.ndim in {2, 3}:
-            expected_shape = (nshells, nums, nums) if o.ndim == 3 else (nums, nums)
-            ensure_array_shape(o, expected_shape, f'The 3D "target_objective" you have specified '
-                                                  f'has a wrong shape ({o.shape}). Expected {expected_shape}')
 
-            ensure_array_symmetric(o, f'The "target_objective" parameters are not symmetric')
-            objectives = o if o.ndim == 3 else np.stack([o] * nshells)
-            return objectives
+@parameter('prefactor_mode', default=defaults.prefactor_mode, required=True)
+def read_prefactor_mode(settings: AttrDict):
+    if not isinstance(settings.prefactor_mode, str):
+        raise BadSettings('"prefactor_mode" must be of type str')
+    if settings.prefactor_mode.lower() not in {'set', 'mul'}:
+        raise BadSettings('"prefactor_mode" must be either {\'set\', \'mul\'}')
+    return settings.prefactor_mode.lower()
 
-        raise BadSettings(f'The "target_objective" you have specified has a {o.ndim} dimensions. '
-                          f'I only can cope with 2 and 3')
 
-    raise BadSettings(f'Cannot interpret "target_objective" setting. '
-                      f'Acceptable values are a single number, {nums}x{nums} or {nshells}x{nums}x{nums} matrices!')
+@parameter('prefactors', default=defaults.prefactors, required=True)
+def read_prefactors(settings: AttrDict):
+    if isinstance(settings.prefactors, (int, float)):
+        prefactors = np.ones((num_shells(settings), num_species(settings), num_species(settings))) * settings.prefactors
+        settings['prefactors'] = prefactors
+    prefactors = read_parameter_shaped_array(settings, 'prefactors',
+                                       lambda w: w if w.ndim == 3 else np.stack([w] * num_shells(settings)))
+
+    prefactors = prefactors if settings.prefactor_mode == 'set' else (prefactors * defaults.prefactors(settings))
+    if np.any(np.isclose(prefactors, 0)):
+        raise BadSettings('A prefactor of zero is not allowed as divison would lead to infinite numbers')
+    return prefactors
 
 
 @parameter('threads_per_rank', default=defaults.threads_per_rank, required=True)
