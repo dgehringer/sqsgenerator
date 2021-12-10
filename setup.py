@@ -22,7 +22,7 @@ opt_flags = {
 
 
 class CMakeExtension(Extension):
-    def __init__(self, name, target='', cmake_lists_dir='.', debug=False, verbose=False, **kwargs):
+    def __init__(self, name, target='', cmake_lists_dir='.', debug=False, verbose=True, **kwargs):
         Extension.__init__(self, name, sources=[], **kwargs)
         self.cmake_lists_dir = os.path.abspath(cmake_lists_dir)
         self.debug = debug

@@ -96,3 +96,7 @@ def make_rank(*args, **kwargs):
 
 def sqs_analyse(*args, **kwargs):
     pass
+
+
+def compute_prefactors(*args, **kwargs):
+    pass

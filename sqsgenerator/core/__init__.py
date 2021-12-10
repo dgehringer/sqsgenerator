@@ -10,7 +10,8 @@ from sqsgenerator.core.core import IterationMode, IterationSettings, BoostLogLev
 from sqsgenerator.core.structure import Structure, structure_to_dict, make_supercell
 from sqsgenerator.core.core import default_shell_distances, atoms_from_numbers, atoms_from_symbols, available_species, \
     symbols_from_z, z_from_symbols, build_configuration, ALL_SITES, make_rank as make_rank_, \
-    rank_structure as rank_structure_, total_permutations as total_permutations_
+    rank_structure as rank_structure_, total_permutations as total_permutations_, \
+    compute_prefactors as compute_prefactors_
 
 __all__ = [
     '__version__',
@@ -150,3 +151,7 @@ def rank_structure(struct: Structure, which: T.Optional[T.Iterable[int]] = None)
     """
     which = tuple(range(len(struct))) if which is None else which
     return rank_structure_(struct[which])
+
+
+def compute_prefactors(structure: Structure, composition: dict, shell_wights: dict, atol: float = 1e-3, rtol: float = 1e-5):
+    return compute_prefactors_(structure, composition, shell_wights, atol, rtol)
