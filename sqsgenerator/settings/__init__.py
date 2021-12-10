@@ -16,7 +16,7 @@ def construct_settings(settings: AttrDict, process: T.Optional[bool] = True, **o
 
     :param settings: the dict-like settings object. The parameter is passed on to the ``AttrDict`` constructor
     :type settings: AttrDict
-    :param process: process the the settings (default is ``True``)
+    :param process: process the settings (default is ``True``)
     :type process: bool
     :param overloads: keyword args are used to **overload** key in the {settings} dictionary
     :return: the ``sqsgenerator.core.IterationSettings`` object, ready to pass on to ``pair_analysis``
@@ -37,6 +37,7 @@ def construct_settings(settings: AttrDict, process: T.Optional[bool] = True, **o
             to_internal_composition_specs(settings.composition, settings.structure),
             settings.target_objective,
             settings.pair_weights,
+            settings.prefactors,
             dict(settings.shell_weights),
             settings.iterations,
             settings.max_output_configurations,
