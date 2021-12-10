@@ -45,6 +45,7 @@ namespace sqsgenerator {
                 composition_t composition,
                 const_array_3d_ref_t target_objective,
                 const_array_3d_ref_t parameter_weights,
+                const_array_3d_ref_t bond_count_prefactors,
                 pair_shell_weights_t shell_weights,
                 rank_t iterations,
                 int output_configurations,
