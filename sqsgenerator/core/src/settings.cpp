@@ -23,6 +23,7 @@ namespace sqsgenerator {
             composition_t composition,
             const_array_3d_ref_t target_objective,
             const_array_3d_ref_t parameter_weights,
+            const_array_3d_ref_t bond_count_prefactors,
             pair_shell_weights_t shell_weights,
             rank_t iterations,
             int output_configurations,
@@ -41,6 +42,7 @@ namespace sqsgenerator {
         m_mode(mode),
         m_parameter_weights(parameter_weights),
         m_target_objective(target_objective),
+        m_parameter_prefactors(bond_count_prefactors),
         m_shell_distances(shell_distances),
         m_threads_per_rank(threads_per_rank)
     {
@@ -65,10 +67,8 @@ namespace sqsgenerator {
 
         for (auto i = 0; i < m_structure.num_atoms(); i++) assert(m_structure.configuration()[i] == configuration[i]);
         std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(configuration);
-
-        m_parameter_prefactors.resize(boost::extents[num_shells()][num_species()][num_species()]);
-        m_parameter_prefactors = compute_prefactors(m_shell_matrix, m_shell_weights, m_packed_configuration);
     }
+
 
     IterationSettings::IterationSettings(
             Structure structure,
@@ -81,12 +81,12 @@ namespace sqsgenerator {
             std::vector<int> threads_per_rank,
             double atol,
             double rtol,
-            iteration_mode mode) :
-            IterationSettings(
+            iteration_mode mode) : IterationSettings(
                     structure,
                     composition,
                     target_objective,
                     parameter_weights,
+                    array_3d_t(boost::extents[1][1][1]),
                     shell_weights,
                     iterations,
                     output_configurations,
@@ -95,7 +95,10 @@ namespace sqsgenerator {
                     atol,
                     rtol,
                     mode)
-    { }
+            {
+        m_parameter_prefactors.resize(boost::extents[num_shells()][num_species()][num_species()]);
+        m_parameter_prefactors = compute_prefactors(m_shell_matrix, m_shell_weights, m_packed_configuration);
+    }
 
 
     [[nodiscard]] std::vector<shell_t> IterationSettings::available_shells() const {

@@ -1,7 +1,7 @@
 structure:
   supercell: [2, 2, 2]
   file: ti-n.cif
-iterations: 5e5
+iterations: 5e6
 shell_weights:
   2: 1.0
 composition:
@@ -13,6 +13,8 @@ composition:
     Ti: 16
   Al:
     Ti: 16
+prefactor_mode: mul
+prefactors: 0.5
 pair_weights:
   #   B    N    Al   Ti
   - [ 0.0, 0.5, 0.0, 0.0 ] # B
