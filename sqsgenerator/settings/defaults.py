@@ -2,9 +2,10 @@ import collections
 import numpy as np
 from attrdict import AttrDict
 from operator import itemgetter as item
-from sqsgenerator.settings.utils import build_structure
+from sqsgenerator.settings.utils import build_structure, to_internal_composition_specs
 from sqsgenerator.settings.functional import const, if_
-from sqsgenerator.core import IterationMode, Structure, default_shell_distances as default_shell_distances_core
+from sqsgenerator.core import IterationMode, Structure, default_shell_distances as default_shell_distances_core, \
+    compute_prefactors as default_compute_prefactors
 
 
 ATOL = 1e-3
@@ -55,6 +56,12 @@ def default_target_objective(settings: AttrDict):
     return np.zeros((num_shells(settings), structure.num_unique_species, structure.num_unique_species))
 
 
+def default_prefactors(settings: AttrDict):
+    internal_composition_spec = to_internal_composition_specs(settings.composition, settings.structure)
+    return default_compute_prefactors(settings.structure[settings.which], internal_composition_spec,
+                                      dict(settings.shell_weights), settings.atol, settings.rtol)
+
+
 defaults = AttrDict(
     dict(
         atol=const(ATOL),
@@ -68,6 +75,8 @@ defaults = AttrDict(
         shell_weights=default_shell_weights,
         pair_weights=default_pair_weights,
         target_objective=default_target_objective,
+        prefactors=default_prefactors,
+        prefactor_mode=const('set'),
         threads_per_rank=const([-1])
     )
 )
