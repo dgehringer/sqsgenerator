@@ -279,7 +279,7 @@ namespace sqsgenerator {
             }
             #pragma omp barrier
             rank_t start_it, end_it;
-            std::tie(start_it, end_it]) = iteration_ranks[mpi_rank][thread_id];
+            std::tie(start_it, end_it) = iteration_ranks[mpi_rank][thread_id];
             #pragma omp critical
             {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::iteration_start = " << start_it;
