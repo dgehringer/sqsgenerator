@@ -54,7 +54,7 @@ namespace sqsgenerator {
     using Shape = std::array<size_t, NDims>;
 
     // The array consists of {size_t i, size_t j, size_t shell, size_t shell_index}
-    typedef std::array<pair_shell_matrix_t::index, 4> AtomPair;
+    typedef std::tuple<pair_shell_matrix_t::index, pair_shell_matrix_t::index, pair_shell_matrix_t::index, pair_shell_matrix_t::index> AtomPair;
 
     constexpr species_t ALL_SITES = -1;
 }
