@@ -122,8 +122,9 @@ namespace sqsgenerator {
 
     std::vector<size_t> convert_pair_list(const std::vector<AtomPair> &pair_list) {
         std::vector<size_t> result;
+        pair_shell_matrix_t::index i, j, _, shell_index;
         for (const auto &pair : pair_list) {
-            auto[i, j, _, shell_index] = pair;
+            std::tie(i, j, _, shell_index) = pair;
             result.push_back(i);
             result.push_back(j);
             result.push_back(shell_index);
@@ -277,7 +278,8 @@ namespace sqsgenerator {
                 iteration_ranks = compute_ranks(settings, threads_per_rank);
             }
             #pragma omp barrier
-            auto [start_it, end_it] = iteration_ranks[mpi_rank][thread_id];
+            rank_t start_it, end_it;
+            std::tie(start_it, end_it) = iteration_ranks[mpi_rank][thread_id];
             #pragma omp critical
             {
                 BOOST_LOG_TRIVIAL(debug) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::iteration_start = " << start_it;
