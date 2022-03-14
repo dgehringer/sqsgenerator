@@ -59,9 +59,6 @@ class TestStructure(unittest.TestCase):
         with self.assertRaises(ValueError):
             s.slice_with_species(['Fe'], [0, 1])
 
-    def test_repr(self):
-        length = len(self.structure)
-        self.assertTrue(f'len={length}', repr(self.structure))
 
 
 if __name__ == '__main__':

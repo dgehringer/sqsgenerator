@@ -8,13 +8,13 @@ from pymatgen.io.vasp import Poscar
 from pymatgen.util.coord import pbc_shortest_vectors
 
 def write_array(stream, array: np.ndarray, name=None, fmt="{0:.8f}"):
-    stream.write(f"{name}::array::begin\n")
-    stream.write(f"{name}::array::ndims {len(array.shape)}\n")
-    stream.write(f"{name}::array::shape {' '.join(map(str, array.shape))}\n")
-    stream.write(f"{name}::array::data")
+    stream.write("{}::array::begin\n".format(name))
+    stream.write("{}::array::ndims {}\n".format(name, len(array.shape)))
+    stream.write("{}::array::shape {}\n".format(name, ' '.join(map(str, array.shape))))
+    stream.write("{}::array::data".format(name))
     for v in array.flat: stream.write(" " + fmt.format(v))
     stream.write("\n")
-    stream.write(f"{name}::array::end\n")
+    stream.write("{}::array::end\n".format(name))
 
 
 def nditer(A: np.ndarray):
