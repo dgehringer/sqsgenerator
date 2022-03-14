@@ -78,7 +78,7 @@ def make_help_link(parameter: str) -> str:
 
 def exit_on_input_parameter_error(f):
     """
-    Decorator: Wraps a @parameter decorated function -> catches a eventual `BadSettings` error -> creates a help-link
+    Decorator: Wraps a @parameter decorated function -> catches an eventual `BadSettings` error -> creates a help-link
     for the parameter -> redirects the `BadSettings` into `click.Abort` to stop CLI execution
     """
 
@@ -100,7 +100,7 @@ def exit_on_input_parameter_error(f):
 
 def click_settings_file(process=None, default_name='sqs.yaml', ignore=()):
     """
-    Decorator-Factory: A lot of the commands need an input YAML file -> creates a a decorator which parses a settings
+    Decorator-Factory: A lot of the commands need an input YAML file -> creates a decorator which parses a settings
     file and takes an input format as parameter. The decorator processes the specified file
     :param process: process (parsed) the settings dictionary with sqsgenerator.core (default is `None`)
     :type process: Iterable[str] or None
