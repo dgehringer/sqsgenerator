@@ -11,9 +11,8 @@ import typing as T
 import collections
 import collections.abc
 from functools import partial
-from attrdict import AttrDict
 from operator import itemgetter as item
-
+from sqsgenerator.fallback.attrdict import AttrDict
 from sqsgenerator.io import read_structure_from_file
 from sqsgenerator.settings.exceptions import BadSettings
 from sqsgenerator.core import IterationMode, Structure, make_supercell
@@ -34,14 +33,14 @@ parameter = partial(parameter_, registry=__parameter_registry)
 @parameter('atol', default=defaults.atol)
 def read_atol(settings: AttrDict):
     if not isinstance(settings.atol, float) or settings.atol < 0:
-        raise BadSettings(f'The absolute tolerance can be only a positive floating point number')
+        raise BadSettings('The absolute tolerance can be only a positive floating point number')
     return settings.atol
 
 
 @parameter('rtol', default=defaults.rtol)
 def read_rtol(settings: AttrDict):
     if not isinstance(settings.rtol, float) or settings.rtol < 0:
-        raise BadSettings(f'The relative tolerance can be only a positive floating point number')
+        raise BadSettings('The relative tolerance can be only a positive floating point number')
     return settings.rtol
 
 
@@ -136,7 +135,7 @@ def read_which(settings: AttrDict):
         if len(sublattice) < 2:
             raise BadSettings('You need to at least specify two different lattice positions to define a sublattice')
         if not all(map(isa(int), sublattice)):
-            raise BadSettings(f'I do only understand integer lists to specify a sublattice')
+            raise BadSettings('I do only understand integer lists to specify a sublattice')
         if not all(map(lambda _: 0 <= _ < structure.num_atoms, sublattice)):
             raise BadSettings(f'All indices in the list must be 0 <= index < {structure.num_atoms}')
         which = tuple(settings.which)
@@ -150,7 +149,7 @@ def read_which(settings: AttrDict):
 def read_composition(settings: AttrDict):
     structure = settings.structure[settings.which]
     if not isinstance(settings.composition, dict):
-        raise BadSettings(f'Cannot interpret "composition" settings. I expect a dictionary')
+        raise BadSettings('Cannot interpret "composition" settings. I expect a dictionary')
 
     build_structure(settings.composition, structure)
     return settings.composition
@@ -260,10 +259,10 @@ def read_threads_per_rank(settings: AttrDict):
     if isinstance(settings.threads_per_rank, (list, tuple, np.ndarray)):
         if len(settings.threads_per_rank) != 1:
             if not have_mpi_support():
-                raise BadSettings(f'The module sqsgenerator.core.iteration was not compiled with MPI support')
+                raise BadSettings('The module sqsgenerator.core.iteration was not compiled with MPI support')
         return list(map(converter, settings.threads_per_rank))
 
-    raise BadSettings(f'Cannot interpret "threads_per_rank" setting.')
+    raise BadSettings('Cannot interpret "threads_per_rank" setting.')
 
 
 def process_settings(settings: AttrDict, params: T.Optional[T.Set[str]] = None, ignore: T.Iterable[str]=()) -> AttrDict:

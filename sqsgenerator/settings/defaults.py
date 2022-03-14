@@ -1,7 +1,8 @@
+
 import collections
 import numpy as np
-from attrdict import AttrDict
 from operator import itemgetter as item
+from sqsgenerator.fallback.attrdict import AttrDict
 from sqsgenerator.settings.utils import build_structure, to_internal_composition_specs
 from sqsgenerator.settings.functional import const, if_
 from sqsgenerator.core import IterationMode, Structure, default_shell_distances as default_shell_distances_core, \

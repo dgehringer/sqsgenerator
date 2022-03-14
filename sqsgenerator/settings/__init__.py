@@ -1,7 +1,7 @@
 
 import typing as T
-from attrdict import AttrDict
 from sqsgenerator.core import IterationSettings
+from sqsgenerator.fallback.attrdict import AttrDict
 from sqsgenerator.settings.defaults import defaults
 from sqsgenerator.settings.utils import build_structure
 from sqsgenerator.settings.exceptions import BadSettings

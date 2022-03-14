@@ -2,8 +2,8 @@
 A data file storing the CLI's help strings
 """
 
-from attrdict import AttrDict
 from sqsgenerator.io import default_adapter
+from sqsgenerator.fallback.attrdict import AttrDict
 
 
 command_help = AttrDict(dict(

@@ -54,13 +54,13 @@ def _check_features():
             getter = functools.partial(operator.itemgetter(feat.value), __features)
             setattr(self_module, f'have_{feat.value}', getter)
             message = f'Feature "{feat.value}" was ' + ('found' if __features[feat.value] else 'not found')
-            logging.getLogger(f'compat.check_features').info(message)
+            logging.getLogger('compat.check_features').info(message)
 
 
 def have_feature(feature: T.Union[Feature, str]) -> bool:
     assert is_initialized()
-    freature_value = feature.value if isinstance(feature, Feature) else feature
-    return freature_value in __features and __features[freature_value]
+    feature_value = feature.value if isinstance(feature, Feature) else feature
+    return feature_value in __features and __features[feature_value]
 
 
 def require(*features: Feature, condition=all):
@@ -70,8 +70,11 @@ def require(*features: Feature, condition=all):
 
         @functools.wraps(f)
         def _wrapper(*args, **kwargs):
-            if not condition(map(have_feature, features)): raise FeatureNotAvailableException(features)
+            if not condition(map(have_feature, features)):
+                raise FeatureNotAvailableException(features)
+
             return f(*args, **kwargs)
+
         return _wrapper
 
     return _decorator
@@ -87,7 +90,9 @@ def available_features():
 
 
 def available_features_with_version():
-    default_version = lambda _ : ''
+
+    def default_version(*_):
+        return ''
 
     def module_version_attr(f):
         feature = Feature(f)

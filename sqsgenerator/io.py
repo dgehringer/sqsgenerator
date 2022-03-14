@@ -9,8 +9,8 @@ import zipfile
 import functools
 import numpy as np
 import typing as T
-from attrdict import AttrDict
 from frozendict import frozendict
+from sqsgenerator.fallback.attrdict import AttrDict
 from sqsgenerator.core import Structure, IterationMode
 from sqsgenerator.compat import FeatureNotAvailableException
 from operator import attrgetter as attr, methodcaller as method
@@ -134,7 +134,8 @@ def dumps(o: dict, output_format: str = 'yaml') -> bytes:
     """
     f = F(output_format)
     if not have_feature(f):
-        raise FeatureNotAvailableException(f'The package "{format}" is not installed, consider to install it with')
+        raise FeatureNotAvailableException(f'The package "{format}" is not installed, '
+                                           'consider to install it with')
 
     # for yaml format we create a simple wrapper which captures the output
     def safe_dumps(d, **kwargs):
@@ -171,7 +172,8 @@ def read_settings_file(path: str, format: str = 'yaml') -> AttrDict:
         F.yaml: 'safe_load'
     }
     if not have_feature(f):
-        raise FeatureNotAvailableException(f'The package "{format}" is not installed, consider to install it with')
+        raise FeatureNotAvailableException(f'The package "{format}" is not installed, '
+                                           'consider to install it with')
     reader = getattr(get_module(f), readers[f])
     try:
         mode = 'r' if f != F.pickle else 'rb'
@@ -250,7 +252,7 @@ def read_structure_from_file(settings: AttrDict) -> Structure:
     reader = settings.structure.get('reader', 'ase')
     available_readers = set(map(attr('value'), known_adapters))
     if reader not in available_readers:
-        raise FeatureNotAvailableException(f'Unknown reader specification "{reader}". '
+        raise FeatureNotAvailableException(f'Unknown reader specification "{reader}.  '
                                            f'Available readers are {known_adapters}')
     reader_kwargs = settings.structure.get('args', {})
     reader_funcs = dict(ase=read_structure_file_with_ase, pymatgen=read_structure_file_with_pymatgen)
