@@ -8,6 +8,7 @@
 
 #include "types.hpp"
 #include "utils.hpp"
+#include <set>
 #include <vector>
 #include <limits>
 #include <algorithm>

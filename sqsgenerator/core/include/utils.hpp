@@ -6,6 +6,7 @@
 #define SQSGENERATOR_UTILS_HPP
 
 #include "types.hpp"
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <boost/multi_array.hpp>
