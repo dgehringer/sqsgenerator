@@ -63,17 +63,17 @@ class CMakeBuildExt(build_ext):
             extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
             cfg = 'Debug' if ext.debug else 'Release'
             cmake_args = [
-                '-DCMAKE_BUILD_TYPE={}'.format(cfg),
+                f'-DCMAKE_BUILD_TYPE={cfg}',
                 # Ask CMake to place the resulting library in the directory
                 # containing the extension
-                '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir),
+                f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}',
                 # Other intermediate static libraries are placed in a
                 # temporary build directory instead
-                '-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), self.build_temp),
+                f'-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_{cfg.upper()}={self.build_temp}',
                 # Hint CMake to use the same Python executable that
                 # is launching the build, prevents possible mismatching if
                 # multiple versions of Python are installed
-                '-DPython3_EXECUTABLE={}'.format(sys.executable),
+                f'-DPython3_EXECUTABLE={sys.executable}',
                 # Add other project-specific CMake arguments if needed
                 # ...
                 '-DUSE_MPI={}'.format("ON" if self.with_mpi else "OFF"),
@@ -82,19 +82,19 @@ class CMakeBuildExt(build_ext):
             cmake_cxx_flags = ' '.join(opt_flags.get(cfg, {}).get(self.compiler.compiler_type, []))
 
             env_var_prefix = 'SQS_'
-            # we allow to overload cmake compiler options
+            # we allow overloading cmake compiler options
             for env_var_name, env_var_value in os.environ.items():
                 if env_var_name == 'CMAKE_CXX_FLAGS':
                     # we append them to our release/debug flags
-                    cmake_cxx_flags += ' {}'.format(env_var_value)
+                    cmake_cxx_flags += f' {env_var_value}'
                 elif env_var_name.startswith('CMAKE'):
-                    cmake_args.append('-D{}={}'.format(env_var_name, env_var_value))
-                m = re.match('{}(?P<varname>\w+)'.format(env_var_prefix), env_var_name)
+                    cmake_args.append(f'-D{env_var_name}={env_var_value}')
+                m = re.match(f'{env_var_prefix}(?P<varname>\w+)', env_var_name)
                 if m:
                     env_var_name_real = m.groupdict()['varname']
-                    cmake_args.append('-D{}={}'.format(env_var_name_real, env_var_value))
+                    cmake_args.append(f'-D{env_var_name_real}={env_var_value}')
 
-            cmake_args.append('-DCMAKE_CXX_FLAGS_{}={}'.format(cfg.upper(), cmake_cxx_flags))
+            cmake_args.append(f'-DCMAKE_CXX_FLAGS_{cfg.upper()}={cmake_cxx_flags}')
             pprint.pprint(cmake_args)
             # We can handle some platform-specific settings at our discretion
             if platform.system() == 'Windows':
@@ -102,12 +102,12 @@ class CMakeBuildExt(build_ext):
                 cmake_args += [
                     # These options are likely to be needed under Windows
                     '-DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE',
-                    '-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir),
+                    f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}'
                 ]
                 # Assuming that Visual Studio and MinGW are supported compilers
                 if self.compiler.compiler_type == 'msvc':
                     cmake_args += [
-                        '-DCMAKE_GENERATOR_PLATFORM={}'.format(plat)
+                        f'-DCMAKE_GENERATOR_PLATFORM={plat}'
                     ]
                 else:
                     cmake_args += [
@@ -129,7 +129,7 @@ class CMakeBuildExt(build_ext):
         """finalize options"""
         super(CMakeBuildExt, self).finalize_options()
 
-        
+
 setup(
     name='sqsgenerator',
     version='0.1',
