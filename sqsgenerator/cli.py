@@ -12,12 +12,12 @@ from sqsgenerator.core import __version__, __features__
 
 def make_version_string():
     major, minor, *_ = __version__
-    return f'{major}.{minor}'
+    return '%i.%i' % (major, minor)
 
 
 def make_repo_status():
     _, _, commit, branch = __version__
-    return f'{commit}@{branch}'
+    return '%s@%s' % (commit, branch)
 
 
 _title = '[bold]sqsgenerator[/bold] - A CLI tool to find optimized SQS structures'

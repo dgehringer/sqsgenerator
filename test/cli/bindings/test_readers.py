@@ -3,9 +3,9 @@ import functools
 import io
 import random
 import unittest
-import attrdict
 import numpy as np
 from sqsgenerator.compat import have_mpi_support
+from sqsgenerator.fallback.attrdict import AttrDict
 from sqsgenerator.core import default_shell_distances
 from sqsgenerator.adapters import to_ase_atoms, to_pymatgen_structure
 from sqsgenerator.io import read_settings_file
@@ -27,7 +27,7 @@ from sqsgenerator.settings.readers import read_atol, \
 
 
 def settings(recursive=True, **kwargs):
-    return attrdict.AttrDict({**kwargs}, recursive=recursive)
+    return AttrDict({**kwargs}, recursive=recursive)
 
 
 def test_function(test_f):
@@ -62,7 +62,7 @@ class TestSettingReaders(unittest.TestCase):
         self.assertTrue(coords_close)
 
     def override_default(self, **kwargs):
-        cp = attrdict.AttrDict(self.processed.copy())
+        cp = AttrDict(self.processed.copy())
         cp.update(**kwargs)
         return cp
 

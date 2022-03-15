@@ -10,9 +10,9 @@ import functools
 from rich import box
 from rich.text import Text
 from rich.table import Table
-from attrdict import AttrDict
 from sqsgenerator.io import dumps, to_dict
 from sqsgenerator.core import rank_structure
+from sqsgenerator.fallback.attrdict import AttrDict
 from operator import attrgetter as attr, itemgetter as item
 from sqsgenerator.commands.help import parameter_help as help, command_help
 from sqsgenerator.settings import construct_settings, process_settings, defaults

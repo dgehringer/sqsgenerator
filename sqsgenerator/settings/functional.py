@@ -1,20 +1,21 @@
 import enum
-import attrdict
 import functools
 import typing as T
 from sqsgenerator.core import get_function_logger
+from sqsgenerator.fallback.attrdict import AttrDict
 from sqsgenerator.settings.exceptions import BadSettings
 
 
 class Default(enum.Enum):
     """
     Dummy Enum to represent "no default" value. ``None`` is not possible, since it is a legit default value, we
-    use  ``Default.NoDfault``to prepresent no default value
+    use  ``Default.NoDfault``to represent no default value
     """
     NoDefault = 0
 
 
-def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, required: T.Union[T.Callable, bool]=True, key: T.Union[T.Callable, str] = None, registry: T.Optional[dict] = None):
+def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, required: T.Union[T.Callable, bool] = True,
+              key: T.Union[T.Callable, str] = None, registry: T.Optional[dict] = None):
     if key is None: key = name
     get_required = lambda *_: required if isinstance(required, bool) else required
     get_key = lambda *_: key if isinstance(key, str) else key
@@ -24,7 +25,7 @@ def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, require
 
     def _decorator(f: T.Callable):
         @functools.wraps(f)
-        def _wrapped(settings: attrdict.AttrDict):
+        def _wrapped(settings: AttrDict):
             is_required = get_required(settings)
             k = get_key(settings)
             nonlocal name

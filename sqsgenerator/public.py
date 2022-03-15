@@ -4,7 +4,7 @@ import warnings
 import itertools
 import numpy as np
 import typing as T
-from attrdict import AttrDict
+from sqsgenerator.fallback.attrdict import AttrDict
 from operator import attrgetter as attr, itemgetter as item
 from sqsgenerator.io import read_settings_file, export_structures
 from sqsgenerator.settings import construct_settings, process_settings, defaults

@@ -46,7 +46,7 @@ class TestRunIterationCommand(unittest.TestCase):
         for compression in compression_to_file_extension.keys():
 
             r = self.cli_runner.invoke(cli, ['run', 'iteration', '--export', '--no-minimal', '--similar', '--compress', compression])
-            archive_name = f'sqs.{compression_to_file_extension.get(compression)}'
+            archive_name = 'sqs.{}'.format(compression_to_file_extension.get(compression))
 
             if r.exit_code != 0:
                 print(r.output, r.exit_code, r.stderr)
@@ -57,7 +57,8 @@ class TestRunIterationCommand(unittest.TestCase):
     @inject_config_file()
     def test_analyse_command(self):
         result_file = 'sqs.result.yaml'
-        r = self.cli_runner.invoke(cli, ['run', 'iteration', '--export', '--no-minimal', '--similar', '--dump-include', 'parameters', '--dump-include', 'objective'])
+        r = self.cli_runner.invoke(cli, ['run', 'iteration', '--export', '--no-minimal', '--similar', '--dump-include',
+                                         'parameters', '--dump-include', 'objective'])
         self.assertTrue(os.path.exists(result_file))
         self.assertEqual(r.exit_code, 0)
 
@@ -77,7 +78,7 @@ class TestRunIterationCommand(unittest.TestCase):
 
         for k in results_from_analyse.keys():
             iteration, analyse = results_from_iteration[k], results_from_analyse[k]
-            # self.assertAlmostEqual(iteration['objective'], analyse['objective'])
+
             self.assertListEqual(iteration['configuration'], analyse['configuration'])
             np.testing.assert_array_almost_equal(iteration['parameters'], analyse['parameters'])
 

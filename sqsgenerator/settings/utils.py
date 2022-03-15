@@ -58,7 +58,7 @@ def to_internal_composition_specs(composition: dict, structure: Structure):
             if k == 0:
                 return k
             else:
-                raise BadSettings('I can only iterpret "0" as an atomic species')
+                raise BadSettings('I can only interpret "0" as an atomic species')
         else:
             return symbol_to_z(k)
 

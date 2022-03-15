@@ -63,20 +63,20 @@ class CMakeBuildExt(build_ext):
             extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
             cfg = 'Debug' if ext.debug else 'Release'
             cmake_args = [
-                f'-DCMAKE_BUILD_TYPE={cfg}',
+                '-DCMAKE_BUILD_TYPE={}'.format(cfg),
                 # Ask CMake to place the resulting library in the directory
                 # containing the extension
-                f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}',
+                '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir),
                 # Other intermediate static libraries are placed in a
                 # temporary build directory instead
-                f'-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_{cfg.upper()}={self.build_temp}',
+                '-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), self.build_temp),
                 # Hint CMake to use the same Python executable that
                 # is launching the build, prevents possible mismatching if
                 # multiple versions of Python are installed
                 '-DPython3_EXECUTABLE={}'.format(sys.executable),
                 # Add other project-specific CMake arguments if needed
                 # ...
-                f'-DUSE_MPI={"ON" if self.with_mpi else "OFF"}',
+                '-DUSE_MPI={}'.format("ON" if self.with_mpi else "OFF"),
                 # '-DCMAKE_CXX_FLAGS_{}={}'.format(cfg.upper(),  )
             ]
             cmake_cxx_flags = ' '.join(opt_flags.get(cfg, {}).get(self.compiler.compiler_type, []))
@@ -86,13 +86,13 @@ class CMakeBuildExt(build_ext):
             for env_var_name, env_var_value in os.environ.items():
                 if env_var_name == 'CMAKE_CXX_FLAGS':
                     # we append them to our release/debug flags
-                    cmake_cxx_flags += f' {env_var_value}'
+                    cmake_cxx_flags += ' {}'.format(env_var_value)
                 elif env_var_name.startswith('CMAKE'):
-                    cmake_args.append(f'-D{env_var_name}={env_var_value}')
-                m = re.match(f'{env_var_prefix}(?P<varname>\w+)', env_var_name)
+                    cmake_args.append('-D{}={}'.format(env_var_name, env_var_value))
+                m = re.match('{}(?P<varname>\w+)'.format(env_var_prefix), env_var_name)
                 if m:
                     env_var_name_real = m.groupdict()['varname']
-                    cmake_args.append(f'-D{env_var_name_real}={env_var_value}')
+                    cmake_args.append('-D{}={}'.format(env_var_name_real, env_var_value))
 
             cmake_args.append('-DCMAKE_CXX_FLAGS_{}={}'.format(cfg.upper(), cmake_cxx_flags))
             pprint.pprint(cmake_args)
@@ -107,7 +107,7 @@ class CMakeBuildExt(build_ext):
                 # Assuming that Visual Studio and MinGW are supported compilers
                 if self.compiler.compiler_type == 'msvc':
                     cmake_args += [
-                        f'-DCMAKE_GENERATOR_PLATFORM={plat}'
+                        '-DCMAKE_GENERATOR_PLATFORM={}'.format(plat)
                     ]
                 else:
                     cmake_args += [
@@ -143,7 +143,7 @@ setup(
         'build_ext': CMakeBuildExt,
         'install': InstallCustom
     },
-    install_requires=['attrdict', 'numpy', 'click', 'rich>=9.11.0', 'pyyaml', 'frozendict'],
+    install_requires=['numpy', 'click', 'rich>=9.11.0', 'pyyaml', 'frozendict'],
     entry_points={
         'console_scripts': ['sqsgen=sqsgenerator.cli:cli']
     },
