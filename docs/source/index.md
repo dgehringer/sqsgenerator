@@ -1,17 +1,6 @@
 
 # Welcome to `sqsgenerator`'s documentation!
 
-```{admonition} Version mismatch with **conda-forge** channel
-:class: danger
-
-The `sqsgenerator` package was rewritten (nearly from scratch) and ported from C to C++. Therefore, it is still
-under evaluation, while the **conda-forge** channel does contain still the old version of the package.
-
-**This documentation** page **does not apply** to the old version, but rather to actual version of the package as it 
-is found [here](https://github.com/dgehringer/sqsgenerator)
-
-```
-
 ## Highlights
 
   - Easy integration with popular frameworks such as [ase](https://wiki.fysik.dtu.dk/ase/),
