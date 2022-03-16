@@ -13,12 +13,6 @@ dependencies of `sqsgenerator`. However we **strongly encourage** you to install
 
 ## ... with `conda`
 
-```{warning}
-`sqsgenerator` is still under evaluation, therefore the newest version is **yet** not available at the conda-forge channel
-Until evaluation phase is finished, we kindly ask you to **build it yourself**, or to use one of the **pre-built binaries**.
-
-```
-
 `sqsgenerator` is available on the `conda-forge` channel. In case you are already using an Anaconda distribution we 
 strongly encourage you to head for this installation option
 
@@ -27,31 +21,10 @@ conda install -c conda-forge sqsgenerator
 ```
 
 To allow for fast generation of random structures, `sqsgenerator`s core modules support hybrid parallelization ([OpenMP](https://www.openmp.org) + [MPI](https://www.mpi-forum.org/))
-The version hosted on `conda-forge` supports thread-level-parallelism (only [OpenMP](https://www.openmp.org))
+The version hosted on `conda-forge` supports thread-level-parallelism only. ([OpenMP](https://www.openmp.org))
 
 ```{note}
 To obtain an **MPI enabled** version of the package, you have to **build it** yourself.
-```
-
-
-## ... with `pip`
-
-`sqsgenerator` is not hosted on PyPi. You still can install the package using `pip` by using one of the 
-prebuilt binary packages:
-
-
-| OS    | arch   | Py   | Wheel                                                        |
-| ----- | ------ | ---- | ------------------------------------------------------------ |
-| linux | x86_64 | 3.6  | [sqsgenerator-0.1-cp36-cp36m-linux_x86_64.whl](http://oc.unileoben.ac.at/index.php/s/qqDIydH02PkV32V/download) |
-| linux | x86_64 | 3.7  | [sqsgenerator-0.1-cp37-cp37m-linux_x86_64.whl](http://oc.unileoben.ac.at/index.php/s/34xlYhyZxkyb6xy/download) |
-| linux | x86_64 | 3.8  | [sqsgenerator-0.1-cp38-cp38-linux_x86_64.whl](http://oc.unileoben.ac.at/index.php/s/gTk345lGTwk3C0G/download) |
-| linux | x86_64 | 3.9  | [sqsgenerator-0.1-cp39-cp39-linux_x86_64.whl](http://oc.unileoben.ac.at/index.php/s/3x01KBKarx11BgQ/download) |
-
-Once you have choosen the correct wheel for your Python interpreter (`python --vserion`), download one from the table above:
-You can install the downloaded wheel with:
-
-```{code-block} bash
-pip install sqsgenerator-0.1-cp36-cp36m-linux_x86_64.whl
 ```
 
 
@@ -63,7 +36,7 @@ through this section carefully.
 
   - Python interpreter and headers (**>= 3.6**)
   - [numpy](https://numpy.org) installed
-  - A C++ compiler, such as `g++`, which has support for [OpenMP](https://www.openmp.org/) and supports C++17
+  - C++ compiler, with support for [OpenMP](https://www.openmp.org/) and C++17 standard
   - [Boost](https://www.boost.org/) libraries are needed to compile the core modules. In particular the following subset of the boost libraries are needed
     - `libboost_python` (Python bindings)
     - `libboost_numpy` (Python bindings)
@@ -75,6 +48,12 @@ through this section carefully.
 
 Please make sure to have **all** those tools installed, before installing sqsgenerator.
 
+```{admonition} Compatibility between Python interpreter and boost libraries
+:class: note
+
+Please make sure that you boost libs `libboost_python` and `libboost_numpy` are compatible with the 
+Python interpreter you build `sqsgenerator` against.
+```
 
 ### Environment variable forwarding
 
@@ -110,7 +89,7 @@ With `conda` it is easy to install the needed toolchain, and thus get to a quick
 
     ```{code-block} bash
     conda activate sqs-build
-    conda install -c anaconda boost
+    conda install -c anaconda boost boost-cpp
     # in case you do not have a system g++/cmake
     conda install -c anaconda cmake gxx_linux-64 
     ```
@@ -131,13 +110,11 @@ With `conda` it is easy to install the needed toolchain, and thus get to a quick
     **cmake** a hint, where to find them. The same is true if you want to use Anacondas C++ compiler (`CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++"`)
 
     ```{code-block} bash
-    pushd sqsgenerator
-    SQS_Boost_USE_STATIC_LIBS=ON \ # optional
+    cd sqsgenerator
     SQS_Boost_INCLUDE_DIR="${CONDA_PREFIX}/include" \
     SQS_Boost_LIBRARY_DIR_RELEASE="${CONDA_PREFIX}/lib" \
     CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++" \
     pip install .
-    popd
     ```
    
     In case you want to build a MPI build version you have to add `SQS_USE_MPI=ON` to the installation instructions.
@@ -145,7 +122,7 @@ With `conda` it is easy to install the needed toolchain, and thus get to a quick
     *cmake* to so, by adding `SQS_MPI_HOME` which points the installation directory 
 
     ```{code-block} bash
-    pushd sqsgenerator
+    cd sqsgenerator
     # SQS_MPI_HOME=/path/to/mpi/implementation/root
     SQS_USE_MPI=ON \
     SQS_Boost_USE_STATIC_LIBS=ON \
@@ -153,12 +130,4 @@ With `conda` it is easy to install the needed toolchain, and thus get to a quick
     SQS_Boost_LIBRARY_DIR_RELEASE="${CONDA_PREFIX}/lib" \
     CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++" \
     pip install .
-    popd
     ```
-
-6. **Remove build dependencies**
-
-    This step is only optional. In case you have compiled the core modules with `SQS_Boost_USE_STATIC_LIBS=ON` the created
-    library does not depend any more on the `boost` libraries.
-    In case you **do not need** them any more and you can remove them again.
-
