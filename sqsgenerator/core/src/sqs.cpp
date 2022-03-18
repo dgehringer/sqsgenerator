@@ -14,7 +14,6 @@
 #endif
 #include <atomic>
 #include <chrono>
-#include <unistd.h>
 #include <signal.h>
 #include <unordered_set>
 #include <boost/circular_buffer.hpp>
