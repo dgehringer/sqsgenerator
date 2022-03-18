@@ -1,10 +1,8 @@
 //
 // Created by dominik on 02.09.21.
 //
-#if defined(_MSC_VER) && _MSC_VER < 1500 // VC++ 8.0 and below
-#define snprintf _snprintf
-#endif
 
+#include <stdio>
 #include "version.hpp"
 #include "types.hpp"
 #include "sqs.hpp"
