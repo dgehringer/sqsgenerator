@@ -98,16 +98,18 @@ class CMakeBuildExt(build_ext):
             pprint.pprint(cmake_args)
             # We can handle some platform-specific settings at our discretion
             if platform.system() == 'Windows':
-                plat = ('x64' if platform.architecture()[0] == '64bit' else 'Win32')
+                print('sqsgenerator.setup.py -> configuring CMake for Windows')
+                # plat = ('x64' if platform.architecture()[0] == '64bit' else 'Win32')
                 cmake_args += [
                     # These options are likely to be needed under Windows
                     '-DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE',
-                    f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}'
+                    # f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}'
                 ]
                 # Assuming that Visual Studio and MinGW are supported compilers
                 if self.compiler.compiler_type == 'msvc':
                     cmake_args += [
-                        f'-DCMAKE_GENERATOR_PLATFORM={plat}'
+                        # f'-DCMAKE_GENERATOR_PLATFORM={plat}',
+                        '-G', 'Ninja'
                     ]
                 else:
                     cmake_args += [
