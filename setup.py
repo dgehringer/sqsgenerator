@@ -103,7 +103,7 @@ class CMakeBuildExt(build_ext):
                         if env_var_name not in cmake_var_whitelist:
                             print(f'sqsgenerator.setup: Blocking env-var "{env_var_name}" '
                                   f'since it is not whitelisted in {whitelist_env_var_name}')
-                        continue
+                            continue
                     print(f'sqsgenerator.setup: Forwarding env-var "{env_var_name}" -> "-D{env_var_name}"')
                     cmake_args.append(f'-D{env_var_name}={env_var_value}')
                 m = re.match(f'{env_var_prefix}(?P<varname>\w+)', env_var_name)
