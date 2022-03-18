@@ -145,7 +145,7 @@ setup(
         'build_ext': CMakeBuildExt,
         'install': InstallCustom
     },
-    install_requires=['numpy', 'click', 'rich>=9.11.0', 'pyyaml', 'frozendict'],
+    install_requires=['six', 'numpy', 'click', 'rich>=9.11.0', 'pyyaml', 'frozendict'],
     entry_points={
         'console_scripts': ['sqsgen=sqsgenerator.cli:cli']
     },
