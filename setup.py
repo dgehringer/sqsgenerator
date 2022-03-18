@@ -83,11 +83,27 @@ class CMakeBuildExt(build_ext):
 
             env_var_prefix = 'SQS_'
             # we allow overloading cmake compiler options
+            # for windows builds CMake chooses bad default on azure-pipelines
+            # we implement it as a whitelist
+            whitelist_env_var_name = 'SQS_FORWARD_WHITELIST'
+            cmake_var_whitelist = os.environ.get(whitelist_env_var_name, None)
+            cmake_var_whitelist = cmake_var_whitelist \
+                if cmake_var_whitelist is None \
+                else list(filter(bool, cmake_var_whitelist.split(',')))
+
             for env_var_name, env_var_value in os.environ.items():
+                if env_var_name == whitelist_env_var_name:
+                    continue
                 if env_var_name == 'CMAKE_CXX_FLAGS':
                     # we append them to our release/debug flags
                     cmake_cxx_flags += f' {env_var_value}'
                 elif env_var_name.startswith('CMAKE'):
+
+                    if cmake_var_whitelist is not None:
+                        if env_var_name not in cmake_var_whitelist:
+                            print(f'sqsgenerator.setup: Blocking env-var "{env_var_name}" '
+                                  f'since it is not whitelisted in {whitelist_env_var_name}')
+                        continue
                     print(f'sqsgenerator.setup: Forwarding env-var "{env_var_name}" -> "-D{env_var_name}"')
                     cmake_args.append(f'-D{env_var_name}={env_var_value}')
                 m = re.match(f'{env_var_prefix}(?P<varname>\w+)', env_var_name)
