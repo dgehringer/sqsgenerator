@@ -33,7 +33,21 @@ add_library(core SHARED
         ${SQSGENERATOR_SOURCE_DIR}/structure_utils.cpp
          )
 
-set_target_properties(core PROPERTIES SUFFIX .so)
+
+if (WIN32)
+  set_target_properties(core PROPERTIES SUFFIX .pyd)
+endif()
+
+if (UNIX AND NOT APPLE)
+    set(LINUX TRUE)
+endif()
+
+if (LINUX)
+    set_target_properties(core PROPERTIES SUFFIX .so)
+else()
+    set_target_properties(core PROPERTIES SUFFIX .dylib)
+endif()
+
 set_target_properties(core PROPERTIES PREFIX "")
 target_link_libraries(core pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})
 if (USE_MPI)
