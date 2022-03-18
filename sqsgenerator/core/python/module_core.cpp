@@ -1,8 +1,7 @@
-//
-// Created by dominik on 02.09.21.
-//
 
-#include <stdio>
+#if defined(_WIN32) || defined(_WIN64)
+#include <stdio.h>
+#endif
 #include "version.hpp"
 #include "types.hpp"
 #include "sqs.hpp"
