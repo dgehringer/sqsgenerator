@@ -36,6 +36,7 @@ add_library(core SHARED
 
 if (WIN32)
   set_target_properties(core PROPERTIES SUFFIX .pyd)
+  target_link_libraries(core ${Python3_LIBRARIES} ${Boost_LIBRARIES})
 endif()
 
 if (UNIX AND NOT APPLE)
@@ -44,12 +45,13 @@ endif()
 
 if (LINUX)
     set_target_properties(core PROPERTIES SUFFIX .so)
+    target_link_libraries(core pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})
 else()
     set_target_properties(core PROPERTIES SUFFIX .dylib)
+    target_link_libraries(core pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})
 endif()
 
 set_target_properties(core PROPERTIES PREFIX "")
-target_link_libraries(core pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})
 if (USE_MPI)
     target_link_libraries(core ${MPI_CXX_LIBRARIES})
 endif()
