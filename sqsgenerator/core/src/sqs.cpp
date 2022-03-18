@@ -415,8 +415,8 @@ namespace sqsgenerator {
 
         // Restore the the old sigaction handler
         #if defined(_WIN32) || defined(_WIN64)
-            signal(SIGINT, &old_sigint_handler);
-            signal(SIGABRT, &old_sigabrt_handler);
+            signal(SIGINT, old_sigint_handler);
+            signal(SIGABRT, old_sigabrt_handler);
         #else
             sigaction(SIGINT, &old_sigint_handler, NULL);
         #endif
@@ -424,7 +424,7 @@ namespace sqsgenerator {
 #if defined(USE_MPI)
         // For the MPI-version we also have to restore the SIGTERM handler
         #if defined(_WIN32) || defined(_WIN64)
-            signal(SIGTERM, &old_sigterm_handler);
+            signal(SIGTERM, old_sigterm_handler);
         #else
             sigaction(SIGTERM, &old_sigterm_handler, NULL);
         #endif
