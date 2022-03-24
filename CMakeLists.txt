@@ -36,6 +36,11 @@ message([BOOST]:LIBRARIES: ${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 set(CMAKE_CXX_LIBRARIES ${Boost_LIBRARIES})
 
+if (WIN32)
+    add_definitions(-DBOOST_ALL_NO_LIB)
+    add_definitions(-DBOOST_ALL_DYN_LINK)
+endif()
+
 if(NOT Boost_USE_STATIC_LIBS)
     # There is an issue find FindBoost.cmake
     # https://gitlab.kitware.com/cmake/cmake/-/issues/20638: That's why log setup is added
