@@ -119,7 +119,7 @@ class CMakeBuildExt(build_ext):
                 # plat = ('x64' if platform.architecture()[0] == '64bit' else 'Win32')
                 cmake_args += [
                     # These options are likely to be needed under Windows
-                    '-DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE',
+                    # '-DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE',
                     f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}'
                 ]
                 # Assuming that Visual Studio and MinGW are supported compilers
