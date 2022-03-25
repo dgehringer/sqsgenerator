@@ -359,16 +359,28 @@ namespace sqsgenerator {
                     }
 #endif
                     // we do only an atomic read from the global shared variable in case the current is smaller than the thread internal
-                    #pragma omp atomic read
-                    best_objective_local = best_objective;
+                    #if defined(_WIN32) || defined(_WIN64)
+                        // MSCV2019 does not support "atomic" directive
+                        best_objective_local = best_objective;
+                    #else
+                        #pragma omp atomic read
+                        best_objective_local = best_objective;
+                    #endif
 
                     SQSResult result(objective_local, {-1}, configuration_local, parameters_local);
                     #pragma omp critical
                     results.push_back(result);
                     // synchronize writing to global best objective, only if the local one is really better
                     if (objective_local < best_objective_local){
-                        #pragma omp atomic write
-                        best_objective = objective_local;
+                        #if defined(_WIN32) || defined(_WIN64)
+                            // MSCV2019 does not support "atomic" directive
+                            #pragma omp critical
+                            best_objective = objective_local;
+                        #else
+                            #pragma omp atomic write
+                            best_objective = objective_local;
+                        #endif
+
                         best_objective_local = objective_local;
 #if defined(USE_MPI)
                         /*
