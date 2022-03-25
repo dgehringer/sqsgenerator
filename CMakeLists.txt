@@ -36,9 +36,17 @@ message([BOOST]:LIBRARIES: ${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 set(CMAKE_CXX_LIBRARIES ${Boost_LIBRARIES})
 
+
+# https://stackoverflow.com/questions/28887680/linking-boost-library-with-boost-use-static-lib-off-on-windows
 if (WIN32)
-    add_definitions(-DBOOST_ALL_NO_LIB)
-    add_definitions(-DBOOST_ALL_DYN_LINK)
+  # disable autolinking in boost
+  add_definitions( -DBOOST_ALL_NO_LIB )
+
+  # force all boost libraries to dynamic link (we already disabled
+  # autolinking, so I don't know why we need this, but we do!)
+  add_definitions( -DBOOST_ALL_DYN_LINK )
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
+
 endif()
 
 if(NOT Boost_USE_STATIC_LIBS)
