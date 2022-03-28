@@ -3,6 +3,12 @@
 //
 
 #include "utils.hpp"
+#if defined(_WIN32) || defined(_WIN64)
+#include "uint128_t.h"
+#define UINT128_T uint128_t
+#else
+#define UINT128_T __uint128_t
+#endif
 
 namespace sqsgenerator::utils {
 
@@ -46,10 +52,10 @@ namespace sqsgenerator::utils {
     // Code taken from: https://github.com/lemire/testingRNG/blob/master/source/wyhash.h
     static inline uint64_t wyhash64_stateless(uint64_t *seed) {
         *seed += UINT64_C(0x60bee2bee120fc15);
-        __uint128_t tmp;
-        tmp = (__uint128_t)*seed * UINT64_C(0xa3b195354a39b70d);
+        UINT128_T tmp;
+        tmp = (UINT128_T)*seed * UINT64_C(0xa3b195354a39b70d);
         uint64_t m1 = (tmp >> 64) ^ tmp;
-        tmp = (__uint128_t)m1 * UINT64_C(0x1b03738712fad5c9);
+        tmp = (UINT128_T)m1 * UINT64_C(0x1b03738712fad5c9);
         uint64_t m2 = (tmp >> 64) ^ tmp;
         return m2;
     }
@@ -61,6 +67,7 @@ namespace sqsgenerator::utils {
          uint64_t m = uint64_t(x) * uint64_t(range);
          return m >> 32;
     }
+
     // Simple Knuth-Fisher-Yates shuffle with random generator
     void shuffle_configuration_(configuration_t &configuration, uint64_t *seed) {
         for (uint32_t i=configuration.size(); i > 1; i--) {
