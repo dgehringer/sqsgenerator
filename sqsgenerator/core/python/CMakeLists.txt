@@ -18,6 +18,34 @@ include_directories(${SQSGENERATOR_INCLUDE_DIR} include)
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Python3_LIBRARY_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
+
+# https://stackoverflow.com/questions/28887680/linking-boost-library-with-boost-use-static-lib-off-on-windows
+if (WIN32)
+
+  # disable autolinking in boost
+  add_definitions(-DBOOST_ALL_NO_LIB )
+
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+
+  # force all boost libraries to dynamic link (we already disabled
+  # autolinking, so I don't know why we need this, but we do!)
+  add_definitions(-DBOOST_ALL_DYN_LINK )
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
+
+  include(FetchContent)
+  # on Windows MSVC compiler is missing 128 unsigned integers, we therefore use https://github.com/calccrypto/uint128_t
+  FetchContent_Declare(
+     uint128t
+     GIT_REPOSITORY https://github.com/calccrypto/uint128_t.git
+     GIT_TAG ddc03839ea7efb78fa504ae8ecc2304e5ba80c3c
+  )
+
+  FetchContent_MakeAvailable(uint128t)
+
+  include_directories(${FETCHCONTENT_BASE_DIR}/uint128t-src)
+endif()
+
 
 add_library(core SHARED
         module_core.cpp
@@ -31,7 +59,7 @@ add_library(core SHARED
         ${SQSGENERATOR_SOURCE_DIR}/rank.cpp
         ${SQSGENERATOR_SOURCE_DIR}/utils.cpp
         ${SQSGENERATOR_SOURCE_DIR}/structure_utils.cpp
-         )
+)
 
 
 if (WIN32)
