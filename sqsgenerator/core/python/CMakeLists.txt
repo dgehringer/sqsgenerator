@@ -24,13 +24,6 @@ link_directories(${Boost_LIBRARY_DIRS})
 if (WIN32)
 
   # disable autolinking in boost
-  add_definitions(-DBOOST_ALL_NO_LIB )
-
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
-
-  # force all boost libraries to dynamic link (we already disabled
-  # autolinking, so I don't know why we need this, but we do!)
-  add_definitions(-DBOOST_ALL_DYN_LINK )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
 
   include(FetchContent)
