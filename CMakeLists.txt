@@ -33,21 +33,10 @@ configure_file(${PROJECT_SOURCE_DIR}/sqsgenerator/core/include/version.hpp.in ${
 find_package(Boost REQUIRED COMPONENTS system python numpy log_setup log)
 message([BOOST]:INCLUDE_DIRS: ${Boost_INCLUDE_DIRS})
 message([BOOST]:LIBRARIES: ${Boost_LIBRARIES})
+message([BOOST]:LIBRARY_DIRS: ${Boost_LIBRARY_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 set(CMAKE_CXX_LIBRARIES ${Boost_LIBRARIES})
 
-
-# https://stackoverflow.com/questions/28887680/linking-boost-library-with-boost-use-static-lib-off-on-windows
-if (WIN32)
-  # disable autolinking in boost
-  add_definitions( -DBOOST_ALL_NO_LIB )
-
-  # force all boost libraries to dynamic link (we already disabled
-  # autolinking, so I don't know why we need this, but we do!)
-  add_definitions( -DBOOST_ALL_DYN_LINK )
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
-
-endif()
 
 if(NOT Boost_USE_STATIC_LIBS)
     # There is an issue find FindBoost.cmake
