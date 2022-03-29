@@ -23,11 +23,6 @@ link_directories(${Boost_LIBRARY_DIRS})
 # https://stackoverflow.com/questions/28887680/linking-boost-library-with-boost-use-static-lib-off-on-windows
 if (WIN32)
 
-  # disable auto-linking in boost
-  add_definitions(-DBOOST_ALL_NO_LIB)
-  add_definitions(-DBOOST_ALL_DYN_LINK)
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
-
   # add permissive flags
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
 
