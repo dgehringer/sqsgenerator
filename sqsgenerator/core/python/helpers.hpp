@@ -137,7 +137,7 @@ namespace sqsgenerator::python::helpers {
         std::map<K,V> result;
         py::list keys = d.keys();
         auto length {py::len(d)};
-        for (ssize_t i = 0; i < length ; i++) {
+        for (size_t i = 0; i < length ; i++) {
             K key = py::extract<K>(keys[i]);
             V val = py::extract<V>(d[key]);
             result.emplace(std::make_pair(key, val));

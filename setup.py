@@ -83,19 +83,36 @@ class CMakeBuildExt(build_ext):
 
             env_var_prefix = 'SQS_'
             # we allow overloading cmake compiler options
+            # for windows builds CMake chooses bad default on azure-pipelines
+            # we implement it as a whitelist
+            whitelist_env_var_name = 'SQS_FORWARD_WHITELIST'
+            cmake_var_whitelist = os.environ.get(whitelist_env_var_name, None)
+            cmake_var_whitelist = cmake_var_whitelist \
+                if cmake_var_whitelist is None \
+                else list(filter(bool, cmake_var_whitelist.split(',')))
+
             for env_var_name, env_var_value in os.environ.items():
+                if env_var_name == whitelist_env_var_name:
+                    continue
                 if env_var_name == 'CMAKE_CXX_FLAGS':
                     # we append them to our release/debug flags
                     cmake_cxx_flags += f' {env_var_value}'
                 elif env_var_name.startswith('CMAKE'):
+
+                    if cmake_var_whitelist is not None:
+                        if env_var_name not in cmake_var_whitelist:
+                            print(f'sqsgenerator.setup: Blocking env-var "{env_var_name}" '
+                                  f'since it is not whitelisted in {whitelist_env_var_name}')
+                            continue
+                    print(f'sqsgenerator.setup: Forwarding env-var "{env_var_name}" -> "-D{env_var_name}"')
                     cmake_args.append(f'-D{env_var_name}={env_var_value}')
                 m = re.match(f'{env_var_prefix}(?P<varname>\w+)', env_var_name)
                 if m:
                     env_var_name_real = m.groupdict()['varname']
+                    print(f'sqsgenerator.setup: Forwarding env-var "{env_var_name}" -> "-D{env_var_name_real}"')
                     cmake_args.append(f'-D{env_var_name_real}={env_var_value}')
 
-            cmake_args.append(f'-DCMAKE_CXX_FLAGS_{cfg.upper()}={cmake_cxx_flags}')
-            pprint.pprint(cmake_args)
+
             # We can handle some platform-specific settings at our discretion
             if platform.system() == 'Windows':
                 print('sqsgenerator.setup.py -> configuring CMake for Windows')
@@ -103,7 +120,7 @@ class CMakeBuildExt(build_ext):
                 cmake_args += [
                     # These options are likely to be needed under Windows
                     '-DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE',
-                    # f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}'
+                    f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}'
                 ]
                 # Assuming that Visual Studio and MinGW are supported compilers
                 if self.compiler.compiler_type == 'msvc':
@@ -115,6 +132,11 @@ class CMakeBuildExt(build_ext):
                     cmake_args += [
                         '-G', 'MinGW Makefiles',
                     ]
+
+            cmake_args.append(f'-DCMAKE_CXX_FLAGS_{cfg.upper()}={cmake_cxx_flags}')
+
+            # for debugging reasons we print the actual config which is passed to cmake
+            pprint.pprint(cmake_args)
 
             subprocess.check_call(['cmake', ext.cmake_lists_dir] + cmake_args, cwd=self.build_temp)
             cmake_build_args = ['cmake', '--build', '.', '--config', cfg]
@@ -145,7 +167,7 @@ setup(
         'build_ext': CMakeBuildExt,
         'install': InstallCustom
     },
-    install_requires=['numpy', 'click', 'rich>=9.11.0', 'pyyaml', 'frozendict'],
+    install_requires=['six', 'numpy', 'click', 'rich>=9.11.0', 'pyyaml', 'frozendict'],
     entry_points={
         'console_scripts': ['sqsgen=sqsgenerator.cli:cli']
     },

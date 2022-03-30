@@ -18,8 +18,27 @@ include_directories(${SQSGENERATOR_INCLUDE_DIR} include)
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Python3_LIBRARY_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
 
-add_library(core SHARED
+# https://stackoverflow.com/questions/28887680/linking-boost-library-with-boost-use-static-lib-off-on-windows
+if (WIN32)
+
+  # add permissive flags
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
+
+  include(FetchContent)
+  # on Windows MSVC compiler is missing 128 unsigned integers, we therefore use https://github.com/calccrypto/uint128_t
+  FetchContent_Declare(
+     uint128t
+     GIT_REPOSITORY https://github.com/calccrypto/uint128_t.git
+     GIT_TAG ddc03839ea7efb78fa504ae8ecc2304e5ba80c3c
+  )
+
+  FetchContent_MakeAvailable(uint128t)
+
+  include_directories(${FETCHCONTENT_BASE_DIR}/uint128t-src)
+
+  add_library(core SHARED
         module_core.cpp
         data.cpp
         iteration.cpp
@@ -31,11 +50,36 @@ add_library(core SHARED
         ${SQSGENERATOR_SOURCE_DIR}/rank.cpp
         ${SQSGENERATOR_SOURCE_DIR}/utils.cpp
         ${SQSGENERATOR_SOURCE_DIR}/structure_utils.cpp
-         )
+        ${FETCHCONTENT_BASE_DIR}/uint128t-src/uint128_t.cpp
+  )
 
-set_target_properties(core PROPERTIES SUFFIX .so)
+else()
+    add_library(core SHARED
+        module_core.cpp
+        data.cpp
+        iteration.cpp
+        helpers.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/sqs.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/settings.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/atomistics.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/result.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/rank.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/utils.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/structure_utils.cpp
+    )
+endif()
+
+
+if (WIN32)
+  set_target_properties(core PROPERTIES SUFFIX .pyd)
+  target_link_libraries(core ${Python3_LIBRARIES} ${Boost_LIBRARIES})
+else()
+    set_target_properties(core PROPERTIES SUFFIX .so)
+    target_link_libraries(core pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})
+endif()
+
+
 set_target_properties(core PROPERTIES PREFIX "")
-target_link_libraries(core pthread ${Python3_LIBRARIES} ${Boost_LIBRARIES})
 if (USE_MPI)
     target_link_libraries(core ${MPI_CXX_LIBRARIES})
 endif()

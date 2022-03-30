@@ -7,7 +7,7 @@
 (optional-dependencies)=
 
 [`ase`](https://wiki.fysik.dtu.dk/ase/) and [`pymatgen`](https://pymatgen.org/) are not explicitly listed as
-dependencies of `sqsgenerator`. However we **strongly encourage** you to install at least one of them.
+dependencies of `sqsgenerator`. However, we **strongly encourage** you to install at least one of them.
 `sqsgenerator` uses those packages as backends to export the its results into different file formats. Without
 `ase` or `pymatgen` results can be exported in YAML format only.
 
@@ -57,17 +57,19 @@ Python interpreter you build `sqsgenerator` against.
 
 ### Environment variable forwarding
 
-`sqsgenerator`'s `setup.py` forwards all environment variables with a `SQS_` prefix to **cmake**.
-This allows you to create the binaries with your own configuration.
+`sqsgenerator`'s `setup.py` forwards all environment variables with a `SQS_` prefix to *CMake*.
+This allows you to create the binaries with your own configuration. All variables of form `SQS_{VARNAME}={VALUE}` will
+be forwarded to *CMake* as `-D{VARNAME}={VALUE}` via the *setup.py* script.
+
 E. g. [FindBoost.cmake](https://cmake.org/cmake/help/latest/module/FindBoost.html#hints) takes a `BOOST_ROOT` hint to allow
-the use of a custom boost version. Therefore to build `sqsgenerator` with your own Boost version use 
+the use of a custom boost version. Therefore, to build `sqsgenerator` with your own Boost version use 
 
 
    ```{code-block} bash
    SQS_BOOST_ROOT=/path/to/own/boost pip install # add SQS_USE_MPI=ON for MPI enabled build
    ```
 
-The above code will under-the-hood call **cmake** with a `-DBOOST_ROOT=/path/to/own/boost` option.
+The above code will under-the-hood call *CMake* with a `-DBOOST_ROOT=/path/to/own/boost` option.
 
 In the same manner values can be passed to [FindMPI.cmake](https://cmake.org/cmake/help/latest/module/FindMPI.html).
 
@@ -89,7 +91,7 @@ With `conda` it is easy to install the needed toolchain, and thus get to a quick
 
     ```{code-block} bash
     conda activate sqs-build
-    conda install -c anaconda boost boost-cpp
+    conda install -c conda-forge boost boost-cpp
     # in case you do not have a system g++/cmake
     conda install -c anaconda cmake gxx_linux-64 
     ```
@@ -107,7 +109,7 @@ With `conda` it is easy to install the needed toolchain, and thus get to a quick
 4. **Build & install** the package<br>
     
     To ensure that we use Anaconda's `boost` libs (in case also system libraries are installed) we have to give 
-    **cmake** a hint, where to find them. The same is true if you want to use Anacondas C++ compiler (`CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++"`)
+    *CMake* a hint, where to find them. The same is true if you want to use Anacondas C++ compiler (`CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++"`)
 
     ```{code-block} bash
     cd sqsgenerator
@@ -119,15 +121,16 @@ With `conda` it is easy to install the needed toolchain, and thus get to a quick
    
     In case you want to build a MPI build version you have to add `SQS_USE_MPI=ON` to the installation instructions.
     In case you also want to link it against a specifiy MPI implementation (e. g. on a HPC cluster) you can instruct
-    *cmake* to so, by adding `SQS_MPI_HOME` which points the installation directory 
+    *CMake* to so, by adding `SQS_MPI_HOME` which points the installation directory 
 
     ```{code-block} bash
     cd sqsgenerator
     # SQS_MPI_HOME=/path/to/mpi/implementation/root
     SQS_USE_MPI=ON \
-    SQS_Boost_USE_STATIC_LIBS=ON \
     SQS_Boost_INCLUDE_DIR="${CONDA_PREFIX}/include" \
     SQS_Boost_LIBRARY_DIR_RELEASE="${CONDA_PREFIX}/lib" \
-    CMAKE_CXX_COMPILER="x86_64-conda-linux-gnu-g++" \
     pip install .
     ```
+
+    On UNIX* systems boost might be installed already by the system package manager. Hence, `SQS_Boost_INCLUDE_DIR`
+    and `SQS_Boost_LIBRARY_DIR_RELEASE` point *CMake* to the installation from the conda-environment.

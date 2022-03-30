@@ -14,7 +14,6 @@
 #endif
 #include <atomic>
 #include <chrono>
-#include <unistd.h>
 #include <signal.h>
 #include <unordered_set>
 #include <boost/circular_buffer.hpp>
@@ -146,19 +145,26 @@ namespace sqsgenerator {
 #endif
 
     std::tuple<std::vector<SQSResult>, timing_map_t> do_pair_iterations(const IterationSettings &settings) {
-        typedef boost::circular_buffer<SQSResult> result_buffer_t; // this typedef is an implementation detail and used just in this method
-        auto threads_per_rank {settings.threads_per_rank()};
+    typedef boost::circular_buffer<SQSResult> result_buffer_t; // this typedef is an implementation detail and used just in this method
+    auto threads_per_rank {settings.threads_per_rank()};
 
-        // setup the signal handler
+    // setup the signal handler
+#if defined(_WIN32) || defined(_WIN64)
+    typedef void (*signal_handler_ptr)(int);
+    signal_handler_ptr old_sigint_handler, old_sigabrt_handler;
+    old_sigint_handler = signal(SIGINT, handle_signal_sigint);
+    old_sigabrt_handler = signal(SIGABRT, handle_signal_sigint);
+#else
+    struct sigaction old_sigint_handler;
+    {
+        struct sigaction new_sigint_handler;
+        new_sigint_handler.sa_handler = handle_signal_sigint;
+        sigemptyset(&new_sigint_handler.sa_mask);
+        new_sigint_handler.sa_flags = 0x0;
+        sigaction(SIGINT, &new_sigint_handler, &old_sigint_handler);
+    }
+#endif
 
-        struct sigaction old_sigint_handler;
-        {
-            struct sigaction new_sigint_handler;
-            new_sigint_handler.sa_handler = handle_signal_sigint;
-            sigemptyset(&new_sigint_handler.sa_mask);
-            new_sigint_handler.sa_flags = 0x0;
-            sigaction(SIGINT, &new_sigint_handler, &old_sigint_handler);
-        }
 #if defined(USE_MPI)
         /*
          * Upon hitting Ctrl+C Python has registered it's own signal handler which raises the Keyboard interrupt
@@ -166,6 +172,10 @@ namespace sqsgenerator {
          * "mpiexec" a SIGTERM is propagated to all child processes, therefore we also put a handler for this signal
          * See: https://www.open-mpi.org/doc/v3.0/man1/mpirun.1.php#sect15
          */
+    #if defined(_WIN32) || defined(_WIN64)
+        signal_handler_ptr old_sigterm_handler;
+        old_sigterm_handler = signal(SIGTERM, handle_signal_sigterm);
+    #else
         struct sigaction old_sigterm_handler;
         {
             struct sigaction new_sigterm_handler;
@@ -174,6 +184,7 @@ namespace sqsgenerator {
             new_sigterm_handler.sa_flags = 0x0;
             sigaction(SIGTERM, &new_sigterm_handler, &old_sigterm_handler);
         }
+    #endif
 #endif
 
 #if defined(USE_MPI)
@@ -348,16 +359,28 @@ namespace sqsgenerator {
                     }
 #endif
                     // we do only an atomic read from the global shared variable in case the current is smaller than the thread internal
-                    #pragma omp atomic read
-                    best_objective_local = best_objective;
+                    #if defined(_WIN32) || defined(_WIN64)
+                        // MSCV2019 does not support "atomic" directive
+                        best_objective_local = best_objective;
+                    #else
+                        #pragma omp atomic read
+                        best_objective_local = best_objective;
+                    #endif
 
                     SQSResult result(objective_local, {-1}, configuration_local, parameters_local);
                     #pragma omp critical
                     results.push_back(result);
                     // synchronize writing to global best objective, only if the local one is really better
                     if (objective_local < best_objective_local){
-                        #pragma omp atomic write
-                        best_objective = objective_local;
+                        #if defined(_WIN32) || defined(_WIN64)
+                            // MSCV2019 does not support "atomic" directive
+                            #pragma omp critical
+                            best_objective = objective_local;
+                        #else
+                            #pragma omp atomic write
+                            best_objective = objective_local;
+                        #endif
+
                         best_objective_local = objective_local;
 #if defined(USE_MPI)
                         /*
@@ -403,11 +426,20 @@ namespace sqsgenerator {
         } // pragma omp parallel
 
         // Restore the the old sigaction handler
-        sigaction(SIGINT, &old_sigint_handler, NULL);
+        #if defined(_WIN32) || defined(_WIN64)
+            signal(SIGINT, old_sigint_handler);
+            signal(SIGABRT, old_sigabrt_handler);
+        #else
+            sigaction(SIGINT, &old_sigint_handler, NULL);
+        #endif
 
 #if defined(USE_MPI)
         // For the MPI-version we also have to restore the SIGTERM handler
-        sigaction(SIGTERM, &old_sigterm_handler, NULL);
+        #if defined(_WIN32) || defined(_WIN64)
+            signal(SIGTERM, old_sigterm_handler);
+        #else
+            sigaction(SIGTERM, &old_sigterm_handler, NULL);
+        #endif
 #endif
 
         if ((do_shutdown && shutdown_requested.load())) {

@@ -1,4 +1,5 @@
 ![conda](https://anaconda.org/conda-forge/sqsgenerator/badges/installer/conda.svg) 
+![plats](https://anaconda.org/conda-forge/sqsgenerator/badges/platforms.svg)
 ![downloads](
 https://anaconda.org/conda-forge/sqsgenerator/badges/downloads.svg)
 [![Documentation Status](https://readthedocs.org/projects/sqsgenerator/badge/?version=latest)](https://sqsgenerator.readthedocs.io/en/latest/?badge=latest)
