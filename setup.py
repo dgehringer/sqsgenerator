@@ -112,7 +112,7 @@ class CMakeBuildExt(build_ext):
                     print(f'sqsgenerator.setup: Forwarding env-var "{env_var_name}" -> "-D{env_var_name_real}"')
                     cmake_args.append(f'-D{env_var_name_real}={env_var_value}')
 
-            cmake_args.append(f'-DCMAKE_CXX_FLAGS_{cfg.upper()}={cmake_cxx_flags}')
+
             # We can handle some platform-specific settings at our discretion
             if platform.system() == 'Windows':
                 print('sqsgenerator.setup.py -> configuring CMake for Windows')
@@ -133,7 +133,11 @@ class CMakeBuildExt(build_ext):
                         '-G', 'MinGW Makefiles',
                     ]
 
+            cmake_args.append(f'-DCMAKE_CXX_FLAGS_{cfg.upper()}={cmake_cxx_flags}')
+
+            # for debugging reasons we print the actual config which is passed to cmake
             pprint.pprint(cmake_args)
+
             subprocess.check_call(['cmake', ext.cmake_lists_dir] + cmake_args, cwd=self.build_temp)
             cmake_build_args = ['cmake', '--build', '.', '--config', cfg]
             if ext.target: cmake_build_args += ['--target', ext.target]
