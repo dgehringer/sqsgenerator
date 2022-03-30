@@ -37,10 +37,8 @@ if (WIN32)
   FetchContent_MakeAvailable(uint128t)
 
   include_directories(${FETCHCONTENT_BASE_DIR}/uint128t-src)
-endif()
 
-
-add_library(core SHARED
+  add_library(core SHARED
         module_core.cpp
         data.cpp
         iteration.cpp
@@ -52,7 +50,24 @@ add_library(core SHARED
         ${SQSGENERATOR_SOURCE_DIR}/rank.cpp
         ${SQSGENERATOR_SOURCE_DIR}/utils.cpp
         ${SQSGENERATOR_SOURCE_DIR}/structure_utils.cpp
-)
+        ${FETCHCONTENT_BASE_DIR}/uint128t-src/uint128_t.cpp
+  )
+
+else()
+    add_library(core SHARED
+        module_core.cpp
+        data.cpp
+        iteration.cpp
+        helpers.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/sqs.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/settings.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/atomistics.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/result.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/rank.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/utils.cpp
+        ${SQSGENERATOR_SOURCE_DIR}/structure_utils.cpp
+    )
+endif()
 
 
 if (WIN32)
