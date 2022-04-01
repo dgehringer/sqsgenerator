@@ -11,15 +11,6 @@ from setuptools import setup, Extension, find_packages
 
 WITH_MPI = False
 
-opt_flags = {
-    'Release': {
-        'unix': ['-O3', '-DNDEBUG']
-    },
-    'Debug': {
-        'unix': ['-g']
-    }
-}
-
 
 class CMakeExtension(Extension):
     def __init__(self, name, target='', cmake_lists_dir='.', debug=False, verbose=True, **kwargs):
@@ -79,7 +70,7 @@ class CMakeBuildExt(build_ext):
                 '-DUSE_MPI={}'.format("ON" if self.with_mpi else "OFF"),
                 # '-DCMAKE_CXX_FLAGS_{}={}'.format(cfg.upper(),  )
             ]
-            cmake_cxx_flags = ' '.join(opt_flags.get(cfg, {}).get(self.compiler.compiler_type, []))
+            cmake_cxx_flags = ''
 
             env_var_prefix = 'SQS_'
             # we allow overloading cmake compiler options
