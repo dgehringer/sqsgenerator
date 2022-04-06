@@ -1,5 +1,5 @@
 """
-Provides utility functions and accsess to optional modules
+Provides utility functions and access to optional modules
 """
 
 import sys
@@ -13,12 +13,12 @@ from enum import Enum
 
 class Feature(Enum):
     ase = 'ase'
-    pymatgen = 'pymatgen'
     rich = 'rich'
-    pyiron_atomistics = 'pyiron_atomistics'
     json = 'json'
     yaml = 'yaml'
     pickle = 'pickle'
+    pymatgen = 'pymatgen'
+    pyiron_atomistics = 'pyiron_atomistics'
 
 
 class FeatureNotAvailableException(Exception):
@@ -106,6 +106,7 @@ def available_features_with_version():
         'yaml': module_version_attr,
         'mpi4py': module_version_attr
     }
+
     return tuple(f'{feature_str}{version_getters.get(feature_str, default_version)(feature_str)}'
                  for feature_str in available_features())
 

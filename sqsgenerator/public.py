@@ -8,7 +8,8 @@ from sqsgenerator.fallback.attrdict import AttrDict
 from operator import attrgetter as attr, itemgetter as item
 from sqsgenerator.io import read_settings_file, export_structures
 from sqsgenerator.settings import construct_settings, process_settings, defaults
-from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms, from_pymatgen_structure, from_ase_atoms
+from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms, to_pyiron_atoms, from_pymatgen_structure, \
+    from_ase_atoms, from_pyiron_atoms
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
     SQSResult, symbols_from_z, Structure, make_supercell, IterationMode, pair_analysis, available_species, make_rank, \
     rank_structure, total_permutations
@@ -265,6 +266,7 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
             - "*default*": :py:class:`Structure`
             - "*pymatgen*" :py:class:`pymatgen.core.Structure`
             - "*ase*": :py:class:`ase.atoms.Atoms`
+            - "*pyiron*": :py:class:`pyiron_atomistics.atomistics.structure.Atoms`
 
     :type structure_format: str
     :return: a dictionary with the specified fields as well as timing information. The keys of the result dictionary are
@@ -280,7 +282,8 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
     result_document = expand_sqs_results(settings, results, timings=timings, fields=fields)
     if make_structures:
         structure_document = extract_structures(result_document)
-        converter = dict(default=lambda _: _, ase=to_ase_atoms, pymatgen=to_pymatgen_structure).get(structure_format)
+        converter = dict(default=lambda _: _, ase=to_ase_atoms, pymatgen=to_pymatgen_structure,
+                         pyiron=to_pyiron_atoms).get(structure_format)
         structure_document = {k: converter(v) for k, v in structure_document.items()}
 
         result_document = result_document.get('configurations')
@@ -315,6 +318,8 @@ def sqs_analyse(settings: T.Union[Settings, T.Dict], structures: T.Iterable[Stru
             - "*default*": :py:class:`Structure`
             - "*pymatgen*" :py:class:`pymatgen.core.Structure`
             - "*ase*": :py:class:`ase.atoms.Atoms`
+            - "*pyiron*": :py:class:`pyiron_atomistics.atomistics.structure.Atoms`
+
     :type structure_format: str
     :param append_structures: append the initial {structures} to the analysed results (default is ``False``)
     :type append_structures: bool
@@ -326,7 +331,8 @@ def sqs_analyse(settings: T.Union[Settings, T.Dict], structures: T.Iterable[Stru
     settings = settings if isinstance(settings, Settings) else AttrDict(settings)
     settings = process_settings(settings) if process else settings
 
-    converter = dict(default=lambda _: _, ase=from_ase_atoms, pymatgen=from_pymatgen_structure).get(structure_format)
+    converter = dict(default=lambda _: _, ase=from_ase_atoms, pymatgen=from_pymatgen_structure,
+                     pyiron=from_pyiron_atoms).get(structure_format)
     slicer = item(settings.which)
 
     # convert the structures to Structure object and extract the sublattice if needed
