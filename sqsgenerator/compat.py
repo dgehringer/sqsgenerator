@@ -15,7 +15,7 @@ class Feature(Enum):
     ase = 'ase'
     pymatgen = 'pymatgen'
     rich = 'rich'
-    pyiron = 'pyiron'
+    pyiron_atomistics = 'pyiron_atomistics'
     json = 'json'
     yaml = 'yaml'
     pickle = 'pickle'
@@ -102,7 +102,7 @@ def available_features_with_version():
     version_getters = {
         'ase': module_version_attr,
         'pymatgen': module_version_attr,
-        'pyiron': module_version_attr,
+        'pyiron_atomistics': module_version_attr,
         'yaml': module_version_attr,
         'mpi4py': module_version_attr
     }
