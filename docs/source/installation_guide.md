@@ -64,7 +64,7 @@ Python interpreter you build *sqsgenerator* against.
 This allows you to create the binaries with your own configuration. All variables of form `SQS_{VARNAME}={VALUE}` will
 be forwarded to *CMake* as `-D{VARNAME}={VALUE}` via the *setup.py* script.
 
-E. g. [FindBoost.cmake](https://cmake.org/cmake/help/latest/module/FindBoost.html#hints) takes a `BOOST_ROOT` hint to allow
+E. g. [*FindBoost.cmake*](https://cmake.org/cmake/help/latest/module/FindBoost.html#hints) takes a `BOOST_ROOT` hint to allow
 the use of a custom boost version. Therefore, to build *sqsgenerator* with your own Boost version use 
 
 
@@ -74,7 +74,7 @@ the use of a custom boost version. Therefore, to build *sqsgenerator* with your 
 
 The above code will under-the-hood call *CMake* with a `-DBOOST_ROOT=/path/to/own/boost` option.
 
-In the same manner values can be passed to [FindMPI.cmake](https://cmake.org/cmake/help/latest/module/FindMPI.html).
+In the same manner values can be passed to [*FindMPI.cmake*](https://cmake.org/cmake/help/latest/module/FindMPI.html).
 
 ### with *conda* package manager
 
@@ -179,7 +179,7 @@ If you use *conda* to install the required libraries, you **need to** have MSVC 
 
 ## shell completion
 
-*sqsgenerator* used [pallets/click](https://github.com/pallets/click) to implement its CLI. *click* supports 
+*sqsgenerator* used [*pallets/click*](https://github.com/pallets/click) to implement its CLI. *click* supports 
 automatically generated shell completion. To enable this completion, execute one of the commands below, or add it to
 your shell profile file (*~/.bashrc* | *~/.zshrc* | *~/.config/fish/completions/sqsgen.fish*)
 
