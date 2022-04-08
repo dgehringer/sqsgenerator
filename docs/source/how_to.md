@@ -1,15 +1,15 @@
 
-# How to use `sqsgenerator`
+# How to use *sqsgenerator*
 
-This is short tutorial, on how `sqsgenerator` works
+This is short tutorial, on how *sqsgenerator* works
 
 
 ## Using the CLI interface
 
-This section deals with the usage of the `sqsgenerator` package. A more granular documentation for the CLI can be found 
+This section deals with the usage of the *sqsgenerator* package. A more granular documentation for the CLI can be found 
 in the {ref}`CLI Reference <cli_reference>`. The CLI interface was built using the excellent [click](https://click.palletsprojects.com/en/8.0.x/) framework.
 
-Once you have managed to {ref}`install <installation_guide>` `sqsgenerator` you should have a command `sqsgen` available
+Once you have managed to {ref}`install <installation_guide>` *sqsgenerator* you should have a command `sqsgen` available
 in your shell.
 
 Make sure you can call the `sqsgen` command before you start, using
@@ -18,20 +18,20 @@ Make sure you can call the `sqsgen` command before you start, using
 sqsgen --version
 ```
 
-which should plot version information about `sqsgenerator` and also its dependencies.
+which should plot version information about *sqsgenerator* and also its dependencies.
 
 ### The `sqs.yaml` file
 
-`sqsgenerator` uses a `dict`-like configuration, to store the parameters used for the iteration/analysis process. By
+*sqsgenerator* uses a `dict`-like configuration, to store the parameters used for the iteration/analysis process. By
 default the program assumes the configuration to be stored in a YAML file.
 
 YAML is easy to read and write by humans. On this tutorial site we will focus on setting up proper `sqs.yaml` input 
 files.
 
 Most of the CLI commands which require an input settings file. However, specifying a file is always optional, since 
-`sqsgenerator` will always look for a default file name `sqs.yaml` in the **current directory**.
+*sqsgenerator* will always look for a default file name `sqs.yaml` in the **current directory**.
 
-`sqsgenerator` an also read more formats, which can store Python `dict`s, such as **JSON** and **pickle**. Therefore, 
+*sqsgenerator* an also read more formats, which can store Python `dict`s, such as **JSON** and **pickle**. Therefore, 
 all commands which require a settings file also do have an `--input-fomat` (`-if`) option, which instruct the program 
 to use different file-formats. For more infos please have look at the {ref}`CLI Reference <cli_reference>`.
 
@@ -141,7 +141,7 @@ entries:
 ##### How many structures are actually computed?
 The number of structures in `sqs.result.yaml` is basically determined by the 
 {ref}`max_output_configurations <input-param-max-output-configurations>` parameters which is by default 10.
-There is however as post-processing step **after the minimization** process. The default behaviour `sqsgenerator` is 
+There is however as post-processing step **after the minimization** process. The default behaviour *sqsgenerator* is 
 to discard those configurations which do not exhibit the minimal values of the objective function. Furthermore, our 
 definition of the objective function in Eq. {eq}`eqn:objective` may yield "*degenerate*" results, which are also 
 discarded in the post-processing step. This "*degeneracy*" decreases by including more coordination shells.
@@ -262,7 +262,7 @@ composition:
 
 #### Perform SQS on a sublattice only - $\text{Ti}\text{N} \rightarrow \text{Ti}_{0.5}(\text{B}_{0.25}\text{N}_{0.25})$
 
-`sqsgenerator` allows you to select lattice positions, on which the SQS iteration is then carried out. This is done by 
+*sqsgenerator* allows you to select lattice positions, on which the SQS iteration is then carried out. This is done by 
 specifying a {ref}`which <input-param-which>` input parameter. All sites which are not explicitly chosen are ignored 
 during the optimization. The following example checks **all possible** configuration and will therefore an optimized 
 SQS structure
@@ -304,7 +304,7 @@ It will take me roughly 14 minutes and 23.576 seconds to compute 601080390 itera
 
 #### $\gamma$-iron (austenite) - Partial random occupancy of interstitial atoms
 
-The `sqsgenerator` also knows a fictitious atomic species "**0**", representing a vacancy. During the optimization
+The *sqsgenerator* also knows a fictitious atomic species "**0**", representing a vacancy. During the optimization
  vacancies will be treated as atoms. When exporting the structures the vacancies are deleted. 
 
 The following example constructs a $\gamma$-iron cell, where carbon is distributed on the **octahedral interstitial** 
@@ -554,7 +554,7 @@ function
 ## Using Python API
 Of course, you can also directly use sqsgenerator directly from your Python interpreter. The package is designed in such
 a way that all public function are gathered int the `sqsgenerator.public` module. Those which are needed to 
-generate and analyze structure are forwarded to the `sqsgenerator` module itself and can be imported from there
+generate and analyze structure are forwarded to the *sqsgenerator* module itself and can be imported from there
 
 Basically the API is build around two functions
 
@@ -692,7 +692,7 @@ for rank in results:
 ### Other (maybe) useful examples
 
 #### Conversion between structure types
-`sqsgenerator`'s API export function to convert internal {py:class}`sqsgenerator.public.Structure` objects to types
+*sqsgenerator*'s API export function to convert internal {py:class}`sqsgenerator.public.Structure` objects to types
 employed by larger projects ([ase](https://wiki.fysik.dtu.dk/ase/) and [pymatgen](https://pymatgen.org/))
 
 ```{admonition} Packages must be available
@@ -730,9 +730,9 @@ assert fcc_al == from_pymatgen_structure(fcc_al_pymatgen)
 ## Graceful exits
 
 As the SQS optimization may require a large number of iterations, it is sometimes desirable to stop the process 
-(e. g. because of time limits on HPC clusters). When sending a signal to `sqsgenerator` it does not crash but rather 
+(e. g. because of time limits on HPC clusters). When sending a signal to *sqsgenerator* it does not crash but rather 
 exit and write out the current state of the optimization.
-`sqsgenerator`'s core routine installs a temporary signal *SIGINT* handler which replaces Pythons default 
+*sqsgenerator*'s core routine installs a temporary signal *SIGINT* handler which replaces Pythons default 
 `KeyboardInterrupt`. Thus while executing the optimization you can always interrupt it by hitting **Ctrl+C**. You should 
 get a warning that the program was interrupted
 
@@ -742,7 +742,7 @@ get a warning that the program was interrupted
   warnings.warn('SIGINT received: SQS results may be incomplete')
 ```
 
-In case of MPI parallel both *SIGINT* and *SIGTERM* handlers are overwritten. Therefore, if you run `sqsgenerator`
+In case of MPI parallel both *SIGINT* and *SIGTERM* handlers are overwritten. Therefore, if you run *sqsgenerator*
 interactively using the `mpirun` command you can also gracefully terminate the process using **Ctrl+C**. How to 
 terminate the program if executed with a queuing system behind, is documented in the 
 [parallelization guide](parallelization.md).
@@ -774,7 +774,7 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
     for the current machine. The above command analyzes $10^5$ random configurations and 
     
   - Reduce the number of shells. This has two-fold advantage
-    1. In contrast to old versions of `sqsgenerator`, the current implementations profit greatly from a decreased number
+    1. In contrast to old versions of *sqsgenerator*, the current implementations profit greatly from a decreased number
        of coordination shells. The actual speedup depends on the input structure but might be up to an order of 
        magnitude when compared to the default value (all shells are considered)
        ```{image} images/time_vs_shells.svg
