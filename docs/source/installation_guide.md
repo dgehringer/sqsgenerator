@@ -45,8 +45,8 @@ through this section carefully.
     - *libboost_system* (math, data structures)
     - *libboost_regex*
     - *libboost_thread*
-    - [Boost](https://www.boost.org/) is used to create the Python bindings, logging, multiprecision math and data structures.
-  - [CMake](https://cmake.org/) is used as a build system. A version greater than 3.12 is needed
+    - [*Boost*](https://www.boost.org/) is used to create the Python bindings, logging, multiprecision math and data structures.
+  - [*CMake*](https://cmake.org/) is used as a build system. A version greater than 3.12 is needed
   - MPI libraries, in case you want to build the MPI enabled version of *sqsgenerator*
 
 Please make sure to have **all** those tools installed, before installing *sqsgenerator*.
