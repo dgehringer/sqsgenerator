@@ -20,8 +20,8 @@ strongly encourage you to head for this installation option
 conda install -c conda-forge sqsgenerator
 ```
 
-To allow for fast generation of random structures, *sqsgenerator*'s core modules support hybrid parallelization ([OpenMP](https://www.openmp.org) + [MPI](https://www.mpi-forum.org/))
-The version hosted on *conda-forge* supports thread-level-parallelism only. ([OpenMP](https://www.openmp.org))
+To allow for fast generation of random structures, *sqsgenerator*'s core modules support hybrid parallelization ([*OpenMP*](https://www.openmp.org) + [*MPI*](https://www.mpi-forum.org/))
+The version hosted on *conda-forge* supports thread-level-parallelism only. ([*OpenMP*](https://www.openmp.org))
 
 ```{note}
 To obtain an **MPI enabled** version of the package, you have to **build it** yourself.
@@ -35,9 +35,9 @@ To obtain an **MPI enabled** version of the package, you have to **build it** yo
 through this section carefully.
 
   - Python interpreter and headers (**>= 3.6**)
-  - [numpy](https://numpy.org) installed
-  - C++ compiler, with support for [OpenMP](https://www.openmp.org/) and C++17 standard
-  - [Boost](https://www.boost.org/) libraries are needed to compile the core modules. In particular the following subset of the boost libraries are needed
+  - [*numpy*](https://numpy.org) installed
+  - C++ compiler, with support for [*OpenMP*](https://www.openmp.org/) and C++17 standard
+  - [*Boost*](https://www.boost.org/) libraries are needed to compile the core modules. In particular the following subset of the boost libraries are needed
     - *libboost_python* (Python bindings)
     - *libboost_numpy* (Python bindings)
     - *libboost_log* (logging)
