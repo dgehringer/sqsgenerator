@@ -176,3 +176,29 @@ If you use *conda* to install the required libraries, you **need to** have MSVC 
     - `/MD`: is needed to link against runtime library and boost libraries
     - `/DBOOST_PYTHON_STATIC_LIB /DBOOST_NUMPY_STATIC_LIB`: *libboost_python* and *libboost_numpy* require static linking on Windows
     - `/DHAVE_SNPRINTF`: Keeps compatibility to older MSVC versions. **Note:** Remove this flag if you are using *Visual C++ 14.0* or older
+
+## shell completion
+
+*sqsgenerator* used [pallets/click](https://github.com/pallets/click) to implement its CLI. *click* supports 
+automatically generated shell completion. To enable this completion, execute one of the commands below, or add it to
+your shell profile file (*~/.bashrc* | *~/.zshrc* | *~/.config/fish/completions/sqsgen.fish*)
+
+  - **bash**: `eval "$(_SQSGEN_COMPLETE=bash_source sqsgen)"`
+  - **zsh**: `eval "$(_SQSGEN_COMPLETE=zsh_source sqsgen)"`
+  - **fish**: `eval (env _SQSGEN_COMPLETE=fish_source sqsgen)`
+
+
+The *eval* command is executed every time the shell is started. This may negatively influence shell responsiveness. 
+This can be fixed, using the following workflow instead:
+
+  
+1. Save the script somewhere
+    - **bash**: `_SQSGEN_COMPLETE=bash_source sqsgen > ~/path/to/.sqsgen-complete.bash`
+    - **zsh**: `_SQSGEN_COMPLETE=zsh_source sqsgen > ~/path/to/.sqsgen-complete.zsh`
+    - **fish**: `_SQSGEN_COMPLETE=fish_source sqsgen > ~/.config/fish/completions/sqsgen.fish`
+    
+2. Source the file in your profile
+    - **bash** (*~/.bashrc*): `source ~/path/to/.sqsgen-complete.bash`
+    - **zsh** (*~/.zshrc*): `source ~/path/to/.sqsgen-complete.zsh`
+       
+   
