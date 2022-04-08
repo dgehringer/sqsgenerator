@@ -33,13 +33,10 @@ configure_file(${PROJECT_SOURCE_DIR}/sqsgenerator/core/include/version.hpp.in ${
 find_package(Boost REQUIRED COMPONENTS system python numpy log_setup log)
 message([BOOST]:INCLUDE_DIRS: ${Boost_INCLUDE_DIRS})
 message([BOOST]:LIBRARIES: ${Boost_LIBRARIES})
+message([BOOST]:LIBRARY_DIRS: ${Boost_LIBRARY_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 set(CMAKE_CXX_LIBRARIES ${Boost_LIBRARIES})
 
-if (WIN32)
-    add_definitions(-DBOOST_ALL_NO_LIB)
-    add_definitions(-DBOOST_ALL_DYN_LINK)
-endif()
 
 if(NOT Boost_USE_STATIC_LIBS)
     # There is an issue find FindBoost.cmake

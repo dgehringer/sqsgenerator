@@ -2,6 +2,13 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <stdio.h>
 #endif
+
+#if defined(_WIN32) || defined(_WIN64) && !defined(HAVE_SNPRINTF)
+#define HAVE_SNPRINTF
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#endif
+
 #include "version.hpp"
 #include "types.hpp"
 #include "sqs.hpp"
