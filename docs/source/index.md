@@ -27,6 +27,7 @@ cli_interface
 input_parameters
 what_is_actually_computed
 api_reference
+who_uses_sqsgenerator
 ```
 
 ## API Reference
