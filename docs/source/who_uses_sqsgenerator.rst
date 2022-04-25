@@ -1,11 +1,14 @@
 
 
-
 Who uses *sqsgenerator*
 =======================
 
-Institutes and research facilities
-##################################
+The following page, shows a curated, yet incomplete list of research facilities, institutes
+and projects that use *sqsgenerator*. If you do not find your institution here, feel free to
+`drop me a line <mailto:dominik.gehringer@unileoben.ac.at>`_ to add it below.
+
+Research facilities using *sqsgenerator*
+########################################
 
 .. panels::
     :container: container pb-4
@@ -56,8 +59,8 @@ Institutes and research facilities
 
     `CM Department - Max-Planck Institut für Eisenforschung <https://mpie.de/>`_
 
-projects
-########
+Projects using *sqsgenerator*
+########################################
 
 .. panels::
     :container: container pb-4
