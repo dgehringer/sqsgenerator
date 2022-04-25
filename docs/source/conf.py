@@ -26,14 +26,11 @@ import sqsgenerator
 import sqsgenerator.io
 import sqsgenerator.adapters
 import sqsgenerator.settings
-print(sqsgenerator)
-print(sqsgenerator.io)
-print(sqsgenerator.adapters)
-print(sqsgenerator.settings)
+
 # -- Project information -----------------------------------------------------
 
 project = 'sqsgenerator'
-copyright = '2021, Dominik Gehringer'
+copyright = '2022, Dominik Gehringer'
 author = 'Dominik Gehringer'
 
 # The full version, including alpha/beta/rc tags
@@ -64,6 +61,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'myst_parser',
     'sphinx_click',
+    'sphinx_panels',
     'sphinx_togglebutton',
     'sphinx_copybutton'
 ]
@@ -99,3 +97,9 @@ html_favicon = 'favicon.ico'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_css_files = [
+    'custom.css',
+]
+
+print()
