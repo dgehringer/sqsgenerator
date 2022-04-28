@@ -49,6 +49,23 @@ def to_ase_atoms(structure: Structure):
     return Atoms(cell=structure.lattice, scaled_positions=structure.frac_coords, numbers=numbers, pbc=structure.pbc)
 
 
+@require(F.pyiron_atomistics)
+def to_pyiron_atoms(structure: Structure):
+    """
+    Convert structure {structure} to as ``pyiron_atomistics.atomistics.structure.Atoms`` object
+
+    :param structure: the structure to convert
+    :type structure: Structure
+    :return: the ``pyiron_atomistics.atomistics.structure.Atoms`` object
+    :rtype: pyiron_atomistics.atomistics.structure.Atoms
+    """
+    from pyiron_atomistics.atomistics.structure.atoms import Atoms
+    structure = structure.without_vacancies()
+    numbers = list(map(attr('Z'), structure.species))
+    return Atoms(cell=structure.lattice, numbers=numbers, scaled_positions=structure.frac_coords, pbc=structure.pbc)
+
+
+
 @require(F.pymatgen)
 def from_pymatgen_structure(structure) -> Structure:
     """
@@ -81,4 +98,17 @@ def from_ase_atoms(atoms) -> Structure:
         raise RuntimeWarning("At present I can only handle fully periodic structures. "
                              "I'will overwrite ase.Atoms.pbc setting to (True, True, True)")
     return Structure(lattice, frac_coords, list(atoms.symbols), (True, True, True))
+
+
+@require(F.pyiron_atomistics)
+def from_pyiron_atoms(atoms) -> Structure:
+    """
+    Convert the ``ase.Atoms`` {structure} object to a ``pyiron_atomistics.atomistics.structure.Atoms`` object
+
+    :param atoms: the structure to convert
+    :type atoms: pyiron_atomistics.atomistics.structure.Atoms
+    :return: the structure object
+    :rtype: Structure
+    """
+    return from_ase_atoms(atoms)
 

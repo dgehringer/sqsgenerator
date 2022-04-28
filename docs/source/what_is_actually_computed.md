@@ -1,9 +1,9 @@
-# How does `sqsgenerator` work?
+# How does *sqsgenerator* work?
 ## Pair Short-Range-Order
 
-### What does `sqsgenerator` actually compute?
+### What does *sqsgenerator* actually compute?
 
-`sqsgenerator` computes so-called *Warren-Cowley* short-range-order (WC-SRO) parameters, to quantify the "*randomness*" of an atomistic model. Thus consider a binary alloy with just $A$ and $B$ atoms, then the  SRO parameter is defined as
+*sqsgenerator* computes so-called *Warren-Cowley* short-range-order (WC-SRO) parameters, to quantify the "*randomness*" of an atomistic model. Thus consider a binary alloy with just $A$ and $B$ atoms, then the  SRO parameter is defined as
 
 $$
 \alpha_{AB} = 1 - \dfrac{N_{AB}}{NMx_Ax_B}
@@ -15,9 +15,9 @@ Where $N_{AB}$ the number of $A-B$ bonds, $N$  the number of atoms in the cell, 
 * $\alpha_{AB} > 0$: system tends to be **clustered**
 * $\alpha_{AB} \approx 0$: system tends to be **disordered**
 
-Therefore `sqsgenerator` tries to optimize a given system such that the SRO approaches zero. 
+Therefore *sqsgenerator* tries to optimize a given system such that the SRO approaches zero. 
 
-### Can `sqsgenerator` handle also second nearest neighbors?
+### Can *sqsgenerator* handle also second nearest neighbors?
 
 Yes it actually can! Indeed on a *fcc* lattice each atom exhibits $M^{fcc}_1=12$ nearest neighbors, but there are also  $M^{fcc}_2=6$ second nearest neighbors and even  $M^{fcc}_3=24$ third nearest neighbors. However, it is very easy to generalize the *Warren-Cowley* SRO to more "*coordination shells*" which, therefore becomes a vector
 
@@ -74,7 +74,7 @@ $$
  &=\sum_{i,\xi,\eta} \underbrace{\tilde{p}_{\xi\eta}^i}_{\texttt{pair_weights}} | \overbrace{\alpha'_{\xi\eta}}^{\texttt{target_objective}}- \overbrace{(1 - \underbrace{f^i_{\xi\eta}}_{\texttt{prefactors}}N^i_{\xi\eta})}^{\alpha^i_{\xi\eta}} |
 $$ (eqn:objective-actual)
 
-`sqsgenerator` tries different atomic configurations $\sigma$ by "*randomly shuffling*" or "*systematically*" (in lexicographical order) to filter out those configuration which **minimize** $\mathcal{O}(\sigma)$.
+*sqsgenerator* tries different atomic configurations $\sigma$ by "*randomly shuffling*" or "*systematically*" (in lexicographical order) to filter out those configuration which **minimize** $\mathcal{O}(\sigma)$.
 
 ```{note}
 In the technical part of the documentation we refer to $w^i$ as the 
