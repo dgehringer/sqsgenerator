@@ -15,11 +15,11 @@ Where $N_{AB}$ the number of $A-B$ bonds, $N$  the number of atoms in the cell, 
 * $\alpha_{AB} > 0$: system tends to be **clustered**
 * $\alpha_{AB} \approx 0$: system tends to be **disordered**
 
-Therefore *sqsgenerator* tries to optimize a given system such that the SRO approaches zero. 
+Therefore, *sqsgenerator* tries to optimize a given system such that the SRO approaches zero. 
 
-### Can *sqsgenerator* handle also second nearest neighbors?
+### Can *sqsgenerator* handle also second-nearest neighbors?
 
-Yes it actually can! Indeed on a *fcc* lattice each atom exhibits $M^{fcc}_1=12$ nearest neighbors, but there are also  $M^{fcc}_2=6$ second nearest neighbors and even  $M^{fcc}_3=24$ third nearest neighbors. However, it is very easy to generalize the *Warren-Cowley* SRO to more "*coordination shells*" which, therefore becomes a vector
+Yes it actually can! Indeed, on a *fcc* lattice each atom exhibits $M^{fcc}_1=12$ nearest neighbors, but there are also  $M^{fcc}_2=6$ second nearest neighbors and even  $M^{fcc}_3=24$ third nearest neighbors. However, it is very easy to generalize the *Warren-Cowley* SRO to more "*coordination shells*" which, therefore becomes a vector
 
 $$
 \alpha^k_{AB} = 1 - \dfrac{N_{AB}^k}{NM^kx_Ax_B}.
@@ -27,7 +27,7 @@ $$ (eqn:wc-sro-shells)
 
 ### But what about optimizing multi-component alloys?
 
-Similarly the generalization to multi-component systems is a straight as for the the coordination shells. Consider a system of $\{A,B,C\}$ atoms. Now we have to also consider $A-C$ and $B-C$ bonds, thus resulting in 6 SRO parameters for each coordination shells (also $A-A$, $B-B$ and $C-C$ bonds are considered), thus the initial parameter becomes a three dimensional object
+Similarly, the generalization to multi-component systems is a straight as for the the coordination shells. Consider a system of $\{A,B,C\}$ atoms. Now we have to also consider $A-C$ and $B-C$ bonds, thus resulting in 6 SRO parameters for each coordination shells (also $A-A$, $B-B$ and $C-C$ bonds are considered), thus the initial parameter becomes a three dimensional object
 
 $$
 \alpha^i_{\xi\eta} = 1 - \dfrac{N^i_{\xi\eta}}{NM^ix_{\xi}x_{\eta}}
@@ -40,11 +40,11 @@ where again $M^{i}$ is the number of sites in the $i$-th coordination shell, $x_
 This is a quite large number of parameters to optimize. In order to squeeze those together we produce a single scalar value by simply summing over those parameters. Therefore we define our "*objective-function*" as for a certain atomic configuration $\sigma$ as,
 
 $$
-\mathcal{O}(\sigma) = \sum_{k}w^i\sum_{\xi,\eta} p_{\xi\eta} | \alpha'_{\xi\eta}-\alpha^i_{\xi\eta} |
+\mathcal{O}(\sigma) = \sum_{k}w^i\sum_{\xi,\eta} p_{\xi\eta} | \tilde{\alpha}_{\xi\eta}-\alpha^i_{\xi\eta} |
 $$ (eqn:objective)
 
-where $w^i$ are the coordination shell weighting factor, to take into account the decreasing influence of shells which are farther away.  $\alpha'_{\xi\eta}$ are the "*target objective*" parameters. Those can be used to optimize pairs between different species differently.
-$p_{\xi\eta}$ are "*pair weights*" and allows the user to weight pair types differently.
+where $w^i$ are the coordination *{ref}`shell_weights <input-param-shell-weights>`*, to take into account the decreasing influence of shells which are farther away.  $\tilde{\alpha}_{\xi\eta}$ are the *{ref}`target_objective <input-param-target-objective>`* parameters. Those can be used to optimize pairs between different species differently.
+$p_{\xi\eta}$ are *{ref}`pair_weights <input-param-pair-weights>`* and allows the user to weight pair types differently.
 
 However for the sake of computational efficiency we merge $p_{\xi\eta}$ and $w^i$ into $\tilde{p}_{\xi\eta}^i$ where
 
@@ -53,7 +53,7 @@ $$
 $$ (eqn:parameter-weight-efficient)
 
 Moreover, the $\dfrac{1}{NM^i x_\xi x_\eta}$ term does not depend on a specific configuration $\sigma$ therefore it can
-be computed before the actual optimization process. Hence we gather those and name them "*prefactors*" $f_{\xi\eta}^i$ 
+be computed before the actual optimization process. Hence we gather those and name them "*{ref}`prefactors <input-param-prefactors>`*" $f_{\xi\eta}^i$ 
 where
 
 $$
@@ -70,17 +70,17 @@ $$
 Employing the above definition the objective function $\mathcal{O}(\sigma)$ can be written as
 
 $$
-\mathcal{O}(\sigma) &= \sum_{i,\xi,\eta} \tilde{p}_{\xi\eta}^i | \alpha'_{\xi\eta}-\alpha^i_{\xi\eta} |  \\
- &=\sum_{i,\xi,\eta} \underbrace{\tilde{p}_{\xi\eta}^i}_{\texttt{pair_weights}} | \overbrace{\alpha'_{\xi\eta}}^{\texttt{target_objective}}- \overbrace{(1 - \underbrace{f^i_{\xi\eta}}_{\texttt{prefactors}}N^i_{\xi\eta})}^{\alpha^i_{\xi\eta}} |
+\mathcal{O}(\sigma) &= \sum_{i,\xi,\eta} \tilde{p}_{\xi\eta}^i | \tilde{\alpha}_{\xi\eta}-\alpha^i_{\xi\eta} |  \\
+ &=\sum_{i,\xi,\eta} \underbrace{\tilde{p}_{\xi\eta}^i}_{\texttt{pair_weights}} | \overbrace{\tilde{\alpha}_{\xi\eta}}^{\texttt{target_objective}}- \overbrace{(1 - \underbrace{f^i_{\xi\eta}}_{\texttt{prefactors}}N^i_{\xi\eta})}^{\alpha^i_{\xi\eta}} |
 $$ (eqn:objective-actual)
 
 *sqsgenerator* tries different atomic configurations $\sigma$ by "*randomly shuffling*" or "*systematically*" (in lexicographical order) to filter out those configuration which **minimize** $\mathcal{O}(\sigma)$.
 
 ```{note}
 In the technical part of the documentation we refer to $w^i$ as the 
-{ref}`shell_weights <input-param-shell-weights>`, 
-$\alpha'_{\xi\eta}$  as the {ref}`target_objective <input-param-target-objective>`, $\tilde{p}^i_{\xi\eta}$ as the {ref}`pair_weights <input-param-pair-weights>` and $f_{\xi\eta}^i$ as the
-{ref}`prefactors <input-param-prefactors>`
+*{ref}`shell_weights <input-param-shell-weights>`*, 
+$\tilde{\alpha}_{\xi\eta}$  as the *{ref}`target_objective <input-param-target-objective>`*, $\tilde{p}^i_{\xi\eta}$ as the *{ref}`pair_weights <input-param-pair-weights>`* and $f_{\xi\eta}^i$ as the
+*{ref}`prefactors <input-param-prefactors>`*
 
 ```
 
