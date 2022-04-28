@@ -1,7 +1,7 @@
-# How does *sqsgenerator* work?
+#  *sqsgen* under the hood
 ## Pair Short-Range-Order
 
-### What does *sqsgenerator* actually compute?
+### What does *sqsgen* actually compute?
 
 *sqsgenerator* computes so-called *Warren-Cowley* short-range-order (WC-SRO) parameters, to quantify the "*randomness*" of an atomistic model. Thus consider a binary alloy with just $A$ and $B$ atoms, then the  SRO parameter is defined as
 

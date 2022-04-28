@@ -1,7 +1,7 @@
 
 
-Who uses *sqsgenerator*
-=======================
+Who uses *sqsgen*?
+========================
 
 The following page, shows a curated, yet incomplete list of research facilities, institutes
 and projects that use *sqsgenerator*. If you do not find your institution here, feel free to

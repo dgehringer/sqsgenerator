@@ -1,5 +1,5 @@
 
-# How to use *sqsgenerator*
+# How to use *sqsgen*?
 
 This is short tutorial, on how *sqsgenerator* works
 

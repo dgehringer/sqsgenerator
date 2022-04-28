@@ -1,5 +1,5 @@
 
-# Install *sqsgenerator* ...
+# How to install *sqsgen*?
 
 (installation_guide)=
 
