@@ -101,19 +101,20 @@ def total_permutations(struct: Structure, which: T.Optional[T.Iterable[int]] = N
     return total_permutations_(struct[which])
 
 
-def make_rank(struct: Structure, configuration: T.Iterable[str], rank: int,
+def make_rank(struct: Structure, rank: int, configuration: T.Optional[T.Iterable[str]] = None,
               which: T.Optional[T.Iterable[int]] = None) -> Structure:
     """
     Uses the lattice and positions from {struct} and generates the {rank}-th permutation (in lexicographical order)
-    of {configuration} and and creates a new structure with it. If {which} is given we the selected lattices positions
+    of {configuration} and creates a new structure with it. If {which} is given, the selected lattices positions
     are used, therefore the length of {configuration} must match the length of {which}
 
     :param struct: the basis structure from which the new structure will be created
     :type struct: Structure
-    :param configuration: the species sequence from which the {rank}-th permutation sequence
-    :type configuration: Iterable[str]
     :param rank: the index of the permutation sequence
     :type rank: int
+    :param configuration: the species sequence from which the {rank}-th permutation sequence. Use this parameter when
+        you want to create a rank and simultaneously want to distribute new atomic species (default is ``None``)
+    :type configuration: Optional[Iterable[str]]
     :param which: the indices of the lattice positions to choose (default is ``None``)
     :type which: Optional[Iterable[int]]
     :raises IndexError: if the length of {which} does not match the length of {configuration}
@@ -121,6 +122,8 @@ def make_rank(struct: Structure, configuration: T.Iterable[str], rank: int,
     :return: the structure with {rank}-th permutation sequence as configuration
     :rtype: Structure
     """
+
+    configuration = struct.symbols.tolist() if configuration is None else configuration
 
     msg = f"the rank of a configuration must me 1 <= rank <= total_permutations() = " \
           f"{total_permutations(struct.slice_with_species(configuration, which))}"
@@ -131,7 +134,7 @@ def make_rank(struct: Structure, configuration: T.Iterable[str], rank: int,
     try:
         unranked_configuration = make_rank_(configuration, rank)
     except IndexError:
-        # the C++ extension raises an IndexError, we want to propagate it as an domain error
+        # the C++ extension raises an IndexError, we want to propagate it as a Value error
         raise ValueError(msg)
 
     return struct.with_species(unranked_configuration, which=which)
