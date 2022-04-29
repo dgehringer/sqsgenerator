@@ -21,7 +21,7 @@ class TestUtils(unittest.TestCase):
 
     def test_rank_and_unrank(self):
         for rank, data in self.results.items():
-            created_structure = make_rank(self.settings.structure, data['configuration'], rank, which=self.settings.which)
+            created_structure = make_rank(self.settings.structure, rank, configuration=data['configuration'], which=self.settings.which)
             self.assertEqual(data['structure'], created_structure)
             self.assertEqual(rank_structure(created_structure, which=self.settings.which), rank)
 
@@ -62,7 +62,7 @@ class TestUtils(unittest.TestCase):
         pprint.pprint(timinigs)
 
         for rank, data in results.items():
-            analysed = sqs_analyse(settings, [data['structure']])
+            analysed = sqs_analyse([data['structure']], settings=settings)
             self.assertTrue(rank in analysed)
             analysed = analysed[rank]
             self.assertEqual(rank_structure(data['structure']), rank)
