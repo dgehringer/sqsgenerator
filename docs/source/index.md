@@ -31,7 +31,6 @@ who_uses_sqsgenerator
 ```
 
 ## API Reference
-
 * {ref}`genindex`
-* {ref}`modindex`
 * {ref}`search`
+

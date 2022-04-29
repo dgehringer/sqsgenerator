@@ -111,8 +111,5 @@ class TestParamsCommand(unittest.TestCase):
             else:
                 self.assertEqual(before_value, after_value)
 
-
-
-
 if __name__ == '__main__':
     unittest.main()

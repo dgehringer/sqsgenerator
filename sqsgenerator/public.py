@@ -1,3 +1,6 @@
+"""
+This module forwards public imports from sqsgenerator.core and defines functions which are designed as user-functions
+"""
 
 import signal
 import warnings
@@ -295,18 +298,18 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
     return result_document, timings
 
 
-def sqs_analyse(settings: T.Union[Settings, T.Dict], structures: T.Iterable[Structure], process: bool = True,
-                fields: T.Tuple[str, ...] = ('configuration', 'parameters', 'objective'),
+def sqs_analyse(structures: T.Iterable[Structure], settings: T.Optional[T.Union[Settings, T.Dict]] = None,
+                process: bool = True, fields: T.Tuple[str, ...] = ('configuration', 'parameters', 'objective'),
                 structure_format: str = 'default', append_structures: bool = False) -> T.Dict[int, T.Dict[str, T.Any]]:
     """
     Uses the given settings {settings} and an iterable of :py:func:`Structure` and compute the short-range-order
     parameters, objective function. By default the {fields} = ('configuration', 'parameters', 'objective') are
     included.
 
-    :param settings: the settings used for the SQS optimization
-    :type settings: AttrDict or Dict
     :param structures: an iterable of structures to analyse
     :type structures: Iterable[Union[Structure, :py:class`ase.atoms.Atoms`, :py:class:`pymatgen.core.Structure`]]
+    :param settings: the settings used for the SQS optimization
+    :type settings: AttrDict or Dict
     :param process: process the input {settings} dictionary (default is ``True``)
     :type process: bool
     :param fields: output fields included in the result document. Possible fields are "*configuration*", "*parameters*",
@@ -328,22 +331,42 @@ def sqs_analyse(settings: T.Union[Settings, T.Dict], structures: T.Iterable[Stru
     :rtype: Dict[int, Dict[str, Any]]
     """
 
-    settings = settings if isinstance(settings, Settings) else AttrDict(settings)
-    settings = process_settings(settings) if process else settings
-
     converter = dict(default=lambda _: _, ase=from_ase_atoms, pymatgen=from_pymatgen_structure,
                      pyiron=from_pyiron_atoms).get(structure_format)
-    slicer = item(settings.which)
 
     # convert the structures to Structure object and extract the sublattice if needed
-    structures = map(lambda st: slicer(converter(st)), structures)
-    first_structure = next(iter(structures), None)
+    structures = map(lambda st: converter(st), structures)
+    first_structure = next(structures, None)
+
     if first_structure is None:
         raise ValueError('The structure input iterable contains no structure')
 
-    analyse_settings = AttrDict(settings.copy())
-    analyse_settings.update(structure=first_structure)
-    analyse_settings.update(which=defaults.which(analyse_settings))
+    if settings is None:
+        # construct default settings
+        settings = AttrDict(structure=first_structure)
+        settings.update(which=defaults.which(settings))
+        settings = process_settings(settings)  # we ignore {process} flag as we have to compute default settings
+    else:
+        # if the settings object contains a structure object we rise a warning that we will overwrite it
+        if 'structure' in settings:
+            warnings.warn('Your settings for "sqs_analyse" contain a "structure" key. I will ignore it!'
+                          ' Pass structures using the {structures} parameter!')
+            del settings['structure']
+
+        if 'composition' in settings:
+            warnings.warn('You cannot specify a composition when analysing a SQS structure')
+            del settings['composition']
+
+        # make sure which is in the settings object
+        settings['which'] = settings['which'] if 'which' in settings else defaults.which(AttrDict(structure=first_structure))
+
+    settings = AttrDict(settings)
+    # we are sure the which and structure is there, hence we can set our value for first_structure
+    slicer = item(settings.which)
+    structures = map(slicer, structures)
+    settings['structure'] = slicer(first_structure)
+    settings = process_settings(settings) if process else settings
+    analyse_settings = AttrDict(**settings)
 
     # we have consumed the first element of the {structure} iterator we again assemble it
     # we create a copy of the iterator
