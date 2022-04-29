@@ -355,16 +355,19 @@ def sqs_analyse(structures: T.Iterable[Structure], settings: T.Optional[T.Union[
 
         if 'composition' in settings:
             warnings.warn('You cannot specify a composition when analysing a SQS structure')
-            del settings['composition']
 
         # make sure which is in the settings object
         settings['which'] = settings['which'] if 'which' in settings else defaults.which(AttrDict(structure=first_structure))
+        first_structure = first_structure[settings['which']]
+        # in any case we need default composition dictionary
+        settings['composition'] = defaults.composition(AttrDict(structure=first_structure, which=settings['which']))
+
 
     settings = AttrDict(settings)
     # we are sure the which and structure is there, hence we can set our value for first_structure
     slicer = item(settings.which)
     structures = map(slicer, structures)
-    settings['structure'] = slicer(first_structure)
+    settings['structure'] = first_structure
     settings = process_settings(settings) if process else settings
     analyse_settings = AttrDict(**settings)
 

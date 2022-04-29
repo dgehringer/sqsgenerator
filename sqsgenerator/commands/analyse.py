@@ -10,14 +10,15 @@ import functools
 from rich import box
 from rich.text import Text
 from rich.table import Table
-from sqsgenerator.io import dumps, to_dict
-from sqsgenerator.core import rank_structure
+from sqsgenerator.settings import process_settings
 from sqsgenerator.fallback.attrdict import AttrDict
 from operator import attrgetter as attr, itemgetter as item
+from sqsgenerator.public import available_species, sqs_analyse
+from sqsgenerator.io import dumps, to_dict, read_structure_from_file
+from sqsgenerator.commands.common import read_settings_file, pretty_print
 from sqsgenerator.commands.help import parameter_help as help, command_help
-from sqsgenerator.settings import construct_settings, process_settings, defaults
-from sqsgenerator.commands.common import click_settings_file, error, pretty_print
-from sqsgenerator.public import pair_analysis, available_species, extract_structures, expand_sqs_results
+
+
 
 
 species_to_ordinal = dict(map(attr('symbol', 'Z'), available_species()))
@@ -32,7 +33,34 @@ def map_values(f, d: dict, factory=dict):
     return factory({k: f(v) for k, v in d.items()})
 
 
-def format_parameters(settings, result):
+def filter_dict(d, ignore=frozenset(), factory=dict):
+    return factory({k: v for k, v in d.items() if k not in ignore})
+
+
+def wrap_in_iterable(o, factory=tuple):
+    return factory((o,))
+
+
+def read_structure_file(file_name, reader):
+    return read_structure_from_file(AttrDict(
+        structure=dict(file=file_name),
+        reader=reader
+    ))
+
+
+def first(iterable):
+    return next(iter(iterable))
+
+
+def override(b: dict, factory=AttrDict, **kwargs):
+    return factory({**b, **kwargs})
+
+
+def make_default(f, **kwargs):
+    return f(AttrDict(kwargs))
+
+
+def format_parameters(settings, result: AttrDict):
     """
     Nicely formats SQS parameters into a list of tables
     """
@@ -53,57 +81,55 @@ def format_parameters(settings, result):
     return (make_table(shell, sw, sros) for (shell, sw), sros in zip(sorted_shell_weights, parameters))
 
 
+def render_sqs_analyse_result(rank, settings, result: AttrDict):
+    renderables = list(format_parameters(settings, result))
+    renderables.insert(0, Text(f'Parameters:{os.linesep}', style='bold'))
+    renderables.insert(0, Text.assemble(
+        ('Configuration: ', 'bold'), (f'{result.configuration}', 'bold cyan'))
+                       )
+    renderables.insert(0, Text.assemble(('Objective: ', 'bold'), (f'{result.objective}', 'bold cyan')))
+    renderables.insert(0, Text.assemble(('Rank: ', 'bold'), (f'{rank}', 'bold cyan')))
+    return renderables
+
+
 @click.command('analyse', help=command_help.analyse)
+@click.option('--settings', '-s', type=click.Path(dir_okay=False, allow_dash=True))
+@click.option('--reader', '-r', type=click.Choice(['ase', 'pymatgen']), default='ase', help=help.writer)
 @click.option('--output-format', '-of', type=click.Choice(['yaml', 'json', 'pickle', 'native']), default='native',
               help=help.output_format)
-@click.option('--params', '-p', is_flag=True, help=help.dump_params)
-@click_settings_file(process={'structure'}, ignore={'which'}, default_name='sqs.result.yaml')
-def analyse(settings, output_format, params):
-    if 'configurations' not in settings:
-        # in this case we use the input from the loaded structure
-        settings['configurations'] = {
-            rank_structure(settings.structure): settings.structure.symbols.tolist()
-        }
-    # we do not want to override "which" upon parsing therefore we add it only once we it is not present
-    if 'which' not in settings:
-        settings['which'] = list(range(len(settings.structure)))
-    num_configurations = len(settings.configurations)
+@click.argument('input-files', type=click.Path(dir_okay=False, allow_dash=True), nargs=-1)
+def analyse(input_files, settings, reader, output_format):
 
-    if num_configurations < 1:
-        error('Your input does not contain any input configurations')
+    # read optional setting file which is passed to sqs_analyse, settings will
+    # be applied to each of the input-structure files
+    non_eligible_keys = frozenset({'structure', 'composition'})
+    settings = {} if settings is None else filter_dict(read_settings_file(settings), non_eligible_keys, AttrDict)
 
-    # extract the defines sublattice from the merged structure
-    structures = map_values(lambda s: s[settings.which], extract_structures(settings))
+    # read each of the structure file and wrap it in an iterable -> iterable is necessary for compat. with sqs_analyse
+    input_structures = map(lambda f: wrap_in_iterable(read_structure_file(f, reader)), input_files)
 
-    # set one of the actual computes structures into settings, to get proper default values
-    first_structure = next(iter(structures.values()))
+    document = {}
 
-    # a new clone of the actual settings object is create -> we do not want to loose the old -> TODO: find a reason why
-    analyse_settings = AttrDict(settings.copy())
-    analyse_settings.update(structure=first_structure)
-    analyse_settings.update(which=defaults.which(analyse_settings))
+    for file_name, structures in zip(input_files, input_structures):
+        first_structure = first(structures)
 
-    include_fields = ('objective', 'parameters', 'configuration')
-    analyse_settings = process_settings(analyse_settings)
-    # carry out the actual pair analysis by overwriting the structure in the current settings
-    analyzed = map_values(lambda s: pair_analysis(construct_settings(analyse_settings, False, structure=s)), structures)
-    document = expand_sqs_results(analyse_settings, list(analyzed.values()), fields=include_fields, inplace=params)
+        local_settings = process_settings(override(settings, structure=first_structure))
+        local_settings = filter_dict(local_settings, non_eligible_keys, AttrDict)
+        # we need to keep the input to be able to render it nicely
+        document[file_name] = dict(
+            result=sqs_analyse(structures, local_settings, process=False),
+            settings=override(local_settings, structure=first_structure)
+        )
 
-    if 'structure' in document:
-        del document['structure']
-    if 'which' in document:
-        del document['which']
     if output_format == 'native':
         all_renderables = []
-        for rank, result in map_values(AttrDict, document.configurations).items():
-            renderables = list(format_parameters(analyse_settings, AttrDict(result)))
-            renderables.insert(0, Text(f'Parameters:{os.linesep}', style='bold'))
-            renderables.insert(0, Text.assemble(
-                ('Configuration: ', 'bold'), (f'{result.configuration}', 'bold cyan'))
-            )
-            renderables.insert(0, Text.assemble(('Objective: ', 'bold'), (f'{result.objective}', 'bold cyan')))
-            renderables.insert(0, Text.assemble(('Rank: ', 'bold'), (f'{rank}', 'bold cyan')))
-            all_renderables.extend(renderables)
+        for file_name, data in document.items():
+            settings = data.get('settings')
+            all_renderables.append(Text(f'File: {file_name}', style='bold red'))
+            all_renderables.append(Text('='*len(f'File: {file_name}'), style='bold red'))
+            for rank, result in data.get('result').items():
+                all_renderables.extend(render_sqs_analyse_result(rank, settings, AttrDict(result)))
         pretty_print(*all_renderables)
     else:
+        document = {file_name: data.get('result') for file_name, data in document.items()}
         sys.stdout.buffer.write(dumps(to_dict(document), output_format=output_format))
