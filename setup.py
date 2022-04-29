@@ -147,7 +147,7 @@ class CMakeBuildExt(build_ext):
 
 setup(
     name='sqsgenerator',
-    version='0.1',
+    version='0.2',
     description='A simple command line Special Quasirandom Structure generator in Python',
     author_email='dgehringer@protonmail.com',
     license='MIT',
