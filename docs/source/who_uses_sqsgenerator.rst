@@ -7,8 +7,8 @@ The following page, shows a curated, yet incomplete list of research facilities,
 and projects that use *sqsgenerator*. If you do not find your institution here, feel free to
 `drop me a line <mailto:dominik.gehringer@unileoben.ac.at>`_ to add it below.
 
-Research facilities using *sqsgenerator*
-########################################
+Research facilities using *sqsgen*
+##################################
 
 .. panels::
     :container: container pb-4
@@ -59,8 +59,8 @@ Research facilities using *sqsgenerator*
 
     `CM Department - Max-Planck Institut für Eisenforschung <https://mpie.de/>`_
 
-Projects using *sqsgenerator*
-########################################
+Projects using *sqsgen*
+#############################
 
 .. panels::
     :container: container pb-4

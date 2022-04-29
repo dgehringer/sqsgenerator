@@ -670,6 +670,7 @@ will be analysed. The output-format is exactly the same as for {py:func}`sqsgene
 (see {ref}`above <optimization-output>`)
 
 ```{code-block} python
+
 import numpy.testing
 from operator import itemgetter
 from sqsgenerator import sqs_optimize, read_settings_file, sqs_analyse
@@ -677,7 +678,7 @@ from sqsgenerator import sqs_optimize, read_settings_file, sqs_analyse
 configuration = read_settings_file('sqs.yaml')
 results, timings = sqs_optimize(configuration, make_structures=True, minimal=False, similar=True)  # same as --no-minimal --similar
 structures = map(itemgetter('structure'), results.values())  # for this we need make_structures=True
-analysed = sqs_analyse(configuration, structures, append_structures=True)
+analysed = sqs_analyse(structures, settings=configuration, append_structures=True)
 
 for rank in results:
     # we check that we obatin the same results with sqs_analyse
@@ -686,7 +687,7 @@ for rank in results:
     assert results[rank]['structure'] == analysed[rank]['structure']
     assert results[rank]['configuration'] == analysed[rank]['configuration']
     numpy.testing.assert_array_almost_equal(results[rank]['parameters'], analysed[rank]['parameters'])
-
+    
 ```
 
 ### Other (maybe) useful examples
