@@ -64,7 +64,7 @@ such that Eq. {eq}`eqn:wc-sro-multi` can be factored to
 
 $$
 \alpha^i_{\xi\eta} = 1 - f_{\xi\eta}^i N^i_{\xi\eta}
-$$
+$$ (eqn:sro-modified)
 
 
 Employing the above definition the objective function $\mathcal{O}(\sigma)$ can be written as

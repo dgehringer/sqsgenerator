@@ -333,17 +333,115 @@ composition:
   - **Line 7:** hydrogen works here as a **dummy** species. We select those interstitial sites
   - **Line 10:** distribute nine carbon atoms and 99 vacancies
 
-### Advanced topics
+### Analyse existing structures
+Sometimes it is desirable to compute the SRO parameters ($\alpha^i_{\xi\eta}$) for an exiting arrangement of atoms 
+rather than to generate a new one. To analyse existing structures *sqsgenerator* provides you with the analyse command.
 
-```{admonition} This section will come in future
-:class: note, dropdown
+#### Restore $\alpha^i_{\xi\eta}$ from structure files
 
-This section needs still to be done
- - Custom `target_objective`
- - Maybe MPI enabled version
+**Note:** This example only worke with `pymatgen` or `ase` installed
+
+1. We use the {ref}`example above <example-two>` to generate some randomized structures by executing
+
+   ```{code-block}  bash
+   sqsgen run iteration --similar --no-minimal --export --dump-include objective --dump-include parameters re-w.second.yaml
+   # or with shortcuts
+   sqsgen run iteration -s -nm -e -di objective -di parameters re-w.second.yaml
+   ```
+2. The above command will store the optimized configurations in a file named *re-w.second.result.yaml*. The file will, 
+   in addition also contain (eventually) configurations which do not minimize (`--no-minimal/-nm`) the objective function
+   Eq. {eq}`eqn:objective-actual`. Furthermore it will not check for duplicates in the SRO formalism (`--similar/-s`).
+   Finally *re-w.second.result.yaml* will contain the SRO parameters $\alpha^i_{\xi\eta}$ 
+   (`--dump-include/-di parameters`) as well as the value of the objective function $\mathcal{O}$ 
+   (`--dump-include/-di objective`). All the configurations will be also exported into *CIF* format (default). Listing 
+   your directory, should give you ten additional cif-files.
+3. Please inspect *re-w.second.result.yaml* with a text editor
+4. Now, the task is to reconstruct the SRO parameters from the exported cif-files. Therefore use:
+   
+   ```{code-block} bash
+   sqsgen analyse *.cif
+   ```
+   
+   The command will print the computed SRO parameters, nicely formatted to the console.
+   **Note:** The output will show you SRO parameters for *seven* coordination shells with the default 
+   {ref}`shell_weights <input-param-shell-weights>` of $w^i = \frac{1}{i}$. This happens since *sqsgenerator* does not
+   know the settings for computing the structures, hence it uses its default values. 
+5. To fix this, the `analyse` command takes a `--settings/-s` parameter. It points to a file providing the input settings.
+   In this particular example we have two ways forward, to obtain the same values as in *re-w.second.result.yaml*:
+    
+      - create a new file *settings.yaml* with the following lines
+        
+        ```{code-block} yaml
+        shell_weights:
+          1: 1.0
+        ```
+
+        to take into account only the first coordination shell as {ref}`above <example-two>` and run
+        
+        ```{code-block} bash
+        sqsgen analyse *.cif --settings settings.yaml
+        ```
+       
+      - reuse the input file *re-w.second.yaml* and just execute
+        
+        ```{code-block} bash
+        sqsgen analyse *.cif --settings re-w.second.yaml
+        ```
+        
+        *sqsgenerator* will ignore all parameters which are not needed.
+        
+
+#### Counting pairs in coordination shells using the `analyse` command
+
+*sqsgenerator* can also compute the number of bonds in existing structures, by tweaking parameters
+for the `analyse` command properly.
+
+A closer look on Eq. {eq}`eqn:sro-modified` reveals, by setting the {ref}`prefactors <input-param-prefactors>`
+$f^i_{\xi\eta} = 1$ the SRO parameters become $\alpha^i_{\xi\eta} = 1 - N^i_{\xi\eta}$. Hence by modifying
+*settings.yaml* file to
+
+```{code-block} yaml
+---
+lineno-start: 1
+emphasize-lines: 4-5
+---
+shell_weights:
+  1: 1.0
+  2: 0.5
+prefactor_mode: set
+prefactors: 1
 ```
 
-#### multiple independent sublattices - From $\text{TiN} \rightarrow \left(\text{Ti}_{0.25} \text{Al}_{0.25} \right) \left( \text{B}_{0.25} \text{N}_{0.25} \right)$
+- **Line 4:** explicitly overrides the values of $f^{i}_{\xi\eta}$ with those provided in the file
+- **Line 5:** set $f^i_{\xi\eta}$ to 1
+
+To obtain the number of $\xi - \eta$ pair we have to compute $N^i_{\xi\eta} = 1 - \alpha^i_{\xi}$
+*sqsgenerator* support also other output formats than printing it to the console. Hence, we want to illustrate
+how *sqsgenerator*'s CLI can be used directly in combination with Python without using it's Python API
+
+```{code-block} python
+import os
+import yaml
+import pprint
+import numpy as np
+
+# analyse the structure and export results in YAML format(--output-format/-of yaml)
+yaml_output = os.popen('sqsgen analyse *.cif -s settings.yaml -of yaml')
+results = yaml.safe_load(yaml_output)
+
+# loop over output results
+for analysed_file, configurations in results.items():
+    for rank, results in configurations.items():
+        # actually compute N = 1.0 - alpha
+        results['bonds'] = 1.0 - np.array(results.get('parameters'))
+        
+pprint.pprint(results)
+```
+
+
+### Advanced topics
+
+#### Multiple independent sublattices - from $\text{TiN} \rightarrow \left(\text{Ti}_{0.25} \text{Al}_{0.25} \right) \left( \text{B}_{0.25} \text{N}_{0.25} \right)$
 
 Now we want to enhance the above examples, and want to distribute both Ti and Al on the original Ti sublattice. 
 Furthermore, additionally, we want to distribute B and N on the original nitrogen sublattice. Before going into detail,
