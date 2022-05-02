@@ -19,8 +19,6 @@ from sqsgenerator.commands.common import read_settings_file, pretty_print
 from sqsgenerator.commands.help import parameter_help as help, command_help
 
 
-
-
 species_to_ordinal = dict(map(attr('symbol', 'Z'), available_species()))
 
 
@@ -85,10 +83,10 @@ def render_sqs_analyse_result(rank, settings, result: AttrDict):
     renderables = list(format_parameters(settings, result))
     renderables.insert(0, Text(f'Parameters:{os.linesep}', style='bold'))
     renderables.insert(0, Text.assemble(
-        ('Configuration: ', 'bold'), (f'{result.configuration}', 'bold cyan'))
+        ('Configuration: ', 'bold'), (f'{result.configuration}{os.linesep}', 'bold cyan'))
                        )
-    renderables.insert(0, Text.assemble(('Objective: ', 'bold'), (f'{result.objective}', 'bold cyan')))
-    renderables.insert(0, Text.assemble(('Rank: ', 'bold'), (f'{rank}', 'bold cyan')))
+    renderables.insert(0, Text.assemble(('Objective: ', 'bold'), (f'{result.objective}{os.linesep}', 'bold cyan')))
+    renderables.insert(0, Text.assemble(('Rank: ', 'bold'), (f'{rank}{os.linesep}', 'bold cyan')))
     return renderables
 
 
@@ -125,8 +123,7 @@ def analyse(input_files, settings, reader, output_format):
         all_renderables = []
         for file_name, data in document.items():
             settings = data.get('settings')
-            all_renderables.append(Text(f'File: {file_name}', style='bold red'))
-            all_renderables.append(Text('='*len(f'File: {file_name}'), style='bold red'))
+            all_renderables.append(Text(f'File: {file_name}{os.linesep}', style='bold red underline'))
             for rank, result in data.get('result').items():
                 all_renderables.extend(render_sqs_analyse_result(rank, settings, AttrDict(result)))
         pretty_print(*all_renderables)
