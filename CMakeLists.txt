@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.14)
 project(sqsgenerator VERSION 0.2)
 
 execute_process(
@@ -78,7 +78,7 @@ include_directories(sqsgenerator/core/include)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # remove tests for the moment
-# add_subdirectory(test)
+add_subdirectory(test)
 add_subdirectory(sqsgenerator/core/python)
 
 if (MPI_FOUND)

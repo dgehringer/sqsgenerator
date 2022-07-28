@@ -1,12 +1,14 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.14)
 project(python_bindings VERSION ${sqsgenerator_VERSION_MAJOR}.${sqsgenerator_VERSION_MINOR})
 
-find_package (Python3 COMPONENTS Interpreter Development)
+find_package (Python3 COMPONENTS Interpreter Development NumPy)
 
 message([PYTHON]:INCLUDE_DIRS: ${Python3_INCLUDE_DIRS})
 message([PYTHON]:LIBRARY_DIRS: ${Python3_LIBRARY_DIRS})
 message([PYTHON]:LIBRARIES: ${Python3_LIBRARIES})
 message([PYTHON]:EXECUTABLE: ${Python3_EXECUTABLE})
+message([PYTHON_NUMPY]: VERSION: ${Python3_NumPy_VERSION})
+message([PYTHON_NUMPY]: INCLUDE_DIRS: ${Python3_NumPy_INCLUDE_DIRS})
 
 if(USE_MPI)
     if (MPI_FOUND)
