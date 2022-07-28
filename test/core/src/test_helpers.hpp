@@ -49,12 +49,12 @@ namespace sqsgenerator::test {
     template<typename Return, typename Arg>
     using Transform = std::function<Return(Arg)>;
 
-    template<typename T, typename V, typename C>
+    template<typename VectorA, typename VectorB, typename C>
     void assert_vector_equals(
-            const std::vector<T> &a,
-            const std::vector<V> &b,
-            Transform<T, C> t1 = std::function<C(T)>([](const T &a) { return a; }),
-            Transform<V, C> t2 = std::function<C(V)>([](const V &a) { return a; })) {
+            const VectorA &a,
+            const VectorB &b,
+            Transform<typename VectorA::value_type, C> t1 = std::function<C(typename VectorA::value_type)>([](const typename VectorA::value_type &a) { return a; }),
+            Transform<typename VectorB::value_type, C> t2 = std::function<C(typename VectorB::value_type)>([](const typename VectorB::value_type &a) { return a; })) {
 
         ASSERT_EQ(a.size(), b.size());
         for (auto i = 0; i < a.size(); i++) {
