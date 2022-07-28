@@ -3,6 +3,11 @@ lattice::array::ndims 2
 lattice::array::shape 3 3
 lattice::array::data 8.61849800 0.00000000 0.00000000 0.00000000 8.61849800 0.00000000 0.00000000 0.00000000 8.61849800
 lattice::array::end
+numbers::array::begin
+numbers::array::ndims 1
+numbers::array::shape 58
+numbers::array::data 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25
+numbers::array::end
 fcoords::array::begin
 fcoords::array::ndims 2
 fcoords::array::shape 58 3

@@ -3,6 +3,11 @@ lattice::array::ndims 2
 lattice::array::shape 3 3
 lattice::array::data 8.10000000 0.00000000 0.00000000 0.00000000 8.10000000 0.00000000 0.00000000 0.00000000 8.10000000
 lattice::array::end
+numbers::array::begin
+numbers::array::ndims 1
+numbers::array::shape 16
+numbers::array::data 26 26 26 26 26 26 26 26 26 26 26 26 26 26 26 26
+numbers::array::end
 fcoords::array::begin
 fcoords::array::ndims 2
 fcoords::array::shape 16 3

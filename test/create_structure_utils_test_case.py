@@ -42,7 +42,7 @@ if __name__ == "__main__":
     heights = {0.0: []}
 
     shell_border_nearby = lambda x: any(isclose(x, h) for h in heights)
-    closest_shell = lambda x: min(heights.keys(), key=lambda h : abs(x -h))
+    closest_shell = lambda x: min(heights.keys(), key=lambda h : abs(x - h))
 
     for i, j in nditer(d2):
         d = d2[i ,j]
@@ -51,8 +51,6 @@ if __name__ == "__main__":
         if j < i: continue
 
     shell_dists = [max(heights[k]) for k in sorted(heights.keys())]
-
-    print(len(shell_dists), shell_dists)
 
     def find_shell(d):
         for i, (lower, upper) in enumerate(zip(shell_dists[:-1], shell_dists[1:])):
@@ -66,12 +64,12 @@ if __name__ == "__main__":
         if i == j: s[i, j] = 0
 
     np.set_printoptions(2)
-    print(d2)
-    print(s)
 
+    numbers = np.array([site.specie.Z for site in structure])
 
     with open(f"{name}.test.data", "w") as stream:
         write_array(stream, l, "lattice")
+        write_array(stream, numbers, "numbers", fmt="{0}")
         write_array(stream, fc, "fcoords")
         write_array(stream, d2, "distances")
         write_array(stream, s, "shells", fmt="{0}")
