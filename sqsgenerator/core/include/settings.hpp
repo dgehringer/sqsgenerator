@@ -51,8 +51,8 @@ namespace sqsgenerator {
                 int output_configurations,
                 std::vector<double> shell_distances,
                 std::vector<int> threads_per_rank,
-                double atol=1.0e-5,
-                double rtol=1.05e-8,
+                double atol=ATOL,
+                double rtol=RTOL,
                 iteration_mode mode = iteration_mode::random);
 
         IterationSettings(
@@ -64,8 +64,8 @@ namespace sqsgenerator {
                 rank_t iterations,
                 int output_configurations,
                 std::vector<int> threads_per_rank,
-                double atol=1.0e-5,
-                double rtol=1.05e-8,
+                double atol=ATOL,
+                double rtol=RTOL,
                 iteration_mode mode = iteration_mode::random);
 
         [[nodiscard]] double atol() const;

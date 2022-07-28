@@ -160,7 +160,7 @@ namespace sqsgenerator::utils {
 
         template<typename T>
         inline
-        bool is_close(T a, T b, T atol=1.0e-5, T rtol=1.0e-8) {
+        bool is_close(T a, T b, T atol=ATOL, T rtol=RTOL) {
             return std::abs(a - b) <= (atol + rtol * std::abs(b));
         }
 

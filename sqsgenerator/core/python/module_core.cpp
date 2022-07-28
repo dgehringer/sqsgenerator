@@ -155,7 +155,7 @@ py::list available_species() {
     return helpers::vector_to_list(atomistics::Atoms::all_elements());
 }
 
-py::list default_shell_distances_wrapped(StructurePythonWrapper &s, double atol=1e-5, double rtol=1e-8) {
+py::list default_shell_distances_wrapped(StructurePythonWrapper &s, double atol=1e-3, double rtol=1e-5) {
     return helpers::vector_to_list(sqsgenerator::utils::default_shell_distances(s.handle()->distance_matrix(), atol, rtol));
 }
 
