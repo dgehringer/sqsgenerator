@@ -45,17 +45,19 @@ target_link_libraries(test.sqsgenerator.core.atomistics ${SQSGENERATOR_TEST_LIBR
 gtest_add_tests(TARGET      test.sqsgenerator.core.atomistics
                 TEST_SUFFIX .noArgs
                 TEST_LIST   noArgsTests)
+add_custom_command(TARGET test.sqsgenerator.core.atomistics POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/test/resources $<TARGET_FILE_DIR:test.sqsgenerator.core.atomistics>/resources)
+
 
 add_executable(test.sqsgenerator.core.structure_utils
         core/src/test_structure_utils.cpp
         ${SQSGENERATOR_SRC_DIR}/utils.cpp
         ${SQSGENERATOR_SRC_DIR}/structure_utils.cpp)
-
 target_link_libraries(test.sqsgenerator.core.structure_utils ${SQSGENERATOR_TEST_LIBRARIES})
 gtest_add_tests(TARGET test.sqsgenerator.core.structure_utils
                 TEST_SUFFIX .noArgs
                 TEST_LIST   noArgsTests)
-
 add_custom_command(TARGET test.sqsgenerator.core.structure_utils POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/test/resources $<TARGET_FILE_DIR:test.sqsgenerator.core.structure_utils>/resources)

@@ -51,6 +51,7 @@ if __name__ == "__main__":
         if j < i: continue
 
     shell_dists = [max(heights[k]) for k in sorted(heights.keys())]
+    print('SHELL_DISTS', shell_dists)
 
     def find_shell(d):
         for i, (lower, upper) in enumerate(zip(shell_dists[:-1], shell_dists[1:])):
@@ -58,10 +59,17 @@ if __name__ == "__main__":
         return len(shell_dists)
 
     for i, j in nditer(d2):
-        d = d2[i ,j]
+        if j < i:
+            continue
+        d = d2[i, j]
         actual_shell = find_shell(d)
-        s[i,j] = actual_shell
-        if i == j: s[i, j] = 0
+        s[i, j] = actual_shell
+        s[j, i] = actual_shell
+        if i == j:
+            s[i, j] = 0
+
+    assert np.allclose(d2, d2.T)
+    assert np.allclose(s, s.T)
 
     np.set_printoptions(2)
 
