@@ -4,6 +4,8 @@
 #include "test_helpers.hpp"
 #include "types.hpp"
 #include "atomistics.hpp"
+#include <map>
+#include <time.h>
 #include <gtest/gtest.h>
 
 using namespace sqsgenerator::utils::atomistics;
@@ -18,6 +20,7 @@ namespace sqsgenerator::test {
     protected:
         size_t m_num_species;
         std::vector<species_t> m_z;
+
         
         // primitive fcc-Al structure (3 x 3 x 3) super cell
         std::vector<TestCaseData> m_test_cases;
@@ -27,6 +30,7 @@ namespace sqsgenerator::test {
             m_z(m_num_species) {
             std::iota(m_z.begin(), m_z.end(), 1);
             m_test_cases = load_test_cases("resources");
+            srand ( time(NULL) );
         }
 
     };
@@ -135,7 +139,6 @@ namespace sqsgenerator::test {
     }
 
     TEST_F(AtomisticsTestFixture, TestStructureDistanceVecsAndMatrixAndShellMatrix) {
-        typedef std::vector<std::string> StringVector;
         for (const auto &c: m_test_cases) {
             auto structure = from_test_case_data(c);
             auto computed_vecs = structure.distance_vecs();
@@ -144,6 +147,51 @@ namespace sqsgenerator::test {
             assert_multi_array_near<decltype(computed_vecs), decltype(c.vecs), double>(computed_vecs, c.vecs, std::abs<double>, std::abs<double>);
             assert_multi_array_near<decltype(computed_dists), decltype(c.distances), double>(computed_dists, c.distances);
             assert_multi_array_near<decltype(computed_shells), decltype(c.shells), shell_t>(computed_shells, c.shells);
+        }
+    }
+
+    TEST_F(AtomisticsTestFixture, TestStructureWithSpeciesAndRearranged) {
+
+        // we randomly generate a sequence of new occupations for each test case
+        configuration_t choice_species = {13, 17, 25, 26};
+        // we sort them by their ordinal number
+        std::sort(choice_species.begin(), choice_species.end());
+
+        for (const auto &c: m_test_cases) {
+            auto structure = from_test_case_data(c);
+            configuration_t new_species(structure.num_atoms());
+            std::map<species_t, size_t> histogram;
+            // create a random equence of occupations containing the atoms defined in choice_species
+            // create a histogram in parallel
+            for (auto i = 0; i < structure.num_atoms(); i++) {
+                species_t species = choice_species[rand() % choice_species.size()];
+                new_species[i] = species;
+                if (! histogram.count(species)) {
+                    histogram[species] = 1;
+                } else {
+                    histogram[species]++;
+                }
+            }
+
+            auto new_structure = structure.with_species(new_species);
+            ASSERT_EQ(new_structure.num_atoms(), structure.num_atoms());
+            assert_vector_equals<configuration_t, configuration_t, species_t>(new_structure.configuration(), new_species);
+
+
+            auto indices = sqsgenerator::utils::argsort(new_species);
+
+            auto rearranged_structure = new_structure.rearranged(indices);
+            auto rearranged_configuration= configuration_t(rearranged_structure.num_atoms());
+
+            auto cnt = 0;
+            for (const auto& sp: choice_species) {
+                for (auto i = 0; i < histogram[sp]; i++) {
+                    rearranged_configuration[cnt] = sp;
+                    cnt++;
+                }
+            }
+            ASSERT_EQ(rearranged_structure.num_atoms(), structure.num_atoms());
+            assert_vector_equals<configuration_t, configuration_t, species_t>(rearranged_configuration, rearranged_structure.configuration());
         }
     }
 }
