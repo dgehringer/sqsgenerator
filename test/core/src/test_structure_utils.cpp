@@ -132,6 +132,58 @@ namespace sqsgenerator::test {
             }
         }
     }
+
+    TEST_F(StructureUtilsTestFixture, TestShellIndexMap) {
+        pair_shell_weights_t empty_map;
+        typedef std::pair<pair_shell_weights_t::key_type, pair_shell_weights_t::value_type> pair_shell_weight_t;
+        auto index_map = shell_index_map(empty_map);
+
+        ASSERT_EQ(empty_map.size(), index_map.size());
+
+        pair_shell_weights_t weights = {
+                {7, 7.0},
+                {1, 1.0},
+                {4, 4.0},
+                {2, 2.0}
+        };
+
+        index_map = shell_index_map(weights);
+
+        auto shell_list = apply<pair_shell_weights_t, shell_t , pair_shell_weights_t::value_type>(weights, first<pair_shell_weights_t::value_type>);
+        std::sort(shell_list.begin(), shell_list.end());
+
+        ASSERT_EQ(shell_list.size(), index_map.size());
+
+        for (auto i = 0; i < index_map.size(); i++) {
+            ASSERT_EQ(index_map.count(shell_list[i]), 1);
+            ASSERT_EQ(index_map[shell_list[i]], i);
+        }
+    }
+
+    TEST_F(StructureUtilsTestFixture, TestComputeShellIndicesAndWeights) {
+        pair_shell_weights_t weights = {
+                {7, 7.0},
+                {1, 1.0},
+                {4, 4.0},
+                {2, 2.0}
+        };
+        typedef std::vector<double> weights_t;
+        typedef std::vector<shell_t> shells_t;
+
+        auto index_map = shell_index_map(weights);
+        auto shell_list = apply<pair_shell_weights_t, shell_t , pair_shell_weights_t::value_type>(weights, first<pair_shell_weights_t::value_type>);
+        std::sort(shell_list.begin(), shell_list.end());
+
+        auto [sorted_shells, sorted_weights] = compute_shell_indices_and_weights(weights);
+
+        assert_vector_equals<shells_t, shells_t, shells_t::value_type>(sorted_shells, shell_list);
+
+        auto t = apply<double, shell_t>(sorted_shells, [&weights](const shell_t &shell){ return weights[shell]; });
+        assert_vector_equals<weights_t, weights_t, weights_t::value_type>(
+                sorted_weights,
+                apply<double, shell_t>(sorted_shells, [&weights](const shell_t &shell){ return weights[shell]; })
+        );
+    }
 }
 
 int main(int argc, char **argv) {

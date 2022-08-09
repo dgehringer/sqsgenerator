@@ -20,7 +20,6 @@ namespace sqsgenerator::test {
     protected:
         size_t m_num_species;
         std::vector<species_t> m_z;
-
         
         // primitive fcc-Al structure (3 x 3 x 3) super cell
         std::vector<TestCaseData> m_test_cases;

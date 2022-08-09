@@ -61,3 +61,12 @@ gtest_add_tests(TARGET test.sqsgenerator.core.structure_utils
 add_custom_command(TARGET test.sqsgenerator.core.structure_utils POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/test/resources $<TARGET_FILE_DIR:test.sqsgenerator.core.structure_utils>/resources)
+
+
+add_executable(test.sqsgenerator.core.utils
+        core/src/test_utils.cpp
+        ${SQSGENERATOR_SRC_DIR}/utils.cpp)
+target_link_libraries(test.sqsgenerator.core.utils ${SQSGENERATOR_TEST_LIBRARIES})
+gtest_add_tests(TARGET test.sqsgenerator.core.utils
+        TEST_SUFFIX .noArgs
+        TEST_LIST   noArgsTests)
