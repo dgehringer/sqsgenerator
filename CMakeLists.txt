@@ -90,7 +90,6 @@ message("[CMAKE_CXX_FLAGS]: " ${CMAKE_CXX_FLAGS})
 message("[CMAKE_CXX_LIBRARIES]: " ${CMAKE_CXX_LIBRARIES})
 
 add_executable(sqsgenerator.core
-        sqsgenerator/core/src/main.cpp
         sqsgenerator/core/src/settings.cpp
         sqsgenerator/core/src/sqs.cpp
         sqsgenerator/core/src/rank.cpp

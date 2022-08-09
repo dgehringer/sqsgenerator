@@ -86,7 +86,6 @@ namespace sqsgenerator::utils {
                 std::swap(configuration[lower_bound+i-1], configuration[p+lower_bound]); // swap the values at i-1 and p
             }
         }
-
     }
 
     std::set<species_t> compute_occupied_sublattices(const composition_t &composition) {

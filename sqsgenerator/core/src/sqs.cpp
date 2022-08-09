@@ -304,7 +304,7 @@ namespace sqsgenerator {
                     {
                         /* the random generators only need initialization in case we are in parallel mode
                          * The call to srand is not guaranteed to be thread-safe and may cause a data-race
-                         * Each thread keeps it's own state of the whyhash random number generator
+                         * Each thread keeps its own state of the whyhash random number generator
                          */
                         auto current_time {std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count()};
                         std::srand(current_time * (thread_id + 1));
@@ -407,7 +407,6 @@ namespace sqsgenerator {
                     {
                         BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::sigint_received = true";
                         BOOST_LOG_TRIVIAL(info) << "do_pair_iterations::rank::" << mpi_rank << "::thread::" << thread_id << "::finished_iterations::" << (i - start_it) << "::out_of::" << (end_it - start_it);
-
                     }
                     actual_iterations = i;
                     break;
@@ -425,7 +424,7 @@ namespace sqsgenerator {
             // spit out a warning if SIGINT was encountered
         } // pragma omp parallel
 
-        // Restore the the old sigaction handler
+        // Restore the old sigaction handler
         #if defined(_WIN32) || defined(_WIN64)
             signal(SIGINT, old_sigint_handler);
             signal(SIGABRT, old_sigabrt_handler);
@@ -573,8 +572,8 @@ namespace sqsgenerator {
                 nparams {nshells * nspecies * nspecies};
         configuration_t configuration(settings.packed_configuraton());
         /*
-         * the structure in IterationSettings::ctor was orderd with ascending species with have manually undo that here
-         * we have to do the following steps.
+         * the structure in IterationSettings::ctor was ordered with ascending species with have manually undone that
+         * here we have to do the following steps.
          *   - rearrange structure
          *   - recalculate shell_matrix
          *   - recalculate pair_list
