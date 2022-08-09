@@ -49,6 +49,17 @@ namespace sqsgenerator::test {
     template<typename Return, typename Arg>
     using Transform = std::function<Return(Arg)>;
 
+
+    template<typename PairType>
+    typename PairType::first_type first(const PairType &pair) {
+        return pair.first;
+    }
+
+    template<typename PairType>
+    typename PairType::second_type second(const PairType &pair) {
+        return pair.second;
+    }
+
     template<typename VectorA, typename VectorB, typename C>
     void assert_vector_equals(
             const VectorA &a,
