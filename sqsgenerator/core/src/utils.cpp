@@ -33,7 +33,7 @@ namespace sqsgenerator::utils {
         std::sort(unique_spec.begin(), unique_spec.end());
         configuration_t remapped(configuration);
         for (size_t i = 0; i < configuration.size(); i++) {
-            int index{get_index(unique_spec, configuration[i])};
+            int index { get_index(unique_spec, configuration[i]) };
             if (index < 0) throw std::runtime_error("A species was detected which I am not aware of");
             remapped[i] = index;
         }
