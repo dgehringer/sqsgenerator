@@ -46,7 +46,7 @@ namespace sqsgenerator::test {
     public:
         void SetUp() {
             m_seed = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-            std::cout << "sqsgenerator::test::seed=" << m_seed << std::endl;
+            // std::cout << "sqsgenerator::test::seed=" << m_seed << std::endl;
         };
         void TearDown() {}
 
@@ -109,7 +109,7 @@ namespace sqsgenerator::test {
 
             auto unique_spec = unique_species(configuration);
             ASSERT_EQ(sorted_species.size(), unique_spec.size());
-            assert_vector_equals<decltype(sorted_species), decltype(unique_spec), species_t>(sorted_species, unique_spec);
+            assert_vector_equals(sorted_species, unique_spec);
         }
     }
 
@@ -119,21 +119,33 @@ namespace sqsgenerator::test {
             species_map_t species_map;
             configuration_t configuration;
             std::tie(species_map, configuration) = default_random_configuration();
-            //auto [species_map, configuration] = default_random_configuration();
-            auto unique_spec = unique_species(configuration);
 
+            auto unique_spec = unique_species(configuration);
             auto histogram = apply<size_t, species_t>(unique_spec, [&species_map](const species_t &spec) { return species_map[spec]; });
             auto histogram_test = configuration_histogram(configuration);
 
             ASSERT_EQ(std::accumulate(histogram.begin(), histogram.end(), 0), configuration.size());
             ASSERT_EQ(std::accumulate(histogram_test.begin(), histogram_test.end(), 0), configuration.size());
-
             ASSERT_EQ(histogram.size(), histogram_test.size());
-            assert_vector_equals<decltype(histogram), decltype(histogram_test), size_t>(histogram, histogram_test);
+            assert_vector_equals(histogram, histogram_test);
+        }
+    }
+
+    TEST_F(UtilsTestFixture, TestPackUnpackConfiguration) {
+        auto num_test_cases {512};
+        for (auto _ = 0; _ < num_test_cases; _++) {
+            auto [species_map, configuration] = default_random_configuration();
+            auto [uspec, packed_configuration] = pack_configuration(configuration);
+            auto uspec_test = unique_species(configuration);
+            auto uspec_remapped = unique_species(packed_configuration);
+            auto unpacked_configuration = unpack_configuration(uspec, packed_configuration);
+
+            configuration_t packed_species_test(species_map.size());
+            std::iota(packed_species_test.begin(), packed_species_test.end(), 0);
+
+            assert_vector_equals(uspec, uspec_test);
+            assert_vector_equals(packed_species_test, uspec_remapped);
+            assert_vector_equals(unpacked_configuration, configuration);
         }
     }
 }
-
-
-
-// auto current_time {std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count()};

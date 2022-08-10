@@ -73,6 +73,14 @@ namespace sqsgenerator::test {
         }
     }
 
+    template<typename VectorT>
+    void assert_vector_equals(
+            const VectorT &a,
+            const VectorT &b
+            ) {
+        assert_vector_equals<VectorT, VectorT, typename VectorT::value_type>(a, b);
+    }
+
     template<typename MultiArrayA, typename MultiArrayB, typename C>
     void assert_multi_array_near(
             MultiArrayA a,
@@ -90,6 +98,15 @@ namespace sqsgenerator::test {
         }
     }
 
+    template<typename MultiArrayA, typename MultiArrayB>
+    void assert_multi_array_near(
+            MultiArrayA a,
+            MultiArrayB b,
+            Transform<typename MultiArrayA::element, typename MultiArrayA::element> t1 = std::function<typename MultiArrayA::element(typename MultiArrayA::element)>([](const typename MultiArrayA::element &a) { return a; }),
+            Transform<typename MultiArrayB::element, typename MultiArrayB::element> t2 = std::function<typename MultiArrayB::element(typename MultiArrayB::element)>([](const typename MultiArrayB::element &a) { return a; }),
+            typename MultiArrayA::element tol = 1.05e-7) {
+        assert_multi_array_near<MultiArrayA, MultiArrayB, typename MultiArrayA::element>(a, b, t1, t2,  tol);
+    }
 
     template <typename T> T convert_to (const std::string &str)
     {

@@ -108,8 +108,8 @@ namespace sqsgenerator::test {
         for (const auto& test_case: m_test_cases) {
             auto structure = Structure(test_case.lattice, test_case.fcoords, Atoms::z_to_symbol(test_case.configuration), {true, true, true});
             auto structure1 = Structure(test_case.lattice, test_case.fcoords, Atoms::from_z(test_case.configuration), {true, true, true});
-            assert_vector_equals<decltype(structure.symbols()), decltype(structure1.symbols()), std::string>(structure.symbols(), structure1.symbols());
-            assert_vector_equals<configuration_t, configuration_t, species_t>(structure.configuration(), structure1.configuration());
+            assert_vector_equals(structure.symbols(), structure1.symbols());
+            assert_vector_equals(structure.configuration(), structure1.configuration());
             ASSERT_EQ(structure.num_atoms(), structure1.num_atoms());
         }
     }
@@ -117,14 +117,14 @@ namespace sqsgenerator::test {
     TEST_F(AtomisticsTestFixture, TestStructureLattice){
         for (const auto& test_case: m_test_cases) {
             auto structure = from_test_case_data(test_case);
-            assert_multi_array_near<decltype(structure.lattice()), decltype(test_case.lattice), double>(structure.lattice(), test_case.lattice);
+            assert_multi_array_near(structure.lattice(), test_case.lattice);
         }
     }
 
     TEST_F(AtomisticsTestFixture, TestStructureFracCoords){
         for (const auto& test_case: m_test_cases) {
             auto structure = from_test_case_data(test_case);
-            assert_multi_array_near<decltype(structure.frac_coords()), decltype(test_case.fcoords), double>(structure.frac_coords(), test_case.fcoords);
+            assert_multi_array_near(structure.frac_coords(), test_case.fcoords);
         }
     }
 
@@ -132,8 +132,8 @@ namespace sqsgenerator::test {
         typedef std::vector<std::string> StringVector;
         for (const auto& test_case: m_test_cases) {
             auto structure = from_test_case_data(test_case);
-            assert_vector_equals<StringVector, StringVector, std::string>(Atoms::z_to_symbol(test_case.configuration), structure.symbols());
-            assert_vector_equals<configuration_t, configuration_t, species_t>(test_case.configuration, structure.configuration());
+            assert_vector_equals(Atoms::z_to_symbol(test_case.configuration), structure.symbols());
+            assert_vector_equals(test_case.configuration, structure.configuration());
         }
     }
 
@@ -143,9 +143,9 @@ namespace sqsgenerator::test {
             auto computed_vecs = structure.distance_vecs();
             auto computed_dists = structure.distance_matrix();
             auto computed_shells = structure.shell_matrix();
-            assert_multi_array_near<decltype(computed_vecs), decltype(c.vecs), double>(computed_vecs, c.vecs, std::abs<double>, std::abs<double>);
-            assert_multi_array_near<decltype(computed_dists), decltype(c.distances), double>(computed_dists, c.distances);
-            assert_multi_array_near<decltype(computed_shells), decltype(c.shells), shell_t>(computed_shells, c.shells);
+            assert_multi_array_near(computed_vecs, c.vecs, std::abs<double>, std::abs<double>);
+            assert_multi_array_near(computed_dists, c.distances);
+            assert_multi_array_near(computed_shells, c.shells);
         }
     }
 
@@ -174,7 +174,7 @@ namespace sqsgenerator::test {
 
             auto new_structure = structure.with_species(new_species);
             ASSERT_EQ(new_structure.num_atoms(), structure.num_atoms());
-            assert_vector_equals<configuration_t, configuration_t, species_t>(new_structure.configuration(), new_species);
+            assert_vector_equals(new_structure.configuration(), new_species);
 
 
             auto indices = sqsgenerator::utils::argsort(new_species);
@@ -190,7 +190,7 @@ namespace sqsgenerator::test {
                 }
             }
             ASSERT_EQ(rearranged_structure.num_atoms(), structure.num_atoms());
-            assert_vector_equals<configuration_t, configuration_t, species_t>(rearranged_configuration, rearranged_structure.configuration());
+            assert_vector_equals(rearranged_configuration, rearranged_structure.configuration());
         }
     }
 }
