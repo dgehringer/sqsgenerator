@@ -155,7 +155,7 @@ py::list available_species() {
     return helpers::vector_to_list(atomistics::Atoms::all_elements());
 }
 
-py::list default_shell_distances_wrapped(StructurePythonWrapper &s, double atol=1e-5, double rtol=1e-8) {
+py::list default_shell_distances_wrapped(StructurePythonWrapper &s, double atol=1e-3, double rtol=1e-5) {
     return helpers::vector_to_list(sqsgenerator::utils::default_shell_distances(s.handle()->distance_matrix(), atol, rtol));
 }
 
@@ -202,7 +202,8 @@ BOOST_PYTHON_MODULE(core) {
             .def_readonly("atomic_radius", &atomistics::Atom::atomic_radius)
             .def_readonly("mass", &atomistics::Atom::mass);
 
-        py::class_<StructurePythonWrapper>("Structure", py::init<np::ndarray, np::ndarray, py::object, py::tuple>())
+        py::class_<StructurePythonWrapper>("Structure", py::init<np::ndarray, np::ndarray, py::object, py::object>())
+            .def(py::init<np::ndarray, np::ndarray, py::object>())
             .def_readonly("lattice", &StructurePythonWrapper::lattice)
             .def_readonly("num_atoms", &StructurePythonWrapper::num_atoms)
             .def_readonly("species", &StructurePythonWrapper::species)
@@ -234,9 +235,9 @@ BOOST_PYTHON_MODULE(core) {
         py::class_<pair_shell_weights_t>("ShellWeights")
             .def(py::map_indexing_suite<pair_shell_weights_t>());
 
-                                                                                      // StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode
+        // IterationSettingsPythonWrapper StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode
         py::class_<IterationSettingsPythonWrapper>("IterationSettings", py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode>())
-                              // StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, double, double, iteration_mode
+        // IterationSettingsPythonWrapper StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, double, double, iteration_mode
             .def(py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, double, double, iteration_mode>())
             .def_readonly("num_atoms", &IterationSettingsPythonWrapper::num_atoms)
             .def_readonly("num_shells", &IterationSettingsPythonWrapper::num_shells)

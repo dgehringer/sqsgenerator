@@ -2,6 +2,9 @@
 // Created by dominik on 21.05.21.
 //
 
+#define ATOL 1.0e-3
+#define RTOL 1.0e-5
+
 #ifndef SQSGENERATOR_TYPES_HPP
 #define SQSGENERATOR_TYPES_HPP
 

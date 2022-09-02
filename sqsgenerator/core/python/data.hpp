@@ -35,7 +35,8 @@ namespace sqsgenerator::python {
     private:
         std::shared_ptr<atomistics::Structure> m_handle;
     public:
-        StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols, py::tuple pbc);
+        StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols);
+        StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols, py::object pbc);
         StructurePythonWrapper(const_array_2d_ref_t lattice, const_array_2d_ref_t frac_coords, configuration_t species, std::array<bool, 3> pbc);
         StructurePythonWrapper(const StructurePythonWrapper &other) = default;
         np::ndarray lattice();
@@ -44,8 +45,6 @@ namespace sqsgenerator::python {
         py::tuple pbc();
         np::ndarray distance_vecs();
         np::ndarray distance_matrix();
-//        np::ndarray shell_matrix(double atol=1.0e-5, double rtol=1.0e-8);
-//        np::ndarray shell_matrix(const py::list &distances, double atol=1.0e-5, double rtol=1.0e-8);
         size_t num_atoms();
         std::shared_ptr<atomistics::Structure> handle();
         StructurePythonWrapper sorted();

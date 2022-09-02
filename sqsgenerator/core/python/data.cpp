@@ -45,12 +45,20 @@ StructurePythonWrapper::StructurePythonWrapper(const_array_2d_ref_t lattice, con
 
 }
 
-StructurePythonWrapper::StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols, py::tuple pbc):
+StructurePythonWrapper::StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols):
+        StructurePythonWrapper(
+                helpers::ndarray_to_multi_array<const_array_2d_ref_t>(lattice),
+                helpers::ndarray_to_multi_array<const_array_2d_ref_t>(frac_coords),
+                sqsgenerator::utils::atomistics::Atoms::symbol_to_z(helpers::list_to_vector<std::string>(symbols)),
+                {true, true, true})
+{}
+
+StructurePythonWrapper::StructurePythonWrapper(np::ndarray lattice, np::ndarray frac_coords, py::object symbols, py::object pbc):
         StructurePythonWrapper(
             helpers::ndarray_to_multi_array<const_array_2d_ref_t>(lattice),
             helpers::ndarray_to_multi_array<const_array_2d_ref_t>(frac_coords),
             sqsgenerator::utils::atomistics::Atoms::symbol_to_z(helpers::list_to_vector<std::string>(symbols)),
-        {py::extract<bool>(pbc[0]),py::extract<bool>(pbc[1]), py::extract<bool>(pbc[2])})
+            {py::extract<bool>(pbc[0]),py::extract<bool>(pbc[1]), py::extract<bool>(pbc[2])})
         {}
 
 np::ndarray StructurePythonWrapper::lattice() {

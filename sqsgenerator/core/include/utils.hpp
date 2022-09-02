@@ -160,7 +160,7 @@ namespace sqsgenerator::utils {
 
         template<typename T>
         inline
-        bool is_close(T a, T b, T atol=1.0e-5, T rtol=1.0e-8) {
+        bool is_close(T a, T b, T atol=ATOL, T rtol=RTOL) {
             return std::abs(a - b) <= (atol + rtol * std::abs(b));
         }
 
@@ -190,12 +190,19 @@ namespace sqsgenerator::utils {
             return  it != v.end() ? it - v.begin() : -1;
         }
 
-        template<typename TOut, typename TIn>
-        std::vector<TOut> apply(const std::vector<TIn> &input, std::function<TOut(TIn)> f) {
+        template<typename Iterable, typename TOut, typename TIn>
+        std::vector<TOut> apply(const Iterable &iterable, std::function<TOut(TIn)> f) {
             std::vector<TOut> result;
-            std::transform(input.begin(),  input.end(), std::back_inserter(result), f);
+            for (const auto &element : iterable) result.push_back(f(element));
             return result;
         }
+
+
+        template<typename TOut, typename TIn>
+        std::vector<TOut> apply(const std::vector<TIn> &input, std::function<TOut(TIn)> f) {
+            return apply<std::vector<TIn>, TOut, TIn>(input, f);
+        }
+
 
         template<typename T>
         std::vector<size_t> argsort(const std::vector<T> &array) {

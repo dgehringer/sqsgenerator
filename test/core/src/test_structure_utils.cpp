@@ -1,17 +1,16 @@
 //
 // Created by dominik on 29.06.21.
 //
-#include "types.hpp"
+
+#include "test_helpers.hpp"
 #include "utils.hpp"
 #include "structure_utils.hpp"
 #include <cmath>
-#include <cassert>
 #include <stdexcept>
-#include <fstream>
-#include <filesystem>
+#include <gtest/gtest.h>
 #include <boost/multi_array.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
-#include <gtest/gtest.h>
+
 
 using namespace boost;
 using namespace sqsgenerator::utils;
@@ -19,108 +18,6 @@ using namespace boost::numeric::ublas;
 namespace fs = std::filesystem;
 
 namespace sqsgenerator::test {
-
-    template <typename T> T convert_to (const std::string &str)
-    {
-        std::istringstream ss(str);
-        T num;
-        ss >> num;
-        return num;
-    }
-/**
- * \brief   Return the filenames of all files that have the specified extension
- *          in the specified directory and all subdirectories.
- */
-    std::vector<fs::path> get_all(std::string const &root, std::string const &ext) {
-        std::vector<fs::path> paths;
-        for (auto &p : fs::recursive_directory_iterator(root))
-        {
-            if (p.path().extension() == ext) paths.emplace_back(p.path());
-        }
-        return paths;
-    }
-
-    std::vector<std::string> split (std::string s, std::string delimiter) {
-        // Taken from https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c
-        size_t pos_start = 0, pos_end, delim_len = delimiter.length();
-        std::string token;
-        std::vector<std::string> res;
-
-        while ((pos_end = s.find (delimiter, pos_start)) != std::string::npos) {
-            token = s.substr (pos_start, pos_end - pos_start);
-            pos_start = pos_end + delim_len;
-            res.push_back (token);
-        }
-
-        res.push_back (s.substr (pos_start));
-        return res;
-    }
-
-    template<typename T, size_t NDims>
-    multi_array<T, NDims> read_array(std::ifstream &fhandle, std::string const &name) {
-        std::string line;
-        std::string start_line = name + "::array::begin";
-        while (std::getline(fhandle, line)) {
-            if (line == start_line) { break; }
-        }
-        assert(line == start_line);
-        // Read dimensions
-        std::getline(fhandle, line);
-        auto crumbs  = split(line, " ");
-        assert(crumbs.size() == 2);
-        assert(crumbs[0] == name + "::array::ndims");
-        size_t ndims {std::stoul(crumbs[1])};
-        assert(ndims == NDims);
-
-        // Read shape
-        std::getline(fhandle, line);
-        crumbs  = split(line, " ");
-        assert(crumbs.size() == ndims+1);
-        assert(crumbs[0] == name + "::array::shape");
-        std::vector<size_t> shape;
-        for(auto it = crumbs.begin() + 1; it != crumbs.end(); ++it) shape.push_back(std::stoul(*it));
-        assert(shape.size() == ndims);
-        size_t num_elements = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-
-        std::getline(fhandle, line);
-        crumbs  = split(line, " ");
-        assert(crumbs.size() == num_elements+1);
-        assert(crumbs[0] == name + "::array::data");
-        std::vector<T> data;
-        for(auto it = crumbs.begin() + 1; it != crumbs.end(); ++it) data.push_back(convert_to<T>(*it));
-        assert(data.size() == num_elements);
-
-
-        multi_array<T, NDims> result;
-        auto& shape_array = reinterpret_cast<boost::array<size_t, NDims> const&>(*shape.data());
-        result.resize(shape_array);
-        result.assign(data.begin(), data.end());
-        std::getline(fhandle, line);
-        assert(line == name + "::array::end");
-        return result;
-    }
-
-    struct TestCaseData {
-    public:
-        array_2d_t lattice;
-        array_2d_t fcoords;
-        array_2d_t distances;
-        array_3d_t vecs;
-        pair_shell_matrix_t shells;
-    };
-
-    TestCaseData read_test_data(std::string const &path) {
-        std::ifstream fhandle(path);
-        std::string line;
-        auto lattice = read_array<double, 2>(fhandle, "lattice");
-        auto fcoords = read_array<double, 2>(fhandle, "fcoords");
-        auto d2 = read_array<double, 2>(fhandle, "distances");
-        auto shells = read_array<shell_t, 2>(fhandle, "shells");
-        auto vecs = read_array<double, 3>(fhandle, "vecs");
-
-        fhandle.close();
-        return TestCaseData {lattice, fcoords, d2, vecs, shells};
-    }
 
     class StructureUtilsTestFixture : public ::testing::Test {
     protected:
@@ -130,41 +27,14 @@ namespace sqsgenerator::test {
         void SetUp() {
             // code here will execute just before the test ensues
             // std::cout << "StructureUtilsTestFixture::SetUp(): " << std::filesystem::current_path() << std::endl;
-            get_all("resources", ".data");
-            for (auto &p : get_all("resources", ".data")) {
-                // std::cout << "StructureUtilsTestFixture::SetUp(): Found test case: " << p << std::endl;
-                test_cases.emplace_back(read_test_data(p));
-            }
+            test_cases = load_test_cases("resources");
         };
 
         void TearDown() {
             // code here will be called just after the test completes
             // ok to through exceptions from here if need be
         }
-
-
     };
-
-    template<typename MultiArrayA>
-    void assert_multi_array_equal(const MultiArrayA &a, const MultiArrayA &b) {
-        typedef typename MultiArrayA::element T;
-
-        ASSERT_EQ(a.num_elements(), b.num_elements());
-        for (size_t i = 0; i < a.num_elements(); ++i) {
-            ASSERT_NEAR(std::abs<T>(a.data()[i]), std::abs<T>(b.data()[i]), 1.0e-5);
-            //EXPECT_NEAR(a.data()[i], b.data()[i], 1.0e-5);
-        }
-    }
-
-    template<>
-    void assert_multi_array_equal<pair_shell_matrix_t>(const pair_shell_matrix_t &a, const pair_shell_matrix_t &b) {
-        ASSERT_EQ(a.num_elements(), b.num_elements());
-        for (size_t i = 0; i < a.num_elements(); ++i) {
-            //ASSERT_NEAR(std::abs<int>(a.data()[i]), std::abs<int>(b.data()[i]), 1.0e-5);
-            EXPECT_NEAR(std::abs<int>(a.data()[i]), std::abs<int>(b.data()[i]), 1.0e-5);
-            //EXPECT_NEAR(a.data()[i], b.data()[i], 1.0e-5);
-        }
-    }
 
     TEST_F(StructureUtilsTestFixture, TestPbcVectors) {
         for (TestCaseData &test_case : test_cases) {
@@ -172,7 +42,8 @@ namespace sqsgenerator::test {
             matrix<double> fcoords (matrix_from_multi_array(test_case.fcoords));
             auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
             for (size_t i = 0; i < 3; i++) ASSERT_EQ(pbc_vecs.shape()[i], test_case.vecs.shape()[i]);
-            assert_multi_array_equal(pbc_vecs, test_case.vecs);
+
+            assert_multi_array_near<decltype(pbc_vecs), decltype(test_case.vecs), double>(pbc_vecs, test_case.vecs, std::abs<double>, std::abs<double>);
         }
     }
 
@@ -183,10 +54,12 @@ namespace sqsgenerator::test {
             matrix<double> fcoords (matrix_from_multi_array(test_case.fcoords));
             auto pbc_vecs = sqsgenerator::utils::pbc_shortest_vectors(lattice, fcoords, true);
             auto d2 = sqsgenerator::utils::distance_matrix(pbc_vecs);
+
             for (size_t i = 0; i < 2; i++)  ASSERT_EQ(d2.shape()[i], test_case.vecs.shape()[i]);
-            assert_multi_array_equal(d2, test_case.distances);
+            assert_multi_array_near<decltype(d2), decltype(test_case.distances), double>(d2, test_case.distances);
+
             auto d2_external = sqsgenerator::utils::distance_matrix(test_case.vecs);
-            assert_multi_array_equal(d2, d2_external);
+            assert_multi_array_near<decltype(d2), decltype(d2_external), double>(d2, d2_external);
         }
     }
 
@@ -199,20 +72,13 @@ namespace sqsgenerator::test {
             auto distances = sqsgenerator::utils::default_shell_distances(d2, 1.0e-3);
             auto shells = sqsgenerator::utils::shell_matrix(d2, distances, 1.0e-3);
             auto natoms {static_cast<index_t>(fcoords.size1())};
+
             for (size_t i = 0; i < 2; i++)  ASSERT_EQ(shells.shape()[i], test_case.shells.shape()[i]);
-            assert_multi_array_equal(shells, test_case.shells);
-            /*for (index_t i = 0; i < natoms; i++) {
-                for (index_t j = i+1; j < natoms; j++) {
-                    if (shells[i][j] != test_case.shells[i][j]) {
-                        std::cout << "Different shell (" << i << ", " << j << ") = (" << static_cast<int>(shells[i][j]) << " != " << static_cast<int>(test_case.shells[i][j]) << ") = (" << d2[i][j] << ", " << distances[shells[i][j]] << ")" << std::endl;
-                    } else {
-                        ASSERT_EQ(shells[i][j], test_case.shells[i][j]);
-                    }
-                }
-            }*/
+            assert_multi_array_near<decltype(shells), decltype(test_case.shells), shell_t>(shells, test_case.shells);
+
             auto shells_external = sqsgenerator::utils::shell_matrix(test_case.distances, distances);
-            assert_multi_array_equal(shells, shells_external);
-            std::cout << format_vector(distances);
+            assert_multi_array_near<decltype(shells), decltype(shells_external), shell_t>(shells, shells_external);
+
             // Make sure the main diagonal is zero
             for (index_t i = 0; i < natoms; i++) {
                 ASSERT_EQ(shells[i][i], 0);
@@ -241,6 +107,7 @@ namespace sqsgenerator::test {
                 counts.insert(std::make_pair(i, 0));
                 all_weights.insert(std::make_pair(i, 0.0));
             }
+
             // If all shells are present, the list length must be the number of pairs in the structure
             ASSERT_EQ(create_pair_list(shells, all_weights).size(), natoms*(natoms-1)/2);
             for (index_t i = 0; i < natoms; i++) {
@@ -248,7 +115,8 @@ namespace sqsgenerator::test {
                     counts[shells[i][j]]++;
                 }
             }
-            // If theres only one shell it must be exactly the number of pairs in the corresponding shell
+
+            // If there's only one shell it must be exactly the number of pairs in the corresponding shell
             for (auto i = 1; i <= max_shell; i++) {
                 auto num_pairs = create_pair_list(shells, {{i, 0.0}}).size();
                 auto should_be = counts[i];
@@ -263,6 +131,58 @@ namespace sqsgenerator::test {
                 }
             }
         }
+    }
+
+    TEST_F(StructureUtilsTestFixture, TestShellIndexMap) {
+        pair_shell_weights_t empty_map;
+        typedef std::pair<pair_shell_weights_t::key_type, pair_shell_weights_t::value_type> pair_shell_weight_t;
+        auto index_map = shell_index_map(empty_map);
+
+        ASSERT_EQ(empty_map.size(), index_map.size());
+
+        pair_shell_weights_t weights = {
+                {7, 7.0},
+                {1, 1.0},
+                {4, 4.0},
+                {2, 2.0}
+        };
+
+        index_map = shell_index_map(weights);
+
+        auto shell_list = apply<pair_shell_weights_t, shell_t , pair_shell_weights_t::value_type>(weights, first<pair_shell_weights_t::value_type>);
+        std::sort(shell_list.begin(), shell_list.end());
+
+        ASSERT_EQ(shell_list.size(), index_map.size());
+
+        for (auto i = 0; i < index_map.size(); i++) {
+            ASSERT_EQ(index_map.count(shell_list[i]), 1);
+            ASSERT_EQ(index_map[shell_list[i]], i);
+        }
+    }
+
+    TEST_F(StructureUtilsTestFixture, TestComputeShellIndicesAndWeights) {
+        pair_shell_weights_t weights = {
+                {7, 7.0},
+                {1, 1.0},
+                {4, 4.0},
+                {2, 2.0}
+        };
+        typedef std::vector<double> weights_t;
+        typedef std::vector<shell_t> shells_t;
+
+        auto index_map = shell_index_map(weights);
+        auto shell_list = apply<pair_shell_weights_t, shell_t , pair_shell_weights_t::value_type>(weights, first<pair_shell_weights_t::value_type>);
+        std::sort(shell_list.begin(), shell_list.end());
+
+        auto [sorted_shells, sorted_weights] = compute_shell_indices_and_weights(weights);
+
+        assert_vector_equals<shells_t, shells_t, shells_t::value_type>(sorted_shells, shell_list);
+
+        auto t = apply<double, shell_t>(sorted_shells, [&weights](const shell_t &shell){ return weights[shell]; });
+        assert_vector_equals<weights_t, weights_t, weights_t::value_type>(
+                sorted_weights,
+                apply<double, shell_t>(sorted_shells, [&weights](const shell_t &shell){ return weights[shell]; })
+        );
     }
 }
 

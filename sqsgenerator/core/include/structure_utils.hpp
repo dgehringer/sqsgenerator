@@ -93,7 +93,7 @@ namespace sqsgenerator::utils {
 
 
         template<typename MultiArray>
-        pair_shell_matrix_t shell_matrix(const MultiArray &distance_matrix, const std::vector<typename MultiArray::element> &distances, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
+        pair_shell_matrix_t shell_matrix(const MultiArray &distance_matrix, const std::vector<typename MultiArray::element> &distances, typename MultiArray::element atol = ATOL, typename MultiArray::element rtol=RTOL) {
 
             typedef typename MultiArray::index index_t;
             typedef typename MultiArray::element T;
@@ -133,7 +133,7 @@ namespace sqsgenerator::utils {
         }
 
     template<typename MultiArray>
-    std::vector<typename MultiArray::element> default_shell_distances(const MultiArray &distance_matrix, typename MultiArray::element atol = 1.0e-5, typename MultiArray::element rtol=1.0e-8) {
+    std::vector<typename MultiArray::element> default_shell_distances(const MultiArray &distance_matrix, typename MultiArray::element atol = ATOL, typename MultiArray::element rtol=RTOL) {
         typedef typename MultiArray::index index_t;
         typedef typename MultiArray::element T;
         auto shape(shape_from_multi_array(distance_matrix));
