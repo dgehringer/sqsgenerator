@@ -5,8 +5,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SQSGENERATOR_SRC_DIR ../sqsgenerator/core/src)
 set(SQSGENERATOR_INC_DIR ../sqsgenerator/core/include)
 
-
-
 find_package(GTest REQUIRED)
 find_package (Python3 COMPONENTS Interpreter Development NumPy)
 
