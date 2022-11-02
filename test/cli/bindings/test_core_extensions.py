@@ -53,9 +53,9 @@ class TestUtils(unittest.TestCase):
 
         assert sum(composition.values()) == total_num_of_atoms
         settings = dict(
-            structure = superstructure,
-            composition = composition,
-            iterations=1e4
+            structure=superstructure,
+            composition=composition,
+            iterations=1e3
         )
 
         results, timinigs = sqs_optimize(settings, similar=True, minimal=False, make_structures=True)
