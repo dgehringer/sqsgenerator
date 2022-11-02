@@ -12,6 +12,7 @@ from sqsgenerator.core.core import default_shell_distances, atoms_from_numbers, 
     symbols_from_z, z_from_symbols, build_configuration, ALL_SITES, make_rank as make_rank_, \
     rank_structure as rank_structure_, total_permutations as total_permutations_, \
     compute_prefactors as compute_prefactors_
+from sqsgenerator.core.utils import merge, transpose, chunks_of
 
 __all__ = [
     '__version__',
@@ -40,6 +41,9 @@ __all__ = [
     'ALL_SITES',
     'make_rank',
     'rank_structure',
+    'merge',
+    'transpose',
+    'chunks_of',
 ]
 
 attr = operator.attrgetter

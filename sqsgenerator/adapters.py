@@ -6,14 +6,9 @@ and vice versa
 
 
 import numpy as np
-import typing as T
 from operator import attrgetter as attr
-from sqsgenerator.core import Structure
+from sqsgenerator.core import Structure, transpose
 from sqsgenerator.compat import Feature as F, require
-
-
-def transpose(iterable: T.Iterable):
-    return zip(*iterable)
 
 
 @require(F.pymatgen)
