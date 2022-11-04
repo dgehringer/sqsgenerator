@@ -4,7 +4,7 @@ import functools
 import frozendict
 import typing as T
 from sqsgenerator.core.core import SQSResult, Atom
-from sqsgenerator.core.core import __version__, __features__
+from sqsgenerator.core.core import __version__, __features__, ATOL, RTOL
 from sqsgenerator.core.core import set_log_level, pair_sqs_iteration, pair_analysis
 from sqsgenerator.core.core import IterationMode, IterationSettings, BoostLogLevel
 from sqsgenerator.core.structure import Structure, structure_to_dict, make_supercell
@@ -44,6 +44,8 @@ __all__ = [
     'merge',
     'transpose',
     'chunks_of',
+    'ATOL',
+    'RTOL'
 ]
 
 attr = operator.attrgetter
