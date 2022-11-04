@@ -30,6 +30,18 @@ __parameter_registry = collections.OrderedDict({})
 parameter = partial(parameter_, registry=__parameter_registry)
 
 
+@parameter('bin_width', default=defaults.peak_isolation)
+def read_bin_width(settings: AttrDict):
+    if not isinstance(settings.bin_width, float) or settings.bin_width <= 0.0:
+        raise BadSettings('The bin_width can be only a positive floating point number greater than 0.0')
+    return settings.bin_width
+
+@parameter('peak_isolation', default=defaults.peak_isolation)
+def read_peak_isolation(settings: AttrDict):
+    if not isinstance(settings.peak_isolation, float) or 0 <= settings.peak_isolation <= 1:
+        raise BadSettings('The peak isolation in the pair histogram can be only a positive floating point number between 0 and 1')
+    return settings.peak_isolation
+
 @parameter('atol', default=defaults.atol)
 def read_atol(settings: AttrDict):
     if not isinstance(settings.atol, float) or settings.atol < 0:

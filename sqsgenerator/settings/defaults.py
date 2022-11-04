@@ -4,14 +4,13 @@ import numpy as np
 from math import isclose
 from operator import itemgetter as item
 from sqsgenerator.fallback.attrdict import AttrDict
-from sqsgenerator.settings.utils import build_structure, to_internal_composition_specs
 from sqsgenerator.settings.functional import const, if_
-from sqsgenerator.core import IterationMode, Structure, default_shell_distances as default_shell_distances_core, \
-    compute_prefactors as default_compute_prefactors
+from sqsgenerator.settings.utils import build_structure, to_internal_composition_specs
+from sqsgenerator.core import IterationMode, Structure, compute_prefactors as default_compute_prefactors, ATOL, RTOL
 
 
-ATOL = 1e-3
-RTOL = 1e-5
+DEFAULT_PAIR_HIST_PEAK_ISOLATION = 0.25
+DEFAULT_PAIR_HIST_BIN_WIDTH = 0.15
 
 
 def num_shells(settings: AttrDict):
@@ -44,8 +43,9 @@ def default_shell_distances(settings: AttrDict):
 
     max_dist = np.amax(d2)
 
-    bin_width = 0.1
-    peak_isolation = 0.25
+    bin_width = settings.get('bin_width', DEFAULT_PAIR_HIST_BIN_WIDTH)
+    peak_isolation = settings.get('peak_isolation', DEFAULT_PAIR_HIST_PEAK_ISOLATION)
+
     nbins = int(max_dist / bin_width)
 
     frequencies, edges = np.histogram(d2, bins=nbins+1, range=(0.0, max_dist + 2.0 * bin_width))
@@ -91,6 +91,8 @@ def default_prefactors(settings: AttrDict):
 
 defaults = AttrDict(
     dict(
+        peak_isolation=const(DEFAULT_PAIR_HIST_PEAK_ISOLATION),
+        bin_width=const(DEFAULT_PAIR_HIST_BIN_WIDTH),
         atol=const(ATOL),
         rtol=const(RTOL),
         mode=const(IterationMode.random),
