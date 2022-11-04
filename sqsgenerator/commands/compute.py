@@ -10,9 +10,10 @@ import collections
 from math import isclose
 from functools import partial
 from sqsgenerator.commands.help import command_help as c_help
+from sqsgenerator.settings.defaults import default_shell_distances
 from sqsgenerator.settings import construct_settings, build_structure
 from sqsgenerator.commands.common import click_settings_file, pretty_print, error
-from sqsgenerator.core import total_permutations as total_permutations_, default_shell_distances, \
+from sqsgenerator.core import total_permutations as total_permutations_, \
     rank_structure as rank_structure_core, IterationMode, pair_sqs_iteration
 
 
@@ -39,7 +40,7 @@ def in_bounds(min_val: float, max_val: float, val: float) -> bool:
 @click_settings_file({'atol', 'rtol', 'structure', 'which', 'composition'})
 def shell_distances(settings, plot, rmin, rmax):
     structure = build_structure(settings.composition, settings.structure[settings.which])
-    distances = default_shell_distances(structure, settings.atol, settings.rtol)
+    distances = default_shell_distances(settings)
     if plot:
         try:
             import plotext
@@ -67,7 +68,7 @@ def shell_distances(settings, plot, rmin, rmax):
             # we plot not vertical lines outside (rmin, rmax)
             # therefore we check if the shell_distance if within the bounds
             in_bounds_plot = partial(in_bounds, rmin, rmax)
-            nbins = max(int(len(structure)/200), 200)  # a guess for the number of bins
+            nbins = max(int(len(structure)/150), 150)  # a guess for the number of bins
 
             hist, (_, *edges) = np.histogram(d2, bins=nbins)
             max_y = np.amax(hist)

@@ -1,6 +1,7 @@
 
 import collections
 import numpy as np
+from math import isclose
 from operator import itemgetter as item
 from sqsgenerator.fallback.attrdict import AttrDict
 from sqsgenerator.settings.utils import build_structure, to_internal_composition_specs
@@ -38,7 +39,32 @@ def default_composition(settings: AttrDict):
 
 def default_shell_distances(settings: AttrDict):
     structure = settings.structure[settings.which].sorted()
-    return default_shell_distances_core(structure, settings.atol, settings.rtol)
+    mask = ~np.eye(len(structure), dtype=bool)
+    d2 = structure.distance_matrix[mask]
+
+    max_dist = np.amax(d2)
+
+    bin_width = 0.1
+    peak_isolation = 0.25
+    nbins = int(max_dist / bin_width)
+
+    frequencies, edges = np.histogram(d2, bins=nbins+1, range=(0.0, max_dist + 2.0 * bin_width))
+    lower_edges, upper_edges = edges[:-1], edges[1:]
+
+    shells = []
+    for i in range(1, len(frequencies)-1):
+        prev_freq, freq, next_freq = frequencies[i-1:i+2]
+        threshold = (1.0 - peak_isolation) * freq
+        if threshold > prev_freq and threshold > next_freq:
+            upper_edge = upper_edges[i]
+            max_element = np.amax(d2[d2 <= upper_edge])
+            shells.append(max_element)
+
+    if not any(isclose(0.0, shell, abs_tol=settings.atol, rel_tol=settings.rtol) for shell in shells):
+        shells.insert(0, 0.0)
+
+    # print(shells, default_shell_distances_core(structure, settings.atol, settings.rtol))
+    return shells
 
 
 def default_shell_weights(settings: AttrDict):
