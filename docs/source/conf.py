@@ -66,6 +66,8 @@ extensions = [
     'sphinx_copybutton'
 ]
 
+myst_dmath_allow_labels=True
+
 html_show_sourcelink = True
 
 # Add any paths that contain templates here, relative to this directory.
