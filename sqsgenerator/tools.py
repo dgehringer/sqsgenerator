@@ -1,3 +1,8 @@
+"""
+Custom tools, which should help for more advanced use-cases
+"""
+
+
 import asyncio
 import typing as T
 from math import isclose
@@ -62,7 +67,7 @@ def minimum_objective_and_structures(results: T.Tuple[float, T.List[Structure]],
 T.Tuple[float, T.List[Structure]]:
     best_objective, structures = results
     if isinstance(next(iter(new_results)), dict):
-        new_results, *_ = new_results
+        new_results, *_ = new_results  # new_results contains is a tuple of form (actual_results, timing_information)
         new_objective, new_structures = transpose(map(item('objective', 'structure'), new_results.values()))
         new_objective = min(new_objective)
     else:
@@ -85,4 +90,17 @@ def sqsgen_optimize_multiple(it: T.Iterable[T.Dict[str, T.Any]],
 
 
 def sqsgen_minimize_multiple(it: T.Iterable[T.Dict[str, T.Any]], chunk_size: int = 1):
+    """
+    Runs multiple :py:func:`sqs_optimize` runs asynchronously, and merges the results. It will carry out an optimization
+    for each input settings yielded from {it}. It selects only those results with the minimal objective function. This
+    is useful when varying the cell shape
+
+    :param it: input generator that produces settings for :py:func:`sqs_optimize_async`
+    :type it: Iterable[Dict[str, Any]]
+    :param chunk_size: whether to split {it} into chunks of size {n}. Use this in combination when setting
+        *threads_per_rank* manually. For values > 1 {it} will be split (default is 1)
+    :type chunk_size: int
+    :return: the best objective and the structures which minimize the objective function
+    :rtype: Tuple[float, List[:py:class:`sqsgenerator.public.structure`]]
+    """
     return sqsgen_optimize_multiple(it, minimum_objective_and_structures, lambda: (float('inf'), []), chunk_size=chunk_size)

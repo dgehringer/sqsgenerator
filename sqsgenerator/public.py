@@ -192,7 +192,7 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
     :param fields: a tuple of fields to include. Allowed fields are "*configuration*", "*objective*", and
         "*parameters*" (default is ``('configuration',)``)
     :type fields: Tuple[str, ...]
-    :param inplace: update the the input ``settings`` document instead of creating a new one (default is ``False``)
+    :param inplace: update the input ``settings`` document instead of creating a new one (default is ``False``)
 
     """
     dump_include = list(fields)
