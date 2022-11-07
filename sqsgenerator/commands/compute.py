@@ -10,9 +10,9 @@ import collections
 from math import isclose
 from functools import partial
 from sqsgenerator.commands.help import command_help as c_help
-from sqsgenerator.settings.defaults import default_shell_distances
 from sqsgenerator.settings import construct_settings, build_structure
 from sqsgenerator.commands.common import click_settings_file, pretty_print, error
+from sqsgenerator.settings.defaults import default_shell_distances, DEFAULT_PAIR_HIST_BIN_WIDTH
 from sqsgenerator.core import total_permutations as total_permutations_, \
     rank_structure as rank_structure_core, IterationMode, pair_sqs_iteration
 
@@ -45,21 +45,19 @@ def shell_distances(settings, plot, rmin, rmax):
         try:
             import plotext
         except ImportError:
-            error('To plot the pair distance histrogram I need the "plotext" package which I could not find.'
+            error('To plot the pair distance histogram I need the "plotext" package which I could not find.'
                   'Please install it. See: https://github.com/piccolomo/plotext', exc_type=ImportError)
         else:
             # excludes main diagonal of the distance matrix to eliminate 0 distances
             exclude_diag = ~np.eye(len(structure), dtype=bool)
-            d2 = structure.distance_matrix[exclude_diag]
+            d2 = np.zeros(np.sum(exclude_diag) + 1)
+            d2[0] = 0.0
+            d2[1:] = structure.distance_matrix[exclude_diag]
 
-            # apply bounds and mask pair-distance array correspondingly
-            if rmin is not None:
-                d2 = d2[np.logical_or(np.isclose(d2, rmin), d2 > rmin)]
-            else:
+            if rmin is None:
                 rmin = np.amin(d2)
 
             if rmax is not None:
-                d2 = d2[np.logical_or(np.isclose(d2, rmax), d2 < rmax)]
                 if rmax > np.amax(d2):
                     rmax = np.amax(d2)
             else:
@@ -68,7 +66,8 @@ def shell_distances(settings, plot, rmin, rmax):
             # we plot not vertical lines outside (rmin, rmax)
             # therefore we check if the shell_distance if within the bounds
             in_bounds_plot = partial(in_bounds, rmin, rmax)
-            nbins = max(int(len(structure)/150), 150)  # a guess for the number of bins
+
+            nbins = int(np.amax(d2) / settings.get('bin_width', DEFAULT_PAIR_HIST_BIN_WIDTH))
 
             hist, (_, *edges) = np.histogram(d2, bins=nbins)
             max_y = np.amax(hist)
