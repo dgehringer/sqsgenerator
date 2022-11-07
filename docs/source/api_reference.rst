@@ -24,6 +24,8 @@ Helper functions
 
 .. autofunction:: sqsgenerator.public.rank_structure
 
+.. autofunction:: sqsgenerator.tools.sqsgen_minimize_multiple
+
 Conversion functions
 ####################
 

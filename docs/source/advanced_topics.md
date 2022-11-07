@@ -1,10 +1,9 @@
 
 # Advanced topics
 
-## Level 2
+##
 
-### Level 3
-
+###
 
 #### Multiple independent sublattices - from $\text{TiN} \rightarrow \left(\text{Ti}_{0.25} \text{Al}_{0.25} \right) \left( \text{B}_{0.25} \text{N}_{0.25} \right)$
 
@@ -241,13 +240,105 @@ two $i$ and $j$ can only approach discrete values. In the picture below this is 
 
 The grain-boundary, however, breaks the symmetry and therefore the spikes smear out, as shown in the figure above.
 Therefore, it is likely that *sqsgenerator* does not detect all or finds too many coordination shells. It is advisable
-to set the coordination radii manually. Nevertheless, the values computed by default should serve as a decent starting
+to set the coordination radii manually. An example {download}`input file<examples/ni5.yaml>` for this special grain boundary
+case is available. Nevertheless, the values computed by default should serve as a decent starting
 guess. You can always print the computed default values by executing:
 
 ```{code-block} bash
-sqsgen compute shell-distances
+sqsgen compute shell-distances ni5.yaml
 ```
 
-Moreover, *sqsgenerator* can plot the pair-distance histogram and will draw computed coordination-shell radii in the
-diagram using the *--plot* option. If 
+To set the shell distances manually we have to specify them in the input files.
+Therefore, one has to provide values for the coordination shell radii in $\mathrm{\mathring{A}}$ using the
+{ref}`shell_distances <input-param-shell-distances>` parameters.
 
+```{code-block} yaml
+---
+lineno-start: 1
+caption: |
+    Download the example {download}`YAML file <examples/ni5.yaml>` 
+---
+structure:
+  file: ni5.vasp
+shell_distances: [0.0, 2.7, 3.9, 4.65, 5.3, 5.8, 6.27, 6.8, 7.9, 8.49]
+```
+
+What happens under the hood is shown in the figure below. 
+
+```{image} images/ni5_manual_shells.svg
+:alt: Histogram of pair-distance matrix. Estimated and manual coordination shell radii
+:width: 60%
+:align: center
+```
+
+The translucent green lines represent the "*guesses*" made by *sgsgen*'s internal routines. While it is decent 
+for the first few shells, once the peaks get closer it misses some of them. The blue lines corespond to the values 
+specified in the above example.
+
+
+Moreover, *sqsgenerator* can plot the pair-distance histogram and will draw computed coordination-shell radii, 
+similar to the graph shown above. Therefore, just draw the diagram using the *--plot* option. This will print the 
+histogram as well as estimated and user-specified coordination shell radii.
+
+```{code-block} bash
+sqsgen compute shell-distances --plot ni5.yaml
+```
+
+
+#### Optimal structure with unknown cell shape
+
+*sqsgen* itself only permutes configurations, and not cell shapes. Nevertheless, one can perform an optimization
+for different cell shapes individually. Therefore, we provide a function which allows to execute multiple
+optimization loops asynchronously.
+
+To generate the supercell shapes, the following example relies on the [ICET](https://icet.materialsmodeling.org/)
+package. We use [`icet.tools.enumerate_supercells`](https://icet.materialsmodeling.org/moduleref_icet/tools.html#icet.tools.enumerate_supercells),
+which itself implements an algorithm to find such cell shapes$^{1,2}$ which do not lead to symmetrically equivalent cells.
+
+
+Therefore, to keep thins simple we try to find a supercell for $\mathrm{Au}_{0.5}\mathrm{Pd}_{0.5}$. We search cell
+sizes containing 2-14 atoms with a step size of two. This ensures that each cell will have the desired composition
+
+All we need to do is to write a function which generates input for *sqsgen*. 
+
+```{code-block} python
+from ase.build import bulk
+from collections import Counter
+from icet.tools.structure_enumeration import enumerate_supercells
+from sqsgenerator.public import from_ase_atoms, total_permutations
+
+supercell_sizes = list(range(2, 15, 2))  # 2, 4, 6, ...
+fcc_au = bulk('Au')
+
+def make_sqsgen_input():
+    # enumerate over all supercells and generate sqsgen input
+    for supercell in enumerate_supercells(fcc_au, supercell_sizes):
+        natoms = int(0.5 * len(supercell))  # distribute both natoms Au and Pd atoms
+        atoms = from_ase_atoms(supercell).with_species(['Au'] * natoms + ['Pd'] * natoms)
+        yield dict(
+            structure=atoms,
+            composition=Counter(atoms.symbols),
+            mode='systematic',  # search all possible configurations
+            similar=True,  # find all structures that minimize the objective function,
+            max_output_configurations=total_permutations(atoms)  # use 1 if you want to find the best only
+        )
+```
+
+Once we have defined such a function producing input, we can execute it directly, and let *sqsgen* merge the results 
+for us. To actually execute the optimizations for each of the supercell-shapes we can use the following snippet.
+
+```{code-block} python
+from sqsgenerator.tools import sqsgen_minimize_multiple
+best_objective, structures = sqsgen_minimize_multiple(generate_sqsgen_input())
+print(f"Found {len(structures)} best structure with objective {best_objective}")
+```
+
+**Note:** As we have set `max_output_configurations=total_permutations(atoms)` in the first snippet, this example is
+going to result in a lot of structures as it keeps all configuration. In case one needs to find only one best structure
+set `similar=False` and omit the `max_output_configurations` in the first code listing.
+
+---
+
+$^1$ G. L. W. Hart and R. W. Forcade, *Algorithm for generating derivative structures*,  Physical Review B **77**, 224115 (2008), [`10.1103/PhysRevB.77.224115`](http://dx.doi.org/10.1103/PhysRevB.77.224115)
+
+$^2$ G. L. W. Hart and R. W. Forcade, *Generating derivative structures from multilattices: Algorithm and application to hcp alloys*, Physical Review B **80**, 014120 (2009), [`10.1103/PhysRevB.80.014120`](http://dx.doi.org/10.1103/PhysRevB.80.014120)

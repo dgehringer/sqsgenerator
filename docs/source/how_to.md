@@ -23,7 +23,7 @@ which should plot version information about *sqsgenerator* and also its dependen
 ### The `sqs.yaml` file
 
 *sqsgenerator* uses a `dict`-like configuration, to store the parameters used for the iteration/analysis process. By
-default the program assumes the configuration to be stored in a YAML file.
+default, the program assumes the configuration to be stored in a YAML file.
 
 YAML is easy to read and write by humans. On this tutorial site we will focus on setting up proper `sqs.yaml` input 
 files.
@@ -31,7 +31,7 @@ files.
 Most of the CLI commands which require an input settings file. However, specifying a file is always optional, since 
 *sqsgenerator* will always look for a default file name `sqs.yaml` in the **current directory**.
 
-*sqsgenerator* an also read more formats, which can store Python `dict`s, such as **JSON** and **pickle**. Therefore, 
+*sqsgenerator* can also read more formats, which can store Python `dict`s, such as **JSON** and **pickle**. Therefore, 
 all commands which require a settings file also do have an `--input-fomat` (`-if`) option, which instruct the program 
 to use different file-formats. For more infos please have look at the {ref}`CLI Reference <cli_reference>`.
 
@@ -119,7 +119,7 @@ sqsgen run iteration re-w.first.yaml
 ```
 
 In case you have not passed a custom script the programm will create an output file named `sqs.result.yaml`.
-Otherwise it will modify the passed filename e. g. `re-w.first.yaml` $\rightarrow$ `re-w.first.result.yaml`
+Otherwise, it will modify the passed filename e. g. `re-w.first.yaml` $\rightarrow$ `re-w.first.result.yaml`
 
 
 #### The `sqs.result.yaml` file
@@ -335,7 +335,7 @@ composition:
 
 ### Analyse existing structures
 Sometimes it is desirable to compute the SRO parameters ($\alpha^i_{\xi\eta}$) for an exiting arrangement of atoms 
-rather than to generate a new one. To analyse existing structures *sqsgenerator* provides you with the analyse command.
+rather than to generate a new one. To analyse existing structures *sqsgenerator* provides you with the "*analyse*" command.
 
 #### Restore $\alpha^i_{\xi\eta}$ from structure files
 
@@ -350,7 +350,7 @@ rather than to generate a new one. To analyse existing structures *sqsgenerator*
    ```
 2. The above command will store the optimized configurations in a file named *re-w.second.result.yaml*. The file will, 
    in addition also contain (eventually) configurations which do not minimize (`--no-minimal/-nm`) the objective function
-   Eq. {eq}`eqn:objective-actual`. Furthermore it will not check for duplicates in the SRO formalism (`--similar/-s`).
+   Eq. {eq}`eqn:objective-actual`. Furthermore, it will not check for duplicates in the SRO formalism (`--similar/-s`).
    Finally *re-w.second.result.yaml* will contain the SRO parameters $\alpha^i_{\xi\eta}$ 
    (`--dump-include/-di parameters`) as well as the value of the objective function $\mathcal{O}$ 
    (`--dump-include/-di objective`). All the configurations will be also exported into *CIF* format (default). Listing 
@@ -417,7 +417,7 @@ prefactors: 1
 
 To obtain the number of $\xi - \eta$ pair we have to compute $N^i_{\xi\eta} = 1 - \alpha^i_{\xi}$
 *sqsgenerator* support also other output formats than printing it to the console. Hence, we want to illustrate
-how *sqsgenerator*'s CLI can be used directly in combination with Python without using it's Python API
+how *sqsgenerator*'s CLI can be used directly in combination with Python without using the Python API
 
 ```{code-block} python
 import os

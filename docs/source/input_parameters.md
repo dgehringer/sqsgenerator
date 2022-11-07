@@ -26,40 +26,47 @@ you have **read through** the {ref}`note on array input interpretation <input-pa
 
 ## Parameters
 
-### `atol`
-(input-param-atol)=
+### `bin_width`
+(input-param-bin-width)=
 
-Absolute tolerance for calculating the default *{ref}`radii of the coordination shells <input-param-shell-distances>`* in $\mathrm{\mathring{A}}$. *{ref}`atol <input-param-atol>`* and *{ref}`atol <input-param-rtol>`* are used to determine if two numbers are close.
-
-- **Required:** No
-- **Default**: `1e-3`
-- **Accepted:** positive floating point numbers (`float`)
-
-### `rtol`
-(input-param-rtol)=
-
-relative tolerance for calculating the default *{ref}`radii of the coordination shells <input-param-shell-distances>`* in $\mathrm{\mathring{A}}$. *{ref}`atol <input-param-atol>`* and *{ref}`rtol <input-param-rtol>`* are used to determine if two numbers are close.
+Sets the real space bin width of the histogram computed from the pair distance matrix 
+$r_{ij} = \left|\vec{r}_{i} - \vec{r}_j \right|$. This parameter is used in combination with
+the {ref}`peak_isolation <input-param-peak-isolation>` parameter to compute the default guess for the 
+{ref}`radii of the coordination shells <input-param-shell-distances>`. Unit is in $\mathrm{\mathring{A}}$.
 
 - **Required:** No
-- **Default**: `1e-5`
-- **Accepted:** positive floating point numbers (`float`)
+- **Default**: `0.05`
+- **Accepted:** positive floating point number (`float`)
 
-````{admonition} What are **atol** and **rtol** used for?
+### `peak_isolation`
+(input-param-peak-isolation)=
+
+A threshold measure on how *isolated* a bin in the pair distance matrix 
+$r_{ij} = \left|\vec{r}_{i} - \vec{r}_j \right|$ histogram has to be, to become a separate coordination shell.
+An isolation 0.7 means the following. If certain bin in the histogram, for which both the left and the right neighbor
+are smaller than 30% as the current bin, it will become a separate coordination shell.
+
+- **Required:** No
+- **Default**: `0.25`
+- **Accepted:** positive floating point number between 0.0 and 1.0 (`float`)
+
+````{admonition} What are bin_width and peak_isolation  used for?
 :class: tip, dropdown
 
-The `atol` and `rtol` parameters are used to determine if two floating point numbers are close. We use an implementation
- similar to Python [`math.isclose`](https://docs.python.org/3/library/math.html#math.isclose).
+{ref}`bin_width <input-param-bin-width>` and {ref}`peak_isolation <input-param-peak-isolation>` parameters are used 
+to compute the default values for the {ref}`shell_distances <input-param-shell-distances>` parameter.
 
-*{ref}`atol <input-param-atol>`* and *{ref}`rtol <input-param-rtol>`* parameters are used to compute the default values for the *{ref}`shell_distances <input-param-shell-distances>`* parameter.
-Have a look on the *{ref}`shell_distances <input-param-shell-distances>`* parameter, by entering:
+{ref}`bin_width <input-param-bin-width>` determines the resolution of the histogram. Therefore, when passing a structure
+to *sqsgen*, that underwent ionic relaxation, it might be sensible to increase {ref}`bin_width <input-param-bin-width>`.
+Hence slightly distorted atoms will be put into the same coordination shell.
+
+Have a look on the histogram and the {ref}`shell_distances <input-param-shell-distances>` parameter by entering:
 
   ```{code-block} bash
-  sqsgenerator params show input.yaml --param shell_distances
+  sqsgenerator compute shell-distances input.yaml --plot
   ```
-In case you get some distances which are really close e. g. 4.12345 and 4.12346 it is maybe a good idea to increase 
-*{ref}`atol <input-param-atol>`*  and/or *{ref}`rtol <input-param-rtol>`* such that *sqsgenerator* groups them into the same coordination shell
+  
 
-Changing *{ref}`atol <input-param-atol>`*  and/or *{ref}`rtol <input-param-rtol>`* parameters will change the number and radii of the computed coordination shells
 ````
 
 ### `max_output_configurations`
