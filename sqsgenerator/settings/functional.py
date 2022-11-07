@@ -14,8 +14,6 @@ class Default(enum.Enum):
     NoDefault = 0
 
 
-
-
 def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, required: T.Union[T.Callable, bool] = True,
               key: T.Union[T.Callable, str] = None, registry: T.Optional[dict] = None):
     if key is None:
