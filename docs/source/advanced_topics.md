@@ -1,10 +1,12 @@
 
 # Advanced topics
 
-The following page
+## Level 2
+
+### Level 3
 
 
-### Multiple independent sublattices - from $\text{TiN} \rightarrow \left(\text{Ti}_{0.25} \text{Al}_{0.25} \right) \left( \text{B}_{0.25} \text{N}_{0.25} \right)$
+#### Multiple independent sublattices - from $\text{TiN} \rightarrow \left(\text{Ti}_{0.25} \text{Al}_{0.25} \right) \left( \text{B}_{0.25} \text{N}_{0.25} \right)$
 
 Now we want to enhance the above examples, and want to distribute both Ti and Al on the original Ti sublattice. 
 Furthermore, additionally, we want to distribute B and N on the original nitrogen sublattice. Before going into detail,
@@ -212,7 +214,7 @@ pair_weights:
 Note, that this modification has no influence on the SRO parameters itself, but only on the value of the objective
 function
 
-### A $\Sigma (210)[001]$ Ni grain boundary
+#### A $\Sigma (210)[001]$ Ni grain boundary
 
 The following, example should illustrate how to use *sqsgenerator* for populating a structure which contains a planar defect. A symmetric tilt Ni 
 {download}`grain-boundary <examples/ni5.vasp>` will serve as an example. The picture below shows a visual representation
@@ -228,10 +230,24 @@ To elucidate the difference between pure *fcc* Ni and the grain-boundary, we inv
 Actually we create a histogram of the pair distance-matrix. For a perfect (*fcc*) crystal, the distance $r_{ij}$ between
 two $i$ and $j$ can only approach discrete values. In the picture below this is shown by the red vertical lines. Thus,
 *sqsgenerator* will detect those values and use them as coordination shell parameter and consequently implicitly set 
-{ref}`shell_distances <input-param-shell-distances>`.
+ sensible values to the {ref}`shell_distances <input-param-shell-distances>` parameter.
+
 
 ```{image} images/ni5_pair_distribution.svg
 :alt: Histogram of pair-distance matrix for fcc-Ni and a grain-boudary
 :width: 60%
 :align: center
 ```
+
+The grain-boundary, however, breaks the symmetry and therefore the spikes smear out, as shown in the figure above.
+Therefore, it is likely that *sqsgenerator* does not detect all or finds too many coordination shells. It is advisable
+to set the coordination radii manually. Nevertheless, the values computed by default should serve as a decent starting
+guess. You can always print the computed default values by executing:
+
+```{code-block} bash
+sqsgen compute shell-distances
+```
+
+Moreover, *sqsgenerator* can plot the pair-distance histogram and will draw computed coordination-shell radii in the
+diagram using the *--plot* option. If 
+
