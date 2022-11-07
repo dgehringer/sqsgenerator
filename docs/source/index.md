@@ -16,18 +16,18 @@
 ## Table of contents
 
 ```{toctree}
----
-caption: 
+--- 
 maxdepth: 1
 ---
 
 installation_guide
 how_to
-cli_interface
 input_parameters
+advanced_topics
 what_is_actually_computed
-api_reference
 who_uses_sqsgenerator
+cli_interface
+api_reference
 ```
 
 ## API Reference

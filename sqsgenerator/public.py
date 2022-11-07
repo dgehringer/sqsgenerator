@@ -15,7 +15,12 @@ from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms, to_pyiron
     from_ase_atoms, from_pyiron_atoms
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
     SQSResult, symbols_from_z, Structure, make_supercell, IterationMode, pair_analysis, available_species, make_rank, \
-    rank_structure, total_permutations
+    rank_structure, total_permutations, merge
+
+TimingDictionary = T.Dict[int, T.List[float]]
+Settings = AttrDict
+SQSResultCollection = T.Iterable[SQSResult]
+OptimizationResult = T.Tuple[T.Dict[int, T.Dict[str, T.Any]], T.Dict[int, T.Union[float, T.List[float]]]]
 
 __all__ = [
     'IterationMode',
@@ -37,12 +42,10 @@ __all__ = [
     'total_permutations',
     'extract_structures',
     'expand_sqs_results',
-    'sqs_analyse'
+    'sqs_analyse',
+    'OptimizationResult',
+    'Settings'
 ]
-
-TimingDictionary = T.Dict[int, T.List[float]]
-Settings = AttrDict
-SQSResultCollection = T.Iterable[SQSResult]
 
 
 def make_result_document(settings: Settings, sqs_results: T.Iterable[SQSResult],
@@ -189,7 +192,7 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
     :param fields: a tuple of fields to include. Allowed fields are "*configuration*", "*objective*", and
         "*parameters*" (default is ``('configuration',)``)
     :type fields: Tuple[str, ...]
-    :param inplace: update the the input ``settings`` document instead of creating a new one (default is ``False``)
+    :param inplace: update the input ``settings`` document instead of creating a new one (default is ``False``)
 
     """
     dump_include = list(fields)
@@ -209,17 +212,11 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
     return Settings(final_document)
 
 
-def merge(a: dict, b: T.Optional[dict] = None, **kwargs) -> dict:
-    if b is None:
-        b = {}
-    return {**a, **b, **kwargs}
-
-
 def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, minimal: bool = True,
                  similar: bool = False, log_level: str = 'warning',
                  fields: T.Tuple[str, ...] = ('configuration', 'parameters', 'objective'),
                  make_structures: bool = False, structure_format: str = 'default') \
-        -> T.Tuple[T.Dict[int, T.Dict[str, T.Any]], T.Dict[int, T.Union[float, T.List[float]]]]:
+        -> OptimizationResult:
     """
     This function allows to simply generate SQS structures
 

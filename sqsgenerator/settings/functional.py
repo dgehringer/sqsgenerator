@@ -16,9 +16,15 @@ class Default(enum.Enum):
 
 def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, required: T.Union[T.Callable, bool] = True,
               key: T.Union[T.Callable, str] = None, registry: T.Optional[dict] = None):
-    if key is None: key = name
-    get_required = lambda *_: required if isinstance(required, bool) else required
-    get_key = lambda *_: key if isinstance(key, str) else key
+    if key is None:
+        key = name
+
+    def get_required(settings):
+        return required if isinstance(required, bool) else required(settings)
+
+    def get_key(settings):
+        return key if isinstance(key, str) else key(settings)
+
     get_default = (lambda *_: default) if not callable(default) else default
 
     have_default = default != Default.NoDefault
@@ -40,14 +46,17 @@ def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, require
                         return df
             else:
                 # we catch the exception here and raise it again, to inject the parameter information automatically
-                try: processed_value = f(settings)
+                try:
+                    processed_value = f(settings)
                 except BadSettings as exc:
                     exc.parameter = name # set the parameter info and forward the exception
                     raise
-                else: return processed_value
+                else:
+                    return processed_value
 
         # register the parameters at the parameter_registry
-        if registry is not None: registry[name] = _wrapped
+        if registry is not None:
+            registry[name] = _wrapped
         return _wrapped
 
     return _decorator

@@ -4,7 +4,7 @@ import functools
 import frozendict
 import typing as T
 from sqsgenerator.core.core import SQSResult, Atom
-from sqsgenerator.core.core import __version__, __features__
+from sqsgenerator.core.core import __version__, __features__, ATOL, RTOL
 from sqsgenerator.core.core import set_log_level, pair_sqs_iteration, pair_analysis
 from sqsgenerator.core.core import IterationMode, IterationSettings, BoostLogLevel
 from sqsgenerator.core.structure import Structure, structure_to_dict, make_supercell
@@ -12,6 +12,7 @@ from sqsgenerator.core.core import default_shell_distances, atoms_from_numbers, 
     symbols_from_z, z_from_symbols, build_configuration, ALL_SITES, make_rank as make_rank_, \
     rank_structure as rank_structure_, total_permutations as total_permutations_, \
     compute_prefactors as compute_prefactors_
+from sqsgenerator.core.utils import merge, transpose, chunks_of
 
 __all__ = [
     '__version__',
@@ -40,6 +41,11 @@ __all__ = [
     'ALL_SITES',
     'make_rank',
     'rank_structure',
+    'merge',
+    'transpose',
+    'chunks_of',
+    'ATOL',
+    'RTOL'
 ]
 
 attr = operator.attrgetter

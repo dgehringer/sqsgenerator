@@ -61,10 +61,12 @@ extensions = [
     'sphinx.ext.viewcode',
     'myst_parser',
     'sphinx_click',
-    'sphinx_panels',
+    'sphinx_design',
     'sphinx_togglebutton',
     'sphinx_copybutton'
 ]
+
+myst_dmath_allow_labels=True
 
 html_show_sourcelink = True
 

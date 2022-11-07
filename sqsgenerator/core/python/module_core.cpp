@@ -280,6 +280,8 @@ BOOST_PYTHON_MODULE(core) {
         py::def("compute_prefactors", &compute_prefactors_wrapper);
 
         py::scope().attr("ALL_SITES") = ALL_SITES;
+        py::scope().attr("ATOL") = ATOL;
+        py::scope().attr("RTOL") = RTOL;
 
         py::list features;
 #ifdef _OPENMP

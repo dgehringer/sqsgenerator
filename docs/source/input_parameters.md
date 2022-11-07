@@ -1,6 +1,6 @@
 # Input parameters
 
-*sqsgenerator* uses a `dict`-like configuration to find all the value it needs. Thus it can it read its configuration from anything which can store Python `dict`s (e. g. `json`, `yaml` or `pickle`). However by default *sqsgenerator* expects an input file in **YAML** format. 
+*sqsgenerator* uses a `dict`-like configuration to find all the value it needs. Thus, it can it read its configuration from anything which can store Python `dict`s (e. g. `json`, `yaml` or `pickle`). However by default *sqsgenerator* expects an input file in **YAML** format. 
 
 Each of the parameters below represents an entry in the **YAML** (or key in a `dict` if called directly from Python).
 
@@ -26,40 +26,47 @@ you have **read through** the {ref}`note on array input interpretation <input-pa
 
 ## Parameters
 
-### `atol`
-(input-param-atol)=
+### `bin_width`
+(input-param-bin-width)=
 
-Absolute tolerance for calculating the default *{ref}`radii of the coordination shells <input-param-shell-distances>`* in $\mathrm{\mathring{A}}$. *{ref}`atol <input-param-atol>`* and *{ref}`atol <input-param-rtol>`* are used to determine if two numbers are close.
-
-- **Required:** No
-- **Default**: `1e-3`
-- **Accepted:** positive floating point numbers (`float`)
-
-### `rtol`
-(input-param-rtol)=
-
-relative tolerance for calculating the default *{ref}`radii of the coordination shells <input-param-shell-distances>`* in $\mathrm{\mathring{A}}$. *{ref}`atol <input-param-atol>`* and *{ref}`rtol <input-param-rtol>`* are used to determine if two numbers are close.
+Sets the real space bin width of the histogram computed from the pair distance matrix 
+$r_{ij} = \left|\vec{r}_{i} - \vec{r}_j \right|$. This parameter is used in combination with
+the {ref}`peak_isolation <input-param-peak-isolation>` parameter to compute the default guess for the 
+{ref}`radii of the coordination shells <input-param-shell-distances>`. Unit is in $\mathrm{\mathring{A}}$.
 
 - **Required:** No
-- **Default**: `1e-5`
-- **Accepted:** positive floating point numbers (`float`)
+- **Default**: `0.05`
+- **Accepted:** positive floating point number (`float`)
 
-````{admonition} What are **atol** and **rtol** used for?
+### `peak_isolation`
+(input-param-peak-isolation)=
+
+A threshold measure on how *isolated* a bin in the pair distance matrix 
+$r_{ij} = \left|\vec{r}_{i} - \vec{r}_j \right|$ histogram has to be, to become a separate coordination shell.
+An isolation 0.7 means the following. If certain bin in the histogram, for which both the left and the right neighbor
+are smaller than 30% as the current bin, it will become a separate coordination shell.
+
+- **Required:** No
+- **Default**: `0.25`
+- **Accepted:** positive floating point number between 0.0 and 1.0 (`float`)
+
+````{admonition} What are bin_width and peak_isolation  used for?
 :class: tip, dropdown
 
-The `atol` and `rtol` parameters are used to determine if two floating point numbers are close. We use an implementation
- similar to Python [`math.isclose`](https://docs.python.org/3/library/math.html#math.isclose).
+{ref}`bin_width <input-param-bin-width>` and {ref}`peak_isolation <input-param-peak-isolation>` parameters are used 
+to compute the default values for the {ref}`shell_distances <input-param-shell-distances>` parameter.
 
-*{ref}`atol <input-param-atol>`* and *{ref}`rtol <input-param-rtol>`* parameters are used to compute the default values for the *{ref}`shell_distances <input-param-shell-distances>`* parameter.
-Have a look on the *{ref}`shell_distances <input-param-shell-distances>`* parameter, by entering:
+{ref}`bin_width <input-param-bin-width>` determines the resolution of the histogram. Therefore, when passing a structure
+to *sqsgen*, that underwent ionic relaxation, it might be sensible to increase {ref}`bin_width <input-param-bin-width>`.
+Hence slightly distorted atoms will be put into the same coordination shell.
+
+Have a look on the histogram and the {ref}`shell_distances <input-param-shell-distances>` parameter by entering:
 
   ```{code-block} bash
-  sqsgenerator params show input.yaml --param shell_distances
+  sqsgenerator compute shell-distances input.yaml --plot
   ```
-In case you get some distances which are really close e. g. 4.12345 and 4.12346 it is maybe a good idea to increase 
-*{ref}`atol <input-param-atol>`*  and/or *{ref}`rtol <input-param-rtol>`* such that *sqsgenerator* groups them into the same coordination shell
+  
 
-Changing *{ref}`atol <input-param-atol>`*  and/or *{ref}`rtol <input-param-rtol>`* parameters will change the number and radii of the computed coordination shells
 ````
 
 ### `max_output_configurations`
@@ -79,7 +86,7 @@ In case the code runs with MPI parallelization, **each MPI rank** will generate 
 ### `composition` 
 (input-param-composition)=
 
-The composition of the output configuration, defined as an dictionary.  Keys are symbols of chemical elements, 
+The composition of the output configuration, defined as a dictionary.  Keys are symbols of chemical elements, 
 whereas values are the number of atoms of the corresponding species. The number in the dict-values or the length of the 
 specified **match** the number of specified positions on the sublattice. See *{ref}`which <input-param-which>`* input
 parameter. The composition parameter might be also used to pin atomic species on current sublattices
@@ -176,7 +183,7 @@ The sum of the atoms distributed must **exactly** match the number of **selected
       V: 8
     ```
     
-- select all **even** sites from your structure, 16 atoms, using a index, list and distribute W, Ta and Mo on those sites
+- select all **even** sites from your structure, 16 atoms, using an index, list and distribute W, Ta and Mo on those sites
   
     ```{code-block} yaml
     which: [0, 2, 4, 6, 8, 10, 12, 14]
@@ -218,7 +225,7 @@ the structure where *sqsgenerator* will operate on *{ref}`which <input-param-whi
         - Cs
         - Cl
     ```
-    Please note that for each entry in `coords` there must be an corresponding species specified in the `species` list
+    Please note that for each entry in `coords` there must be a corresponding species specified in the `species` list
     
 -  specify a file (must be readable by `ase.io.read` , fallback to `pymatgen` if `ase` is not present)
    
@@ -235,7 +242,7 @@ the structure where *sqsgenerator* will operate on *{ref}`which <input-param-whi
        reader: pymatgen # use pymatgen to read the CIF file
     ```
   
-- specify read a file and  pass arguments to the reading package. E. g. read las configuration from a MD-trajectory
+- specify read a file and  pass arguments to the reading package. E.g. read las configuration from an MD-trajectory
   
     ```{code-block} yaml
     structure:
@@ -367,7 +374,7 @@ sqsgenerator params show input.yaml -p shell_distances
 
 accounts for the fact that coodination shells which are farther away are less important. This parameter also determines 
 **which** shells should be taken into account. The `shell_weights` are a mapping (dictionary). It assigns the 
-**shell index** it corresponding shell weight $w^i$. The keys represent the indices of the calculated shell distances 
+**shell index** to its corresponding shell weight $w^i$. The keys represent the indices of the calculated shell distances 
 computed or specified by the *{ref}`shell_distances <input-param-shell-distances>`* parameter. Its values correspond 
 to $w^i$ {eq}`eqn:objective` in the objective function.
 
@@ -415,19 +422,21 @@ Please refer to the *{ref}`target_objective <input-param-target-objective>`* par
 
 The default value is a hollow matrix, which is multiplied with the corresponding shell weight
 
-$$
-  p_{\xi\eta} = \frac{1}{2}\left(\mathbf{J}_N - \mathbf{I}_N \right)
-$$ (eqn:parameter-weight-single-shell)
+```{math}
+:label: eqn:parameter-weight-single-shell
+p_{\xi\eta} = \frac{1}{2}\left(\mathbf{J}_N - \mathbf{I}_N \right)
+```
 
 where $N=N_{\text{species}}$, $\mathbf{J}_N$ the matrix full of ones and $\mathbf{I}_N$ the identity matrix.
 Using this formalism the default value for $\tilde{p}_{\xi\eta}^i$ is calculates according to Eq. {eq}`eqn:parameter-weight-efficient` and
 {eq}`eqn:parameter-weight-single-shell` as
 
-$$
-  \tilde{p}_{\xi\eta}^i = w^i p_{\xi\eta}  = \frac{1}{2}w_i\left(\mathbf{J}_N - \mathbf{I}_N \right)
-$$ (eqn:parameter-weight-default)
+```{math}
+:label: eqn:parameter-weight-default
+\tilde{p}_{\xi\eta}^i = w^i p_{\xi\eta}  = \frac{1}{2}w_i\left(\mathbf{J}_N - \mathbf{I}_N \right)
+```
 
-where $w^i$ is the *{ref}`shell_weight <input-param-shell-weights>`* of the i$^\text{th}$ coordination shell. If a 2D input or any of the of the sub-array 
+where $w^i$ is the *{ref}`shell_weight <input-param-shell-weights>`* of the i$^\text{th}$ coordination shell. If a 2D input or any of the sub-array 
 in case of a 3D input array is not symmetric a `BadSettings` exception is raised.
 
 - **Required:** No
@@ -533,11 +542,10 @@ Specifies how the *{ref}`prefactors <input-param-prefactors>`* parameter is inte
 
 number of threads should be used on each rank. The value(s) is (are) passed on to 
 [*omp_set_num_threads*](https://www.openmp.org/spec-html/5.0/openmpsu110.html). If the version of *sqsgenerator* 
-**is not capable**  MPI parallelism, a single value is needed. If *sqsgenerator* was called within a MPI runtime, 
+**is not capable**  MPI parallelism, a single value is needed. If *sqsgenerator* was called within an MPI runtime, 
 an entry must be present for each rank. In case OpenMP schedules a different number of threads, than specified in 
 `threads_per_rank` the workload will be redistributed automatically. Negative values represent a call to 
-[*omp_get_max_threads*](https://www.openmp.org/spec-html/5.0/openmpsu112.html) (as many threads as possible). Further 
-reading can be found in the [parallelization guide](parallelization.md).
+[*omp_get_max_threads*](https://www.openmp.org/spec-html/5.0/openmpsu112.html) (as many threads as possible).
 
 - **Required:** No
 - **Default:** `[-1]` if there is no MPI support. Otherwise `[-1]*N` where `N` is the number of MPI ranks
