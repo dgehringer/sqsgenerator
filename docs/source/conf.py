@@ -61,7 +61,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'myst_parser',
     'sphinx_click',
-    'sphinx_panels',
+    'sphinx_design',
     'sphinx_togglebutton',
     'sphinx_copybutton'
 ]

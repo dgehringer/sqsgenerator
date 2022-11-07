@@ -8,6 +8,8 @@ __version__ = (1, 2, 3, 4)
 __features__ = {}
 
 ALL_SITES = -1
+ATOL = 1e-3
+RTOL = 1e-5
 
 
 class SQSResult:
