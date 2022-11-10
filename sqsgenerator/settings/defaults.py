@@ -85,7 +85,8 @@ def default_target_objective(settings: AttrDict):
 def default_prefactors(settings: AttrDict):
     internal_composition_spec = to_internal_composition_specs(settings.composition, settings.structure)
     return default_compute_prefactors(settings.structure[settings.which], internal_composition_spec,
-                                      dict(settings.shell_weights), settings.atol, settings.rtol)
+                                      dict(settings.shell_weights), settings.shell_distances, settings.atol,
+                                      settings.rtol)
 
 
 defaults = AttrDict(

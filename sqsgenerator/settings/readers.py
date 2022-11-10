@@ -38,6 +38,7 @@ def read_bin_width(settings: AttrDict):
         raise BadSettings('The bin_width can be only a positive floating point number greater than 0.0')
     return bin_width
 
+
 @parameter('peak_isolation', default=defaults.peak_isolation)
 def read_peak_isolation(settings: AttrDict):
     peak_isolation = convert(
@@ -49,6 +50,7 @@ def read_peak_isolation(settings: AttrDict):
         raise BadSettings(f'The peak isolation in the pair histogram '
                           f'can be only a positive floating point number between 0 and 1.')
     return settings.peak_isolation
+
 
 @parameter('atol', default=defaults.atol)
 def read_atol(settings: AttrDict):
