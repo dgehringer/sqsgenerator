@@ -22,7 +22,10 @@ class Feature(Enum):
 
 
 class FeatureNotAvailableException(Exception):
-    pass
+
+    def __init__(self, features, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.features = features
 
 
 __features = None
