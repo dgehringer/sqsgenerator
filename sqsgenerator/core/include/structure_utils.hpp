@@ -5,10 +5,13 @@
 #ifndef SQSGENERATOR_STRUCTURE_UTILS_HPP
 #define SQSGENERATOR_STRUCTURE_UTILS_HPP
 
-
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 #include "types.hpp"
 #include "utils.hpp"
 #include <set>
+#include <map>
 #include <vector>
 #include <limits>
 #include <algorithm>
@@ -36,6 +39,7 @@ namespace sqsgenerator::utils {
             multi_array<T, 3> vecs(boost::extents[num_atoms][num_atoms][3]);
             // pi1 = position_index_1
             // pi2 = position_index_2
+            #pragma omp parallel for schedule(static) shared(vecs) firstprivate(a, b, c, axis, num_atoms, cart_coords)
             for (index_t pi1 = 0; pi1 < num_atoms; pi1++) {
                 auto p1 {row(cart_coords, pi1)};
                 for (index_t pi2 = pi1+1; pi2 < num_atoms; pi2++) {
@@ -104,6 +108,8 @@ namespace sqsgenerator::utils {
                 return is_close(a, b, atol, rtol);
             };
 
+            BOOST_LOG_TRIVIAL(info) << "structure_utils::shell_matrix::shell_distances = " << format_vector(distances);
+
             auto find_shell = [&distances, &is_close_tol] (T distance) {
                 if (distance < 0 ) return -1;
                 if (is_close_tol(distance, 0.0)) return 0;
@@ -118,6 +124,9 @@ namespace sqsgenerator::utils {
                 return static_cast<int>(distances.size());
             };
 
+            std::map<int, size_t> shell_hist;
+            for (index_t i = 1; i < distances.size() -1 ; i++) shell_hist.emplace(i, 0);
+
             for (index_t i = 0; i < num_atoms; i++) {
                 for (index_t j = i + 1; j < num_atoms; j++) {
                     int shell {find_shell(distance_matrix[i][j])};
@@ -125,10 +134,14 @@ namespace sqsgenerator::utils {
                     else if (shell == 0 and i != j) {
                         BOOST_LOG_TRIVIAL(warning) << "Atoms " + std::to_string(i) + " and " + std::to_string(j) + " are overlapping! (distance = " + std::to_string(distance_matrix[i][j])<< ", shell = " << shell <<")!";
                     }
+                    shell_hist[shell] += 2;
                     shells[i][j] = shell;
                     shells[j][i] = shell;
                 }
             }
+
+            BOOST_LOG_TRIVIAL(info) << "structure_utils::shell_matrix::pair_shell_hist=" << format_map(shell_hist);
+
             return shells;
         }
 

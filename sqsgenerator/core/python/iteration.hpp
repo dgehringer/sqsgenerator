@@ -28,19 +28,6 @@ namespace sqsgenerator::python {
                 py::dict composition,
                 np::ndarray target_objective,
                 np::ndarray parameter_weights,
-                py::dict shell_weights,
-                rank_t iterations,
-                int output_configurations,
-                py::list threads_per_rank,
-                double atol,
-                double rtol,
-                iteration_mode iteration_mode);
-
-        IterationSettingsPythonWrapper(
-                StructurePythonWrapper structure,
-                py::dict composition,
-                np::ndarray target_objective,
-                np::ndarray parameter_weights,
                 np::ndarray bond_prefactors,
                 py::dict shell_weights,
                 rank_t iterations,

@@ -246,10 +246,6 @@ namespace sqsgenerator::utils::atomistics {
         return m_distance_matrix;
     }
 
-    pair_shell_matrix_t Structure::shell_matrix(double atol, double rtol) const {
-        return shell_matrix(sqsgenerator::utils::default_shell_distances(m_distance_matrix, atol, rtol), atol, rtol);
-    }
-
     pair_shell_matrix_t Structure::shell_matrix(const std::vector<double> &shell_distances, double atol, double rtol) const {
         return sqsgenerator::utils::shell_matrix(m_distance_matrix, shell_distances, atol, rtol);
     }
