@@ -651,6 +651,9 @@ however lots of the might be symmetrically equivalent.
 
 A few rules over the thumb, and what you can do if you deal with "*large*" systems
 
+  - Maybe you have knowledge about the system: E. g certain species are restricted on 
+    different sub-lattices.
+
   - Check how long it would take to compute your current settings
   
     ```{code-block} bash
@@ -658,9 +661,11 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
     ```
 
     You can tune the number of permutations to a computing time you can afford. The above command gives only an estimate
-    for the current machine. The above command analyzes $10^5$ random configurations and 
+    for the current machine. The above command analyzes $10^5$ random configurations and extrapolates it to the desired
+    number of iterations. However, this value should be seen as an **upper bound**, as cycle times 
+    are slightly reduced for large number of iterations
     
-  - Reduce the number of shells. This has two-fold advantage
+  - Reduce the number of shells. This has two-fold advantage:
     1. In contrast to old versions of *sqsgenerator*, the current implementations profit greatly from a decreased number
        of coordination shells. The actual speedup depends on the input structure but might be up to an order of 
        magnitude when compared to the default value (all shells are considered)

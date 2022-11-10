@@ -261,6 +261,9 @@ caption: |
 structure:
   file: ni5.vasp
 shell_distances: [0.0, 2.7, 3.9, 4.65, 5.3, 5.8, 6.27, 6.8, 7.9, 8.49]
+composition:
+  Ni: 190
+  Al: 190 
 ```
 
 What happens under the hood is shown in the figure below. 
