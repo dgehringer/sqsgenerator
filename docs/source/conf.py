@@ -63,7 +63,8 @@ extensions = [
     'sphinx_click',
     'sphinx_design',
     'sphinx_togglebutton',
-    'sphinx_copybutton'
+    'sphinx_copybutton',
+    'sphinx_inline_tabs',
 ]
 
 myst_dmath_allow_labels=True

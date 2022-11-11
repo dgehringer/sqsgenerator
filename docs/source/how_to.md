@@ -676,3 +676,47 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
        ```
     3. The image size of the objective function is drastically reduced. In other words a lot of different structures are 
        mapped onto the same value of the objective function.
+
+
+### A simple convergence-test 
+    
+````{tab} bash
+
+```{code-block} bash
+#/bin/bash
+
+NSHELLS=6
+MIN_MAGNITUDE=4 # minimum mag. of iteration = 10^4
+MAX_MAGNITUDE=9 # minimum mag. of iteration = 10^9
+MAX_SAMPLES=10000 
+
+for NSHELL in `seq 1 1 $NSHELLS`; do
+  for MAG in `seq $MIN_MAGNITUDE 1 $MAX_MAGNITUDE`; do
+    INPUT_YAML="sqs-$NSHELL-shells-$MAG-iterations.yaml"
+    NUM_ITERATIONS=`echo "10^$MAG" | bc`
+    # create the input YAML file
+    cat > $INPUT_YAML << EOF
+structure:
+  file: hcp.vasp
+  supercell: [2, 2, 4]
+composition:
+  Re: 12
+  W: 36
+iterations: $NUM_ITERATIONS
+shell_weights:
+EOF
+   
+   for SHELL_ in `seq 1 1 $NSHELL`; do
+     WEIGHT=`echo "1/$SHELL_" | bc -l` # set the shell weights 1/i
+     echo "  $SHELL_: $WEIGHT" >> $INPUT_YAML
+   done
+   # run with 
+   #   --no-minimal: to keep also the non minimum configurations
+   #   --dump-format pickle: there might be a log of structure, binary format is efficient
+   sqsgen run iteration $INPUT_YAML --no-minimal --dump-include objective --dump-format pickle
+  done
+done
+
+```
+
+````
