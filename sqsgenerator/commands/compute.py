@@ -94,10 +94,10 @@ def shell_distances(settings, plot, rmin, rmax):
                     plotext.plot([manual_dist, manual_dist], [0, max_y], color='red')
 
             if last_dist is not None:
-                plotext.plot([last_dist, last_dist], [0, max_y], color='red', label=f'specified in "{settings["file_name"]}"')
+                plotext.plot([last_dist, last_dist], [0, max_y], color='red', label=f'specified in "{settings.get("file_name")}"')
 
             xticks = np.linspace(rmin, rmax, 10)
-            # set up graph-labelings
+            # set up graph-labeling
             plotext.xticks(ticks=xticks, labels=[f'{tick:.2f}' for tick in xticks])
             plotext.xlabel('pair-distance [A]')
             plotext.ylabel('counts [a. u.]')
