@@ -680,43 +680,37 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
 
 ### A simple convergence-test 
     
-````{tab} bash
+```{code-block} python
+import yaml
+from math import isclose
+from sqsgenerator import sqs_optimize
+from operator import itemgetter as item
 
-```{code-block} bash
-#/bin/bash
+NSHELLS=7  # max number of shells
+MIN_MAGNITUDE=4  # minimum number of iterations
+MAX_MAGNITUDE=7  # maximum number of iterations
+SAMPLES=10000
 
-NSHELLS=6
-MIN_MAGNITUDE=4 # minimum mag. of iteration = 10^4
-MAX_MAGNITUDE=9 # minimum mag. of iteration = 10^9
-MAX_SAMPLES=10000 
 
-for NSHELL in `seq 1 1 $NSHELLS`; do
-  for MAG in `seq $MIN_MAGNITUDE 1 $MAX_MAGNITUDE`; do
-    INPUT_YAML="sqs-$NSHELL-shells-$MAG-iterations.yaml"
-    NUM_ITERATIONS=`echo "10^$MAG" | bc`
-    # create the input YAML file
-    cat > $INPUT_YAML << EOF
-structure:
-  file: hcp.vasp
-  supercell: [2, 2, 4]
-composition:
-  Re: 12
-  W: 36
-iterations: $NUM_ITERATIONS
-shell_weights:
-EOF
-   
-   for SHELL_ in `seq 1 1 $NSHELL`; do
-     WEIGHT=`echo "1/$SHELL_" | bc -l` # set the shell weights 1/i
-     echo "  $SHELL_: $WEIGHT" >> $INPUT_YAML
-   done
-   # run with 
-   #   --no-minimal: to keep also the non minimum configurations
-   #   --dump-format pickle: there might be a log of structure, binary format is efficient
-   sqsgen run iteration $INPUT_YAML --no-minimal --dump-include objective --dump-format pickle
-  done
-done
+# 36 atoms hcp with 12 Al and 24 Ti atoms
+settings = dict(
+    structure=dict(file='hcp.vasp', supercell=[2, 2, 3]),
+    composition=dict(Al=12, Ti=24),
+    max_output_configurations=SAMPLES,
+    mode='systematic'
+)
 
+for shells in range(1, NSHELLS+1):
+    # set shell_weights accordingly to 1/i
+    settings['shell_weights'] = { i: 1.0/i for i in range(1, shells+1) }
+    # compute the best value of the objective function by exhaustive enumeration
+    sys_results, *_ = sqs_optimize(settings, fields=('objective',))
+    best_objective = min(sys_results.values(), key=item('objective')).get('objective')
+    for mag in range(MIN_MAGNITUDE, MAX_MAGNITUDE+1):
+        settings['mode'] = 'random'
+        settings['iterations'] = int(10**mag)
+        results, *_ = sqs_optimize(settings, minimal=False, similar=True, fields=('objective',))
+        # compute percentage of structures that exhibit minimal objective
+        n_best_structures = sum(isclose(r.get('objective'), best_objective) for r in results.values())
+        print(shells, mag, n_best_structures/len(results)*100)
 ```
-
-````
