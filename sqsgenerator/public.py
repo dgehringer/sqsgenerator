@@ -8,9 +8,10 @@ import itertools
 import numpy as np
 import typing as T
 from sqsgenerator.fallback.attrdict import AttrDict
+from sqsgenerator.settings.readers import read_structure
 from operator import attrgetter as attr, itemgetter as item
 from sqsgenerator.io import read_settings_file, export_structures
-from sqsgenerator.settings import construct_settings, process_settings, defaults
+from sqsgenerator.settings import construct_settings, process_settings, defaults, build_structure as build_structure_
 from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms, to_pyiron_atoms, from_pymatgen_structure, \
     from_ase_atoms, from_pyiron_atoms
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
@@ -385,3 +386,8 @@ def sqs_analyse(structures: T.Iterable[Structure], settings: T.Optional[T.Union[
             document[rank]['structure'] = structure
 
     return document
+
+
+def build_structure(settings: Settings) -> Structure:
+    structure = read_structure(settings)
+    return build_structure_(settings.get('compositions'), structure)

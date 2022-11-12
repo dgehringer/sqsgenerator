@@ -681,36 +681,61 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
 ### A simple convergence-test 
     
 ```{code-block} python
-import yaml
-from math import isclose
+---
+lineno-start: 1
+emphasize-lines: 7,11,15-19,23,24,26,32,34
+caption: |
+    Script to perform a "*convergence test*" for the parameters $N^{\mathrm{shells}}$ and $N^{\mathrm{iterations}}$.
+---
+
+from matplotlib import pyplot as plt
 from sqsgenerator import sqs_optimize
 from operator import itemgetter as item
+from math import isclose, factorial as f, log10
+
+# compute size of configurational space
+conf_space_size = f(36)/(f(24)*f(12))
 
 NSHELLS=7  # max number of shells
 MIN_MAGNITUDE=4  # minimum number of iterations
-MAX_MAGNITUDE=7  # maximum number of iterations
-SAMPLES=10000
+MAX_MAGNITUDE=int(log10(conf_space_size))  # maximum number of iterations
+SAMPLES=int(10**MIN_MAGNITUDE) # maximum number of structures
 
-
-# 36 atoms hcp with 12 Al and 24 Ti atoms
+# 36 atoms hcp with 12 Re and 24 W atoms
 settings = dict(
     structure=dict(file='hcp.vasp', supercell=[2, 2, 3]),
-    composition=dict(Al=12, Ti=24),
+    composition=dict(W=12, Re=24),
     max_output_configurations=SAMPLES,
-    mode='systematic'
 )
 
+test_results = dict()
 for shells in range(1, NSHELLS+1):
-    # set shell_weights accordingly to 1/i
-    settings['shell_weights'] = { i: 1.0/i for i in range(1, shells+1) }
+    settings['mode'] = 'systematic'  # perform exhaustive search
+    settings['shell_weights'] = {i: 1.0/i for i in range(1, shells + 1) }
     # compute the best value of the objective function by exhaustive enumeration
     sys_results, *_ = sqs_optimize(settings, fields=('objective',))
-    best_objective = min(sys_results.values(), key=item('objective')).get('objective')
+    best_objective = min(sys_results.values(), key=item('objective')).get('objective') 
+    test_results[shells] = []  # create a list where we store 
     for mag in range(MIN_MAGNITUDE, MAX_MAGNITUDE+1):
         settings['mode'] = 'random'
         settings['iterations'] = int(10**mag)
         results, *_ = sqs_optimize(settings, minimal=False, similar=True, fields=('objective',))
         # compute percentage of structures that exhibit minimal objective
-        n_best_structures = sum(isclose(r.get('objective'), best_objective) for r in results.values())
-        print(shells, mag, n_best_structures/len(results)*100)
+        percent = sum(isclose(r.get('objective'), best_objective) for r in results.values()) / len(results) * 100
+        test_results[shells].append((mag, percent))
+
+def transpose(it) -> zip:
+    return zip(*it)
+
+# visualize the data
+for shells, data in sorted(test_results.items(), key=item(0)):
+    plt.plot(*transpose(data), marker='o', label=f'$S={shells}$')
+plt.axvline(log10(conf_space_size), color='k', label='exhaustive')
+plt.xlabel(r'$\log(N^{iter})$')
+plt.ylabel(r'$\frac{N^{best}}{N^{total}} [\%]$')
+plt.legend()
+plt.savefig('convergence_test.pdf')
 ```
+
+  - **Line 7:** compute the total number of iterations for the exhaustive search according to Eq.~{eq}`eqn:multinomial`.
+    In the present case $N^{\text{iterations}} = \frac{36!}{12!24!} \approx 1.25 \cdot 10^9$

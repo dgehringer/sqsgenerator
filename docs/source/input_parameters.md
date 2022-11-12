@@ -298,9 +298,10 @@ The iteration mode specifies how new structures are generated.
 - *random*: the configuration will be shuffled randomly
 - *systematic*: will instruct the code generate configurations in lexicographical order and to scan the **complete configurational space**. In case *systematic* is specified the *{ref}`iterations <input-param-iterations>`* parameter will be ignored, since the number of permutations is predefined. Therefore, for a system with $N$ atoms with $M$ species, will lead to
 
-$$
-N_{\text{iterations}} = \dfrac{N!}{\prod_m^M N_m!} \quad \text{where} \quad \sum_m^M N_m = N
-$$
+```{math}
+:label: eqn:multinomial
+N^{\text{iterations}} = \dfrac{N!}{\prod_m^M N_m!} \quad \text{where} \quad \sum_m^M N_m = N
+```
 
 - **Required:** No
 - **Default:** *random*
