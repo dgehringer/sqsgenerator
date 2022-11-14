@@ -679,7 +679,23 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
 
 
 ### A simple convergence-test 
-    
+
+
+````{admonition} Warning
+:class: warning, dropdown
+
+The following examples makes use of exhaustive enumeration, multiple times. Therefore, check if you can run an 
+exhaustive enumeration in reasonable time using
+
+```{code-block} bash
+sqsgen compute estimated-time exhaustive-setup.sqs.yaml
+```
+
+and benchmarking an systematic iteration. For large cells, such an convergence test might not be possible at due to
+too large configurational space
+
+````
+
 ```{code-block} python
 ---
 lineno-start: 1
@@ -703,7 +719,7 @@ SAMPLES=int(10**MIN_MAGNITUDE) # maximum number of structures
 
 # 36 atoms hcp with 12 Re and 24 W atoms
 settings = dict(
-    structure=dict(file='hcp.vasp', supercell=[2, 2, 3]),
+    structure=dict(file='ti-hex.vasp', supercell=[2, 2, 3]),
     composition=dict(W=12, Re=24),
     max_output_configurations=SAMPLES,
 )
@@ -739,3 +755,25 @@ plt.savefig('convergence_test.pdf')
 
   - **Line 7:** compute the total number of iterations for the exhaustive search according to Eq.~{eq}`eqn:multinomial`.
     In the present case $N^{\text{iterations}} = \frac{36!}{12!24!} \approx 1.25 \cdot 10^9$
+  - **Line 8:** for the Monte-Carlo approach is does not make sense to go beyond $10^9$ iterations, as otherwise
+    one could use exhaustive search anyway.
+  - **Line 15-19:** setup up the configuration for *sqsgenerator*. Create a 48 atomic cell (replicate 
+    a 3 atomic [Ti](https://materialsproject.org/materials/mp-72) {download}`cell <examples/ti-hex.vasp>` by 
+    $2 \times 2 \times 3$) and distribute 12 rhenium and 24 tungsten atoms. Rhenium and tungsten serve only as 
+    dummy species.
+  - **Line 23-24:** at first we compute the best value of the objective function $\mathcal{O}(\sigma)$
+    (Eq. {eq}`eqn:objective`) for a defined number of `shells`. Therefore, we set the iteration {ref}`mode <input-param-mode>`
+    and {ref}`shell_weights <input-param-shell-weights>` accordingly.
+  - **Line 26:** perform exhaustive enumeration
+  - **Line 32:** perform Monte-Carlo sampling of the configurational space using for different number of iterations
+    ranging from `10**MIN_MAGNITUDE` from `10**MAX_MAGNITUDE`
+  - **Line 34:** compute the amount of structures from the Monte-Carlo approach, which exhibit the minimum objective.
+
+The bottom part of the listing above visualizes the results using [matplotlib](https://matplotlib.org/). The output
+from the above script might look something like the figure below.
+
+```{image} images/convergence_test.svg
+:alt: Convergence of the optimization as a function of number of shell and number of iterations
+:width: 60%
+:align: center
+```
