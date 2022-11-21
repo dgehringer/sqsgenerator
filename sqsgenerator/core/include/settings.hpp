@@ -55,26 +55,14 @@ namespace sqsgenerator {
                 double rtol=RTOL,
                 iteration_mode mode = iteration_mode::random);
 
-        IterationSettings(
-                Structure structure,
-                composition_t composition,
-                const_array_3d_ref_t target_objective,
-                const_array_3d_ref_t parameter_weights,
-                pair_shell_weights_t shell_weights,
-                rank_t iterations,
-                int output_configurations,
-                std::vector<int> threads_per_rank,
-                double atol=ATOL,
-                double rtol=RTOL,
-                iteration_mode mode = iteration_mode::random);
 
         [[nodiscard]] double atol() const;
         [[nodiscard]] double rtol() const;
         [[nodiscard]] size_t num_atoms() const;
         [[nodiscard]] size_t num_shells() const;
-        [[nodiscard]] rank_t num_iterations() const;
         [[nodiscard]] size_t num_species() const;
         [[nodiscard]] iteration_mode mode() const;
+        [[nodiscard]] rank_t num_iterations() const;
         [[nodiscard]] composition_t composition() const;
         [[nodiscard]] const Structure &structure() const;
         [[nodiscard]] int num_output_configurations() const;
@@ -85,6 +73,7 @@ namespace sqsgenerator {
         [[nodiscard]] pair_shell_weights_t shell_weights() const;
         [[nodiscard]] configuration_t packed_configuraton() const;
         [[nodiscard]] shuffling_bounds_t shuffling_bounds() const;
+        [[nodiscard]] std::vector<double> shell_distances() const;
         [[nodiscard]] std::vector<shell_t> available_shells() const;
         [[nodiscard]] const_array_3d_ref_t parameter_weights() const;
         [[nodiscard]] const_array_3d_ref_t target_objective() const;

@@ -261,6 +261,9 @@ caption: |
 structure:
   file: ni5.vasp
 shell_distances: [0.0, 2.7, 3.9, 4.65, 5.3, 5.8, 6.27, 6.8, 7.9, 8.49]
+composition:
+  Ni: 190
+  Al: 190 
 ```
 
 What happens under the hood is shown in the figure below. 
@@ -272,7 +275,7 @@ What happens under the hood is shown in the figure below.
 ```
 
 The translucent green lines represent the "*guesses*" made by *sgsgen*'s internal routines. While it is decent 
-for the first few shells, once the peaks get closer it misses some of them. The blue lines corespond to the values 
+for the first few shells, once the peaks get closer it misses some of them. The blue lines correspond to the values 
 specified in the above example.
 
 
@@ -280,10 +283,30 @@ Moreover, *sqsgenerator* can plot the pair-distance histogram and will draw comp
 similar to the graph shown above. Therefore, just draw the diagram using the *--plot* option. This will print the 
 histogram as well as estimated and user-specified coordination shell radii.
 
+
 ```{code-block} bash
 sqsgen compute shell-distances --plot ni5.yaml
 ```
 
+```{admonition} Non-integer values of $M^i$
+:class: note
+
+In equation Eq. {eq}`eqn:wc-sro-multi`, $M^i$ denotes the number of atoms in a coordination shell. Often $M^i$ is also
+called the "*coordination number*. E. g. $M^1 = 12$ for a fcc lattice. For perfect lattices this number will be an 
+integer. 
+
+However, if not all atoms in the input cell exhibit the same amount of neighbors in the $i^{\mathrm{th}}$ coordination
+shell, $M^i$ will exhibit an non-integer value.
+
+This might occur for example if the input structure ...
+
+   - exhibits a point or planar defect, as shown above
+   - underwent ionic relaxtion before
+
+However, for perfect lattices, which we assume as the "*standard*" use case, a non-integer value of $M^i$ would be
+a problem. Therefore, *sqsgenerator* will print a warning, which should be ingored for the current example.
+
+```
 
 #### Optimal structure with unknown cell shape
 

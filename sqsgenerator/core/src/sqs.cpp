@@ -579,7 +579,7 @@ namespace sqsgenerator {
          *   - recalculate pair_list
          */
         auto real_structure = settings.structure().rearranged(settings.arrange_backward());
-        auto real_shell_matrix = real_structure.shell_matrix(settings.atol(), settings.rtol());
+        auto real_shell_matrix = real_structure.shell_matrix(settings.shell_distances(), settings.atol(), settings.rtol());
         auto real_pair_list = Structure::create_pair_list(real_shell_matrix, settings.shell_weights());
         configuration = rearrange(configuration, settings.arrange_backward());
         std::vector<size_t> pair_list(convert_pair_list(real_pair_list));

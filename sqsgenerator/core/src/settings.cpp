@@ -69,37 +69,9 @@ namespace sqsgenerator {
         std::tie(m_configuration_packing_indices, m_packed_configuration) = pack_configuration(configuration);
     }
 
-
-    IterationSettings::IterationSettings(
-            Structure structure,
-            composition_t composition,
-            const_array_3d_ref_t target_objective,
-            const_array_3d_ref_t parameter_weights,
-            pair_shell_weights_t shell_weights,
-            rank_t iterations,
-            int output_configurations,
-            std::vector<int> threads_per_rank,
-            double atol,
-            double rtol,
-            iteration_mode mode) : IterationSettings(
-                    structure,
-                    composition,
-                    target_objective,
-                    parameter_weights,
-                    array_3d_t(boost::extents[1][1][1]),
-                    shell_weights,
-                    iterations,
-                    output_configurations,
-                    default_shell_distances(structure.distance_matrix(), atol, rtol),
-                    threads_per_rank,
-                    atol,
-                    rtol,
-                    mode)
-            {
-        m_parameter_prefactors.resize(boost::extents[num_shells()][num_species()][num_species()]);
-        m_parameter_prefactors = compute_prefactors(m_shell_matrix, m_shell_weights, m_packed_configuration);
-    }
-
+    [[nodiscard]] std::vector<double> IterationSettings::shell_distances() const {
+        return m_shell_distances;
+    };
 
     [[nodiscard]] std::vector<shell_t> IterationSettings::available_shells() const {
         return m_available_shells;

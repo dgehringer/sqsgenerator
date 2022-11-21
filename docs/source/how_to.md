@@ -118,7 +118,7 @@ In case you have downloaded the above example you can run it using
 sqsgen run iteration re-w.first.yaml
 ```
 
-In case you have not passed a custom script the programm will create an output file named `sqs.result.yaml`.
+In case you have not passed a custom script the program will create an output file named `sqs.result.yaml`.
 Otherwise, it will modify the passed filename e. g. `re-w.first.yaml` $\rightarrow$ `re-w.first.result.yaml`
 
 
@@ -287,7 +287,7 @@ composition:
 ```
 
 - **Line 4:** set the iteration mode to **systematic**. This will scan through all possible structures. **Note:** Check
-  the size of the configurational space before actually running the minimization process. Otherwise, the program might 
+  the size of the configuration space before actually running the minimization process. Otherwise, the program might 
   run "*forever*"
 - **Line 7:** use only nitrogen lattice positions to perform the SQS minimization.
 
@@ -339,7 +339,7 @@ rather than to generate a new one. To analyse existing structures *sqsgenerator*
 
 #### Restore $\alpha^i_{\xi\eta}$ from structure files
 
-**Note:** This example only worke with `pymatgen` or `ase` installed
+**Note:** This example only works with `pymatgen` or `ase` installed
 
 1. We use the {ref}`example above <example-two>` to generate some randomized structures by executing
 
@@ -637,7 +637,7 @@ interactively using the `mpirun` command you can also gracefully terminate the p
 ## A note on the number of `iterations`
 
 Actually it is very hard to tell what is a "**sufficiently**" large enough number for the `iteration` parameter. As the 
-configurational space is growing extremely fast (factorial), it is anyway not possible to sample it properly in case the
+configuration space is growing extremely fast (factorial), it is anyway not possible to sample it properly in case the
 structures get large enough.
 
 To get a feeling how many structures are there, set `mode` to **systematic** and hit
@@ -651,6 +651,9 @@ however lots of the might be symmetrically equivalent.
 
 A few rules over the thumb, and what you can do if you deal with "*large*" systems
 
+  - Maybe you have knowledge about the system: E. g certain species are restricted on 
+    different sub-lattices.
+
   - Check how long it would take to compute your current settings
   
     ```{code-block} bash
@@ -658,9 +661,11 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
     ```
 
     You can tune the number of permutations to a computing time you can afford. The above command gives only an estimate
-    for the current machine. The above command analyzes $10^5$ random configurations and 
+    for the current machine. The above command analyzes $10^5$ random configurations and extrapolates it to the desired
+    number of iterations. However, this value should be seen as an **upper bound**, as cycle times 
+    are slightly reduced for large number of iterations
     
-  - Reduce the number of shells. This has two-fold advantage
+  - Reduce the number of shells. This has two-fold advantage:
     1. In contrast to old versions of *sqsgenerator*, the current implementations profit greatly from a decreased number
        of coordination shells. The actual speedup depends on the input structure but might be up to an order of 
        magnitude when compared to the default value (all shells are considered)
@@ -671,3 +676,119 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
        ```
     3. The image size of the objective function is drastically reduced. In other words a lot of different structures are 
        mapped onto the same value of the objective function.
+
+
+### A simple convergence-test 
+
+For some general systems, which one uses often it might be useful, to know how many 
+{ref}`iterations <input-param-iterations>` would be needed to get a converged result. The number of 
+{ref}`iterations <input-param-iterations>` mainly depend on three factors:
+
+  1. **Cell size:** the configuration space grows very fast, see. Eq. {eq}`eqn:multinomial`
+  2. **Composition:** the size of the configuration space for a given cell size $N$, according to 
+     Eq. {eq}`eqn:multinomial`, will reach its maximum for close to equi-atomic compositions
+  3. **Number of coordination shells:** The objective function (Eq. {eq}`eqn:objective`) is a sum of the SRO parameters.
+     Therefore, the more shells are considered, the larger the image domain of the objective function becomes. In other
+     words, the more shells considered, the more {ref}`iterations <input-param-iterations>` will be needed.
+
+````{admonition} Warning
+:class: warning, dropdown
+
+The following examples makes use of exhaustive enumeration, multiple times. Therefore, check if you can run an 
+exhaustive enumeration in reasonable time using
+
+```{code-block} bash
+sqsgen compute estimated-time exhaustive-setup.sqs.yaml
+```
+
+and benchmarking an systematic iteration. For large cells, such an convergence test might not be possible at due to
+too large configurational space
+
+Moreover, keep in mind, that such a convergence test is computationally demanding as it invloves a lot of different 
+single-point runs.
+
+````
+
+```{code-block} python
+---
+lineno-start: 1
+emphasize-lines: 7,11,15-19,23,24,26,32,34
+caption: |
+    Script to perform a "*convergence test*" for the parameters $N^{\mathrm{shells}}$ and $N^{\mathrm{iterations}}$.
+---
+
+from matplotlib import pyplot as plt
+from sqsgenerator import sqs_optimize
+from operator import itemgetter as item
+from math import isclose, factorial as f, log10
+
+# compute size of configurational space
+conf_space_size = f(36)/(f(24)*f(12))
+
+NSHELLS=7  # max number of shells
+MIN_MAGNITUDE=4  # minimum number of iterations
+MAX_MAGNITUDE=int(log10(conf_space_size))  # maximum number of iterations
+SAMPLES=int(10**MIN_MAGNITUDE) # maximum number of structures
+
+# 36 atoms hcp with 12 Re and 24 W atoms
+settings = dict(
+    structure=dict(file='ti-hex.vasp', supercell=[2, 2, 3]),
+    composition=dict(W=12, Re=24),
+    max_output_configurations=SAMPLES,
+)
+
+test_results = dict()
+for shells in range(1, NSHELLS+1):
+    settings['mode'] = 'systematic'  # perform exhaustive search
+    settings['shell_weights'] = {i: 1.0/i for i in range(1, shells + 1) }
+    # compute the best value of the objective function by exhaustive enumeration
+    sys_results, *_ = sqs_optimize(settings, fields=('objective',))
+    best_objective = min(sys_results.values(), key=item('objective')).get('objective') 
+    test_results[shells] = []  # create a list where we store 
+    for mag in range(MIN_MAGNITUDE, MAX_MAGNITUDE+1):
+        settings['mode'] = 'random'
+        settings['iterations'] = int(10**mag)
+        results, *_ = sqs_optimize(settings, minimal=False, similar=True, fields=('objective',))
+        # compute percentage of structures that exhibit minimal objective
+        percent = sum(isclose(r.get('objective'), best_objective) for r in results.values()) / len(results) * 100
+        test_results[shells].append((mag, percent))
+
+def transpose(it) -> zip:
+    return zip(*it)
+
+# visualize the data
+for shells, data in sorted(test_results.items(), key=item(0)):
+    plt.plot(*transpose(data), marker='o', label=f'$S={shells}$')
+plt.axvline(log10(conf_space_size), color='k', label='exhaustive')
+plt.xlabel(r'$\log(N^{iter})$')
+plt.ylabel(r'$\frac{N^{best}}{N^{total}} [\%]$')
+plt.legend()
+plt.savefig('convergence_test.pdf')
+```
+
+  - **Line 7:** compute the total number of iterations for the exhaustive search according to Eq.~{eq}`eqn:multinomial`.
+    In the present case $N^{\text{iterations}} = \frac{36!}{12!24!} \approx 1.25 \cdot 10^9$
+  - **Line 8:** for the Monte-Carlo approach is does not make sense to go beyond $10^9$ iterations, as otherwise
+    one could use exhaustive search anyway.
+  - **Line 15-19:** setup up the configuration for *sqsgenerator*. Create a 48 atomic cell (replicate 
+    a 3 atomic [Ti](https://materialsproject.org/materials/mp-72) {download}`cell <examples/ti-hex.vasp>` by 
+    $2 \times 2 \times 3$) and distribute 12 rhenium and 24 tungsten atoms. Rhenium and tungsten serve only as 
+    dummy species.
+  - **Line 23-24:** at first we compute the best value of the objective function $\mathcal{O}(\sigma)$
+    (Eq. {eq}`eqn:objective`) for a defined number of `shells`. Therefore, we set the iteration {ref}`mode <input-param-mode>`
+    and {ref}`shell_weights <input-param-shell-weights>` accordingly.
+  - **Line 26:** perform exhaustive enumeration
+  - **Line 32:** perform Monte-Carlo sampling of the configuration space using for different number of iterations
+    ranging from `10**MIN_MAGNITUDE` from `10**MAX_MAGNITUDE`
+  - **Line 34:** compute the amount of structures from the Monte-Carlo approach, which exhibit the minimum objective.
+
+The bottom part of the listing above visualizes the results using [matplotlib](https://matplotlib.org/). The output
+from the above script might look something like the figure below.
+
+```{image} images/convergence_test.svg
+:alt: Convergence of the optimization as a function of number of shell and number of iterations
+:width: 60%
+:align: center
+```
+
+Please remember that the figure above might look differently for a different system (lattice).

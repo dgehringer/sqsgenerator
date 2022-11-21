@@ -4,6 +4,7 @@ import typing as T
 from sqsgenerator.core import get_function_logger
 from sqsgenerator.fallback.attrdict import AttrDict
 from sqsgenerator.settings.exceptions import BadSettings
+from sqsgenerator.compat import FeatureNotAvailableException
 
 
 class Default(enum.Enum):
@@ -49,8 +50,15 @@ def parameter(name: str, default: T.Optional[T.Any] = Default.NoDefault, require
                 try:
                     processed_value = f(settings)
                 except BadSettings as exc:
-                    exc.parameter = name # set the parameter info and forward the exception
+                    exc.parameter = name  # set the parameter info and forward the exception
                     raise
+                except FeatureNotAvailableException as exc:
+
+                    raise BadSettings(
+                        message='Missing at least one of the following features: ' + ', '.join(
+                            f'"{f.value}"' for f in exc.features),
+                        parameter=name
+                    )
                 else:
                     return processed_value
 
@@ -67,8 +75,11 @@ def if_(condition):
         def else_(el_val):
             def stmt_(settings):
                 return th_val if condition(settings) else el_val
+
             return stmt_
+
         return else_
+
     return then_
 
 

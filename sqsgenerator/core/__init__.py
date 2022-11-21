@@ -162,5 +162,5 @@ def rank_structure(struct: Structure, which: T.Optional[T.Iterable[int]] = None)
     return rank_structure_(struct[which])
 
 
-def compute_prefactors(structure: Structure, composition: dict, shell_wights: dict, atol: float = 1e-3, rtol: float = 1e-5):
-    return compute_prefactors_(structure, composition, shell_wights, atol, rtol)
+def compute_prefactors(structure: Structure, composition: T.Dict[str, T.Any], shell_weights: T.Dict[int, float], shell_distances: T.List[float], atol: float = 1e-3, rtol: float = 1e-5):
+    return compute_prefactors_(structure, composition, shell_weights, shell_distances, atol, rtol)

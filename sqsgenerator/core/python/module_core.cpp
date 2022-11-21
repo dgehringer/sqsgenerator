@@ -175,10 +175,13 @@ Structure build_structure_from_composition(const Structure &structure, const com
     return structure.with_species(configuration).rearranged(arrange_forward);
 }
 
-np::ndarray compute_prefactors_wrapper(StructurePythonWrapper &s, py::dict composition, py::dict shell_weights, double atol, double rtol) {
-    auto structure = build_structure_from_composition(*s.handle(), helpers::convert_composition(composition));
+np::ndarray compute_prefactors_wrapper(StructurePythonWrapper &s, py::dict composition, py::dict shell_weights, py::object shell_distances, double atol, double rtol) {
     auto weights = helpers::dict_to_map<shell_t, double>(shell_weights);
-    auto prefactors = sqsgenerator::utils::compute_prefactors(structure.shell_matrix(atol, rtol), weights, std::get<1>(pack_configuration(structure.configuration())));
+    auto structure = build_structure_from_composition(*s.handle(), helpers::convert_composition(composition));
+    auto [_, configuration] = pack_configuration(structure.configuration());
+    auto distances {helpers::list_to_vector<double>(shell_distances)};
+
+    auto prefactors = sqsgenerator::utils::compute_prefactors(structure.shell_matrix(distances, atol, rtol), weights, configuration);
     return helpers::multi_array_to_ndarray(prefactors);
 }
 
@@ -237,8 +240,6 @@ BOOST_PYTHON_MODULE(core) {
 
         // IterationSettingsPythonWrapper StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode
         py::class_<IterationSettingsPythonWrapper>("IterationSettings", py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode>())
-        // IterationSettingsPythonWrapper StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, double, double, iteration_mode
-            .def(py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, double, double, iteration_mode>())
             .def_readonly("num_atoms", &IterationSettingsPythonWrapper::num_atoms)
             .def_readonly("num_shells", &IterationSettingsPythonWrapper::num_shells)
             .def_readonly("num_iterations", &IterationSettingsPythonWrapper::num_iterations)

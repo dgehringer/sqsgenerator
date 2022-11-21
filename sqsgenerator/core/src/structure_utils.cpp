@@ -54,32 +54,38 @@ namespace sqsgenerator::utils {
 
         std::map<shell_t, double> neighbor_count;
         std::vector<shell_t> shells = std::get<0>(compute_shell_indices_and_weights(shell_weights));
-        for (const auto &shell: shells) neighbor_count.emplace(std::make_pair(shell, 0));
+        for (const auto &shell: shells) neighbor_count.emplace(shell, 0.0);
 
         for (auto i = 0; i < natoms; i++) {
             for (auto j = i + 1; j < natoms; j++) {
                 auto neighbor_shell {shell_matrix[i][j]};
-                if (neighbor_count.count(neighbor_shell)) neighbor_count[neighbor_shell]++;
-                neighbor_shell = shell_matrix[j][i];
-                if (neighbor_count.count(neighbor_shell)) neighbor_count[neighbor_shell]++;
+                if (neighbor_count.count(neighbor_shell)) {
+                    assert(neighbor_shell == shell_matrix[j][i]);
+                    neighbor_count[neighbor_shell] += 2.0;
+                }
             }
         }
 
         for (const auto& [shell_index, num_neighbors] : neighbor_count) neighbor_count[shell_index] /= natoms_d;
 
-        BOOST_LOG_TRIVIAL(debug) << "structure_utils::calculate_prefactors::shell_weights= " << format_map(shell_weights);
-        BOOST_LOG_TRIVIAL(debug) << "structure_utils::calculate_prefactors::neighbor_count= " << format_map(neighbor_count);
+        BOOST_LOG_TRIVIAL(info) << "structure_utils::compute_prefactors::shells = " << format_vector(shells);
+        BOOST_LOG_TRIVIAL(info) << "structure_utils::compute_prefactors::shell_weights = " << format_map(shell_weights);
+        BOOST_LOG_TRIVIAL(info) << "structure_utils::compute_prefactors::neighbor_count = " << format_map(neighbor_count);
 
         auto sum_neighbors {0};
         for (const auto&[shell_index, shell_atoms] : neighbor_count) {
             if (shell_atoms < 1) BOOST_LOG_TRIVIAL(warning) <<"The coordination shell " + std::to_string(shell_index) + R"( contains no or only one lattice position(s) increase either "atol" or "rtol" or to set the "shell_distances" parameter manually)";
 
             auto is_integer { is_close(shell_atoms, static_cast<double>(static_cast<shell_t>(shell_atoms))) };
-            if (!is_integer) BOOST_LOG_TRIVIAL(warning) << "structure_utils::calculate_prefactors::shell::" << shell_index << "::no_integer_coordination_shell = " << shell_atoms;
-            else BOOST_LOG_TRIVIAL(info) << "structure_utils::calculate_prefactors::shell::" << shell_index << "::is_integer_coordination_shell = " << shell_atoms;
+            if (!is_integer) {
+                BOOST_LOG_TRIVIAL(warning) << "structure_utils::compute_prefactors::shell::" << shell_index << "::no_integer_coordination_shell = " << shell_atoms;
+            }
+            else {
+                BOOST_LOG_TRIVIAL(info) << "structure_utils::compute_prefactors::shell::" << shell_index << "::is_integer_coordination_shell = " << shell_atoms;
+            }
             sum_neighbors += shell_atoms;
         }
-        BOOST_LOG_TRIVIAL(debug) << "structure_utils::calculate_prefactors::sum_neighbors = " << sum_neighbors;
+        BOOST_LOG_TRIVIAL(debug) << "structure_utils::compute_prefactors::sum_neighbors = " << sum_neighbors;
 
         auto hist = configuration_histogram(configuration);
         array_3d_t parameter_prefactors(boost::extents[static_cast<index_t>(nshells)][static_cast<index_t>(nspecies)][static_cast<index_t>(nspecies)]);
