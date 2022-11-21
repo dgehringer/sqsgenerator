@@ -704,6 +704,9 @@ sqsgen compute estimated-time exhaustive-setup.sqs.yaml
 and benchmarking an systematic iteration. For large cells, such an convergence test might not be possible at due to
 too large configurational space
 
+Moreover, keep in mind, that such a convergence test is computationally demanding as it invloves a lot of different 
+single-point runs.
+
 ````
 
 ```{code-block} python
