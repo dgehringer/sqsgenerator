@@ -118,7 +118,7 @@ In case you have downloaded the above example you can run it using
 sqsgen run iteration re-w.first.yaml
 ```
 
-In case you have not passed a custom script the programm will create an output file named `sqs.result.yaml`.
+In case you have not passed a custom script the program will create an output file named `sqs.result.yaml`.
 Otherwise, it will modify the passed filename e. g. `re-w.first.yaml` $\rightarrow$ `re-w.first.result.yaml`
 
 
@@ -287,7 +287,7 @@ composition:
 ```
 
 - **Line 4:** set the iteration mode to **systematic**. This will scan through all possible structures. **Note:** Check
-  the size of the configurational space before actually running the minimization process. Otherwise, the program might 
+  the size of the configuration space before actually running the minimization process. Otherwise, the program might 
   run "*forever*"
 - **Line 7:** use only nitrogen lattice positions to perform the SQS minimization.
 
@@ -339,7 +339,7 @@ rather than to generate a new one. To analyse existing structures *sqsgenerator*
 
 #### Restore $\alpha^i_{\xi\eta}$ from structure files
 
-**Note:** This example only worke with `pymatgen` or `ase` installed
+**Note:** This example only works with `pymatgen` or `ase` installed
 
 1. We use the {ref}`example above <example-two>` to generate some randomized structures by executing
 
@@ -637,7 +637,7 @@ interactively using the `mpirun` command you can also gracefully terminate the p
 ## A note on the number of `iterations`
 
 Actually it is very hard to tell what is a "**sufficiently**" large enough number for the `iteration` parameter. As the 
-configurational space is growing extremely fast (factorial), it is anyway not possible to sample it properly in case the
+configuration space is growing extremely fast (factorial), it is anyway not possible to sample it properly in case the
 structures get large enough.
 
 To get a feeling how many structures are there, set `mode` to **systematic** and hit
@@ -680,6 +680,16 @@ A few rules over the thumb, and what you can do if you deal with "*large*" syste
 
 ### A simple convergence-test 
 
+For some general systems, which one uses often it might be useful, to know how many 
+{ref}`iterations <input-param-iterations>` would be needed to get a converged result. The number of 
+{ref}`iterations <input-param-iterations>` mainly depend on three factors:
+
+  1. **Cell size:** the configuration space grows very fast, see. Eq. {eq}`eqn:multinomial`
+  2. **Composition:** the size of the configuration space for a given cell size $N$, according to 
+     Eq. {eq}`eqn:multinomial`, will reach its maximum for close to equi-atomic compositions
+  3. **Number of coordination shells:** The objective function (Eq. {eq}`eqn:objective`) is a sum of the SRO parameters.
+     Therefore, the more shells are considered, the larger the image domain of the objective function becomes. In other
+     words, the more shells considered, the more {ref}`iterations <input-param-iterations>` will be needed.
 
 ````{admonition} Warning
 :class: warning, dropdown
@@ -765,7 +775,7 @@ plt.savefig('convergence_test.pdf')
     (Eq. {eq}`eqn:objective`) for a defined number of `shells`. Therefore, we set the iteration {ref}`mode <input-param-mode>`
     and {ref}`shell_weights <input-param-shell-weights>` accordingly.
   - **Line 26:** perform exhaustive enumeration
-  - **Line 32:** perform Monte-Carlo sampling of the configurational space using for different number of iterations
+  - **Line 32:** perform Monte-Carlo sampling of the configuration space using for different number of iterations
     ranging from `10**MIN_MAGNITUDE` from `10**MAX_MAGNITUDE`
   - **Line 34:** compute the amount of structures from the Monte-Carlo approach, which exhibit the minimum objective.
 
@@ -777,3 +787,5 @@ from the above script might look something like the figure below.
 :width: 60%
 :align: center
 ```
+
+Please remember that the figure above might look differently for a different system (lattice).
