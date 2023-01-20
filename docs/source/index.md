@@ -14,7 +14,7 @@
   - Simple to use Python API
 
 I would highly, appreciate, if you cite our [article](https://doi.org/10.1016/j.cpc.2023.108664) in case you use the 
-software in your research. Here is the {download}`BibTeX entry <citation.bib>`. You  Many thanks in advance =)
+software in your research. Here is the {download}`BibTeX entry <citation.bib>`. Many thanks in advance =)
 
 ## Table of contents
 
