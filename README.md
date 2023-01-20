@@ -34,7 +34,7 @@ https://anaconda.org/conda-forge/sqsgenerator/badges/downloads.svg)
 
 ### Appreciation
 I would highly, appreciate, if you cite our [article](https://doi.org/10.1016/j.cpc.2023.108664) in case you use the 
-software in your research. Here is the [BibTeX entry](citation.bib). You  Many thanks in advance :smile:
+software in your research. Here is the [BibTeX entry](citation.bib). Many thanks in advance :smile:
 
 ## Installation
 
