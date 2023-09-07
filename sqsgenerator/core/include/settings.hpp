@@ -5,13 +5,23 @@
 #ifndef SQSGENERATOR_SETTINGS_HPP
 #define SQSGENERATOR_SETTINGS_HPP
 
+#include <functional>
 #include "types.hpp"
+#include "result.hpp"
 #include "atomistics.hpp"
 
 using namespace sqsgenerator::utils::atomistics;
 
 namespace sqsgenerator {
     enum iteration_mode { random = 0, systematic = 1};
+
+    typedef std::function<bool(rank_t, const SQSResult&, int, int)> callback_t;
+    typedef std::map<std::string, std::vector<callback_t>> callback_map_t;
+
+    static const callback_map_t DEFAULT_CALLBACKS {
+            {"found_better_or_equal", {}},
+            {"found_better", {}}
+    };
 
     class IterationSettings {
 
@@ -37,6 +47,7 @@ namespace sqsgenerator {
         arrangement_t m_arrange_forward;
         arrangement_t m_arrange_backward;
         shuffling_bounds_t m_shuffling_bounds;
+        callback_map_t m_callback_map;
 
     public:
 
@@ -53,7 +64,8 @@ namespace sqsgenerator {
                 std::vector<int> threads_per_rank,
                 double atol=ATOL,
                 double rtol=RTOL,
-                iteration_mode mode = iteration_mode::random);
+                iteration_mode mode = iteration_mode::random,
+                callback_map_t callback_map = DEFAULT_CALLBACKS);
 
 
         [[nodiscard]] double atol() const;
@@ -65,6 +77,7 @@ namespace sqsgenerator {
         [[nodiscard]] rank_t num_iterations() const;
         [[nodiscard]] composition_t composition() const;
         [[nodiscard]] const Structure &structure() const;
+        [[nodiscard]] callback_map_t callback_map() const;
         [[nodiscard]] int num_output_configurations() const;
         [[nodiscard]] arrangement_t arrange_forward() const;
         [[nodiscard]] arrangement_t arrange_backward() const;

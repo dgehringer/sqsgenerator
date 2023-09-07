@@ -31,7 +31,8 @@ namespace sqsgenerator {
             std::vector<int> threads_per_rank,
             double atol,
             double rtol,
-            iteration_mode mode) :
+            iteration_mode mode,
+            callback_map_t callback_map) :
         m_structure(build_structure_from_composition(structure, composition)),
         m_composition(composition),
         m_atol(atol),
@@ -44,7 +45,8 @@ namespace sqsgenerator {
         m_target_objective(target_objective),
         m_parameter_prefactors(bond_count_prefactors),
         m_shell_distances(shell_distances),
-        m_threads_per_rank(threads_per_rank)
+        m_threads_per_rank(threads_per_rank),
+        m_callback_map(callback_map)
     {
 
         m_shell_matrix.resize(boost::extents[num_atoms()][num_atoms()]);
@@ -167,5 +169,9 @@ namespace sqsgenerator {
 
     [[nodiscard]] shuffling_bounds_t IterationSettings::shuffling_bounds() const {
         return m_shuffling_bounds;
+    }
+
+    [[nodiscard]] callback_map_t IterationSettings::callback_map() const {
+        return m_callback_map;
     }
 }

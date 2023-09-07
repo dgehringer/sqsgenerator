@@ -238,8 +238,8 @@ BOOST_PYTHON_MODULE(core) {
         py::class_<pair_shell_weights_t>("ShellWeights")
             .def(py::map_indexing_suite<pair_shell_weights_t>());
 
-        // IterationSettingsPythonWrapper StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode
-        py::class_<IterationSettingsPythonWrapper>("IterationSettings", py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode>())
+        // IterationSettingsPythonWrapper StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode, py::dict
+        py::class_<IterationSettingsPythonWrapper>("IterationSettings", py::init<StructurePythonWrapper, py::dict, np::ndarray, np::ndarray, np::ndarray, py::dict, rank_t, int, py::list, py::list, double, double, iteration_mode, py::dict>())
             .def_readonly("num_atoms", &IterationSettingsPythonWrapper::num_atoms)
             .def_readonly("num_shells", &IterationSettingsPythonWrapper::num_shells)
             .def_readonly("num_iterations", &IterationSettingsPythonWrapper::num_iterations)
