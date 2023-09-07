@@ -63,7 +63,7 @@ def shell_distances(settings, plot, rmin, rmax):
             else:
                 rmax = np.amax(d2)
 
-            # we plot not vertical lines outside (rmin, rmax)
+            # we plot no vertical lines outside (rmin, rmax)
             # therefore we check if the shell_distance if within the bounds
             in_bounds_plot = partial(in_bounds, rmin, rmax)
 
@@ -160,7 +160,7 @@ def estimate_time(settings, verbose):
     num_test_iterations = 100000
     default_guess_settings = dict(iterations=num_test_iterations, mode=IterationMode.random)
     settings.update(default_guess_settings)
-    iteration_settings = construct_settings(settings, False, structure=structure)
+    iteration_settings = construct_settings(settings, False)
 
     t0 = time.time()
     _, timings = pair_sqs_iteration(iteration_settings)
