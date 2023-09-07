@@ -34,77 +34,11 @@ def in_bounds(min_val: float, max_val: float, val: float) -> bool:
 
 
 @click.command('shell-distances', help=c_help.compute.shell_distances)
-@click.option('--plot', '-p', is_flag=True, default=False)
-@click.option('--rmin', type=click.FloatRange(min=0.0))
-@click.option('--rmax', type=click.FloatRange(min=0.0))
 @click_settings_file({'atol', 'rtol', 'structure', 'which', 'composition'})
-def shell_distances(settings, plot, rmin, rmax):
+def shell_distances(settings):
     structure = build_structure(settings.composition, settings.structure[settings.which])
     distances = default_shell_distances(settings)
-    if plot:
-        try:
-            import plotext
-        except ImportError:
-            error('To plot the pair distance histogram I need the "plotext" package which I could not find.'
-                  'Please install it. See: https://github.com/piccolomo/plotext', exc_type=ImportError)
-        else:
-            # excludes main diagonal of the distance matrix to eliminate 0 distances
-            exclude_diag = ~np.eye(len(structure), dtype=bool)
-            d2 = np.zeros(np.sum(exclude_diag) + 1)
-            d2[0] = 0.0
-            d2[1:] = structure.distance_matrix[exclude_diag]
-
-            if rmin is None:
-                rmin = np.amin(d2)
-
-            if rmax is not None:
-                if rmax > np.amax(d2):
-                    rmax = np.amax(d2)
-            else:
-                rmax = np.amax(d2)
-
-            # we plot no vertical lines outside (rmin, rmax)
-            # therefore we check if the shell_distance if within the bounds
-            in_bounds_plot = partial(in_bounds, rmin, rmax)
-
-            nbins = int(np.amax(d2) / settings.get('bin_width', DEFAULT_PAIR_HIST_BIN_WIDTH))
-
-            hist, (_, *edges) = np.histogram(d2, bins=nbins)
-            max_y = np.amax(hist)
-            plotext.bar(edges, hist, label='Histogram')
-            plotext.xlim(rmin, rmax)
-
-            last_dist = None
-            for dist in distances[1:]:
-                if not in_bounds_plot(dist):
-                    continue
-                last_dist = dist
-                plotext.plot([dist, dist], [0, max_y], color='green')
-            # plot the last vertical line twice to generate a legend entry
-            if last_dist is not None:
-                plotext.plot([last_dist, last_dist], [0, max_y], color='green', label='guessed by sqsgen')
-
-            last_dist = None
-            manual_distances = settings.get('shell_distances', None)
-            if manual_distances:
-                for manual_dist in manual_distances[1:]:
-                    if not in_bounds_plot(manual_dist):
-                        continue
-                    last_dist = manual_dist
-                    plotext.plot([manual_dist, manual_dist], [0, max_y], color='red')
-
-            if last_dist is not None:
-                plotext.plot([last_dist, last_dist], [0, max_y], color='red', label=f'specified in "{settings.get("file_name")}"')
-
-            xticks = np.linspace(rmin, rmax, 10)
-            # set up graph-labeling
-            plotext.xticks(ticks=xticks, labels=[f'{tick:.2f}' for tick in xticks])
-            plotext.xlabel('pair-distance [A]')
-            plotext.ylabel('counts [a. u.]')
-            plotext.title('Histogram and coordination shell radii')
-            plotext.show()
-    else:
-        pretty_print(distances)
+    pretty_print(distances)
     return distances
 
 
