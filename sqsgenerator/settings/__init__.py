@@ -30,7 +30,6 @@ def construct_settings(settings: AttrDict, process: T.Optional[bool] = True, **o
             raise KeyError(overload)
         settings[overload] = value
     settings = process_settings(settings) if process else settings
-
     try:
         return IterationSettings(
             settings.structure,
@@ -45,7 +44,8 @@ def construct_settings(settings: AttrDict, process: T.Optional[bool] = True, **o
             list(settings.threads_per_rank),
             settings.atol,
             settings.rtol,
-            settings.mode
+            settings.mode,
+            settings.callback if "callback" in settings else dict(defaults.callbacks())
         )
     except (ValueError, RuntimeError) as e:
         raise BadSettings(e)

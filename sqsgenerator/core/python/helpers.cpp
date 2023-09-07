@@ -30,10 +30,11 @@ namespace sqsgenerator::python::helpers {
     callback_t create_invocation_function(const py::object &callable) {
         return [&callable](rank_t iteration, const SQSResult &result, int mpi_rank, int thread_id) -> bool{
             // we have to wrap the SQSResult object into a python wrapper at first
+            
             sqsgenerator::python::SQSResultPythonWrapper wrapped_result(result);
             auto return_value = py::call<PyObject*, rank_t, SQSResultPythonWrapper, int, int>(callable.ptr(), iteration, wrapped_result, mpi_rank, thread_id);
             if (Py_IsNone(return_value)) {
-                // a None or no return value means we do not stop the loop
+                // a None or no return value means we do not stop the main optimization loop
                 return false;
             } else {
                 return Py_IsTrue(return_value);
