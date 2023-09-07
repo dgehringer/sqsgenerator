@@ -36,7 +36,6 @@ def in_bounds(min_val: float, max_val: float, val: float) -> bool:
 @click.command('shell-distances', help=c_help.compute.shell_distances)
 @click_settings_file({'atol', 'rtol', 'structure', 'which', 'composition'})
 def shell_distances(settings):
-    structure = build_structure(settings.composition, settings.structure[settings.which])
     distances = default_shell_distances(settings)
     pretty_print(distances)
     return distances
