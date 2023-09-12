@@ -141,7 +141,6 @@ namespace sqsgenerator {
         // we compute the rank after rearranging
         rank_t rank = rank_permutation(ordered_configuration, settings.num_species());
         SQSResult ranked(result.objective(), rank, settings.unpack_configuration(ordered_configuration), result.storage());
-
         bool shutdown = false;
         for (auto &callback : cb_map.at(cb_name)) {
             if (callback(iteration, ranked, mpi_rank, thread_rank)) shutdown = true;
@@ -396,9 +395,16 @@ namespace sqsgenerator {
                     SQSResult result(objective_local, {-1}, configuration_local, parameters_local);
                     #pragma omp critical
                     results.push_back(result);
-                    if (have_callback_better_or_equal) {
-                        if (fire_callbacks(settings, "found_better_or_equal", callback_map, i, result, mpi_rank, thread_id)) {
-                            shutdown();
+
+                    #pragma omp critical
+                    {
+                        if (have_callback_better_or_equal) {
+                            if (i > start_it) {  // skip the trivial case
+                                if (fire_callbacks(settings, "found_better_or_equal", callback_map, i, result, mpi_rank,
+                                                   thread_id)) {
+                                    shutdown();
+                                }
+                            }
                         }
                     }
                     // synchronize writing to global best objective, only if the local one is really better
@@ -413,11 +419,18 @@ namespace sqsgenerator {
                         #endif
 
                         best_objective_local = objective_local;
-                        if (have_callback_better) {
-                            if (fire_callbacks(settings, "found_better", callback_map, i, result, mpi_rank, thread_id)) {
-                                shutdown();
+
+                        #pragma omp critical
+                        {
+                            if (have_callback_better) {
+                                if (i > start_it) {  // the first iteration will of course trigger the callback, we want to avoid that
+                                    if (fire_callbacks(settings, "found_better", callback_map, i, result, mpi_rank,
+                                                       thread_id)) {
+                                        shutdown();
+                                    }
+                                }
                             }
-                        }
+                        };
 #if defined(USE_MPI)
                         /*
                          * Notify the other processes that we have found. Just one of the threads is allowed to send the

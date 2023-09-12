@@ -27,18 +27,27 @@ namespace sqsgenerator::python::helpers {
         return result;
     }
 
-    callback_t create_invocation_function(const py::object &callable) {
-        return [&callable](rank_t iteration, const SQSResult &result, int mpi_rank, int thread_id) -> bool{
+    callback_t create_invocation_function(const py::object callable) {
+        return [callable](rank_t iteration, const SQSResult &result, int mpi_rank, int thread_id) -> bool {
             // we have to wrap the SQSResult object into a python wrapper at first
-            
             sqsgenerator::python::SQSResultPythonWrapper wrapped_result(result);
-            auto return_value = py::call<PyObject*, rank_t, SQSResultPythonWrapper, int, int>(callable.ptr(), iteration, wrapped_result, mpi_rank, thread_id);
-            if (Py_IsNone(return_value)) {
-                // a None or no return value means we do not stop the main optimization loop
-                return false;
-            } else {
-                return Py_IsTrue(return_value);
+            bool stop = false; // we are optimistic and assume we do not have to stop the loop
+            try {
+                py::object return_value = py::call<py::object, rank_t, SQSResultPythonWrapper, int, int>(callable.ptr(),
+                                                                                                   iteration,
+                                                                                                   wrapped_result,
+                                                                                                   mpi_rank, thread_id);
+                if (Py_IsNone(return_value.ptr())) {
+                    // a None or no return value means we do not stop the main optimization loop
+                    stop = false;
+                } else {
+                    stop = (bool) PyObject_IsTrue(return_value.ptr());
+                }
+            } catch (boost::python::error_already_set &e) {
+                BOOST_LOG_TRIVIAL(warning) << "sqsgenerator::python::helpers::create_invocation_function=\"Callback raised an error\"";
+                stop = true;
             }
+            return stop;
         };
     }
 
@@ -52,11 +61,11 @@ namespace sqsgenerator::python::helpers {
                 throw std::invalid_argument("invalid callback name");
             }
             py::list cbs = py::extract<py::list>(callbacks[keys[i]]);
-            std::vector<callback_t> converted_callbacks(py::len(cbs));
+            std::vector<callback_t> converted_callbacks;
             for (auto j = 0; j < py::len(cbs); j++) {
                 converted_callbacks.push_back(create_invocation_function(py::extract<py::object>(cbs[j])));
             }
-            result.emplace(cb_name, converted_callbacks);
+            result.emplace(std::string(cb_name), converted_callbacks);
         }
         return result;
     }
