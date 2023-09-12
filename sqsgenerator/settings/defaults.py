@@ -14,13 +14,13 @@ from sqsgenerator.core import IterationMode, Structure, compute_prefactors as de
 DEFAULT_PAIR_HIST_PEAK_ISOLATION = 0.25
 DEFAULT_PAIR_HIST_BIN_WIDTH = 0.15
 
-def printer(*args):
-    print(args)
 
 DEFAULT_CALLBACKS = frozendict.frozendict(dict(
     found_better_or_equal=[],
-    found_better=[printer]
+    found_better=[]
 ))
+
+
 
 def num_shells(settings: AttrDict):
     return len(settings.shell_weights)
