@@ -1,7 +1,7 @@
 """
 This module forwards public imports from sqsgenerator.core and defines functions which are designed as user-functions
 """
-
+import functools
 import signal
 import warnings
 import itertools
@@ -16,11 +16,12 @@ from sqsgenerator.adapters import to_pymatgen_structure, to_ase_atoms, to_pyiron
     from_ase_atoms, from_pyiron_atoms
 from sqsgenerator.core import log_levels, set_core_log_level, pair_sqs_iteration as pair_sqs_iteration_core, \
     SQSResult, symbols_from_z, Structure, make_supercell, IterationMode, pair_analysis, available_species, make_rank, \
-    rank_structure, total_permutations, merge
+    rank_structure, total_permutations, merge, SQSCallback, SQSCoreCallback, IterationSettings
 
 TimingDictionary = T.Dict[int, T.List[float]]
 Settings = AttrDict
 SQSResultCollection = T.Iterable[SQSResult]
+SQSCallbacks = T.Iterable[SQSCallback]
 OptimizationResult = T.Tuple[T.Dict[int, T.Dict[str, T.Any]], T.Dict[int, T.Union[float, T.List[float]]]]
 
 __all__ = [
@@ -120,7 +121,18 @@ def extract_structures(results: Settings, base_structure: T.Optional[Structure] 
     return structures
 
 
-def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool = False, log_level: str = 'warning') -> \
+def inject_structure(settings: Settings, f: SQSCallback) -> SQSCoreCallback:
+    base_structure: Structure = settings.structure[settings.which]
+
+    def callback(iteration: int, result: SQSResult, rank_id: int, thread_id: int) -> T.Optional[bool]:
+        return f(iteration, base_structure.with_species(symbols_from_z(result.configuration)), result, rank_id,
+                 thread_id)
+
+    return callback
+
+
+def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool = False, log_level: str = 'warning',
+                       pass_structure: bool = False) -> \
         T.Tuple[SQSResultCollection, TimingDictionary]:
     """
     Performs an SQS iteration using the {settings} configuration
@@ -139,9 +151,19 @@ def pair_sqs_iteration(settings: Settings, minimal: bool = True, similar: bool =
         (default is ``"warning"``)
     :type log_level: str
     :return: the minimal configuration and the corresponding Short-range-order parameters as well as timing information
+    :param pass_structure: construct a :py:class:`Structure` object and pass it to the callback. If *True* the callback
+        exhibits a signature of ``cb(iteration: int, structure: :py:class:`Structure`, parameters :py:class:`SQSResult`, rank_id: int, thread_id: int)``.
+        If set to *False* the callbacks signature is ``cb(iteration: int, parameters :py:class:`SQSResult`, rank_id: int, thread_id: int)``
+    :type pass_structure: bool
     :rtype: Tuple[Iterable[:py:class:`SQSResult`], Dict[int, float]]
     """
     set_core_log_level(log_levels.get(log_level))
+
+    inject_structure_for_settings = functools.partial(inject_structure, settings)
+
+    if pass_structure:
+        settings.callbacks = {cb_name: list(map(inject_structure_for_settings, cbs)) for cb_name, cbs in
+                              settings.callbacks.items()}
 
     iteration_settings = construct_settings(settings, False, structure=settings.structure[settings.which])
 
@@ -216,7 +238,7 @@ def expand_sqs_results(settings: Settings, sqs_results: T.Iterable[SQSResult],
 def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, minimal: bool = True,
                  similar: bool = False, log_level: str = 'warning',
                  fields: T.Tuple[str, ...] = ('configuration', 'parameters', 'objective'),
-                 make_structures: bool = False, structure_format: str = 'default') \
+                 make_structures: bool = False, structure_format: str = 'default', pass_structure: bool = False) \
         -> OptimizationResult:
     """
     This function allows to simply generate SQS structures
@@ -272,13 +294,17 @@ def sqs_optimize(settings: T.Union[Settings, T.Dict], process: bool = True, mini
     :type structure_format: str
     :return: a dictionary with the specified fields as well as timing information. The keys of the result dictionary are
         the permutation ranks of the generated configuration.
+        :param pass_structure: construct a :py:class:`Structure` object and pass it to the callback. If *True* the callback
+        exhibits a signature of ``cb(iteration: int, structure: :py:class:`Structure`, parameters :py:class:`SQSResult`, rank_id: int, thread_id: int)``.
+        If set to *False* the callbacks signature is ``cb(iteration: int, parameters :py:class:`SQSResult`, rank_id: int, thread_id: int)``
+    :type pass_structure: bool
     :rtype: Tuple[Dict[int, Dict[str, Any]], Dict[int, Union[float, List[float]]]]
 
     """
     settings = settings if isinstance(settings, Settings) else AttrDict(settings)
     settings = process_settings(settings) if process else settings
 
-    results, timings = pair_sqs_iteration(settings, minimal=minimal, similar=similar, log_level=log_level)
+    results, timings = pair_sqs_iteration(settings, minimal=minimal, similar=similar, log_level=log_level, pass_structure=pass_structure)
 
     result_document = expand_sqs_results(settings, results, timings=timings, fields=fields)
     if make_structures:
@@ -355,11 +381,11 @@ def sqs_analyse(structures: T.Iterable[Structure], settings: T.Optional[T.Union[
             warnings.warn('You cannot specify a composition when analysing a SQS structure')
 
         # make sure which is in the settings object
-        settings['which'] = settings['which'] if 'which' in settings else defaults.which(AttrDict(structure=first_structure))
+        settings['which'] = settings['which'] if 'which' in settings else defaults.which(
+            AttrDict(structure=first_structure))
         first_structure = first_structure[settings['which']]
         # in any case we need default composition dictionary
         settings['composition'] = defaults.composition(AttrDict(structure=first_structure, which=settings['which']))
-
 
     settings = AttrDict(settings)
     # we are sure the which and structure is there, hence we can set our value for first_structure

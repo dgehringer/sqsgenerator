@@ -53,6 +53,9 @@ item = operator.itemgetter
 method = operator.methodcaller
 partial = functools.partial
 
+SQSCoreCallback = T.Callable[[int, SQSResult, int, int], T.Optional[bool]]
+SQSCallback = T.Callable[[int, Structure, SQSResult, int, int], T.Optional[bool]]
+
 TRACE = 5
 logging.addLevelName(TRACE, 'TRACE')
 

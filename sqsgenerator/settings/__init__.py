@@ -45,7 +45,7 @@ def construct_settings(settings: AttrDict, process: T.Optional[bool] = True, **o
             settings.atol,
             settings.rtol,
             settings.mode,
-            settings.callback if "callback" in settings else dict(defaults.callbacks())
+            dict(settings.callbacks)
         )
     except (ValueError, RuntimeError) as e:
         raise BadSettings(e)

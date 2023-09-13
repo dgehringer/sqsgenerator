@@ -29,6 +29,36 @@ __parameter_registry = collections.OrderedDict({})
 # the ordering will be according to their definition in this file
 parameter = partial(parameter_, registry=__parameter_registry)
 
+@parameter('callbacks', default=defaults.callbacks)
+def read_callbacks(settings: AttrDict):
+    callbacks = settings.callbacks
+    # convert the values to lists, as the C++ backend expects, lists as values of the dictionary
+    if not isinstance(callbacks, dict):
+        raise BadSettings("Callbacks must be a dictionary")
+    default_callbacks = defaults.callbacks()
+    callbacks = {cb_name: list(cbs) for cb_name, cbs in callbacks.items()}
+    for cb_name, cbs in callbacks.items():
+        if not all(map(callable, cbs)):
+            raise BadSettings(f"Your callback \"{cb_name}\" contains an object which is not callable")
+    allowed_callbacks = set(default_callbacks) | set(cb_name.replace("found_", "") for cb_name in default_callbacks)
+    for cb_name, cbs in callbacks.items():
+        # we allow callbacks that to not start with a "found_" prefix, as a shortcut
+        if cb_name not in allowed_callbacks:
+            raise BadSettings(f"Sorry, but a callback named \"{cb_name}\" is not implemented. Allowed values are \"{allowed_callbacks}\"")
+
+    # if there are callbacks which do not start with a "found_" prefix we have to rename them
+    no_found_prefix_cb_names = set(filter(lambda name: not name.startswith("found_"), callbacks))
+
+    while no_found_prefix_cb_names:
+        cb_name = no_found_prefix_cb_names.pop()
+        callbacks[f"found_{cb_name}"] = callbacks.get(cb_name)
+        del callbacks[cb_name]
+
+    for default_cb_name, default_cbs in default_callbacks.items():
+        if default_cb_name not in callbacks:
+            callbacks[default_cb_name] = default_cbs
+
+    return callbacks
 
 @parameter('bin_width', default=defaults.peak_isolation)
 def read_bin_width(settings: AttrDict):
