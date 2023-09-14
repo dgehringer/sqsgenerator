@@ -97,7 +97,7 @@ class TestSettingReaders(unittest.TestCase):
     def test_read_iterations(self, f):
 
         self.assertEqual(f(mode=IterationMode.random), 1e5)
-        self.assertEqual(f(mode=IterationMode.systematic), -1)
+        self.assertEqual(f(mode=IterationMode.systematic), None)
 
         num_iterations = random.randint(1000, 10000)
         self.assertEqual(f(mode=IterationMode.systematic, iterations=num_iterations), num_iterations)
