@@ -283,6 +283,13 @@ def to_dict(settings: dict) -> T.Dict[str, T.Any]:
         str: identity,
         bool: identity,
         IterationMode: str,
+        np.float32: float,
+        np.float64: float,
+        np.float128: float,
+        np.int8: int,
+        np.int16: int,
+        np.int64: int,
+        np.int32: int,
         np.ndarray: method('tolist')
     }
 
