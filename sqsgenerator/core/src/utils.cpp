@@ -159,7 +159,7 @@ namespace sqsgenerator::utils {
                 for (auto i = 0; i < distribute_num_atoms; i++) sublattice_configurations[index].push_back(distribute_species);
             }
         }
-        // There might be the case that there is a sublattice on which no atoms were distributes
+        // There might be the case that there is a sublattice on which no atoms were distributed
         // In this case we fill it up with the species itself
         configuration_t final_configuration;
         if (is_constrained) {
