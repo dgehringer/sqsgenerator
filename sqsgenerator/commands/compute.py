@@ -93,7 +93,7 @@ def estimate_time(settings, verbose):
     num_test_iterations = 100000
     default_guess_settings = dict(iterations=num_test_iterations, mode=IterationMode.random)
     settings.update(default_guess_settings)
-    iteration_settings = construct_settings(settings, False)
+    iteration_settings = construct_settings(settings, process=False, structure=settings.structure[settings.which])
 
     t0 = time.time()
     _, timings = pair_sqs_iteration(iteration_settings)
