@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(sqsgenerator VERSION 0.2)
+project(sqsgenerator VERSION 0.3)
 
 execute_process(
         COMMAND git rev-parse --abbrev-ref HEAD

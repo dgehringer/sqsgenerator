@@ -30,11 +30,11 @@ import sqsgenerator.settings
 # -- Project information -----------------------------------------------------
 
 project = 'sqsgenerator'
-copyright = '2022, Dominik Gehringer'
+copyright = '2023, Dominik Gehringer'
 author = 'Dominik Gehringer'
 
 # The full version, including alpha/beta/rc tags
-release = '0.2'
+release = '0.3'
 
 
 # -- General configuration ---------------------------------------------------
