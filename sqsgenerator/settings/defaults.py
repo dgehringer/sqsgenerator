@@ -31,8 +31,10 @@ def num_species(settings: AttrDict):
 
 
 def random_mode(settings) -> bool:
-    return settings.mode == IterationMode.random
-
+    if "mode" in settings:
+        return settings.mode == IterationMode.random
+    # if there is no mode specified sqsgenerator runs in random (=Monte-Carlo9 mode
+    return True
 
 def default_which(settings: AttrDict):
     structure: Structure = settings.structure
