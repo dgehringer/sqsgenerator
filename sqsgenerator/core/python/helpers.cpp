@@ -4,6 +4,7 @@
 
 #include "helpers.hpp"
 #include "data.hpp"
+#include "pythoncapi_compat.h"
 
 namespace sqsgenerator::python::helpers {
 
