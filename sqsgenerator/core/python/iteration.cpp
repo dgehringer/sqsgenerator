@@ -30,7 +30,8 @@ namespace sqsgenerator::python {
             py::list threads_per_rank,
             double atol,
             double rtol,
-            iteration_mode iteration_mode) :
+            iteration_mode iteration_mode,
+            py::dict callbacks) :
     m_structure(structure),
     m_handle(new IterationSettings(
             *structure.handle(),
@@ -45,7 +46,8 @@ namespace sqsgenerator::python {
             helpers::list_to_vector<int>(threads_per_rank),
             atol,
             rtol,
-            iteration_mode
+            iteration_mode,
+            helpers::convert_callbacks(callbacks)
     )) {}
 
     double IterationSettingsPythonWrapper::atol() const {

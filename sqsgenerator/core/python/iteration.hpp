@@ -36,7 +36,8 @@ namespace sqsgenerator::python {
                 py::list threads_per_rank,
                 double atol,
                 double rtol,
-                iteration_mode iteration_mode);
+                iteration_mode iteration_mode,
+                py::dict callbacks);
 
         IterationSettingsPythonWrapper(const IterationSettingsPythonWrapper &other) = default;
 

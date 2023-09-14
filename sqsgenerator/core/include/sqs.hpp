@@ -5,7 +5,6 @@
 #ifndef SQSGENERATOR_SQS_HPP
 #define SQSGENERATOR_SQS_HPP
 
-
 #include "types.hpp"
 #include "settings.hpp"
 #include "rank.hpp"

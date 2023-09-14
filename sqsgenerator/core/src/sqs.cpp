@@ -110,7 +110,7 @@ namespace sqsgenerator {
                     end_it++;
                 }
                 end_it = (thread_count == nthreads - 1) ? total : end_it;
-                local_rank_map.emplace(std::make_pair(local_thread_id, std::make_tuple(start_it, end_it)));
+                local_rank_map.emplace(local_thread_id, std::make_tuple(start_it, end_it));
                 thread_count++;
             }
             rank_map.emplace(std::make_pair(mpi_rank, local_rank_map));
@@ -120,6 +120,10 @@ namespace sqsgenerator {
     }
 
     std::vector<size_t> convert_pair_list(const std::vector<AtomPair> &pair_list) {
+        /**
+         * Converts an atom pair list into a contigous vector of triples (i, j, shell_index). Therefore ignores
+         * the third value (the coordination shell) of the AtomPair type
+         */
         std::vector<size_t> result;
         pair_shell_matrix_t::index i, j, _, shell_index;
         for (const auto &pair : pair_list) {
@@ -131,16 +135,32 @@ namespace sqsgenerator {
         return result;
     }
 
-    void handle_signal_sigint(int) {
+    bool fire_callbacks(const IterationSettings &settings, const std::string &cb_name, const callback_map_t &cb_map, rank_t iteration, const SQSResult &result, int mpi_rank, int thread_rank){
+        // we create a new SQSResult object, because the passed instance will have set its rank to -1, since computing the permutation rank is an expensive operation
+        configuration_t ordered_configuration(rearrange(result.configuration(), settings.arrange_backward()));
+        // we compute the rank after rearranging
+        rank_t rank = rank_permutation(ordered_configuration, settings.num_species());
+        SQSResult ranked(result.objective(), rank, settings.unpack_configuration(ordered_configuration), result.storage());
+        bool shutdown = false;
+        for (auto &callback : cb_map.at(cb_name)) {
+            if (callback(iteration, ranked, mpi_rank, thread_rank)) shutdown = true;
+        }
+        return shutdown;
+    }
+
+    void shutdown() {
         do_shutdown = 1;
         shutdown_requested = true;
+    }
+
+    void handle_signal_sigint(int) {
+        shutdown();
     }
 
 #if defined(USE_MPI)
 
     void handle_signal_sigterm(int) {
-        do_shutdown = 1;
-        shutdown_requested = true;
+        shutdown();
     }
 #endif
 
@@ -224,6 +244,7 @@ namespace sqsgenerator {
 
         timing_map_t thread_timings;
         rank_iteration_map_t iteration_ranks;
+        const callback_map_t callback_map(settings.callback_map());
         double best_objective{std::numeric_limits<double>::max()};
         rank_t nperms = utils::total_permutations(settings.packed_configuraton());
 
@@ -241,6 +262,10 @@ namespace sqsgenerator {
         parameter_storage_t target_objectives (boost::to_flat_vector(settings.target_objective()));
         parameter_storage_t parameter_weights (boost::to_flat_vector(settings.parameter_weights()));
         parameter_storage_t parameter_prefactors (boost::to_flat_vector(settings.parameter_prefactors()));
+
+        // init variables for callbacks
+        bool have_callback_better_or_equal = callback_map.at("found_better_or_equal").size() > 0;
+        bool have_callback_better = callback_map.at("found_better").size() > 0;
 
         omp_set_num_threads(num_threads_per_rank);
         #pragma omp parallel default(shared) firstprivate(nspecies, nshells, nparams, mpi_rank, mpi_num_ranks)
@@ -370,6 +395,18 @@ namespace sqsgenerator {
                     SQSResult result(objective_local, {-1}, configuration_local, parameters_local);
                     #pragma omp critical
                     results.push_back(result);
+
+                    #pragma omp critical
+                    {
+                        if (have_callback_better_or_equal) {
+                            if (i > start_it) {  // skip the trivial case
+                                if (fire_callbacks(settings, "found_better_or_equal", callback_map, i, result, mpi_rank,
+                                                   thread_id)) {
+                                    shutdown();
+                                }
+                            }
+                        }
+                    }
                     // synchronize writing to global best objective, only if the local one is really better
                     if (objective_local < best_objective_local){
                         #if defined(_WIN32) || defined(_WIN64)
@@ -382,6 +419,18 @@ namespace sqsgenerator {
                         #endif
 
                         best_objective_local = objective_local;
+
+                        #pragma omp critical
+                        {
+                            if (have_callback_better) {
+                                if (i > start_it) {  // the first iteration will of course trigger the callback, we want to avoid that
+                                    if (fire_callbacks(settings, "found_better", callback_map, i, result, mpi_rank,
+                                                       thread_id)) {
+                                        shutdown();
+                                    }
+                                }
+                            }
+                        };
 #if defined(USE_MPI)
                         /*
                          * Notify the other processes that we have found. Just one of the threads is allowed to send the

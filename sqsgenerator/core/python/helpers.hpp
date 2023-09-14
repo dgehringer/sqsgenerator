@@ -6,6 +6,7 @@
 #define SQSGENERATOR_HELPERS_HPP
 
 #include "utils.hpp"
+#include "settings.hpp"
 #include <map>
 #include <boost/python.hpp>
 #include <boost/multi_array.hpp>
@@ -157,5 +158,7 @@ namespace sqsgenerator::python::helpers {
     }
 
     composition_t convert_composition(const py::dict &composition);
+
+    sqsgenerator::callback_map_t convert_callbacks(const py::dict &callbacks);
 }
 #endif //SQSGENERATOR_HELPERS_HPP
