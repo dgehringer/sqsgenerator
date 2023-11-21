@@ -211,7 +211,7 @@ def write_structure_file_with_ase(fp, structure: Structure, format, sort=True, *
 
 @require(F.pymatgen)
 def write_structure_file_with_pymatgen(fp, structure: Structure, format, sort=True, **kwargs):
-    fp.write(to_pymatgen_structure(structure.sorted() if sort else structure).to(format, **kwargs))
+    fp.write(to_pymatgen_structure(structure.sorted() if sort else structure).to(fmt=format, **kwargs))
 
 
 @require(F.ase, F.pymatgen, condition=any)
