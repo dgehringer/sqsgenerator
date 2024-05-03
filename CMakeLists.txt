@@ -30,6 +30,7 @@ endif()
 
 configure_file(${PROJECT_SOURCE_DIR}/sqsgenerator/core/include/version.hpp.in ${PROJECT_SOURCE_DIR}/sqsgenerator/core/include/version.hpp)
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(Boost REQUIRED COMPONENTS system python numpy log_setup log)
 message([BOOST]:INCLUDE_DIRS: ${Boost_INCLUDE_DIRS})
 message([BOOST]:LIBRARIES: ${Boost_LIBRARIES})

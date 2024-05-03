@@ -1,13 +1,11 @@
 
 import os
-import pprint
-
 import yaml
 import glob
 import unittest
 import numpy as np
 import click.testing
-from cli import inject_config_file
+from .utils import inject_config_file
 from sqsgenerator.public import process_settings, AttrDict
 from sqsgenerator.io import compression_to_file_extension, read_settings_file
 from sqsgenerator.cli import cli
