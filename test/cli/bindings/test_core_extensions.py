@@ -1,3 +1,4 @@
+import os
 import pprint
 import random
 import unittest
@@ -9,12 +10,13 @@ from operator import mul, attrgetter as attr
 from sqsgenerator import read_settings_file, sqs_optimize, make_rank, process_settings, rank_structure, \
     total_permutations, sqs_analyse
 from sqsgenerator.settings.readers import read_structure
+from sqsgenerator.core import available_species, make_supercell, build_configuration
 
 
 class TestUtils(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.raw_dict = read_settings_file('resources/cs-cl.sqs.yaml')
+        self.raw_dict = read_settings_file(os.path.join(os.getcwd(), "test", "resources", "cs-cl.sqs.yaml"))
         self.settings = process_settings(self.raw_dict)
         self.structure = read_structure(self.raw_dict)
         self.results, _ = sqs_optimize(self.raw_dict, make_structures=True, similar=True, minimal=False)
@@ -38,14 +40,12 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(total_permutations(self.structure), f(sum(hist.values()))/reduce(mul, map(f, hist.values())))
 
     def test_analyse(self):
-        from sqsgenerator.core import available_species, make_supercell, build_configuration
         symbols = list(map(attr('symbol'), available_species()))
         num_species = random.randint(2, 4)
         scale = 2
 
         num_atoms = len(self.structure)
         superstructure = make_supercell(self.structure, scale, scale, scale)
-
         total_num_of_atoms = scale*scale*scale*num_atoms
 
         composition = {random.choice(symbols): random.randint(1, floor(total_num_of_atoms/num_species)) for _ in range(num_species-1)}
@@ -57,7 +57,6 @@ class TestUtils(unittest.TestCase):
             composition=composition,
             iterations=1e3
         )
-
         results, timinigs = sqs_optimize(settings, similar=True, minimal=False, make_structures=True)
         pprint.pprint(timinigs)
 
@@ -68,3 +67,4 @@ class TestUtils(unittest.TestCase):
             self.assertEqual(rank_structure(data['structure']), rank)
             numpy.testing.assert_array_almost_equal(analysed['parameters'], data['parameters'])
             self.assertAlmostEqual(data['objective'], analysed['objective'])
+
