@@ -13,7 +13,11 @@ sphinx:
 # formats:
 #    - pdf
 
+build:
+  os: ubuntu-lts-latest
+  tools:
+    python: "3.9"
+
 python:
-   version: "3.7"
    install:
    - requirements: docs/requirements.txt
