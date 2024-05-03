@@ -10,14 +10,14 @@ from sqsgenerator.commands.common import pretty_format
 from sqsgenerator.core import __version__, __features__
 
 
-def make_version_string():
+def make_version_string() -> str:
     major, minor, *_ = __version__
-    return '%i.%i' % (major, minor)
+    return f'{major}.{minor}'
 
 
-def make_repo_status():
+def make_repo_status() -> str:
     *_, commit, branch = __version__
-    return '%s@%s' % (commit, branch)
+    return f'{commit}@%{branch}'
 
 
 _title = '[bold]sqsgenerator[/bold] - A CLI tool to find optimized SQS structures'
