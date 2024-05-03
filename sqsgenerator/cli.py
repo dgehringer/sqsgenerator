@@ -16,7 +16,7 @@ def make_version_string():
 
 
 def make_repo_status():
-    _, _, commit, branch = __version__
+    *_, commit, branch = __version__
     return '%s@%s' % (commit, branch)
 
 
