@@ -285,7 +285,6 @@ def to_dict(settings: dict) -> T.Dict[str, T.Any]:
         IterationMode: str,
         np.float32: float,
         np.float64: float,
-        np.float128: float,
         np.int8: int,
         np.int16: int,
         np.int64: int,
@@ -310,7 +309,7 @@ def to_dict(settings: dict) -> T.Dict[str, T.Any]:
 
 
 def export_structures(structures: T.Dict[T.Any, T.Any], format: str = 'cif', output_file: str = 'sqs.result',
-                      writer: T.Union[Feature,str] = 'ase', compress: T.Optional[str] = None,
+                      writer: T.Union[Feature, str] = 'ase', compress: T.Optional[str] = None,
                       functor: T.Callable[[T.Any], str] = identity) -> T.NoReturn:
     """
     Writes structures into files. The filename is specified by the keys of {structure} argument. The structures stored
