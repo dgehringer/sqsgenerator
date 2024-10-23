@@ -12,7 +12,7 @@ LATTICE = np.random.uniform(size=(3, 3)) * 4
 
 def shell_matrix(s: Structure):
     d = s.distance_matrix
-    distances = np.unique(d).tolist()
+    distances = sorted(np.unique(d).tolist())
     sm = -np.ones_like(d, dtype=np.int_)
     get_shell = distances.index
     for i in range(d.shape[0]):
