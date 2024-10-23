@@ -40,12 +40,12 @@ if (BUILD_TESTS)
 endif ()
 
 add_executable(sqsgenerator main.cpp
-        include/sqsgen/core/helpers/const_map.h
         include/sqsgen/core/atom.h
         include/sqsgen/types.h
         include/sqsgen/core/helpers/fold.h
         include/sqsgen/core/structure.h
-        include/sqsgen/core/helpers/templates.h)
+        include/sqsgen/core/helpers/templates.h
+        include/sqsgen/io/json.h)
 
-target_link_libraries(sqsgenerator PRIVATE mp++ Eigen3::Eigen)
+target_link_libraries(sqsgenerator PRIVATE mp++ Eigen3::Eigen nlohmann_json)
 
