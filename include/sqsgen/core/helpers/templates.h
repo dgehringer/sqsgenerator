@@ -45,7 +45,7 @@ namespace sqsgen::core::helpers {
 
 
   template <class Fn, std::size_t I = 0, class... Args, class ...IndexArgs>
-  constexpr void for_each(Fn&& fn, Args&&... args) {
+  void for_each(Fn&& fn, Args&&... args) {
     static_assert(I < sizeof...(Args), "For each must be at least one element");
     auto arg = std::get<I>(std::forward_as_tuple(std::forward<Args>(args)...));
     auto rng = range(std::forward<decltype(arg)>(arg));
