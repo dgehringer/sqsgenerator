@@ -6,7 +6,7 @@
 #define SQSGEN_CORE_STRUCTURE_H
 #include <unordered_set>
 
-#include "helpers/templates.h"
+#include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -23,8 +23,6 @@ namespace sqsgen::core {
 
     std::array axis{-1, 0, 1};
     auto distances = matrix_t<T>::Zero(num_atoms, num_atoms);
-    // pi1 = position_index_1
-    // pi2 = position_index_2
 #pragma omp parallel for schedule(static) shared(vecs) \
     firstprivate(a, b, c, axis, num_atoms, cart_coords) if (num_atoms > 100)
     for (auto pi1 = 0; pi1 < num_atoms; pi1++) {
@@ -49,6 +47,7 @@ namespace sqsgen::core {
     return distances;
   }
 
+  /*
   template <class T>
   pair_shell_matrix_t shell_matrix(const matrix_t<T> &distance_matrix, T atol, T rtol) {
     assert(distance_matrix.rows() == distance_matrix.cols());
@@ -97,19 +96,31 @@ namespace sqsgen::core {
                             << format_map(shell_hist);
 
     return shells;
-  }
+  }*/
 
   template <class T>
     requires std::is_arithmetic_v<T>
   class Structure {
   public:
-    const lattice_t<T> lattice;
-    const coords_t<T> frac_coords;
-    const std::vector<specie_t> species;
-    const std::array<bool, 3> pbc = {true, true, true};
+    lattice_t<T> lattice;
+    coords_t<T> frac_coords;
+    std::vector<specie_t> species;
+    std::array<bool, 3> pbc = {true, true, true};
 
     Structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
-              const std::vector<specie_t> &species, const std::array<bool, 3> &pbc);
+              const std::vector<specie_t> &species,
+              const std::array<bool, 3> &pbc = {true, true, true})
+        : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc) {
+      if (frac_coords.rows() != species.size())
+        throw std::invalid_argument("frac coords must have the same size as the species input");
+    };
+
+    Structure(lattice_t<T> &lattice, coords_t<T> &&frac_coords, std::vector<specie_t> &&species,
+              std::array<bool, 3> &&pbc = {true, true, true})
+        : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc) {
+      if (frac_coords.rows() != species.size())
+        throw std::invalid_argument("frac coords must have the same size as the species input");
+    };
 
     [[nodiscard]] const matrix_t<T> &distance_matrix() const {
       if (!_distance_matrix.has_value())
@@ -119,7 +130,7 @@ namespace sqsgen::core {
 
   private:
     std::optional<matrix_t<T>> _distance_matrix;
-    std::optional<pair_shell_matrix_t> _shell_matrix = std::nullopt;
+    // std::optional<pair_shell_matrix_t> _shell_matrix = std::nullopt;
   };
 }  // namespace sqsgen::core
 
