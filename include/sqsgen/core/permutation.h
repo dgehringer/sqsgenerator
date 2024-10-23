@@ -9,7 +9,7 @@
 #include <ranges>
 
 #include "sqsgen/types.h"
-#include "sqsgen/core/helpers/fold.h"
+#include "sqsgen/core/helpers.h"
 
 
 namespace sqsgen::core {
