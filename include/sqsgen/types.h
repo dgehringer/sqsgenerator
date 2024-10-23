@@ -23,13 +23,10 @@ namespace sqsgen {
 
   template <class T>
     requires std::is_arithmetic_v<T>
-  using coords_t = Eigen::Matrix<T, 3, Eigen::Dynamic>;
+  using coords_t = Eigen::Matrix<T, Eigen::Dynamic, 3>;
 
   template <class T>
   using matrix_t = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-
-  using pair_shell_matrix_t = std::variant<matrix_t<std::uint8_t>, matrix_t<std::uint16_t>, matrix_t<std::uint32_t>, matrix_t<std::uint64_t>>;
-
 
 
 }  // namespace sqsgen
