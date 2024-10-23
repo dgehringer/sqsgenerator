@@ -36,8 +36,9 @@ add_executable(test_structure
         "${SQSGEN_INCLUDE_DIR}/types.h"
         "${SQSGEN_INCLUDE_DIR}/core/permutation.h"
         "${SQSGEN_SOURCE_DIR}/core/permutation.cpp"
+        ../include/sqsgen/io/json.h
 )
-target_link_libraries(test_permutation mp++ gtest_main Eigen3::Eigen)
+target_link_libraries(test_structure mp++ gtest_main Eigen3::Eigen)
 add_test(NAME test_structure COMMAND test_structure)
 
 
