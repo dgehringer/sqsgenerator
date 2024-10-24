@@ -31,7 +31,8 @@ def dump_structure(s: Structure):
                     lattice=s.lattice.matrix.tolist(),
                     frac_coords=s.frac_coords.tolist(),
                     distance_matrix=s.distance_matrix.tolist(),
-                    shell_matrix=shell_matrix(s).tolist()
+                    shell_matrix=shell_matrix(s).tolist(),
+                    species=[site.species_string for site in s]
                 )
             )
         , file=handle)
