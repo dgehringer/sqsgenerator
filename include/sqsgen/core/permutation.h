@@ -31,7 +31,7 @@ namespace sqsgen::core {
   template <typename Out, typename In> Out factorial(In n) {
     if (n < 0) throw std::invalid_argument("n must be positive");
     if (n == 1) return 1;
-    return ranges::fold_left(ranges::views::iota(In{1}, n + 1), Out{1}, std::multiplies{});
+    return helpers::fold_left(ranges::views::iota(In{1}, n + 1), Out{1}, std::multiplies{});
   }
 
   rank_t num_permutations(const configuration_t &conf);
