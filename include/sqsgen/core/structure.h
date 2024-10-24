@@ -4,49 +4,51 @@
 
 #ifndef SQSGEN_CORE_STRUCTURE_H
 #define SQSGEN_CORE_STRUCTURE_H
-#include <unordered_set>
 
+#include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
 
-  template <class T>
-  matrix_t<T> distance_matrix(const lattice_t<T> &lattice, const coords_t<T> &frac_coords) {
-    const matrix_t<T> cart_coords{lattice.dot(frac_coords)};
-    assert(frac_coords.rows() == 3);
-    const auto num_atoms = frac_coords.cols();
+  namespace detail {
+    template <class T>
+    matrix_t<T> distance_matrix(const lattice_t<T> &lattice, const coords_t<T> &frac_coords) {
+      const coords_t<T> cart_coords = frac_coords * lattice;
+      assert(frac_coords.cols() == 3);
+      const auto num_atoms = frac_coords.rows();
 
-    auto a{lattice.row(0)};
-    auto b{lattice.row(1)};
-    auto c{lattice.row(2)};
+      auto a{lattice.row(0)};
+      auto b{lattice.row(1)};
+      auto c{lattice.row(2)};
 
-    std::array axis{-1, 0, 1};
-    auto distances = matrix_t<T>::Zero(num_atoms, num_atoms);
-#pragma omp parallel for schedule(static) shared(vecs) \
+      std::array axis{-1, 0, 1};
+      matrix_t<T> distances
+          = matrix_t<T>::Ones(num_atoms, num_atoms) * std::numeric_limits<T>::max();
+#pragma omp parallel for schedule(static) shared(distances) \
     firstprivate(a, b, c, axis, num_atoms, cart_coords) if (num_atoms > 100)
-    for (auto pi1 = 0; pi1 < num_atoms; pi1++) {
-      auto p1{cart_coords.col(pi1)};
-      for (auto pi2 = pi1 + 1; pi2 < num_atoms; pi2++) {
-        auto p2{cart_coords.col(pi2)};
-        T norm{std::numeric_limits<T>::max()};
-        helpers::for_each(
-            [&](auto i, auto j, auto k) {
-              auto t = i * a + j * b + k * c;
-              auto diff = p1 - (t + p2);
-              T image_norm{diff.norm()};
-              if (image_norm < norm) {
-                norm = image_norm;
-                distances(pi1, pi2) = norm;
-                distances(pi2, pi2) = norm;
-              }
-            },
-            axis, axis, axis);
+      for (auto i = 0; i < num_atoms; i++) {
+        auto p1{cart_coords.row(i)};
+        for (auto j = i; j < num_atoms; j++) {
+          auto p2{cart_coords.row(j)};
+          helpers::for_each(
+              [&](auto u, auto v, auto w) {
+                auto t = u * a + v * b + w * c;
+                auto diff = p1 - (t + p2);
+                T image_norm{std::abs(diff.norm())};
+                if (image_norm < distances(i, j)) {
+                  distances(i, j) = image_norm;
+                  if (i != j) distances(j, i) = image_norm;
+                  assert(distances(i, j) == distances(j, i));
+                }
+              },
+              axis, axis, axis);
+        }
       }
+      assert(distances.rows() == num_atoms && distances.cols() == num_atoms);
+      return distances;
     }
-    return distances;
-  }
-
+  }  // namespace detail
   /*
   template <class T>
   pair_shell_matrix_t shell_matrix(const matrix_t<T> &distance_matrix, T atol, T rtol) {
@@ -101,11 +103,16 @@ namespace sqsgen::core {
   template <class T>
     requires std::is_arithmetic_v<T>
   class Structure {
+  private:
+    std::optional<matrix_t<T>> _distance_matrix;
+
   public:
     lattice_t<T> lattice;
     coords_t<T> frac_coords;
     std::vector<specie_t> species;
     std::array<bool, 3> pbc = {true, true, true};
+
+    Structure() = default;
 
     Structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
               const std::vector<specie_t> &species,
@@ -115,22 +122,20 @@ namespace sqsgen::core {
         throw std::invalid_argument("frac coords must have the same size as the species input");
     };
 
-    Structure(lattice_t<T> &lattice, coords_t<T> &&frac_coords, std::vector<specie_t> &&species,
+    Structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords, std::vector<specie_t> &&species,
               std::array<bool, 3> &&pbc = {true, true, true})
         : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc) {
       if (frac_coords.rows() != species.size())
         throw std::invalid_argument("frac coords must have the same size as the species input");
     };
 
-    [[nodiscard]] const matrix_t<T> &distance_matrix() const {
-      if (!_distance_matrix.has_value())
-        _distance_matrix = distance_matrix<T>(lattice, frac_coords);
+    [[nodiscard]] const matrix_t<T> &distance_matrix() {
+      if (!_distance_matrix.has_value()) {
+        _distance_matrix = detail::distance_matrix(lattice, frac_coords);
+      }
+
       return _distance_matrix.value();
     }
-
-  private:
-    std::optional<matrix_t<T>> _distance_matrix;
-    // std::optional<pair_shell_matrix_t> _shell_matrix = std::nullopt;
   };
 }  // namespace sqsgen::core
 
