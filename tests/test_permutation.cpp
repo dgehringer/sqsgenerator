@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 
-namespace sqsgen::test {
+namespace sqsgen::testing {
     using namespace sqsgen::core;
 
 
