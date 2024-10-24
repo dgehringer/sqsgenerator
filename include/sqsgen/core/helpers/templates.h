@@ -28,11 +28,9 @@ namespace sqsgen::core::helpers {
     }(std::make_index_sequence<sizeof...(Args)>{}, std::forward<Fn>(fn));
   }
 
-  template <class... Args> constexpr auto tail(std::tuple<Args...> const& tup) {
-    static_assert(sizeof...(Args) >= 1, "Tail must have at least one element");
-    return [&]<std::size_t... Index>(std::index_sequence<Index...>) {
-      return std::make_tuple(std::get<Index + 1>(tup)...);
-    }(std::make_index_sequence<sizeof...(Args) - 1>{});
+  template <ranges::range R> constexpr auto to_vector(R&& r) {
+    using elem_t = std::decay_t<ranges::range_value_t<R>>;
+    return std::vector<elem_t>{r.begin(), r.end()};
   }
 
   template <std::integral T> constexpr auto range(T end) { return views::iota(0, end); }
@@ -43,9 +41,7 @@ namespace sqsgen::core::helpers {
 
   template <ranges::input_range R> constexpr auto range(R&& r) { return std::forward<R>(r); }
 
-
-  template <class Fn, std::size_t I = 0, class... Args>
-  void for_each(Fn&& fn, Args&&... args) {
+  template <class Fn, std::size_t I = 0, class... Args> void for_each(Fn&& fn, Args&&... args) {
     static_assert(I < sizeof...(Args), "For each must be at least one element");
     auto arg = std::get<I>(std::forward_as_tuple(std::forward<Args>(args)...));
     auto rng = range(std::forward<decltype(arg)>(arg));
