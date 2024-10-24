@@ -36,9 +36,12 @@ add_executable(test_structure
         "${SQSGEN_INCLUDE_DIR}/types.h"
         "${SQSGEN_INCLUDE_DIR}/core/permutation.h"
         "${SQSGEN_SOURCE_DIR}/core/permutation.cpp"
-        ../include/sqsgen/io/json.h
+        ../include/sqsgen/json.h
+        helpers.h
 )
-target_link_libraries(test_structure mp++ gtest_main Eigen3::Eigen)
+target_link_libraries(test_structure mp++ gtest_main Eigen3::Eigen nlohmann_json)
 add_test(NAME test_structure COMMAND test_structure)
-
+add_custom_command(TARGET test_structure POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${SQSGEN_TEST_SOURCE_DIR}/assets $<TARGET_FILE_DIR:test_structure>/assets)
 

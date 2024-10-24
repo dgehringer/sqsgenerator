@@ -18,7 +18,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 
 find_package(GMP REQUIRED)
-CPMAddPackage("gh:fmtlib/fmt#11.0.2")
 CPMAddPackage("gh:bluescarni/mppp@1.0.4")
 CPMAddPackage("gh:nlohmann/json@3.11.3")
 CPMAddPackage("gh:gabime/spdlog@1.14.1")
@@ -45,7 +44,7 @@ add_executable(sqsgenerator main.cpp
         include/sqsgen/core/helpers/fold.h
         include/sqsgen/core/structure.h
         include/sqsgen/core/helpers/templates.h
-        include/sqsgen/io/json.h)
+        include/sqsgen/json.h)
 
 target_link_libraries(sqsgenerator PRIVATE mp++ Eigen3::Eigen nlohmann_json)
 
