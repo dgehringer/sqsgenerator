@@ -28,6 +28,10 @@ namespace sqsgen {
   template <class T>
   using matrix_t = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
+  template<class T>
+  using stl_matrix_t = std::vector<std::vector<T>>;
+
+  using shell_matrix_t = std::variant<matrix_t<std::uint_fast8_t>, matrix_t<std::uint_fast16_t>, matrix_t<std::uint_fast32_t>, matrix_t<std::uint_fast64_t>>;
 
 }  // namespace sqsgen
 #endif  // SQSGEN_TYPES_HPP
