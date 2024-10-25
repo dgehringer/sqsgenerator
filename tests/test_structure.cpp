@@ -100,7 +100,6 @@ namespace sqsgen::testing {
       auto compare_matrices = [&]<class T>(matrix_t<T> const&m) {
           ASSERT_EQ(test_case.shell_matrix.rows(), m.rows());
           ASSERT_EQ(test_case.shell_matrix.cols(), m.cols());
-          std::cout << m << std::endl;
           core::helpers::for_each([&](auto i, auto j) {
               if(i == j) ASSERT_EQ(m(i, j), 0);
               ASSERT_EQ(test_case.shell_matrix(i, j), m(i, j)) << std::format("Shell mismatch at ({}, {})", i, j);
