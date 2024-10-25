@@ -48,15 +48,27 @@ namespace sqsgen::core {
       assert(distances.rows() == num_atoms && distances.cols() == num_atoms);
       return distances;
     }
-  }  // namespace detail
-  /*
-  template <class T>
-  pair_shell_matrix_t shell_matrix(const matrix_t<T> &distance_matrix, T atol, T rtol) {
-    assert(distance_matrix.rows() == distance_matrix.cols());
-    const std::unordered_set<T> unique_distances(distance_matrix.begin(), distance_matrix.end());
-    const std::vector<T> distances(unique_distances.begin(), unique_distances.end());
-    std::sort(distances.begin(), distances.end());
-    const auto num_atoms{distance_matrix.rows()};
+
+    shell_matrix_t narrow_shell_type(auto num_distances, auto num_atoms) {
+      if (num_distances < std::numeric_limits<std::uint_fast8_t>::max())
+        return matrix_t<std::uint_fast8_t>(num_atoms, num_atoms);
+      if (num_distances < std::numeric_limits<std::uint_fast16_t>::max())
+        return matrix_t<std::uint_fast16_t>(num_atoms, num_atoms);
+      if (num_distances < std::numeric_limits<std::uint_fast32_t>::max())
+        return matrix_t<std::uint_fast32_t>(num_atoms, num_atoms);
+      if (num_distances < std::numeric_limits<std::uint_fast64_t>::max())
+        return matrix_t<std::uint_fast64_t>(num_atoms, num_atoms);
+      throw std::runtime_error("Unsupported number of distances");
+    }
+
+    template <class T>
+    shell_matrix_t shell_matrix(const matrix_t<T> &distance_matrix, T atol, T rtol) {
+      assert(distance_matrix.rows() == distance_matrix.cols());
+      const auto flattened = distance_matrix.reshaped();
+      std::unordered_set<T> unique_distances(flattened.begin(), flattened.end());
+      std::vector<T> dists(unique_distances.begin(), unique_distances.end());
+      std::sort(dists.begin(), dists.end());
+      const auto num_atoms{distance_matrix.rows()};
 
     auto is_close_tol = [=](T a, T b) { return is_close(a, b, atol, rtol); };
 
@@ -104,7 +116,8 @@ namespace sqsgen::core {
     requires std::is_arithmetic_v<T>
   class Structure {
   private:
-    std::optional<matrix_t<T>> _distance_matrix;
+    std::optional<matrix_t<T>> _distance_matrix = std::nullopt;
+    std::optional<shell_matrix_t> _shell_matrix = std::nullopt;
 
   public:
     lattice_t<T> lattice;
@@ -130,11 +143,18 @@ namespace sqsgen::core {
     };
 
     [[nodiscard]] const matrix_t<T> &distance_matrix() {
-      if (!_distance_matrix.has_value()) {
+      if (!_distance_matrix.has_value())
         _distance_matrix = detail::distance_matrix(lattice, frac_coords);
       }
 
       return _distance_matrix.value();
+    }
+
+    [[nodiscard]] const shell_matrix_t &shell_matrix(T atol = std::numeric_limits<T>::epsilon(),
+                                                     T rtol = 1.0e-9) {
+      if (!_shell_matrix.has_value())
+        _shell_matrix = detail::shell_matrix(distance_matrix(), atol, rtol);
+      return _shell_matrix.value();
     }
   };
 }  // namespace sqsgen::core
