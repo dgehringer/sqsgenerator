@@ -6,10 +6,10 @@
 
 #include <filesystem>
 #include <fstream>
-#include <nlohmann/json.hpp>
 
 #include "helpers.h"
 #include "sqsgen/core/structure.h"
+#include "sqsgen/json.h"
 
 namespace sqsgen::testing {
   using json = nlohmann::json;
@@ -39,30 +39,31 @@ namespace sqsgen::testing {
 
   template <class T> void to_json(json& j, StructureTestData<T> const& st) {
     j = json{
-        {"lattice", core::helpers::eigen_to_stl(st.lattice)},
+        {"lattice", st.lattice},
         {"species", st.species},
-        {"frac_coords", core::helpers::eigen_to_stl(st.frac_coords)},
+        {"frac_coords", st.frac_coords},
         {"pbc", st.pbc},
-        {"distance_matrix", core::helpers::eigen_to_stl(st.distance_matrix)},
-        {"shell_matrix", core::helpers::eigen_to_stl(st.shell_matrix)},
+        {"distance_matrix", st.distance_matrix},
+        {"shell_matrix", st.shell_matrix},
     };
   }
 
+  template <class T, template <class> class Matrix = matrix_t>
+  Matrix<T> matrix_from_json(json const& j, std::string const& name) {
+    return core::helpers::stl_to_eigen<Matrix<T>>(j.at(name).get<stl_matrix_t<T>>());
+  }
+
   template <class T> void from_json(const json& j, StructureTestData<T>& st) {
-    auto lattice = j.at("lattice").get<stl_matrix<T>>();
-    auto frac_coords = j.at("frac_coords").get<stl_matrix<T>>();
-    auto distance_matrix = j.at("distance_matrix").get<stl_matrix<T>>();
-    auto shell_matrix = j.at("shell_matrix").get<stl_matrix<std::size_t>>();
     auto species = j.at("species").get<std::vector<std::string>>();
 
     auto ordinals = ranges::to<std::vector>(
         species | views::transform([](auto const& s) { return core::Atom::from_symbol(s).Z; }));
 
-    st = StructureTestData<T>(
-        std::move(core::helpers::stl_to_eigen<lattice_t<T>>(lattice)),
-        std::move(core::helpers::stl_to_eigen<coords_t<T>>(frac_coords)), std::move(ordinals),
-        std::move(core::helpers::stl_to_eigen<matrix_t<T>>(distance_matrix)),
-        std::move(core::helpers::stl_to_eigen<matrix_t<std::size_t>>(shell_matrix)));
+    st = StructureTestData<T>(std::move(matrix_from_json<T, lattice_t>(j, "lattice")),
+                              std::move(matrix_from_json<T, coords_t>(j, "frac_coords")),
+                              std::move(ordinals),
+                              std::move(matrix_from_json<T>(j, "distance_matrix")),
+                              std::move(matrix_from_json<std::size_t>(j, "shell_matrix")));
   }
 
   class StructureTestFixture : public ::testing::Test {
@@ -92,18 +93,19 @@ namespace sqsgen::testing {
   }
 
   TEST_F(StructureTestFixture, shell_matrix) {
-
-
     for (const auto& test_case : this->test_cases) {
       auto structure = test_case.structure();
       auto shell_matrix = structure.shell_matrix();
-      auto compare_matrices = [&]<class T>(matrix_t<T> const&m) {
-          ASSERT_EQ(test_case.shell_matrix.rows(), m.rows());
-          ASSERT_EQ(test_case.shell_matrix.cols(), m.cols());
-          core::helpers::for_each([&](auto i, auto j) {
-              if(i == j) ASSERT_EQ(m(i, j), 0);
-              ASSERT_EQ(test_case.shell_matrix(i, j), m(i, j)) << std::format("Shell mismatch at ({}, {})", i, j);
-          }, test_case.shell_matrix.rows(), test_case.shell_matrix.cols());
+      auto compare_matrices = [&]<class T>(matrix_t<T> const& m) {
+        ASSERT_EQ(test_case.shell_matrix.rows(), m.rows());
+        ASSERT_EQ(test_case.shell_matrix.cols(), m.cols());
+        core::helpers::for_each(
+            [&](auto i, auto j) {
+              if (i == j) ASSERT_EQ(m(i, j), 0);
+              ASSERT_EQ(test_case.shell_matrix(i, j), m(i, j))
+                  << std::format("Shell mismatch at ({}, {})", i, j);
+            },
+            test_case.shell_matrix.rows(), test_case.shell_matrix.cols());
       };
       std::visit(compare_matrices, shell_matrix);
     }
