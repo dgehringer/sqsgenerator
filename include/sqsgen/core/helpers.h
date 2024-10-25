@@ -9,6 +9,8 @@
 
 #include "helpers/fold.h"
 #include "helpers/templates.h"
+#include "helpers/numeric.h"
+#include "helpers/for_each.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core::helpers {

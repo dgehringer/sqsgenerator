@@ -8,8 +8,6 @@
 #include <ranges>
 #include <variant>
 
-#include "sqsgen/core/helpers.h"
-
 namespace sqsgen::core::helpers {
   namespace ranges = std::ranges;
   namespace views = std::ranges::views;
@@ -28,33 +26,11 @@ namespace sqsgen::core::helpers {
     }(std::make_index_sequence<sizeof...(Args)>{}, std::forward<Fn>(fn));
   }
 
-  template <ranges::range R> constexpr auto to_vector(R&& r) {
-    using elem_t = std::decay_t<ranges::range_value_t<R>>;
-    return std::vector<elem_t>{r.begin(), r.end()};
-  }
+  template <class... Ts> struct overloaded : Ts... {
+    using Ts::operator()...;
+  };
 
-  template <std::integral T> constexpr auto range(T end) { return views::iota(0, end); }
-
-  template <std::integral T> constexpr auto range(std::pair<T, T>&& bounds) {
-    return views::iota(std::get<0>(bounds), std::get<1>(bounds));
-  }
-
-  template <ranges::input_range R> constexpr auto range(R&& r) { return std::forward<R>(r); }
-
-  template <class Fn, std::size_t I = 0, class... Args> void for_each(Fn&& fn, Args&&... args) {
-    static_assert(I < sizeof...(Args), "For each must be at least one element");
-    auto arg = std::get<I>(std::forward_as_tuple(std::forward<Args>(args)...));
-    auto rng = range(std::forward<decltype(arg)>(arg));
-    for (auto v : rng) {
-      if constexpr (I == sizeof...(Args) - 1) {
-        fn(v);
-      } else if constexpr (I < sizeof...(Args) - 1) {
-        auto curried = [v, &fn](auto... a) { fn(v, a...); };
-        for_each<decltype(curried), I + 1>(std::forward<decltype(curried)>(curried),
-                                           std::forward<Args>(args)...);
-      }
-    }
-  }
+  template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 }  // namespace sqsgen::core::helpers
 
