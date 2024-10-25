@@ -5,6 +5,7 @@
 #ifndef SQSGEN_CORE_STRUCTURE_H
 #define SQSGEN_CORE_STRUCTURE_H
 
+#include <unordered_set>
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
@@ -70,47 +71,46 @@ namespace sqsgen::core {
       std::sort(dists.begin(), dists.end());
       const auto num_atoms{distance_matrix.rows()};
 
-    auto is_close_tol = [=](T a, T b) { return is_close(a, b, atol, rtol); };
+      auto is_close_tol = [=](T a, T b) { return helpers::is_close(a, b, atol, rtol); };
 
-    auto find_shell = [&](T d) {
-      if (d < 0) throw std::out_of_range("Invalid distance matrix input");
-      if (is_close_tol(d, 0.0)) return 0;
+      auto find_shell = [&](T d) {
+        if (d < 0) throw std::out_of_range("Invalid distance matrix input");
+        if (is_close_tol(d, 0.0)) return 0;
 
-      for (auto i = 0; i < distances.size() - 1; i++) {
-        T lb{distances[i]}, up{distances[i + 1]};
-        if ((is_close_tol(d, lb) or d > lb) and (is_close_tol(d, up) or up > d)) {
-          return i + 1;
+        for (auto i = 0; i < dists.size() - 1; i++) {
+          T lb{dists[i]}, up{dists[i + 1]};
+          if ((is_close_tol(d, lb) or d > lb) and (is_close_tol(d, up) or up > d)) {
+            return i + 1;
+          }
         }
-      }
+        return static_cast<int>(dists.size());
+      };
 
-      return distances.size();
-    };
+      shell_matrix_t shells = narrow_shell_type(dists.size(), num_atoms);
 
-    std::map<int, size_t> shell_hist;
-    for (index_t i = 1; i < distances.size() - 1; i++) shell_hist.emplace(i, 0);
+      std::visit(
+          [&]<class S>(matrix_t<S> &arg) {
+            for (auto i = 0; i < num_atoms; i++) {
+              for (auto j = i + 1; j < num_atoms; j++) {
+                auto shell{find_shell(distance_matrix(i, j))};
+                // assert(arg <= std::numeric_limits<ShellSize>::max());
+                arg(i, j) = static_cast<S>(shell);
+                arg(j, i) = static_cast<S>(shell);
+              }
+            }
+          },
+          shells);
 
-    for (index_t i = 0; i < num_atoms; i++) {
-      for (index_t j = i + 1; j < num_atoms; j++) {
-        int shell{find_shell(distance_matrix[i][j])};
-        if (shell < 0)
-          throw std::runtime_error("A shell was detected which I am not aware of");
-        else if (shell == 0 and i != j) {
-          BOOST_LOG_TRIVIAL(warning)
-              << "Atoms " + std::to_string(i) + " and " + std::to_string(j)
-                     + " are overlapping! (distance = " + std::to_string(distance_matrix[i][j])
-              << ", shell = " << shell << ")!";
-        }
-        shell_hist[shell] += 2;
-        shells[i][j] = shell;
-        shells[j][i] = shell;
-      }
+      std::visit(
+          [&]<class S>(matrix_t<S> &m) {
+            helpers::for_each([&](auto i) { m(i, i) = 0; }, num_atoms);
+          },
+          shells);
+
+      return shells;
     }
 
-    BOOST_LOG_TRIVIAL(info) << "structure_utils::shell_matrix::pair_shell_hist="
-                            << format_map(shell_hist);
-
-    return shells;
-  }*/
+  }  // namespace detail
 
   template <class T>
     requires std::is_arithmetic_v<T>
@@ -145,7 +145,6 @@ namespace sqsgen::core {
     [[nodiscard]] const matrix_t<T> &distance_matrix() {
       if (!_distance_matrix.has_value())
         _distance_matrix = detail::distance_matrix(lattice, frac_coords);
-      }
 
       return _distance_matrix.value();
     }
