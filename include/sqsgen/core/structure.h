@@ -6,6 +6,7 @@
 #define SQSGEN_CORE_STRUCTURE_H
 
 #include <unordered_set>
+
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
@@ -62,13 +63,16 @@ namespace sqsgen::core {
       throw std::runtime_error("Unsupported number of distances");
     }
 
-    template <class T>
-    shell_matrix_t shell_matrix(const matrix_t<T> &distance_matrix, T atol, T rtol) {
-      assert(distance_matrix.rows() == distance_matrix.cols());
+    template <class T> std::vector<T> distances(matrix_t<T> const &distance_matrix) {
       const auto flattened = distance_matrix.reshaped();
       std::unordered_set<T> unique_distances(flattened.begin(), flattened.end());
       std::vector<T> dists(unique_distances.begin(), unique_distances.end());
       std::sort(dists.begin(), dists.end());
+      return dists;
+    }
+    template <class T> shell_matrix_t shell_matrix(matrix_t<T> const &distance_matrix,
+                                                   std::vector<T> const &dists, T atol, T rtol) {
+      assert(distance_matrix.rows() == distance_matrix.cols());
       const auto num_atoms{distance_matrix.rows()};
 
       auto is_close_tol = [=](T a, T b) { return helpers::is_close(a, b, atol, rtol); };
@@ -116,6 +120,7 @@ namespace sqsgen::core {
     requires std::is_arithmetic_v<T>
   class Structure {
   private:
+    std::optional<std::vector<T>> _distances = std::nullopt;
     std::optional<matrix_t<T>> _distance_matrix = std::nullopt;
     std::optional<shell_matrix_t> _shell_matrix = std::nullopt;
 
@@ -149,12 +154,19 @@ namespace sqsgen::core {
       return _distance_matrix.value();
     }
 
+    [[nodiscard]] const std::vector<T> &distances() {
+      if (!_distances.has_value()) _distances = detail::distances(distance_matrix());
+      return _distances.value();
+    }
+
     [[nodiscard]] const shell_matrix_t &shell_matrix(T atol = std::numeric_limits<T>::epsilon(),
                                                      T rtol = 1.0e-9) {
       if (!_shell_matrix.has_value())
-        _shell_matrix = detail::shell_matrix(distance_matrix(), atol, rtol);
+        _shell_matrix = detail::shell_matrix(distance_matrix(), distances(), atol, rtol);
       return _shell_matrix.value();
     }
+
+
   };
 }  // namespace sqsgen::core
 
