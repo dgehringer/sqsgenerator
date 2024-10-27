@@ -42,7 +42,31 @@ namespace sqsgen::core::helpers {
       using type = std::tuple<Args...>;
     };
 
-  template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+    template <class...> struct join_impl {};
+    template <> struct join_impl<> {};
+    template <class... T> struct join_impl<std::tuple<T...>> {
+      using type = std::tuple<T...>;
+    };
+    template <class... T, class... U> struct join_impl<std::tuple<T...>, std::tuple<U...>> {
+      using type = std::tuple<T..., U...>;
+    };
+
+    template <class T, class... U> struct join_impl<T, U...> {
+      using type = typename join_impl<T, typename join_impl<U...>::type>::type;
+    };
+    template <class... Args, class... Args2>
+    struct product_impl<std::tuple<Args...>, std::tuple<Args2...>> {
+      static_assert(sizeof...(Args) == sizeof...(Args2));
+      using type =
+          typename join_impl<typename push_all_impl<Args, std::tuple<Args2...>>::type...>::type;
+    };
+  } // namespace detail
+
+  template<class... Args>
+  using product_t = typename detail::product_impl<Args...>::type;
+
+  template<class... Args>
+  using join_t = typename detail::join_impl<Args...>::type;
 
 }  // namespace sqsgen::core::helpers
 
