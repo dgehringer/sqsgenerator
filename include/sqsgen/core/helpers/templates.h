@@ -60,6 +60,13 @@ namespace sqsgen::core::helpers {
       using type =
           typename join_impl<typename push_all_impl<Args, std::tuple<Args2...>>::type...>::type;
     };
+
+    template <template <class...> class, template <class...> class, class> struct lift_impl {
+
+    };
+    template <template <class...> class Out, template <class...> class Lifter, class... Args> struct lift_impl<Out, Lifter, std::tuple<Args...>> {
+      using type = Out<typename Lifter<Args>::type...>;
+    };
   } // namespace detail
 
   template<class... Args>
@@ -67,6 +74,10 @@ namespace sqsgen::core::helpers {
 
   template<class... Args>
   using join_t = typename detail::join_impl<Args...>::type;
+
+  template <template <class...> class Out, template <class...> class Lifter, class... Args>
+  using lift_t = typename detail::lift_impl<Out, Lifter, Args...>::type;
+
 
 }  // namespace sqsgen::core::helpers
 
