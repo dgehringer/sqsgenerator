@@ -13,6 +13,20 @@
 
 namespace sqsgen::core {
 
+  template <class IndexSize, class ShellSize> struct atom_pair {
+    IndexSize i;
+    IndexSize j;
+    ShellSize shell;
+  };
+
+  template <class> struct as_atom_pair {};
+  template <class Is, class Ss> struct as_atom_pair<std::tuple<Is, Ss>> {
+    using type = atom_pair<Is, Ss>;
+  };
+
+  using atom_pair_t = helpers::lift_t<std::variant, as_atom_pair,
+                                      helpers::product_t<index_type_list, index_type_list>>;
+
   namespace detail {
     template <class T>
     matrix_t<T> distance_matrix(const lattice_t<T> &lattice, const coords_t<T> &frac_coords) {
@@ -51,18 +65,6 @@ namespace sqsgen::core {
       return distances;
     }
 
-    shell_matrix_t narrow_shell_type(auto num_distances, auto num_atoms) {
-      if (num_distances < std::numeric_limits<std::uint_fast8_t>::max())
-        return matrix_t<std::uint_fast8_t>(num_atoms, num_atoms);
-      if (num_distances < std::numeric_limits<std::uint_fast16_t>::max())
-        return matrix_t<std::uint_fast16_t>(num_atoms, num_atoms);
-      if (num_distances < std::numeric_limits<std::uint_fast32_t>::max())
-        return matrix_t<std::uint_fast32_t>(num_atoms, num_atoms);
-      if (num_distances < std::numeric_limits<std::uint_fast64_t>::max())
-        return matrix_t<std::uint_fast64_t>(num_atoms, num_atoms);
-      throw std::runtime_error("Unsupported number of distances");
-    }
-
     template <class T> std::vector<T> distances(matrix_t<T> const &distance_matrix) {
       const auto flattened = distance_matrix.reshaped();
       std::unordered_set<T> unique_distances(flattened.begin(), flattened.end());
@@ -70,6 +72,7 @@ namespace sqsgen::core {
       std::sort(dists.begin(), dists.end());
       return dists;
     }
+
     template <class T> shell_matrix_t shell_matrix(matrix_t<T> const &distance_matrix,
                                                    std::vector<T> const &dists, T atol, T rtol) {
       assert(distance_matrix.rows() == distance_matrix.cols());
@@ -89,28 +92,15 @@ namespace sqsgen::core {
         }
         return static_cast<int>(dists.size());
       };
-
-      shell_matrix_t shells = narrow_shell_type(dists.size(), num_atoms);
-
-      std::visit(
-          [&]<class S>(matrix_t<S> &arg) {
-            for (auto i = 0; i < num_atoms; i++) {
-              for (auto j = i + 1; j < num_atoms; j++) {
-                auto shell{find_shell(distance_matrix(i, j))};
-                // assert(arg <= std::numeric_limits<ShellSize>::max());
-                arg(i, j) = static_cast<S>(shell);
-                arg(j, i) = static_cast<S>(shell);
-              }
-            }
-          },
-          shells);
-
-      std::visit(
-          [&]<class S>(matrix_t<S> &m) {
-            helpers::for_each([&](auto i) { m(i, i) = 0; }, num_atoms);
-          },
-          shells);
-
+      shell_matrix_t shells = matrix_t<std::size_t>(num_atoms, num_atoms);
+      for (auto i = 0; i < num_atoms; i++) {
+        for (auto j = i + 1; j < num_atoms; j++) {
+          auto shell{find_shell(distance_matrix(i, j))};
+          shells(i, j) = static_cast<std::size_t>(shell);
+          shells(j, i) = static_cast<std::size_t>(shell);
+        }
+      }
+      helpers::for_each([&](auto i) { shells(i, i) = 0; }, num_atoms);
       return shells;
     }
 
@@ -165,8 +155,6 @@ namespace sqsgen::core {
         _shell_matrix = detail::shell_matrix(distance_matrix(), distances(), atol, rtol);
       return _shell_matrix.value();
     }
-
-
   };
 }  // namespace sqsgen::core
 
