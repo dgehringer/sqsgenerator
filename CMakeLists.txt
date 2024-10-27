@@ -20,7 +20,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(GMP REQUIRED)
 CPMAddPackage("gh:bluescarni/mppp@1.0.4")
 CPMAddPackage("gh:nlohmann/json@3.11.3")
-CPMAddPackage("gh:gabime/spdlog@1.14.1")
 CPMAddPackage(
         GITLAB_REPOSITORY libeigen/eigen
         GIT_TAG 3.4.0
@@ -38,13 +37,21 @@ if (BUILD_TESTS)
     add_subdirectory(tests)
 endif ()
 
+list(APPEND SQSGEN_LIBS "mp++")
+list(APPEND SQSGEN_LIBS "Eigen3::Eigen")
+list(APPEND SQSGEN_LIBS "nlohmann_json")
+
+message(STATUS "SQSGEN_LIBS=${SQSGEN_LIBS}")
+
 add_executable(sqsgenerator main.cpp
         include/sqsgen/core/atom.h
         include/sqsgen/types.h
         include/sqsgen/core/helpers/fold.h
         include/sqsgen/core/structure.h
         include/sqsgen/core/helpers/templates.h
-        include/sqsgen/json.h)
+        include/sqsgen/io/json.h
+        include/sqsgen/core/helpers/numeric.h
+        include/sqsgen/core/helpers/for_each.h)
 
-target_link_libraries(sqsgenerator PRIVATE mp++ Eigen3::Eigen nlohmann_json)
+target_link_libraries(sqsgenerator PRIVATE ${SQSGEN_LIBS})
 

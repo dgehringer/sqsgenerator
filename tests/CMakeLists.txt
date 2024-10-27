@@ -15,6 +15,15 @@ list(REMOVE_ITEM tests "${SQSGEN_TEST_SOURCE_DIR}/main.cpp")
 
 include_directories(${SQSGEN_INCLUDE_DIR})
 
+
+
+list(APPEND SQSGEN_TEST_LIBS "mp++")
+list(APPEND SQSGEN_TEST_LIBS "Eigen3::Eigen")
+list(APPEND SQSGEN_TEST_LIBS "nlohmann_json")
+list(APPEND SQSGEN_TEST_LIBS "gtest_main")
+
+message(STATUS "SQSGEN_TEST_LIBS=${SQSGEN_TEST_LIBS}")
+
 enable_testing()
 
 add_executable(test_permutation
@@ -26,7 +35,7 @@ add_executable(test_permutation
         "${SQSGEN_SOURCE_DIR}/core/permutation.cpp"
         test_structure.cpp
 )
-target_link_libraries(test_permutation mp++ gtest_main Eigen3::Eigen)
+target_link_libraries(test_permutation ${SQSGEN_TEST_LIBS})
 add_test(NAME test_permutation COMMAND test_permutation)
 
 add_executable(test_structure
@@ -34,12 +43,10 @@ add_executable(test_structure
         "${SQSGEN_TEST_SOURCE_DIR}/test_structure.cpp"
         "${SQSGEN_INCLUDE_DIR}/core/helpers.h"
         "${SQSGEN_INCLUDE_DIR}/types.h"
-        "${SQSGEN_INCLUDE_DIR}/core/permutation.h"
-        "${SQSGEN_SOURCE_DIR}/core/permutation.cpp"
-        ../include/sqsgen/json.h
+        "${SQSGEN_INCLUDE_DIR}/io/json.h"
         helpers.h
 )
-target_link_libraries(test_structure mp++ gtest_main Eigen3::Eigen nlohmann_json)
+target_link_libraries(test_structure ${SQSGEN_TEST_LIBS})
 add_test(NAME test_structure COMMAND test_structure)
 add_custom_command(TARGET test_structure POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory

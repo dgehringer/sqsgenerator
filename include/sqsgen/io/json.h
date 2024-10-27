@@ -7,8 +7,8 @@
 
 #include <nlohmann/json.hpp>
 
-#include "core/structure.h"
-#include "types.h"
+#include "sqsgen/core/structure.h"
+#include "sqsgen/types.h"
 
 using namespace sqsgen;
 
@@ -42,6 +42,7 @@ NLOHMANN_JSON_NAMESPACE_END
 namespace sqsgen {
   using json = nlohmann::json;
 
+  NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(core::Structure<float>, lattice, frac_coords, species, pbc);
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(core::Structure<double>, lattice, frac_coords, species, pbc);
 
 }  // namespace sqsgen
