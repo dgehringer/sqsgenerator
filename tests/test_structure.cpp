@@ -9,7 +9,7 @@
 
 #include "helpers.h"
 #include "sqsgen/core/structure.h"
-#include "sqsgen/json.h"
+#include "sqsgen/io/json.h"
 
 namespace sqsgen::testing {
   using json = nlohmann::json;
@@ -95,19 +95,17 @@ namespace sqsgen::testing {
   TEST_F(StructureTestFixture, shell_matrix) {
     for (const auto& test_case : this->test_cases) {
       auto structure = test_case.structure();
-      auto shell_matrix = structure.shell_matrix();
-      auto compare_matrices = [&]<class T>(matrix_t<T> const& m) {
-        ASSERT_EQ(test_case.shell_matrix.rows(), m.rows());
-        ASSERT_EQ(test_case.shell_matrix.cols(), m.cols());
-        core::helpers::for_each(
-            [&](auto i, auto j) {
-              if (i == j) ASSERT_EQ(m(i, j), 0);
-              ASSERT_EQ(test_case.shell_matrix(i, j), m(i, j))
-                  << std::format("Shell mismatch at ({}, {})", i, j);
-            },
-            test_case.shell_matrix.rows(), test_case.shell_matrix.cols());
-      };
-      std::visit(compare_matrices, shell_matrix);
+      auto m = structure.shell_matrix();
+
+      ASSERT_EQ(test_case.shell_matrix.rows(), m.rows());
+      ASSERT_EQ(test_case.shell_matrix.cols(), m.cols());
+      core::helpers::for_each(
+          [&](auto i, auto j) {
+            if (i == j) ASSERT_EQ(m(i, j), 0);
+            ASSERT_EQ(test_case.shell_matrix(i, j), m(i, j))
+                << std::format("Shell mismatch at ({}, {})", i, j);
+          },
+          test_case.shell_matrix.rows(), test_case.shell_matrix.cols());
     }
   }
 }  // namespace sqsgen::testing
