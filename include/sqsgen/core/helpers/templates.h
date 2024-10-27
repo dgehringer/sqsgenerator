@@ -26,9 +26,21 @@ namespace sqsgen::core::helpers {
     }(std::make_index_sequence<sizeof...(Args)>{}, std::forward<Fn>(fn));
   }
 
-  template <class... Ts> struct overloaded : Ts... {
-    using Ts::operator()...;
-  };
+  namespace detail {
+
+    template <class, class> struct push_impl {};
+    template <class T, class... Args> struct push_impl<T, std::tuple<Args...>> {
+      using type = std::tuple<T, Args...>;
+    };
+
+    template <class, class> struct push_all_impl {};
+    template <class T, class... Args> struct push_all_impl<T, std::tuple<Args...>> {
+      using type = std::tuple<typename push_impl<T, std::tuple<Args>>::type...>;
+    };
+    template <class...> struct product_impl {};
+    template <class... Args> struct product_impl<std::tuple<Args...>> {
+      using type = std::tuple<Args...>;
+    };
 
   template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
