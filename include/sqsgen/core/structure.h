@@ -6,7 +6,7 @@
 #define SQSGEN_CORE_STRUCTURE_H
 
 #include <unordered_set>
-
+#include <Eigen/Dense>
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
@@ -154,6 +154,38 @@ namespace sqsgen::core {
       if (!_shell_matrix.has_value())
         _shell_matrix = detail::shell_matrix(distance_matrix(), distances(), atol, rtol);
       return _shell_matrix.value();
+    }
+
+    [[nodiscard]] Structure supercell(std::size_t a, std::size_t b,
+                                      std::size_t c) const {
+      auto num_copies = a * b * c;
+      if (num_copies == 0)
+        throw std::invalid_argument("There must be at least one copy in each direction");
+      lattice_t<T> scale = lattice_t<T>::Zero();
+      scale(0, 0) = a;
+      scale(1, 1) = b;
+      scale(2, 2) = c;
+      lattice_t<T> iscale = scale.inverse();
+
+      auto site_index{0};
+      auto num_atoms{species.size()};
+      coords_t<T> supercell_coords(num_atoms * num_copies, 3);
+      std::vector<specie_t> supercell_species(num_atoms * num_copies);
+      helpers::for_each(
+          [&](auto i, auto j, auto k) {
+            using vec3_t = Eigen::Matrix<double, 1, 3>;
+            vec3_t translation = vec3_t{i, j, k} * iscale;
+            helpers::for_each(
+                [&](auto index) {
+                  supercell_coords.row(site_index) = translation + frac_coords.row(index);
+                  supercell_species[site_index] = species[index];
+                  site_index++;
+                },
+                num_atoms);
+          },
+          a, b, c);
+
+      return Structure(lattice * scale, supercell_coords, supercell_species, pbc);
     }
   };
 }  // namespace sqsgen::core
