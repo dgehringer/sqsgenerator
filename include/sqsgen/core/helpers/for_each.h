@@ -16,7 +16,7 @@ namespace sqsgen::core::helpers {
     return std::vector<elem_t>{r.begin(), r.end()};
   }
 
-  template <std::integral T> constexpr auto range(T end) { return views::iota(0, end); }
+  template <std::integral T> constexpr auto range(T end) { return views::iota(T(0), end); }
 
   template <std::integral T> constexpr auto range(std::pair<T, T>&& bounds) {
     return views::iota(std::get<0>(bounds), std::get<1>(bounds));
