@@ -19,6 +19,7 @@ namespace sqsgen::testing::helpers {
       }
     }
   }
+
 };  // namespace sqsgen::testing::helpers
 
 #endif  // SQSGEN_TESTS_HELPERS_H
