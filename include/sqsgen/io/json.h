@@ -37,14 +37,26 @@ template <class T> struct adl_serializer<coords_t<T>> {
     m = std::move(core::helpers::stl_to_eigen<coords_t<T>>(j.get<stl_matrix_t<T>>()));
   }
 };
+
+template <class T> struct adl_serializer<core::Structure<T>> {
+  static void to_json(json& j, core::Structure<T> const& s) {
+    j = json{
+          {"lattice", s.lattice},
+          {"species", s.species},
+          {"frac_coords", s.frac_coords},
+          {"pbc", s.pbc},
+      };
+  }
+
+
+  static void from_json(const json& j, core::Structure<T>& s) {
+    j.at("species").get_to(s.species);
+    j.at("lattice").get_to(s.lattice);
+    j.at("frac_coords").get_to(s.frac_coords);
+    j.at("pbc").get_to(s.pbc);
+  }
+
+};
 NLOHMANN_JSON_NAMESPACE_END
-
-namespace sqsgen {
-  using json = nlohmann::json;
-
-  NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(core::Structure<float>, lattice, frac_coords, species, pbc);
-  NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(core::Structure<double>, lattice, frac_coords, species, pbc);
-
-}  // namespace sqsgen
 
 #endif  // SQSGEN_IO_JSON_H
