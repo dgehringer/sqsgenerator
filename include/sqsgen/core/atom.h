@@ -5,6 +5,7 @@
 #ifndef ATOM_H
 #define ATOM_H
 #include <string>
+
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -145,16 +146,15 @@ namespace sqsgen::core {
   }
 
   static std::unordered_map SYMBOL_MAP{_make_symbol_map()};
-
   class Atom {
   public:
-    const specie_t Z;         /**< The ordinal number of the element in the periodic table */
-    const std::string name;   /**< The full english name of the element. E. g. "Iron" */
-    const std::string symbol; /**< The two character symbol of an element. E.g "Fe" for iron */
-    const std::string electronic_configuration; /**< The electronic configuration as a string */
-    const double atomic_radius;                 /**< Atomic radius in pm */
-    const double mass;                          /**< The mass of the atoms in atomic units */
-    const double en;                            /**< Electronegativity */
+    specie_t Z;         /**< The ordinal number of the element in the periodic table */
+    std::string name;   /**< The full english name of the element. E. g. "Iron" */
+    std::string symbol; /**< The two character symbol of an element. E.g "Fe" for iron */
+    std::string electronic_configuration; /**< The electronic configuration as a string */
+    double atomic_radius;                 /**< Atomic radius in pm */
+    double mass;                          /**< The mass of the atoms in atomic units */
+    double en;                            /**< Electronegativity */
 
     template <std::integral T> static Atom from_z(T ordinal) {
       if (ordinal > KNOWN_ELEMENTS.size() && ordinal < 0)
