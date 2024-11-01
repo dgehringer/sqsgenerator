@@ -5,8 +5,9 @@
 #ifndef SQSGEN_CORE_STRUCTURE_H
 #define SQSGEN_CORE_STRUCTURE_H
 
-#include <unordered_set>
 #include <Eigen/Dense>
+#include <unordered_set>
+
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
@@ -18,6 +19,8 @@ namespace sqsgen::core {
     IndexSize j;
     ShellSize shell;
   };
+
+  template <class T> using site_t = std::tuple<Atom, Eigen::Vector3<T>>;
 
   template <class> struct as_atom_pair {};
   template <class Is, class Ss> struct as_atom_pair<std::tuple<Is, Ss>> {
@@ -156,8 +159,7 @@ namespace sqsgen::core {
       return _shell_matrix.value();
     }
 
-    [[nodiscard]] Structure supercell(std::size_t a, std::size_t b,
-                                      std::size_t c) const {
+    [[nodiscard]] Structure supercell(std::size_t a, std::size_t b, std::size_t c) const {
       auto num_copies = a * b * c;
       if (num_copies == 0)
         throw std::invalid_argument("There must be at least one copy in each direction");
@@ -187,7 +189,78 @@ namespace sqsgen::core {
 
       return Structure(lattice * scale, supercell_coords, supercell_species, pbc);
     }
+
+    [[nodiscard]] site_t<T> operator[](std::size_t i) const {
+      if (i >= species.size())
+        throw std::out_of_range(std::format("index out of range. Only {} atoms available", size()));
+      return site_t<T>{species[i], Eigen::Vector3<T>(frac_coords.row(i))};
+    }
+
+    [[nodiscard]] std::size_t size() const { return species.size(); }
+
+    class StructureIterator {
+    public:
+      using value_type = site_t<T>;
+      using difference_type = std::ptrdiff_t;
+      using pointer = value_type *;
+      using reference = value_type &;
+      using iterator_category = std::bidirectional_iterator_tag;
+
+      explicit StructureIterator(Structure const &structure, std::size_t position)
+          : _position(position), _structure(structure) {
+        if (position < structure.size()) {
+          _site = site_at(position);
+        }
+      }
+
+      reference operator*() { return _site.value(); }
+
+      StructureIterator &operator++() {
+        ++_position;
+        _site = site_at(_position);
+        return *this;
+      }
+      StructureIterator operator++(int) {
+        StructureIterator tmp = *this;
+        ++_position;
+        _site = site_at(_position);
+        return tmp;
+      }
+
+      StructureIterator &operator--() {
+        --_position;
+        return *this;
+      }
+      StructureIterator operator--(int) {
+        StructureIterator tmp = *this;
+        --_position;
+        return tmp;
+      }
+
+      value_type operator->() const { return &_site; }
+
+      bool operator==(const StructureIterator &other) const {
+        return _position == other._position && _structure.species == other._structure.species
+               && _structure.frac_coords == other._structure.frac_coords;
+      }
+
+    private:
+      std::optional<site_t<T>> _site = std::nullopt;
+      std::size_t _position;
+      const Structure &_structure;
+
+      site_t<T> site_at(std::size_t index) const {
+        return site_t<T>{Atom::from_z(_structure.species[index]),
+                         Eigen::Vector3<T>(_structure.frac_coords.row(index))};
+      }
+    };
+
+    using iterator = StructureIterator;
+
+    iterator begin() { return iterator(*this, 0); }
+    iterator end() { return iterator(*this, species.size()-1); }
   };
+
 }  // namespace sqsgen::core
 
 #endif  // SQSGEN_CORE_STRUCTURE_H
