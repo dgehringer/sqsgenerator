@@ -38,8 +38,8 @@ template <class T> struct adl_serializer<coords_t<T>> {
   }
 };
 
-template <class T> struct adl_serializer<core::Structure<T>> {
-  static void to_json(json& j, core::Structure<T> const& s) {
+template <class T> struct adl_serializer<core::structure<T>> {
+  static void to_json(json& j, core::structure<T> const& s) {
     j = json{
           {"lattice", s.lattice},
           {"species", s.species},
@@ -49,7 +49,7 @@ template <class T> struct adl_serializer<core::Structure<T>> {
   }
 
 
-  static void from_json(const json& j, core::Structure<T>& s) {
+  static void from_json(const json& j, core::structure<T>& s) {
     j.at("species").get_to(s.species);
     j.at("lattice").get_to(s.lattice);
     j.at("frac_coords").get_to(s.frac_coords);
