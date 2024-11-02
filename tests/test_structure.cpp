@@ -145,11 +145,27 @@ namespace sqsgen::testing {
     }
   }
 
+  template <class T> bool site_equals(core::site_t<T> const& lhs, core::site_t<T> const& rhs) {
+    const auto [latom, lcoords] = lhs;
+    const auto [ratom, rcoords] = rhs;
+    return latom.Z == ratom.Z && core::helpers::is_close(lcoords(0), rcoords(0))
+           && core::helpers::is_close(lcoords(1), rcoords(1))
+           && core::helpers::is_close(lcoords(2), rcoords(2));
+  }
+
   TEST_F(SupercellTestFixture, supercell) {
     for (const auto& test_case : this->test_cases) {
       auto shape = test_case.shape;
-      auto supercell = test_case.structure.supercell(std::get<0>(shape), std::get<1>(shape),
-                                                     std::get<2>(shape));
+      auto supercell_computed = test_case.structure.supercell(
+          std::get<0>(shape), std::get<1>(shape), std::get<2>(shape));
+
+      std::vector supercell_sites(test_case.supercell.begin(), test_case.supercell.end());
+      for (const auto& site : supercell_computed) {
+        auto equals_site = [&](auto other) { return site_equals(site, other); };
+        auto same_site = std::find_if(std::begin(supercell_sites), std::end(supercell_sites), equals_site);
+        if (same_site == std::end(supercell_sites)) ASSERT_TRUE(false) << std::format("Site same as supercell not found {}, {}", std::get<0>(site).name, std::get<1>(site)) << std::endl;
+        else supercell_sites.erase(same_site);
+      }
     }
   }
 }  // namespace sqsgen::testing
