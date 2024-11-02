@@ -20,8 +20,8 @@ namespace sqsgen::testing {
   template <class T> using stl_matrix = std::vector<std::vector<T>>;
 
   template <class T> struct SupercellTestData {
-    core::Structure<T> structure;
-    core::Structure<T> supercell;
+    core::structure<T> structure;
+    core::structure<T> supercell;
     std::array<std::size_t, 3> shape;
   };
 
@@ -35,7 +35,7 @@ namespace sqsgen::testing {
     j.at("shape").get_to(st.shape);
   }
 
-  template <class T> class StructureTestData : public core::Structure<T> {
+  template <class T> class StructureTestData : public core::structure<T> {
   public:
     matrix_t<T> distance_matrix;
     matrix_t<std::size_t> shell_matrix;
@@ -47,10 +47,10 @@ namespace sqsgen::testing {
                       matrix_t<std::size_t>&& shell_matrix)
         : distance_matrix(distance_matrix),
           shell_matrix(shell_matrix),
-          core::Structure<T>(lattice, frac_coords, species, {true, true, true}) {}
+          core::structure<T>(lattice, frac_coords, species, {true, true, true}) {}
 
-    [[nodiscard]] core::Structure<T> structure() const {
-      return core::Structure<T>(this->lattice, this->frac_coords, this->species);
+    [[nodiscard]] core::structure<T> structure() const {
+      return core::structure<T>(this->lattice, this->frac_coords, this->species);
     }
   };
 
@@ -146,9 +146,9 @@ namespace sqsgen::testing {
   }
 
   template <class T> bool site_equals(core::site_t<T> const& lhs, core::site_t<T> const& rhs) {
-    const auto [latom, lcoords] = lhs;
-    const auto [ratom, rcoords] = rhs;
-    return latom.Z == ratom.Z && core::helpers::is_close(lcoords(0), rcoords(0))
+    auto lcoords = lhs.frac_coords;
+    auto rcoords = rhs.frac_coords;
+    return lhs.atom().Z == rhs.atom().Z && core::helpers::is_close(lcoords(0), rcoords(0))
            && core::helpers::is_close(lcoords(1), rcoords(1))
            && core::helpers::is_close(lcoords(2), rcoords(2));
   }
@@ -159,13 +159,14 @@ namespace sqsgen::testing {
       auto supercell_computed = test_case.structure.supercell(
           std::get<0>(shape), std::get<1>(shape), std::get<2>(shape));
 
-      std::vector supercell_sites(test_case.supercell.begin(), test_case.supercell.end());
-      for (const auto& site : supercell_computed) {
+
+      for (const auto& site : supercell_computed.sites()) {
         auto equals_site = [&](auto other) { return site_equals(site, other); };
-        auto same_site = std::find_if(std::begin(supercell_sites), std::end(supercell_sites), equals_site);
-        if (same_site == std::end(supercell_sites)) ASSERT_TRUE(false) << std::format("Site same as supercell not found {}, {}", std::get<0>(site).name, std::get<1>(site)) << std::endl;
-        else supercell_sites.erase(same_site);
+        auto expected_sites = test_case.supercell.sites();
+        auto same_site = std::find_if(expected_sites.begin(), expected_sites.end(), equals_site);
+        if (same_site == expected_sites.end()) ASSERT_TRUE(false) << std::format("Site same as supercell not found {}, {}", site.atom().name, site.frac_coords) << std::endl;
       }
     }
   }
+
 }  // namespace sqsgen::testing
