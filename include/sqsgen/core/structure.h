@@ -167,11 +167,13 @@ namespace sqsgen::core {
       scale(0, 0) = a;
       scale(1, 1) = b;
       scale(2, 2) = c;
-      lattice_t<T> iscale = scale.inverse();
+
 
       auto site_index{0};
       auto num_atoms{species.size()};
       coords_t<T> supercell_coords(num_atoms * num_copies, 3);
+      lattice_t<T> iscale = scale.inverse();
+      coords_t<T> scaled_frac_coords = frac_coords * iscale.transpose();
       std::vector<specie_t> supercell_species(num_atoms * num_copies);
       helpers::for_each(
           [&](auto i, auto j, auto k) {
@@ -179,7 +181,7 @@ namespace sqsgen::core {
             vec3_t translation = vec3_t{i, j, k} * iscale;
             helpers::for_each(
                 [&](auto index) {
-                  supercell_coords.row(site_index) = translation + frac_coords.row(index);
+                  supercell_coords.row(site_index) = translation + scaled_frac_coords.row(index);
                   supercell_species[site_index] = species[index];
                   site_index++;
                 },
@@ -188,12 +190,6 @@ namespace sqsgen::core {
           a, b, c);
 
       return Structure(lattice * scale, supercell_coords, supercell_species, pbc);
-    }
-
-    [[nodiscard]] site_t<T> operator[](std::size_t i) const {
-      if (i >= species.size())
-        throw std::out_of_range(std::format("index out of range. Only {} atoms available", size()));
-      return site_t<T>{species[i], Eigen::Vector3<T>(frac_coords.row(i))};
     }
 
     [[nodiscard]] std::size_t size() const { return species.size(); }
@@ -257,8 +253,10 @@ namespace sqsgen::core {
 
     using iterator = StructureIterator;
 
-    iterator begin() { return iterator(*this, 0); }
-    iterator end() { return iterator(*this, species.size()-1); }
+    iterator begin() const { return iterator(*this, 0); }
+    iterator end() const { return iterator(*this, species.size()-1); }
+
+
   };
 
 }  // namespace sqsgen::core
