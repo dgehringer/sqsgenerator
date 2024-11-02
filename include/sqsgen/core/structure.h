@@ -8,19 +8,21 @@
 #include <Eigen/Dense>
 #include <unordered_set>
 
+#include "permutation.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
 
+  namespace ranges = std::ranges;
+  namespace views = ranges::views;
+
   template <class IndexSize, class ShellSize> struct atom_pair {
     IndexSize i;
     IndexSize j;
     ShellSize shell;
   };
-
-  template <class T> using site_t = std::tuple<Atom, Eigen::Vector3<T>>;
 
   template <class> struct as_atom_pair {};
   template <class Is, class Ss> struct as_atom_pair<std::tuple<Is, Ss>> {
@@ -29,6 +31,10 @@ namespace sqsgen::core {
 
   using atom_pair_t = helpers::lift_t<std::variant, as_atom_pair,
                                       helpers::product_t<index_type_list, index_type_list>>;
+
+  template <class T>
+    requires std::is_arithmetic_v<T>
+  class structure;
 
   namespace detail {
     template <class T>
@@ -107,11 +113,26 @@ namespace sqsgen::core {
       return shells;
     }
 
+    template <class T> class site {
+    public:
+      friend class structure<T>;
+      using row_t = const Eigen::Block<const coords_t<T>, 1, 3>;
+      std::size_t index;
+      specie_t specie;
+      row_t frac_coords;
+
+      [[nodiscard]] Atom atom() const { return Atom::from_z(specie); }
+
+    private:
+      site(std::size_t index, const specie_t specie, row_t row)
+          : index(index), specie(specie), frac_coords(row) {}
+    };
+
   }  // namespace detail
 
   template <class T>
     requires std::is_arithmetic_v<T>
-  class Structure {
+  class structure {
   private:
     std::optional<std::vector<T>> _distances = std::nullopt;
     std::optional<matrix_t<T>> _distance_matrix = std::nullopt;
@@ -123,9 +144,9 @@ namespace sqsgen::core {
     std::vector<specie_t> species;
     std::array<bool, 3> pbc = {true, true, true};
 
-    Structure() = default;
+    structure() = default;
 
-    Structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
+    structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
               const std::vector<specie_t> &species,
               const std::array<bool, 3> &pbc = {true, true, true})
         : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc) {
@@ -133,7 +154,7 @@ namespace sqsgen::core {
         throw std::invalid_argument("frac coords must have the same size as the species input");
     };
 
-    Structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords, std::vector<specie_t> &&species,
+    structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords, std::vector<specie_t> &&species,
               std::array<bool, 3> &&pbc = {true, true, true})
         : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc) {
       if (frac_coords.rows() != species.size())
@@ -159,7 +180,7 @@ namespace sqsgen::core {
       return _shell_matrix.value();
     }
 
-    [[nodiscard]] Structure supercell(std::size_t a, std::size_t b, std::size_t c) const {
+    [[nodiscard]] structure supercell(std::size_t a, std::size_t b, std::size_t c) const {
       auto num_copies = a * b * c;
       if (num_copies == 0)
         throw std::invalid_argument("There must be at least one copy in each direction");
@@ -167,7 +188,6 @@ namespace sqsgen::core {
       scale(0, 0) = a;
       scale(1, 1) = b;
       scale(2, 2) = c;
-
 
       auto site_index{0};
       auto num_atoms{species.size()};
@@ -189,75 +209,19 @@ namespace sqsgen::core {
           },
           a, b, c);
 
-      return Structure(lattice * scale, supercell_coords, supercell_species, pbc);
+      return structure(lattice * scale, supercell_coords, supercell_species, pbc);
     }
 
     [[nodiscard]] std::size_t size() const { return species.size(); }
 
-    class StructureIterator {
-    public:
-      using value_type = site_t<T>;
-      using difference_type = std::ptrdiff_t;
-      using pointer = value_type *;
-      using reference = value_type &;
-      using iterator_category = std::bidirectional_iterator_tag;
-
-      explicit StructureIterator(Structure const &structure, std::size_t position)
-          : _position(position), _structure(structure) {
-        if (position < structure.size()) {
-          _site = site_at(position);
-        }
-      }
-
-      reference operator*() { return _site.value(); }
-
-      StructureIterator &operator++() {
-        ++_position;
-        _site = site_at(_position);
-        return *this;
-      }
-      StructureIterator operator++(int) {
-        StructureIterator tmp = *this;
-        ++_position;
-        _site = site_at(_position);
-        return tmp;
-      }
-
-      StructureIterator &operator--() {
-        --_position;
-        return *this;
-      }
-      StructureIterator operator--(int) {
-        StructureIterator tmp = *this;
-        --_position;
-        return tmp;
-      }
-
-      value_type operator->() const { return &_site; }
-
-      bool operator==(const StructureIterator &other) const {
-        return _position == other._position && _structure.species == other._structure.species
-               && _structure.frac_coords == other._structure.frac_coords;
-      }
-
-    private:
-      std::optional<site_t<T>> _site = std::nullopt;
-      std::size_t _position;
-      const Structure &_structure;
-
-      site_t<T> site_at(std::size_t index) const {
-        return site_t<T>{Atom::from_z(_structure.species[index]),
-                         Eigen::Vector3<T>(_structure.frac_coords.row(index))};
-      }
-    };
-
-    using iterator = StructureIterator;
-
-    iterator begin() const { return iterator(*this, 0); }
-    iterator end() const { return iterator(*this, species.size()-1); }
-
-
+    auto sites() const {
+      return ranges::iota_view(std::size_t(0), size()) | views::transform([&](auto i) {
+               return detail::site<T>(i, species[i], frac_coords.row(i));
+             });
+    }
   };
+
+  template <class T> using site_t = detail::site<T>;
 
 }  // namespace sqsgen::core
 
