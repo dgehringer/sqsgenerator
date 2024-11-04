@@ -273,9 +273,16 @@ namespace sqsgen::core {
     }
 
     template <ranges::input_range R, class V = ranges::range_value_t<R>>
-      requires std::is_integral_v<T>
-    structure sliced(R &&r) {
-      auto indices = r | ranges::to<std::unordered_set<V>>();
+      requires std::is_integral_v<V>
+    structure sliced(R &&r) const {
+      auto sites = std::vector<detail::site<T>>{};
+      for (auto index : r) {
+        if (index >= size() || index < 0)
+          throw std::out_of_range(
+              std::format("index out of range 0 <= {} < {}", index, size()));
+        sites.push_back(detail::site<T>{static_cast<std::size_t>(index), species[index], Eigen::Vector3<T>(frac_coords.row(index))});
+      }
+      return structure(lattice, sites);
     }
   };
 
