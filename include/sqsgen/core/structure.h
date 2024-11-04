@@ -161,6 +161,21 @@ namespace sqsgen::core {
 
     structure() = default;
 
+    template <ranges::input_range R>
+      requires std::is_same_v<ranges::range_value_t<R>, detail::site<T>>
+    structure(const lattice_t<T> &lattice, R &&r) : lattice(lattice) {
+      species.resize(ranges::size(r));
+      coords_t<T> fc(ranges::size(r), 3);
+      for (const auto &[index, site] : helpers::enumerate(r)) {
+        species[index] = site.specie;
+        fc.row(index) = site.frac_coords;
+      };
+      frac_coords = fc;
+      _distances = std::nullopt;
+      _shell_matrix = std::nullopt;
+      _distance_matrix = std::nullopt;
+    }
+
     structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
               const std::vector<specie_t> &species,
               const std::array<bool, 3> &pbc = {true, true, true})
