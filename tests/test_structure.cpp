@@ -176,7 +176,7 @@ namespace sqsgen::testing {
       coords_t<T>{{0.0, 0.0, 0.0}, {0.0, 0.5, 0.5}, {0.5, 0.0, 0.5}, {0.5, 0.5, 0.0}},
       std::vector<specie_t>{11, 12, 13, 14}};
 
-  TEST(Structure, sort_structure) {
+  TEST(Structure, sorted) {
     auto [structure, indices] = TEST_FCC_STRUCTURE<double>.sorted_with_indices(
         [](auto a, auto b) { return a.specie > b.specie; });
     // structure is sorted in reversed order
@@ -187,6 +187,34 @@ namespace sqsgen::testing {
     using site_set_t = std::unordered_set<core::site_t<double>, core::site_t<double>::hasher>;
     ASSERT_EQ(ranges::to<site_set_t>(structure.sites()),
               ranges::to<site_set_t>(TEST_FCC_STRUCTURE<double>.sites()));
+  }
+
+  TEST(Structure, filtered) {
+    auto structure
+        = TEST_FCC_STRUCTURE<double>.filtered([](auto site) { return site.specie > 12; });
+    ASSERT_EQ(structure.size(), 2);
+    helpers::assert_vector_equal(structure.species, {13, 14});
+    // filtering out all atoms must result in an exception
+    ASSERT_THROW(TEST_FCC_STRUCTURE<double>.filtered([](auto) { return false; }),
+                 std::invalid_argument);
+  }
+
+  TEST(Structure, sliced) {
+    auto structure = TEST_FCC_STRUCTURE<double>.sliced(views::iota(0, 4));
+    ASSERT_EQ(structure.size(), 4);
+    // filtering out all atoms must result in an exception
+    ASSERT_THROW(TEST_FCC_STRUCTURE<double>.sliced(views::iota(-1, 4)), std::out_of_range);
+    ASSERT_THROW(TEST_FCC_STRUCTURE<double>.sliced(views::iota(3UL, structure.size() + 2UL)),
+                 std::out_of_range);
+    ASSERT_THROW(TEST_FCC_STRUCTURE<double>.sliced(std::vector<std::size_t>{}),
+                 std::invalid_argument);
+
+    auto repeated = TEST_FCC_STRUCTURE<double>.sliced(std::vector<std::size_t>{1, 1, 1});
+    helpers::assert_vector_equal(repeated.species, {12, 12, 12});
+
+    using site_set_t = std::unordered_set<core::site_t<double>, core::site_t<double>::hasher>;
+    auto sites = repeated.sites() | ranges::to<site_set_t>();
+    ASSERT_EQ(sites.size(), 1);
   }
 
 }  // namespace sqsgen::testing
