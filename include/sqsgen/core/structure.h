@@ -249,6 +249,24 @@ namespace sqsgen::core {
                return detail::site<T>{i, species[i], Eigen::Vector3<T>(frac_coords.row(i))};
              });
     }
+
+    template <class Fn> auto sorted_with_indices(Fn &&fn) const {
+      auto s = sites() | ranges::to<std::vector<detail::site<T>>>();
+      std::sort(s.begin(), s.end(), std::forward<Fn>(fn));
+      auto indices = s | views::transform([](auto site) { return site.index; })
+                     | ranges::to<std::vector<std::size_t>>();
+      return std::make_tuple(structure(lattice, s), indices);
+    }
+
+    template <class Fn> auto sorted(Fn &&fn) const {
+      return std::get<0>(sorted_with_indices(std::forward<Fn>(fn)));
+    }
+
+    template <ranges::input_range R, class V = ranges::range_value_t<R>>
+      requires std::is_integral_v<T>
+    structure sliced(R &&r) {
+      auto indices = r | ranges::to<std::unordered_set<V>>();
+    }
   };
 
   template <class T> using site_t = detail::site<T>;
