@@ -116,7 +116,7 @@ namespace sqsgen::core {
     template <class T> class site {
     public:
       friend class structure<T>;
-      using row_t = const Eigen::Block<const coords_t<T>, 1, 3>;
+      using row_t = Eigen::Vector3<T>;
       std::size_t index;
       specie_t specie;
       row_t frac_coords;
@@ -231,7 +231,7 @@ namespace sqsgen::core {
 
     auto sites() const {
       return ranges::iota_view(std::size_t(0), size()) | views::transform([&](auto i) {
-               return detail::site<T>(i, species[i], frac_coords.row(i));
+               return detail::site<T>{i, species[i], Eigen::Vector3<T>(frac_coords.row(i))};
              });
     }
   };
