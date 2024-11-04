@@ -20,6 +20,14 @@ namespace sqsgen::testing::helpers {
     }
   }
 
+  template <class T>
+  void assert_vector_equal(const std::vector<T>& lhs, const std::vector<T>& rhs) {
+    ASSERT_EQ(lhs.size(), rhs.size());
+    for (auto i = 0; i < lhs.size(); ++i)
+      ASSERT_EQ(lhs[i], rhs[i]) << std::format("Error at position {} ({} != {})", i, lhs[i],
+                                               rhs[i]);
+  }
+
 };  // namespace sqsgen::testing::helpers
 
 #endif  // SQSGEN_TESTS_HELPERS_H
