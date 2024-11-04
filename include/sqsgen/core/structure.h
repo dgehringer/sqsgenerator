@@ -183,15 +183,17 @@ namespace sqsgen::core {
               const std::vector<specie_t> &species,
               const std::array<bool, 3> &pbc = {true, true, true})
         : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc) {
-      if (frac_coords.rows() != species.size())
-        throw std::invalid_argument("frac coords must have the same size as the species input");
+      if (frac_coords.rows() != species.size() || species.empty())
+        throw std::invalid_argument(
+            "frac coords must have the same size as the species input and must not be empty");
     };
 
     structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords, std::vector<specie_t> &&species,
               std::array<bool, 3> &&pbc = {true, true, true})
         : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc) {
-      if (frac_coords.rows() != species.size())
-        throw std::invalid_argument("frac coords must have the same size as the species input");
+      if (frac_coords.rows() != species.size() || species.empty())
+        throw std::invalid_argument(
+            "frac coords must have the same size as the species input and must not be empty");
     };
 
     [[nodiscard]] const matrix_t<T> &distance_matrix() {
