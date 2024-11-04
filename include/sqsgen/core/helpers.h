@@ -8,9 +8,10 @@
 #include <ranges>
 
 #include "helpers/fold.h"
-#include "helpers/templates.h"
-#include "helpers/numeric.h"
 #include "helpers/for_each.h"
+#include "helpers/hash.h"
+#include "helpers/numeric.h"
+#include "helpers/templates.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core::helpers {
