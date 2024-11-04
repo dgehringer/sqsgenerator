@@ -164,11 +164,14 @@ namespace sqsgen::core {
     template <ranges::input_range R>
       requires std::is_same_v<ranges::range_value_t<R>, detail::site<T>>
     structure(const lattice_t<T> &lattice, R &&r) : lattice(lattice) {
-      species.resize(ranges::size(r));
-      coords_t<T> fc(ranges::size(r), 3);
-      for (const auto &[index, site] : helpers::enumerate(r)) {
-        species[index] = site.specie;
-        fc.row(index) = site.frac_coords;
+      auto sites = r | ranges::to<std::vector>();
+      if (sites.empty())
+        throw std::invalid_argument("Cannot create a structure without atoms");
+      coords_t<T> fc(sites.size(), 3);
+      species.resize(sites.size());
+      for (auto index = 0; index < sites.size(); ++index) {
+        species[index] = sites[index].specie;
+        fc.row(index) = sites[index].frac_coords;
       };
       frac_coords = fc;
       _distances = std::nullopt;
