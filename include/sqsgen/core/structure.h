@@ -267,6 +267,11 @@ namespace sqsgen::core {
       return std::get<0>(sorted_with_indices(std::forward<Fn>(fn)));
     }
 
+    template <class Fn> auto filtered(Fn &&fn) const {
+      return structure(lattice,
+                       sites() | views::filter(std::forward<Fn>(fn)));
+    }
+
     template <ranges::input_range R, class V = ranges::range_value_t<R>>
       requires std::is_integral_v<T>
     structure sliced(R &&r) {
