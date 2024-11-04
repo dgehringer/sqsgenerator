@@ -120,12 +120,27 @@ namespace sqsgen::core {
       std::size_t index;
       specie_t specie;
       row_t frac_coords;
-
       [[nodiscard]] Atom atom() const { return Atom::from_z(specie); }
 
-    private:
-      site(std::size_t index, const specie_t specie, row_t row)
-          : index(index), specie(specie), frac_coords(row) {}
+      bool operator<(site const &other) const {
+        return specie < other.specie && frac_coords(0) < other.frac_coords(0)
+               && frac_coords(1) < other.frac_coords(1) && frac_coords(2) < other.frac_coords(2);
+      }
+
+      bool operator==(const site &other) const {
+        return specie == other.specie && frac_coords == other.frac_coords;
+      }
+
+      struct hasher {
+        std::size_t operator()(site const &s) const {
+          std::size_t res = 0;
+          helpers::hash_combine(res, s.specie);
+          helpers::hash_combine(res, s.frac_coords(0));
+          helpers::hash_combine(res, s.frac_coords(1));
+          helpers::hash_combine(res, s.frac_coords(2));
+          return res;
+        }
+      };
     };
 
   }  // namespace detail
