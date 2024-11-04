@@ -12,7 +12,7 @@
 
 namespace sqsgen {
 
-  using specie_t = uint8_t;
+  using specie_t = std::uint_fast8_t;
   using rank_t = mppp::integer<2>;
   using configuration_t = std::vector<specie_t>;
 
@@ -32,9 +32,8 @@ namespace sqsgen {
 
   using shell_matrix_t = matrix_t<std::size_t>;
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  using shell_weights_t = std::map<std::size_t, T>;
+  /*template <class T>     requires std::is_arithmetic_v<T>
+  using shell_weights_t = std::map<std::size_t, T>;*/
 
   using index_type_list = std::tuple<std::uint_fast8_t, std::uint_fast16_t, std::uint_fast32_t>;
 
