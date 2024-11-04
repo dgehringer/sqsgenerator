@@ -159,14 +159,34 @@ namespace sqsgen::testing {
       auto supercell_computed = test_case.structure.supercell(
           std::get<0>(shape), std::get<1>(shape), std::get<2>(shape));
 
-
       for (const auto& site : supercell_computed.sites()) {
         auto equals_site = [&](auto other) { return site_equals(site, other); };
         auto expected_sites = test_case.supercell.sites();
         auto same_site = std::find_if(expected_sites.begin(), expected_sites.end(), equals_site);
-        if (same_site == expected_sites.end()) ASSERT_TRUE(false) << std::format("Site same as supercell not found {}, {}", site.atom().name, site.frac_coords) << std::endl;
+        if (same_site == expected_sites.end())
+          ASSERT_TRUE(false) << std::format("Site same as supercell not found {}, {}",
+                                            site.atom().name, site.frac_coords)
+                             << std::endl;
       }
     }
+  }
+
+  template <class T> const static auto TEST_FCC_STRUCTURE = core::structure<T>{
+      lattice_t<T>{{1, 0, 0}, {0, 2, 0}, {0, 0, 3}},
+      coords_t<T>{{0.0, 0.0, 0.0}, {0.0, 0.5, 0.5}, {0.5, 0.0, 0.5}, {0.5, 0.5, 0.0}},
+      std::vector<specie_t>{11, 12, 13, 14}};
+
+  TEST(Structure, sort_structure) {
+    auto [structure, indices] = TEST_FCC_STRUCTURE<double>.sorted_with_indices(
+        [](auto a, auto b) { return a.specie > b.specie; });
+    // structure is sorted in reversed order
+    helpers::assert_vector_equal(structure.species, {14, 13, 12, 11});
+    // indices are a contiguous reversed sequence
+    helpers::assert_vector_equal(indices, {3, 2, 1, 0});
+    // sorting the structure must not change the underlying sites
+    using site_set_t = std::unordered_set<core::site_t<double>, core::site_t<double>::hasher>;
+    ASSERT_EQ(ranges::to<site_set_t>(structure.sites()),
+              ranges::to<site_set_t>(TEST_FCC_STRUCTURE<double>.sites()));
   }
 
 }  // namespace sqsgen::testing
