@@ -6,6 +6,7 @@
 #define SQSGEN_CORE_HELPERS_H
 
 #include <ranges>
+#include <unordered_set>
 
 #include "helpers/fold.h"
 #include "helpers/for_each.h"
@@ -41,8 +42,19 @@ namespace sqsgen::core::helpers {
       for (auto j = 0; j < first_size; ++j) result(i, j) = v[i][j];
     }
 
-  return result;
-}
+    return result;
+  }
+
+  template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
+    requires std::is_integral_v<U>
+  index_mapping_t<T, U> make_index_mapping(R&& r) {
+    auto elements = r | ranges::to<std::unordered_set>() | ranges::to<std::vector>();
+    std::sort(elements.begin(), elements.end());
+    auto index_map = helpers::enumerate(elements) | ranges::to<std::unordered_map<U, T>>();
+    auto reverse_map = views::zip(index_map | views::elements<1>, index_map | views::elements<0>)
+                       | ranges::to<std::unordered_map<T, U>>();
+    return std::make_pair(reverse_map, index_map);
+  }
 
 }  // namespace sqsgen::core::helpers
 

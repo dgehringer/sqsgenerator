@@ -24,8 +24,8 @@ namespace sqsgen::core::helpers {
 
   template <ranges::input_range R> constexpr auto range(R&& r) { return std::forward<R>(r); }
 
-  template <ranges::input_range R> constexpr auto enumerate(R&& r) {
-    return views::zip(views::iota(0), r);
+  template <ranges::input_range R, class U = std::size_t> constexpr auto enumerate(R&& r) {
+    return views::zip(views::iota(U(0)), r);
   }
 
   template <class Fn, std::size_t I = 0, class... Args> void for_each(Fn&& fn, Args&&... args) {

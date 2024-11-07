@@ -1,6 +1,7 @@
 
 #include <utility>
 
+#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/permutation.h"
 
 namespace sqsgen::core {
