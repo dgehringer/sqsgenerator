@@ -37,6 +37,11 @@ if (BUILD_TESTS)
     add_subdirectory(tests)
 endif ()
 
+if (BUILD_BENCHMARKS)
+    message(STATUS "BUILD_BENCHMARKS=${BUILD_BENCHMARKS}")
+    add_subdirectory(bench)
+endif ()
+
 list(APPEND SQSGEN_LIBS "mp++")
 list(APPEND SQSGEN_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_LIBS "nlohmann_json")
@@ -51,7 +56,9 @@ add_executable(sqsgenerator main.cpp
         include/sqsgen/core/helpers/templates.h
         include/sqsgen/io/json.h
         include/sqsgen/core/helpers/numeric.h
-        include/sqsgen/core/helpers/for_each.h)
+        include/sqsgen/core/helpers/for_each.h
+        include/sqsgen/core/helpers/hash.h
+        include/sqsgen/configuration.h)
 
 target_link_libraries(sqsgenerator PRIVATE ${SQSGEN_LIBS})
 
