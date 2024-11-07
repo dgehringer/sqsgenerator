@@ -28,11 +28,7 @@ namespace sqsgen::core {
     return result;
   }
 
-  template <typename Out, typename In> Out factorial(In n) {
-    if (n < 0) throw std::invalid_argument("n must be positive");
-    if (n == 1) return 1;
-    return helpers::fold_left(ranges::views::iota(In{1}, n + 1), Out{1}, std::multiplies{});
-  }
+
 
   rank_t num_permutations(const configuration_t &conf);
 
@@ -41,8 +37,8 @@ namespace sqsgen::core {
   template <ranges::input_range R, class T = ranges::range_value_t<R> >
   rank_t num_permutations(const R &freqs) {
     auto num_atoms = helpers::fold_left_first(freqs, std::plus{}).value_or(0);
-    return factorial<rank_t, T>(num_atoms)
-           / helpers::fold_left_first(freqs | ranges::views::transform(factorial<rank_t, T>),
+    return helpers::factorial<rank_t, T>(num_atoms)
+           / helpers::fold_left_first(freqs | ranges::views::transform(helpers::factorial<rank_t, T>),
                              std::multiplies{})
                  .value_or(1);
   }

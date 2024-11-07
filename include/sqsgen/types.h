@@ -5,7 +5,9 @@
 #ifndef SQSGEN_TYPES_HPP
 #define SQSGEN_TYPES_HPP
 
+
 #include <Eigen/Core>
+#include <map>
 #include <mp++/integer.hpp>
 #include <unordered_map>
 #include <vector>
@@ -32,8 +34,11 @@ namespace sqsgen {
 
   using shell_matrix_t = matrix_t<std::size_t>;
 
-  /*template <class T>     requires std::is_arithmetic_v<T>
-  using shell_weights_t = std::map<std::size_t, T>;*/
+  template <class T>     requires std::is_arithmetic_v<T>
+  using shell_weights_t = std::map<std::size_t, T>;
+
+  template <class T , class U> requires std::is_integral_v<T> && std::is_integral_v<U>
+  using index_mapping_t = std::pair<std::unordered_map<T, U>, std::unordered_map<U, T>>;
 
   using index_type_list = std::tuple<std::uint_fast8_t, std::uint_fast16_t, std::uint_fast32_t>;
 

@@ -10,15 +10,16 @@
 
 #include "permutation.h"
 #include "sqsgen/core/atom.h"
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
+#include "sqsgen/core/helpers.h"
 
 namespace sqsgen::core {
 
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  template <class IndexSize, class ShellSize> struct atom_pair {
+  template <class IndexSize, class ShellSize> requires std::is_integral_v<IndexSize> && std::is_integral_v<ShellSize>
+  struct atom_pair {
     IndexSize i;
     IndexSize j;
     ShellSize shell;
@@ -74,12 +75,19 @@ namespace sqsgen::core {
       return distances;
     }
 
-    template <class T> std::vector<T> distances(matrix_t<T> const &distance_matrix) {
+    template <class T>
+    std::vector<T> distances(matrix_t<T> const &distance_matrix, T atol = std::numeric_limits<T>::epsilon(), T rtol = 1e-9) {
       const auto flattened = distance_matrix.reshaped();
       std::unordered_set<T> unique_distances(flattened.begin(), flattened.end());
       std::vector<T> dists(unique_distances.begin(), unique_distances.end());
       std::sort(dists.begin(), dists.end());
-      return dists;
+      auto reduced = helpers::fold_left(dists, std::vector<T>{T(0)}, [&](auto &&vec, auto dist) {
+        if (helpers::is_close(vec.back(), dist, atol, rtol)) {
+          vec[vec.size() - 1] = 0.5 * (dist + vec.back());
+        } else vec.push_back(dist);
+        return vec;
+      });
+      return reduced;
     }
 
     template <class T> shell_matrix_t shell_matrix(matrix_t<T> const &distance_matrix,
@@ -165,8 +173,7 @@ namespace sqsgen::core {
       requires std::is_same_v<ranges::range_value_t<R>, detail::site<T>>
     structure(const lattice_t<T> &lattice, R &&r) : lattice(lattice) {
       auto sites = r | ranges::to<std::vector>();
-      if (sites.empty())
-        throw std::invalid_argument("Cannot create a structure without atoms");
+      if (sites.empty()) throw std::invalid_argument("Cannot create a structure without atoms");
       coords_t<T> fc(sites.size(), 3);
       species.resize(sites.size());
       for (auto index = 0; index < sites.size(); ++index) {
@@ -268,8 +275,7 @@ namespace sqsgen::core {
     }
 
     template <class Fn> auto filtered(Fn &&fn) const {
-      return structure(lattice,
-                       sites() | views::filter(std::forward<Fn>(fn)));
+      return structure(lattice, sites() | views::filter(std::forward<Fn>(fn)));
     }
 
     template <ranges::input_range R, class V = ranges::range_value_t<R>>
@@ -278,13 +284,36 @@ namespace sqsgen::core {
       auto sites = std::vector<detail::site<T>>{};
       for (auto index : r) {
         if (index >= size() || index < 0)
-          throw std::out_of_range(
-              std::format("index out of range 0 <= {} < {}", index, size()));
-        sites.push_back(detail::site<T>{static_cast<std::size_t>(index), species[index], Eigen::Vector3<T>(frac_coords.row(index))});
+          throw std::out_of_range(std::format("index out of range 0 <= {} < {}", index, size()));
+        sites.push_back(detail::site<T>{static_cast<std::size_t>(index), species[index],
+                                        Eigen::Vector3<T>(frac_coords.row(index))});
       }
       return structure(lattice, sites);
     }
+
+    template<class IndexSize, class ShellSize> requires std::is_integral_v<ShellSize> && std::is_integral_v<IndexSize>
+    auto pairs(shell_weights_t<T> const& weights, bool pack = true) {
+      using namespace helpers;
+      auto [shell_map, reverse_map] = make_index_mapping<ShellSize>(weights | views::elements<0>);
+      std::vector<atom_pair<IndexSize, ShellSize>> pairs;
+      pairs.reserve(size() *  size() / 2);
+      auto sm = shell_matrix();
+      for (IndexSize i = 0; i < size(); ++i) {
+        for (IndexSize j = i +1; j < size(); ++j) pairs.push_back({i, j, static_cast<ShellSize>(pack ? shell_map[sm(i, j)] : sm(i, j))});
+      }
+      pairs.shrink_to_fit();
+      return std::make_tuple(pairs, shell_map, reverse_map);
+    }
+
+    [[nodiscard]] std::vector<specie_t> packed_species() const {
+      auto map = std::get<0>(helpers::make_index_mapping<specie_t>(species));
+      auto result = std::vector<specie_t>(species.size());
+      std::transform(species.begin(), species.end(), result.begin(), [&](auto z) { return map[z]; });
+      return result;
+    }
   };
+
+
 
   template <class T> using site_t = detail::site<T>;
 
