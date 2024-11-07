@@ -4,6 +4,7 @@
 
 #include <unordered_set>
 
+#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/permutation.h"
 #include <gtest/gtest.h>
 
