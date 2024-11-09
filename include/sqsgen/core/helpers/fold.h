@@ -5,6 +5,8 @@
 #ifndef SQSGEN_CORE_HELPERS_FOLD_H
 #define SQSGEN_CORE_HELPERS_FOLD_H
 
+#include <functional>
+
 namespace sqsgen::core::helpers {
   struct fold_left_fn {
     template <std::input_iterator I, std::sentinel_for<I> S, class T = std::iter_value_t<I>,
