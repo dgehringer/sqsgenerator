@@ -5,9 +5,6 @@
 #ifndef SQSGEN_PERMUTATION_HPP
 #define SQSGEN_PERMUTATION_HPP
 
-#include <numeric>
-#include <ranges>
-
 #include "sqsgen/types.h"
 #include "sqsgen/core/helpers.h"
 
