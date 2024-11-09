@@ -80,6 +80,8 @@ namespace sqsgen::bench {
 
 
     // the idea is to sort by index difference to improve cache locality
+    std::random_device rd2;
+    std::mt19937_64 rng2(rd2());
     auto species2 = std::vector<specie_t>(species.size());
     auto pairs2 = std::vector{pairs};
     std::vector<OutSize> bonds2{bonds};
@@ -88,7 +90,7 @@ namespace sqsgen::bench {
     });
 
     bench->run(std::format("{}-sorted", name), [&]() {
-      std::shuffle(species2.begin(), species2.end(), rng);
+      std::shuffle(species2.begin(), species2.end(), rng2);
       std::fill(bonds2.begin(), bonds2.end(), 0);
       for (auto& [i, j, s] : pairs2) {
         auto si{species2[i]};
@@ -98,11 +100,13 @@ namespace sqsgen::bench {
       }
     });
 
+    std::random_device rd3;
+    std::mt19937_64 rng3(rd());
     std::vector<OutSize> bonds3{bonds};
     std::vector<IndexSize> species3(species.size());
     for (auto i = 0; i < species3.size(); i++) species3[i] = static_cast<IndexSize>(species[i]);
     bench->run(std::format("{}-configuration", name), [&]() {
-      std::shuffle(species3.begin(), species3.end(), rng);
+      std::shuffle(species3.begin(), species3.end(), rng3);
       std::fill(bonds3.begin(), bonds3.end(), 0);
       for (auto& [i, j, s] : pairs) {
         auto si{species3[i]};
@@ -112,11 +116,13 @@ namespace sqsgen::bench {
       }
     });
 
+    std::random_device rd4;
+    std::mt19937_64 rng4(rd());
     std::vector<OutSize> bonds4(bonds);
     std::vector<IndexSize> species4(species.size());
     for (auto i = 0; i < species4.size(); i++) species4[i] = static_cast<IndexSize>(species[i]);
     bench->run(std::format("{}-half-off", name), [&]() {
-      std::shuffle(species4.begin(), species4.end(), rng);
+      std::shuffle(species4.begin(), species4.end(), rng4);
       std::fill(bonds4.begin(), bonds4.end(), 0);
       for (auto& [i, j, s] : pairs) {
         auto si{species4[i]};
@@ -126,12 +132,13 @@ namespace sqsgen::bench {
     });
 
     // memory layout-dynamic
-
+    std::random_device rd5;
+    std::mt19937_64 rng5(rd());
     std::vector<std::vector<OutSize>> bonds5(num_shells);
     for (auto i = 0; i < num_shells; i++) bonds5[i].resize(num_params);
     auto species5 = std::vector<specie_t>(species.size());
     bench->run(std::format("{}-memory-layout", name), [&]() {
-      std::shuffle(species5.begin(), species5.end(), rng);
+      std::shuffle(species5.begin(), species5.end(), rng5);
       for (auto i = 0; i < num_shells; i++) std::fill(bonds5[i].begin(), bonds5[i].end(), 0);
       for (auto& [i, j, s] : pairs) {
         auto si{species5[i]};
@@ -141,10 +148,12 @@ namespace sqsgen::bench {
     });
 
     // memory layout static
+    std::random_device rd6;
+    std::mt19937_64 rng6(rd());
     std::array<OutSize, 3 * 3 * 3> bonds6{};
     std::vector<specie_t> species6(species);
     bench->run(std::format("{}-half-off-static", name), [&]() {
-      std::shuffle(species6.begin(), species6.end(), rng);
+      std::shuffle(species6.begin(), species6.end(), rng6);
       std::fill(bonds6.begin(), bonds6.end(), 0);
       for (auto& [i, j, s] : pairs) {
         auto si{species6[i]};
@@ -153,6 +162,8 @@ namespace sqsgen::bench {
       }
     });
 
+    std::random_device rd7;
+    std::mt19937_64 rng7(rd());
     std::array<OutSize, 3 * 3 * 3> bonds7{};
     std::vector<specie_t> species7(species);
     auto pairs7 = std::vector{pairs};
@@ -161,7 +172,7 @@ namespace sqsgen::bench {
     });
 
     bench->run(std::format("{}-half-off-static-sorted", name), [&]() {
-      std::shuffle(species7.begin(), species7.end(), rng);
+      std::shuffle(species7.begin(), species7.end(), rng7);
       std::fill(bonds7.begin(), bonds7.end(), 0);
       for (auto& [i, j, s] : pairs7) {
         auto si{species7[i]};
@@ -179,8 +190,10 @@ int main() {
   using namespace sqsgen::bench;
 
   ankerl::nanobench::Bench bcurr;
-  bcurr.title("count bonds traditional").warmup(1000).minEpochIterations(150000).relative(true);
+  bcurr.title("count bonds traditional").warmup(1000).minEpochIterations(200000).relative(true);
   bcurr.performanceCounters(true);
   bench_count_bond<double, std::size_t, std::size_t, std::size_t>(&bcurr, "current-std::size_t");
+  bench_count_bond<double, std::uint_fast32_t, std::uint_fast32_t, std::uint_fast32_t>(&bcurr, "current-std::uint_fast32_t");
+  bench_count_bond<double, std::uint_fast16_t, std::uint_fast16_t, std::uint_fast16_t>(&bcurr, "current-std::uint_fast16_t");
 
 }

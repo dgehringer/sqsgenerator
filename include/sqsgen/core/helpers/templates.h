@@ -79,6 +79,7 @@ namespace sqsgen::core::helpers {
   using lift_t = typename detail::lift_impl<Out, Lifter, Args...>::type;
 
 
+
 }  // namespace sqsgen::core::helpers
 
 #endif  // SQSGEN_CORE_HELPERS_TEMPLATES_H

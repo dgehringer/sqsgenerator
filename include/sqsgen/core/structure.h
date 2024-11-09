@@ -8,7 +8,7 @@
 #include <Eigen/Dense>
 #include <unordered_set>
 
-#include "permutation.h"
+#include "sqsgen/core/permutation.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/types.h"
 #include "sqsgen/core/helpers.h"
@@ -306,7 +306,7 @@ namespace sqsgen::core {
     }
 
     [[nodiscard]] std::vector<specie_t> packed_species() const {
-      auto map = std::get<0>(helpers::make_index_mapping<specie_t>(species));
+      auto [map, _] = helpers::make_index_mapping<specie_t>(species);
       auto result = std::vector<specie_t>(species.size());
       std::transform(species.begin(), species.end(), result.begin(), [&](auto z) { return map[z]; });
       return result;
