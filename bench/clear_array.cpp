@@ -35,7 +35,7 @@ int main() {
   ankerl::nanobench::Bench b73;
   b73.title("Clearing of static vs dynamic array (7, 3)")
       .warmup(1000)
-      .minEpochIterations(2500000)
+      .minEpochIterations(5000000)
       .relative(true);
   b73.performanceCounters(true);
 
