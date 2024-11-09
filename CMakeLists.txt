@@ -21,15 +21,16 @@ find_package(GMP REQUIRED)
 CPMAddPackage("gh:bluescarni/mppp@1.0.4")
 CPMAddPackage("gh:nlohmann/json@3.11.3")
 CPMAddPackage(
+        NAME Eigen
         GITLAB_REPOSITORY libeigen/eigen
         GIT_TAG 3.4.0
-        OPTIONS "EIGEN_BUILD_DOC OFF"
-        "EIGEN_BUILD_PKGCONFIG OF"
-        "EIGEN_BUILD_DOC OFF"
-        "EIGEN_BUILD_TESTING OFF"
+        OPTIONS
+        "EIGEN_BUILD_DOC OFF"           # Do not build documentation
+        "EIGEN_BUILD_PKGCONFIG OFF"     # Optional, disables pkg-config
+        "BUILD_TESTING OFF"             # Disable building and running tests
 )
 
-
+CPMAddPackage("gh:Nicoshev/rapidhash#rapidhash_v1.0")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 if (BUILD_TESTS)
@@ -58,7 +59,7 @@ add_executable(sqsgenerator main.cpp
         include/sqsgen/core/helpers/numeric.h
         include/sqsgen/core/helpers/for_each.h
         include/sqsgen/core/helpers/hash.h
-        include/sqsgen/configuration.h)
+        include/sqsgen/config.h)
 
 target_link_libraries(sqsgenerator PRIVATE ${SQSGEN_LIBS})
 
