@@ -18,20 +18,13 @@ namespace sqsgen::core {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  template <class IndexSize, class ShellSize> requires std::is_integral_v<IndexSize> && std::is_integral_v<ShellSize>
+  template <class Size> requires std::is_integral_v<Size>
   struct atom_pair {
-    IndexSize i;
-    IndexSize j;
-    ShellSize shell;
+    Size i;
+    Size j;
+    Size shell;
   };
 
-  template <class> struct as_atom_pair {};
-  template <class Is, class Ss> struct as_atom_pair<std::tuple<Is, Ss>> {
-    using type = atom_pair<Is, Ss>;
-  };
-
-  using atom_pair_t = helpers::lift_t<std::variant, as_atom_pair,
-                                      helpers::product_t<index_type_list, index_type_list>>;
 
   template <class T>
     requires std::is_arithmetic_v<T>
@@ -109,12 +102,12 @@ namespace sqsgen::core {
         }
         return static_cast<int>(dists.size());
       };
-      shell_matrix_t shells = matrix_t<std::size_t>(num_atoms, num_atoms);
+      shell_matrix_t shells = matrix_t<usize_t>(num_atoms, num_atoms);
       for (auto i = 0; i < num_atoms; i++) {
         for (auto j = i + 1; j < num_atoms; j++) {
           auto shell{find_shell(distance_matrix(i, j))};
-          shells(i, j) = static_cast<std::size_t>(shell);
-          shells(j, i) = static_cast<std::size_t>(shell);
+          shells(i, j) = static_cast<usize_t>(shell);
+          shells(j, i) = static_cast<usize_t>(shell);
         }
       }
       helpers::for_each([&](auto i) { shells(i, i) = 0; }, num_atoms);
@@ -291,15 +284,15 @@ namespace sqsgen::core {
       return structure(lattice, sites);
     }
 
-    template<class IndexSize, class ShellSize> requires std::is_integral_v<ShellSize> && std::is_integral_v<IndexSize>
+    template<class Size = usize_t> requires std::is_integral_v<Size>
     auto pairs(shell_weights_t<T> const& weights, bool pack = true) {
       using namespace helpers;
-      auto [shell_map, reverse_map] = make_index_mapping<ShellSize>(weights | views::elements<0>);
-      std::vector<atom_pair<IndexSize, ShellSize>> pairs;
+      auto [shell_map, reverse_map] = make_index_mapping<Size>(weights | views::elements<0>);
+      std::vector<atom_pair<Size>> pairs;
       pairs.reserve(size() *  size() / 2);
       auto sm = shell_matrix();
-      for (IndexSize i = 0; i < size(); ++i) {
-        for (IndexSize j = i +1; j < size(); ++j) pairs.push_back({i, j, static_cast<ShellSize>(pack ? shell_map[sm(i, j)] : sm(i, j))});
+      for (Size i = 0; i < size(); ++i) {
+        for (Size j = i +1; j < size(); ++j) pairs.push_back({i, j, static_cast<Size>(pack ? shell_map[sm(i, j)] : sm(i, j))});
       }
       pairs.shrink_to_fit();
       return std::make_tuple(pairs, shell_map, reverse_map);
@@ -313,9 +306,7 @@ namespace sqsgen::core {
     }
   };
 
-
-
-  template <class T> using site_t = detail::site<T>;
+  using site_t = detail::site<usize_t>;
 
 }  // namespace sqsgen::core
 
