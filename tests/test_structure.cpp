@@ -164,9 +164,7 @@ namespace sqsgen::testing {
         auto expected_sites = test_case.supercell.sites();
         auto same_site = std::find_if(expected_sites.begin(), expected_sites.end(), equals_site);
         if (same_site == expected_sites.end())
-          ASSERT_TRUE(false) << std::format("Site same as supercell not found {}, {}",
-                                            site.atom().name, site.frac_coords)
-                             << std::endl;
+          ASSERT_TRUE(false);
       }
     }
   }
