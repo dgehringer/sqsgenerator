@@ -50,10 +50,9 @@ namespace sqsgen::core::helpers {
   index_mapping_t<T, U> make_index_mapping(R&& r) {
     auto elements = r | ranges::to<std::unordered_set>() | ranges::to<std::vector>();
     std::sort(elements.begin(), elements.end());
-    auto index_map = helpers::enumerate(elements) | ranges::to<std::unordered_map<U, T>>();
-    auto reverse_map = views::zip(index_map | views::elements<1>, index_map | views::elements<0>)
-                       | ranges::to<std::unordered_map<T, U>>();
-    return std::make_pair(reverse_map, index_map);
+    std::unordered_map<U, T> index_map = as<std::unordered_map>{}(helpers::enumerate<U>(elements));
+    std::unordered_map<T, U> reverse_map = as<std::unordered_map>{}(views::zip(index_map | views::elements<1>, index_map | views::elements<0>));
+    return index_mapping_t<T, U>(reverse_map, index_map);
   }
 
 }  // namespace sqsgen::core::helpers
