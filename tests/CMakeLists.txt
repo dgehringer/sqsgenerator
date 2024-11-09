@@ -33,7 +33,6 @@ add_executable(test_permutation
         "${SQSGEN_INCLUDE_DIR}/types.h"
         "${SQSGEN_INCLUDE_DIR}/core/permutation.h"
         "${SQSGEN_SOURCE_DIR}/core/permutation.cpp"
-        test_structure.cpp
         ../include/sqsgen/core/helpers/hash.h
 )
 target_link_libraries(test_permutation ${SQSGEN_TEST_LIBS})
