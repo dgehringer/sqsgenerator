@@ -20,38 +20,12 @@ namespace sqsgen::core::helpers {
   template <ranges::input_range R> constexpr auto range(R&& r) { return std::forward<R>(r); }
 
   template <class U, ranges::input_range R> constexpr auto enumerate(R&& r) {
-    return views::zip(views::iota(U(0)), r);
+    return views::iota(U(0)) | views::transform([&](auto&& index) {
+      return std::make_pair(index, ranges::next(r));
+    });
   }
 
-  template <template <class...> class> struct as {};
 
-  template <> struct as<std::vector> {
-    template <ranges::range R>
-    static std::vector<std::decay_t<ranges::range_value_t<R>>> operator()(R&& r) {
-      return {std::begin(r), std::end(r)};
-    }
-  };
-
-  template <> struct as<std::unordered_set> {
-    template <ranges::range R>
-    static std::unordered_set<std::decay_t<ranges::range_value_t<R>>> operator()(R&& r) {
-      return {std::begin(r), std::end(r)};
-    }
-  };
-
-  template <> struct as<std::unordered_map> {
-
-    template <ranges::range R>
-    static auto operator()(R&& r) {
-      using element_t = ranges::range_value_t<R>;
-      using key_t = std::tuple_element_t<0, element_t>;
-      using value_t = std::tuple_element_t<1, element_t>;
-      using return_t = std::unordered_map<key_t, value_t>;
-      return_t result{};
-      for (const auto& [key, value] : r) result[key] = value;;
-      return result;
-    }
-  };
 
   template <class Fn, std::size_t I = 0, class... Args> void for_each(Fn&& fn, Args&&... args) {
     static_assert(I < sizeof...(Args), "For each must be at least one element");
