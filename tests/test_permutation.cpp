@@ -2,8 +2,7 @@
 // Created by dominik on 27.05.21.
 //
 
-#include <unordered_set>
-
+#include <set>
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/permutation.h"
 #include <gtest/gtest.h>

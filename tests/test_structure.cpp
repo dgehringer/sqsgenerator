@@ -8,6 +8,7 @@
 #include <fstream>
 
 #include "helpers.h"
+#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/json.h"
 
@@ -73,7 +74,7 @@ namespace sqsgen::testing {
   template <class T> void from_json(const json& j, StructureTestData<T>& st) {
     auto species = j.at("species").get<std::vector<std::string>>();
 
-    auto ordinals = ranges::to<std::vector>(
+    auto ordinals = core::helpers::as<std::vector>{}(
         species | views::transform([](auto const& s) { return core::Atom::from_symbol(s).Z; }));
 
     st = StructureTestData<T>(std::move(matrix_from_json<T, lattice_t>(j, "lattice")),
@@ -163,8 +164,7 @@ namespace sqsgen::testing {
         auto equals_site = [&](auto other) { return site_equals(site, other); };
         auto expected_sites = test_case.supercell.sites();
         auto same_site = std::find_if(expected_sites.begin(), expected_sites.end(), equals_site);
-        if (same_site == expected_sites.end())
-          ASSERT_TRUE(false);
+        if (same_site == expected_sites.end()) ASSERT_TRUE(false);
       }
     }
   }
@@ -182,9 +182,12 @@ namespace sqsgen::testing {
     // indices are a contiguous reversed sequence
     helpers::assert_vector_equal(indices, {3, 2, 1, 0});
     // sorting the structure must not change the underlying sites
-    using site_set_t = std::unordered_set<core::site_t<double>, core::site_t<double>::hasher>;
-    ASSERT_EQ(ranges::to<site_set_t>(structure.sites()),
-              ranges::to<site_set_t>(TEST_FCC_STRUCTURE<double>.sites()));
+    using hasher_t = core::site_t<double>::hasher;
+    auto computed_sites
+        = core::helpers::as<std::unordered_set>{}.operator()<hasher_t>(structure.sites());
+    auto expected_sites = core::helpers::as<std::unordered_set>{}.operator()<hasher_t>(
+        TEST_FCC_STRUCTURE<double>.sites());
+    ASSERT_EQ(computed_sites, expected_sites);
   }
 
   TEST(Structure, filtered) {
@@ -210,8 +213,7 @@ namespace sqsgen::testing {
     auto repeated = TEST_FCC_STRUCTURE<double>.sliced(std::vector<std::size_t>{1, 1, 1});
     helpers::assert_vector_equal(repeated.species, {12, 12, 12});
 
-    using site_set_t = std::unordered_set<core::site_t<double>, core::site_t<double>::hasher>;
-    auto sites = repeated.sites() | ranges::to<site_set_t>();
+    auto sites = core::helpers::as<std::set>{}(repeated.sites());
     ASSERT_EQ(sites.size(), 1);
   }
 
