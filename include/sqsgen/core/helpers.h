@@ -8,6 +8,7 @@
 #include <ranges>
 #include <unordered_set>
 
+#include "helpers/as.h"
 #include "helpers/fold.h"
 #include "helpers/for_each.h"
 #include "helpers/hash.h"
@@ -48,10 +49,14 @@ namespace sqsgen::core::helpers {
   template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
     requires std::is_integral_v<U>
   index_mapping_t<T, U> make_index_mapping(R&& r) {
-    auto elements = r | ranges::to<std::unordered_set>() | ranges::to<std::vector>();
+
+    auto elements = as<std::vector>{}(as<std::set>{}(r));
     std::sort(elements.begin(), elements.end());
     std::unordered_map<U, T> index_map = as<std::unordered_map>{}(helpers::enumerate<U>(elements));
-    std::unordered_map<T, U> reverse_map = as<std::unordered_map>{}(views::zip(index_map | views::elements<1>, index_map | views::elements<0>));
+    std::unordered_map<T, U> reverse_map = as<std::unordered_map>{}(index_map | views::transform([&](auto const& item) {
+      auto [k, v] = item;
+      return std::make_pair(v, k);
+    }));
     return index_mapping_t<T, U>(reverse_map, index_map);
   }
 
