@@ -17,3 +17,8 @@ target_link_libraries(bench_clear_array  ${SQSGEN_BENCH_LIBS})
 include_directories(${SQSGEN_INCLUDE_DIR})
 add_executable(bench_count_bonds "${SQSGEN_BENCH_SOURCE_DIR}/count_bonds.cpp")
 target_link_libraries(bench_count_bonds  ${SQSGEN_BENCH_LIBS})
+
+
+include_directories(${SQSGEN_INCLUDE_DIR})
+add_executable(bench_shuffle "${SQSGEN_BENCH_SOURCE_DIR}/shuffle.cpp")
+target_link_libraries(bench_shuffle  ${SQSGEN_BENCH_LIBS})
