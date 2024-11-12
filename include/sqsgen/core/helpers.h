@@ -9,14 +9,12 @@
 #include <unordered_set>
 
 #include "helpers/as.h"
-#include "helpers/enumerate.h"
 #include "helpers/fold.h"
 #include "helpers/for_each.h"
 #include "helpers/hash.h"
 #include "helpers/numeric.h"
 #include "helpers/static_string.h"
 #include "helpers/templates.h"
-#include "helpers/zip.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core::helpers {
@@ -54,9 +52,10 @@ namespace sqsgen::core::helpers {
   index_mapping_t<T, U> make_index_mapping(R&& r) {
     auto elements = as<std::vector>{}(as<std::set>{}(r));
     std::sort(elements.begin(), elements.end());
-    U index{0};
-    std::map<U, T> index_map = as<std::map>{}(
-         enumerate<U>(elements) );
+    U index = 0;
+    std::map<U, T> index_map;
+    std::transform(elements.begin(), elements.end(), std::inserter(index_map, index_map.begin()),
+                   [&](auto const& val) { return std::make_pair(index++, val); });
     std::map<T, U> reverse_map = as<std::map>{}(index_map | views::transform([&](auto const& item) {
                                                   auto [k, v] = item;
                                                   return std::make_pair(v, k);
