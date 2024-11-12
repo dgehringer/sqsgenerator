@@ -53,3 +53,13 @@ add_custom_command(TARGET test_structure POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${SQSGEN_TEST_SOURCE_DIR}/assets $<TARGET_FILE_DIR:test_structure>/assets)
 
+
+add_executable(test_shuffle
+        "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
+        "${SQSGEN_TEST_SOURCE_DIR}/test_shuffle.cpp"
+        "${SQSGEN_INCLUDE_DIR}/core/helpers.h"
+        "${SQSGEN_INCLUDE_DIR}/types.h"
+        helpers.h
+)
+target_link_libraries(test_shuffle ${SQSGEN_TEST_LIBS})
+add_test(NAME test_shuffle COMMAND test_shuffle)
