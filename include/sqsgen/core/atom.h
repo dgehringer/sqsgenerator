@@ -146,7 +146,7 @@ namespace sqsgen::core {
   }
 
   static std::unordered_map SYMBOL_MAP{_make_symbol_map()};
-  class Atom {
+  class atom {
   public:
     specie_t Z;         /**< The ordinal number of the element in the periodic table */
     std::string name;   /**< The full english name of the element. E. g. "Iron" */
@@ -156,20 +156,20 @@ namespace sqsgen::core {
     double mass;                          /**< The mass of the atoms in atomic units */
     double en;                            /**< Electronegativity */
 
-    template <std::integral T> static Atom from_z(T ordinal) {
+    template <std::integral T> static atom from_z(T ordinal) {
       if (ordinal > KNOWN_ELEMENTS.size() && ordinal < 0)
         throw std::out_of_range("Element is out of range");
-      return Atom(KNOWN_ELEMENTS[ordinal]);
+      return atom(KNOWN_ELEMENTS[ordinal]);
     }
 
-    static Atom from_symbol(std::string const& symbol) {
+    static atom from_symbol(std::string const& symbol) {
       if (!SYMBOL_MAP.contains(symbol))
         throw std::out_of_range(std::format("Unknown element {}", symbol));
       return from_z(SYMBOL_MAP.at(symbol));
     }
 
   private:
-    explicit Atom(detail::atom_record const& record)
+    explicit atom(detail::atom_record const& record)
         : Z(std::get<0>(record)),
           name(std::get<1>(record)),
           symbol(std::get<2>(record)),
