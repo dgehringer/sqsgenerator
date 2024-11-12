@@ -19,14 +19,6 @@ namespace sqsgen::core::helpers {
 
   template <ranges::input_range R> constexpr auto range(R&& r) { return std::forward<R>(r); }
 
-  template <class U, ranges::input_range R> constexpr auto enumerate(R&& r) {
-    return views::iota(U(0)) | views::transform([&](auto&& index) {
-      return std::make_pair(index, ranges::next(r));
-    });
-  }
-
-
-
   template <class Fn, std::size_t I = 0, class... Args> void for_each(Fn&& fn, Args&&... args) {
     static_assert(I < sizeof...(Args), "For each must be at least one element");
     auto arg = std::get<I>(std::forward_as_tuple(std::forward<Args>(args)...));
