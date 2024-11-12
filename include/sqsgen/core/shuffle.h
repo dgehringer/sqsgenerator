@@ -35,14 +35,15 @@ namespace sqsgen::core {
     explicit shuffler(std::optional<std::uint64_t> seed = std::nullopt)
         : seed(seed.value_or(make_random_seed())) {}
 
-    void shuffle(configuration_t &configuration) {
+    template<class T>
+    void shuffle(std::vector<T> &configuration) {
       for (auto i = static_cast<uint32_t>(configuration.size()); i > 1; i--) {
         uint32_t p = random_bounded(i, seed);               // number in [0,i)
         std::swap(configuration[i - 1], configuration[p]);  // swap the values at i-1 and p
       }
     }
 
-    void shuffle(configuration_t &configuration, bounds_t<usize_t> const &bounds) {
+    void shuffle(configuration_t &configuration, std::vector<bounds_t<usize_t>> const& bounds) {
       for (auto &bound : bounds) {
         auto [lower_bound, upper_bound] = bound;
         assert(upper_bound > lower_bound);

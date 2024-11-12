@@ -9,6 +9,7 @@
 
 #include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
+#include "sqsgen/config.h"
 
 using namespace sqsgen;
 
@@ -58,5 +59,25 @@ template <class T> struct adl_serializer<core::structure<T>> {
 
 };
 NLOHMANN_JSON_NAMESPACE_END
+
+namespace sqsgen {
+
+  using json = nlohmann::json;
+
+  NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {
+    {PREC_SINGLE, "single"},
+    {PREC_DOUBLE, "double"}
+  })
+
+
+  template<core::helpers::string_literal key, class T>
+  std::optional<T> get_optional(json const& json) {
+    if (json.contains(key.data)) {
+      return std::make_optional(json.at(key.data).template get<T>());
+    }
+    return std::nullopt;
+  }
+
+}
 
 #endif  // SQSGEN_IO_JSON_H

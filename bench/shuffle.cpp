@@ -3,9 +3,10 @@
 //
 
 #define ANKERL_NANOBENCH_IMPLEMENT
+#include "core/shuffle.h"
+
 #include <nanobench.h>
 
-#include "core/random.h"
 #include "sqsgen/core/structure.h"
 
 namespace sqsgen::bench {

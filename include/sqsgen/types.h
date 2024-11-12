@@ -6,8 +6,8 @@
 #define SQSGEN_TYPES_HPP
 
 #include <Eigen/Core>
-#include <mp++/integer.hpp>
 #include <map>
+#include <mp++/integer.hpp>
 #include <set>
 #include <vector>
 
@@ -39,15 +39,14 @@ namespace sqsgen {
 
   using shell_matrix_t = matrix_t<usize_t>;
 
+  template <class T> using bounds_t = std::pair<T, T>;
 
   template <class T>
     requires std::is_arithmetic_v<T>
   using shell_weights_t = std::map<usize_t, T>;
 
   struct _compare_usize {
-    bool operator()( usize_t const& lhs,  usize_t const& rhs) const {
-      return lhs < rhs;
-    }
+    bool operator()(usize_t const& lhs, usize_t const& rhs) const { return lhs < rhs; }
   };
 
   struct sublattice {

@@ -5,7 +5,18 @@
 #ifndef SQSGEN_CONFIGURATION_H
 #define SQSGEN_CONFIGURATION_H
 
+
+
 namespace sqsgen {
+
+  enum Prec : std::uint8_t{
+    PREC_SINGLE = 0,
+    PREC_DOUBLE = 1,
+  };
+
+  template<class T>
+  class configuration {
+  };
 
 }
 

@@ -123,7 +123,7 @@ namespace sqsgen::core {
       std::size_t index;
       specie_t specie;
       row_t frac_coords;
-      [[nodiscard]] Atom atom() const { return Atom::from_z(specie); }
+      [[nodiscard]] sqsgen::core::atom atom() const { return atom::from_z(specie); }
 
       bool operator<(site const &other) const {
         return specie < other.specie && frac_coords(0) < other.frac_coords(0)
@@ -311,8 +311,7 @@ namespace sqsgen::core {
     }
   };
 
-  template<typename T>
-  using site_t = detail::site<T>;
+  template <typename T> using site_t = detail::site<T>;
 
 }  // namespace sqsgen::core
 

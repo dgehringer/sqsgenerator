@@ -75,7 +75,7 @@ namespace sqsgen::testing {
     auto species = j.at("species").get<std::vector<std::string>>();
 
     auto ordinals = core::helpers::as<std::vector>{}(
-        species | views::transform([](auto const& s) { return core::Atom::from_symbol(s).Z; }));
+        species | views::transform([](auto const& s) { return core::atom::from_symbol(s).Z; }));
 
     st = StructureTestData<T>(std::move(matrix_from_json<T, lattice_t>(j, "lattice")),
                               std::move(matrix_from_json<T, coords_t>(j, "frac_coords")),
