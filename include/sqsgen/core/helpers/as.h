@@ -64,7 +64,7 @@ namespace sqsgen::core::helpers {
       using element_t = ranges::range_value_t<R>;
       using key_t = std::tuple_element_t<0, element_t>;
       using value_t = std::tuple_element_t<1, element_t>;
-      using return_t = std::unordered_map<key_t, value_t>;
+      using return_t = std::map<key_t, value_t>;
       return_t result{};
       for (const auto& [key, value] : r) result[key] = value;
       ;
