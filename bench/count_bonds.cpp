@@ -4,6 +4,7 @@
 
 #include <nanobench.h>
 
+#include <fstream>
 #include <iostream>
 #include <random>
 
@@ -182,7 +183,14 @@ namespace sqsgen::bench {
     });
   }
 
+  void gen(std::string const& typeName, char const* mustacheTemplate,
+           ankerl::nanobench::Bench const& bench) {
+    std::ofstream templateOut("mustache.template." + typeName);
+    templateOut << mustacheTemplate;
 
+    std::ofstream renderOut("mustache.render." + typeName);
+    ankerl::nanobench::render(mustacheTemplate, bench, renderOut);
+  }
 }  // namespace sqsgen::bench
 // namespace sqsgen::bench
 
@@ -201,4 +209,7 @@ int main() {
   bench_count_bond_half_off_sorted(&bcurr);
   bench_count_bond_half_off_sorted_static(&bcurr);
 
+  gen("json", ankerl::nanobench::templates::json(), bcurr);
+  gen("html", ankerl::nanobench::templates::htmlBoxplot(), bcurr);
+  gen("csv", ankerl::nanobench::templates::csv(), bcurr);
 }
