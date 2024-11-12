@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 project(sqsgenerator)
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 include(FetchContent)
 
 set(CPM_DOWNLOAD_VERSION 0.40.2)
@@ -31,7 +31,9 @@ CPMAddPackage(
 )
 
 CPMAddPackage("gh:Nicoshev/rapidhash#rapidhash_v1.0")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include" "${rapidhash_SOURCE_DIR}")
+
 
 if (BUILD_TESTS)
     message(STATUS "BUILD_TESTS=${BUILD_TESTS}")
@@ -46,6 +48,7 @@ endif ()
 list(APPEND SQSGEN_LIBS "mp++")
 list(APPEND SQSGEN_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_LIBS "nlohmann_json")
+
 
 message(STATUS "SQSGEN_LIBS=${SQSGEN_LIBS}")
 
