@@ -44,6 +44,24 @@ namespace sqsgen::core::helpers {
     return result;
   }
 
+  template <class Tensor>
+  Tensor stl_to_eigen(std::vector<std::vector<std::vector<typename Tensor::Scalar>>> const& v) {
+    if (v.size() == 0) throw std::invalid_argument("empty vector");
+    auto first_size = v.front().size();
+    if (first_size == 0) throw std::invalid_argument("empty vector in first dimension");
+    auto second_size = v.front().front().size();
+    if (second_size == 0) throw std::invalid_argument("empty vector in second dimension");
+    if (!ranges::all_of(v, [&](auto const& face) {
+          return face.size() == first_size && ranges::all_of(face, [&](auto const& row) {
+                   return row.size() == second_size;
+                 });
+        }))
+      throw std::invalid_argument("not all vector have the same size");
+    Tensor result(v.size(), first_size, second_size);
+    helpers::for_each([&](auto i, auto j, auto, auto k) {result(i, j, k) = v[i][j][k]; }, v.size(), first_size, second_size);
+    return result;
+  }
+
   template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
     requires std::is_integral_v<U>
   index_mapping_t<T, U> make_index_mapping(R&& r) {
