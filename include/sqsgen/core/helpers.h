@@ -40,10 +40,7 @@ namespace sqsgen::core::helpers {
       throw std::invalid_argument("not all vector have the same size");
 
     Matrix result(v.size(), first_size);
-    for (auto i = 0; i < v.size(); ++i) {
-      for (auto j = 0; j < first_size; ++j) result(i, j) = v[i][j];
-    }
-
+    helpers::for_each([&](auto i, auto j) { result(i, j) = v[i][j]; }, v.size(), first_size);
     return result;
   }
 
