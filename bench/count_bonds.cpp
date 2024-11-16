@@ -183,6 +183,28 @@ namespace sqsgen::bench {
     });
   }
 
+  void bench_count_bond_half_off_sorted_static_memory_layout(ankerl::nanobench::Bench* bench) {
+    auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
+    core::shuffler shuffler{};
+    if (num_shells != 4) throw std::invalid_argument("num_shells must be 4");
+    if (num_params != 9) throw std::invalid_argument("num_params must be 4");
+    if (num_species != 3) throw std::invalid_argument("num_params must be 3");
+    std::array<std::array<usize_t, 9>, 4> bonds{};
+    std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) {
+      return absolute(p.i - p.j) < absolute(q.i - q.j) && p.i < q.i;
+    });
+    bench->run("draft-half-off-sorted-static-memory-hierarchy", [&]() {
+      shuffler.shuffle(species);
+      for (auto i = 0; i < 4; i++) std::fill(bonds[i].begin(), bonds[i].end(), 0);
+      for (auto& [i, j, s] : pairs) {
+        auto si{species[i]};
+        auto sj{species[j]};
+        ++bonds[s][sj * 3 + si];
+      }
+    });
+  }
+
+
   void gen(std::string const& typeName, char const* mustacheTemplate,
            ankerl::nanobench::Bench const& bench) {
     std::ofstream templateOut("mustache.template." + typeName);
@@ -208,8 +230,8 @@ int main() {
   bench_count_bond_half_off(&bcurr);
   bench_count_bond_half_off_sorted(&bcurr);
   bench_count_bond_half_off_sorted_static(&bcurr);
+  bench_count_bond_half_off_sorted_static_memory_layout(&bcurr);
 
   gen("json", ankerl::nanobench::templates::json(), bcurr);
-  gen("html", ankerl::nanobench::templates::htmlBoxplot(), bcurr);
   gen("csv", ankerl::nanobench::templates::csv(), bcurr);
 }
