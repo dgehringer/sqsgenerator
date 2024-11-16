@@ -6,6 +6,7 @@
 #define SQSGEN_TYPES_HPP
 
 #include <Eigen/Core>
+#include <unsupported/Eigen/CXX11/Tensor>
 #include <map>
 #include <mp++/integer.hpp>
 #include <set>
@@ -29,7 +30,10 @@ namespace sqsgen {
 
   template <class T> using matrix_t = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
+  template <class T> using cube_t = Eigen::Tensor<T, 3>;
+
   template <class T> using stl_matrix_t = std::vector<std::vector<T>>;
+  template <class T> using stl_cube_t = std::vector<std::vector<std::vector<T>>>;
 
   template <class T, class U>
     requires std::is_integral_v<T> && std::is_integral_v<U>
