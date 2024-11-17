@@ -53,6 +53,12 @@ namespace sqsgen {
     bool operator()(usize_t const& lhs, usize_t const& rhs) const { return lhs < rhs; }
   };
 
+  enum Prec : std::uint8_t {
+    PREC_SINGLE = 0,
+    PREC_DOUBLE = 1,
+  };
+
+
   struct sublattice {
     std::set<usize_t> sites;
     std::map<specie_t, usize_t> composition;
