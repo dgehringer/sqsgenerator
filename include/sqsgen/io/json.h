@@ -69,7 +69,7 @@ namespace sqsgen {
 
   NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_SINGLE, "single"}, {PREC_DOUBLE, "double"}})
 
-  enum parse_error_code { CODE_UNKNOWN = -1, CODE_NOT_FOUND = 0, CODE_TYPE_ERROR = 1 };
+  enum parse_error_code { CODE_UNKNOWN = -1, CODE_NOT_FOUND = 0, CODE_TYPE_ERROR = 1, CODE_OUT_OF_RANGE = 2};
 
   struct parse_error {
     std::string key;
@@ -99,7 +99,7 @@ namespace sqsgen {
     try {
       return json.at(key.data).template get<Option>();
     } catch (nlohmann::json::out_of_range const&) {
-      return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range");
+      return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range or not found");
     } catch (nlohmann::json::type_error const&) {
       return parse_error::from_msg<key, CODE_TYPE_ERROR>("type error");
     }
@@ -137,18 +137,16 @@ namespace sqsgen {
   }
 
   template <class... Args>
-  parse_result_t<std::tuple<Args...>> combine(parse_result_t<Args> const& ...args) {
+  parse_result_t<std::tuple<Args...>> combine(parse_result_t<Args> &&... args) {
     std::optional<parse_error> error = std::nullopt;
     ((error = error.has_value()
                   ? error
-                  : (holds_error<Args>(args) ? std::get<parse_error>(args) : std::nullopt)),
+                  : (holds_error<Args>(args) ? std::make_optional(std::get<parse_error>(args)) : std::nullopt)),
      ...);
     if (error.has_value()) {
       return error.value();
-    } else {
-      return std::make_tuple(std::get<Args>(args)...);
     }
-
+    return std::make_tuple(std::get<Args>(args)...);
   }
 }  // namespace sqsgen
 
