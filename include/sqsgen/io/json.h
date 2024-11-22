@@ -94,6 +94,10 @@ namespace sqsgen {
     return std::holds_alternative<parse_error>(a);
   }
 
+  template <class A> A get_result(parse_result_t<A> const& a) {
+    return std::get<A>(a);
+  }
+
   template <core::helpers::string_literal key, class Option>
   parse_result_t<Option> get_as(nlohmann::json const& json) {
     try {
@@ -101,7 +105,7 @@ namespace sqsgen {
     } catch (nlohmann::json::out_of_range const&) {
       return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range or not found");
     } catch (nlohmann::json::type_error const&) {
-      return parse_error::from_msg<key, CODE_TYPE_ERROR>("type error");
+      return parse_error::from_msg<key, CODE_TYPE_ERROR>(std::format("type error - cannot parse {}", typeid(Option).name()));
     }
   };
 
@@ -119,7 +123,7 @@ namespace sqsgen {
     if (json.contains(key.data)) {
       std::variant<parse_error, Options...> result
           = parse_error::from_msg<key, CODE_UNKNOWN>(std::format("failed to load {}", key.data));
-      ((result = forward_variant<Options...>(get_as<key, Options>(json))), ...);
+      ((result = holds_error(result) ? forward_variant<Options...>(get_as<key, Options>(json)) : result), ...);
       return result;
     }
     return std::nullopt;
