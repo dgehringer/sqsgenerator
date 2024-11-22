@@ -2,8 +2,8 @@
 // Created by Dominik Gehringer on 18.11.24.
 //
 
-#ifndef SQSGEN_IO_PARSER_H
-#define SQSGEN_IO_PARSER_H
+#ifndef SQSGEN_IO_PARSER_STRUCTURE_H
+#define SQSGEN_IO_PARSER_STRUCTURE_H
 
 #include <optional>
 
@@ -39,8 +39,8 @@ namespace sqsgen::io::parser {
     }
     if (configuration.size() != num_sites)
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-          std::format("Number of coordinates ({}) does not match number of species {}",
-                      configuration.size(), num_sites));
+          std::format("Number of coordinates ({}) does not match number of species {}", num_sites,
+                      configuration.size()));
     return configuration;
   }
 
@@ -83,7 +83,7 @@ namespace sqsgen::io::parser {
         return std::make_optional(indices);
       }
     }
-      return std::nullopt;
+    return std::nullopt;
   }
 
   template <core::helpers::string_literal key>
@@ -101,44 +101,24 @@ namespace sqsgen::io::parser {
     return std::nullopt;
   }
 
-  template <class T> class structure_configuration {
-  public:
-    lattice_t<T> lattice;
-    coords_t<T> coords;
-    configuration_t species;
-    std::optional<std::array<int, 3>> supercell = std::nullopt;
-    std::optional<std::vector<int>> which = std::nullopt;
+  template <class T>
+  static parse_result_t<structure_configuration<T>> from_json(const nlohmann::json& j) {
+    auto structure_data = combine<lattice_t<T>, coords_t<T>>(get_as<"lattice", lattice_t<T>>(j),
+                                                             get_as<"coords", coords_t<T>>(j));
+    if (holds_error(structure_data)) return std::get<parse_error>(structure_data);
+    auto [lattice, coords] = get_result(structure_data);
+    auto configuration_data = parse_species<"species">(j, coords.rows());
+    if (holds_error(configuration_data)) return std::get<parse_error>(configuration_data);
+    auto configuration = get_result(configuration_data);
+    auto which_data = parse_which<"which">(j, configuration);
+    if (holds_error(which_data)) return std::get<parse_error>(which_data);
+    auto which = get_result(which_data);
 
-    core::structure<T> structure(bool supercell = true, bool which = true) {
-      core::structure<T> structure(lattice, coords, species);
-      if (supercell) {
-        auto [a, b, c] = this->supercell.value_or(std::array{1, 1, 1});
-        structure = structure.supercell(a, b, c);
-      }
-      if (which) {
-        auto slice = this->which.value_or(std::vector<int>{});
-        if (!slice.empty()) structure = structure.sliced(slice);
-      }
-      return structure;
-    }
-
-    static parse_result_t<structure_configuration> from_json(const nlohmann::json& j) {
-      auto structure_data = combine<lattice_t<T>, coords_t<T>>(get_as<"lattice", lattice_t<T>>(j),
-                                                               get_as<"coords", coords_t<T>>(j));
-      if (holds_error(structure_data)) return std::get<parse_error>(structure_data);
-      auto [lattice, coords] = std::get<1>(structure_data);
-      auto configuration_data = parse_species<"species">(j, coords.rows());
-      if (holds_error(configuration_data)) return std::get<parse_error>(configuration_data);
-      auto configuration = std::get<1>(configuration_data);
-      auto which_data = parse_which<"which">(j, configuration);
-      if (holds_error(which_data)) return std::get<parse_error>(which_data);
-      auto which = std::get<1>(which_data);
-
-      auto supercell_data = parse_supercell<"supercell">(j);
-      if (holds_error(supercell_data)) return std::get<parse_error>(supercell_data);
-      auto supercell = std::get<1>(supercell_data);
-      return structure_configuration{lattice, coords, configuration, supercell, which};
-    }
-  };
-}  // namespace sqsgen::io::parser
-#endif  // SQSGEN_IO_PARSER_H
+    auto supercell_data = parse_supercell<"supercell">(j);
+    if (holds_error(supercell_data)) return std::get<parse_error>(supercell_data);
+    auto supercell = get_result(supercell_data);
+    return structure_configuration{lattice, coords, configuration, supercell, which};
+  }
+};  // namespace sqsgen::io::parser
+// namespace sqsgen::io::parser
+#endif  // SQSGEN_IO_PARSER_STRUCTURE_H
