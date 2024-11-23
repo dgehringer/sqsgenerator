@@ -30,14 +30,20 @@ namespace sqsgen::core::helpers {
     return result;
   }
 
-  template <class Matrix>
+
+
+  template <class Matrix, int Rows = Matrix::Base::RowsAtCompileTime, int Cols = Matrix::Base::ColsAtCompileTime>
   Matrix stl_to_eigen(std::vector<std::vector<typename Matrix::Scalar>> const& v) {
     if (v.size() == 0) throw std::invalid_argument("empty vector");
     auto first_size = v.front().size();
     if (first_size == 0) throw std::invalid_argument("empty vector as first argument");
-
     if (!ranges::all_of(v, [&](auto const& row) { return row.size() == first_size; }))
       throw std::invalid_argument("not all vector have the same size");
+
+    if ((Rows != Eigen::Dynamic && Rows != v.size())
+        || (Cols != Eigen::Dynamic && Cols != first_size))
+      throw std::out_of_range(std::format("invalid matrix size: {}x{} compared to {}x{}", Rows,
+                                          Cols, v.size(), first_size));
 
     Matrix result(v.size(), first_size);
     helpers::for_each([&](auto i, auto j) { result(i, j) = v[i][j]; }, v.size(), first_size);
@@ -58,7 +64,8 @@ namespace sqsgen::core::helpers {
         }))
       throw std::invalid_argument("not all vector have the same size");
     Tensor result(v.size(), first_size, second_size);
-    helpers::for_each([&](auto i, auto j, auto, auto k) {result(i, j, k) = v[i][j][k]; }, v.size(), first_size, second_size);
+    helpers::for_each([&](auto i, auto j, auto, auto k) { result(i, j, k) = v[i][j][k]; }, v.size(),
+                      first_size, second_size);
     return result;
   }
 
