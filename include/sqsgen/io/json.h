@@ -69,7 +69,12 @@ namespace sqsgen {
 
   NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_SINGLE, "single"}, {PREC_DOUBLE, "double"}})
 
-  enum parse_error_code { CODE_UNKNOWN = -1, CODE_NOT_FOUND = 0, CODE_TYPE_ERROR = 1, CODE_OUT_OF_RANGE = 2};
+  enum parse_error_code {
+    CODE_UNKNOWN = -1,
+    CODE_NOT_FOUND = 0,
+    CODE_TYPE_ERROR = 1,
+    CODE_OUT_OF_RANGE = 2
+  };
 
   struct parse_error {
     std::string key;
@@ -94,18 +99,20 @@ namespace sqsgen {
     return std::holds_alternative<parse_error>(a);
   }
 
-  template <class A> A get_result(parse_result_t<A> const& a) {
-    return std::get<A>(a);
-  }
+  template <class A> A get_result(parse_result_t<A> const& a) { return std::get<A>(a); }
 
   template <core::helpers::string_literal key, class Option>
   parse_result_t<Option> get_as(nlohmann::json const& json) {
     try {
       return json.at(key.data).template get<Option>();
-    } catch (nlohmann::json::out_of_range const&) {
-      return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range or not found");
-    } catch (nlohmann::json::type_error const&) {
-      return parse_error::from_msg<key, CODE_TYPE_ERROR>(std::format("type error - cannot parse {}", typeid(Option).name()));
+    } catch (nlohmann::json::out_of_range const& e) {
+      return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range or not found - {}",
+                                                         e.what());
+    } catch (nlohmann::json::type_error const& e) {
+      return parse_error::from_msg<key, CODE_TYPE_ERROR>(
+          std::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
+    } catch (std::out_of_range const& e) {
+      return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
     }
   };
 
@@ -123,7 +130,9 @@ namespace sqsgen {
     if (json.contains(key.data)) {
       std::variant<parse_error, Options...> result
           = parse_error::from_msg<key, CODE_UNKNOWN>(std::format("failed to load {}", key.data));
-      ((result = holds_error(result) ? forward_variant<Options...>(get_as<key, Options>(json)) : result), ...);
+      ((result
+        = holds_error(result) ? forward_variant<Options...>(get_as<key, Options>(json)) : result),
+       ...);
       return result;
     }
     return std::nullopt;
@@ -141,11 +150,12 @@ namespace sqsgen {
   }
 
   template <class... Args>
-  parse_result_t<std::tuple<Args...>> combine(parse_result_t<Args> &&... args) {
+  parse_result_t<std::tuple<Args...>> combine(parse_result_t<Args>&&... args) {
     std::optional<parse_error> error = std::nullopt;
     ((error = error.has_value()
                   ? error
-                  : (holds_error<Args>(args) ? std::make_optional(std::get<parse_error>(args)) : std::nullopt)),
+                  : (holds_error<Args>(args) ? std::make_optional(std::get<parse_error>(args))
+                                             : std::nullopt)),
      ...);
     if (error.has_value()) {
       return error.value();
