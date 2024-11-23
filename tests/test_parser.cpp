@@ -58,6 +58,10 @@ namespace sqsgen::testing {
         {"coords", s.frac_coords},
         {"species", 4},
     });
+    assert_holds_error<"species", CODE_NOT_FOUND>({
+        {"lattice", s.lattice},
+        {"coords", s.frac_coords},
+    });
     assert_holds_error<"species", CODE_OUT_OF_RANGE>({
         {"lattice", s.lattice},
         {"coords", s.frac_coords},
@@ -97,6 +101,7 @@ namespace sqsgen::testing {
     auto s = TEST_FCC_STRUCTURE<double>;
 
     json base{{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}};
+
 
     base["which"] = std::vector<int>{};
     assert_holds_error<"which", CODE_OUT_OF_RANGE>(base);
