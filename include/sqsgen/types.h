@@ -6,10 +6,10 @@
 #define SQSGEN_TYPES_HPP
 
 #include <Eigen/Core>
-#include <unsupported/Eigen/CXX11/Tensor>
 #include <map>
 #include <mp++/integer.hpp>
 #include <set>
+#include <unsupported/Eigen/CXX11/Tensor>
 #include <vector>
 
 namespace sqsgen {
@@ -41,6 +41,8 @@ namespace sqsgen {
 
   using usize_t = std::uint_fast32_t;
 
+  using composition_t = std::map<specie_t, usize_t>;
+
   using shell_matrix_t = matrix_t<usize_t>;
 
   template <class T> using bounds_t = std::pair<T, T>;
@@ -58,10 +60,15 @@ namespace sqsgen {
     PREC_DOUBLE = 1,
   };
 
+  enum IterationMode  {
+    ITERATION_MODE_INVALID = -1,
+    ITERATION_MODE_RANDOM,
+    ITERATION_MODE_SYSTEMATIC,
+  };
 
   struct sublattice {
     std::set<usize_t> sites;
-    std::map<specie_t, usize_t> composition;
+    composition_t composition;
   };
 
 }  // namespace sqsgen
