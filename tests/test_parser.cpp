@@ -9,7 +9,7 @@
 #include "nlohmann/json.hpp"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/parser.h"
-#include "sqsgen/io/parser/structure.h"
+#include "sqsgen/io/parser/structure_config.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::testing {
