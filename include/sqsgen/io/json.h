@@ -68,12 +68,17 @@ NLOHMANN_JSON_NAMESPACE_END
 namespace sqsgen {
 
   NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_SINGLE, "single"}, {PREC_DOUBLE, "double"}})
-
+  NLOHMANN_JSON_SERIALIZE_ENUM(IterationMode, {
+                                                  {ITERATION_MODE_INVALID, nullptr},
+                                                  {ITERATION_MODE_RANDOM, "random"},
+                                                  {ITERATION_MODE_SYSTEMATIC, "systematic"},
+                                              })
   enum parse_error_code {
     CODE_UNKNOWN = -1,
     CODE_NOT_FOUND = 0,
     CODE_TYPE_ERROR = 1,
-    CODE_OUT_OF_RANGE = 2
+    CODE_OUT_OF_RANGE = 2,
+    CODE_BAD_VALUE = 3
   };
 
   struct parse_error {
@@ -115,15 +120,6 @@ namespace sqsgen {
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
     }
   };
-
-  template <class... Options, class Option>
-  parse_result_t<Options...> forward_variant(std::variant<parse_error, Option>&& opt) {
-    if (std::holds_alternative<parse_error>(opt)) {
-      return std::get<parse_error>(opt);
-    } else {
-      return std::get<Option>(opt);
-    }
-  }
 
   template <core::helpers::string_literal key, class... Options>
   std::optional<parse_result_t<Options...>> get_either_optional(nlohmann::json const& json) {
