@@ -7,6 +7,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
@@ -42,7 +43,7 @@ template <class T> struct adl_serializer<cube_t<T>> {
   static void to_json(json& j, const cube_t<T>& m) { j = core::helpers::eigen_to_stl(m); }
 
   static void from_json(const json& j, coords_t<T>& m) {
-    m = std::move(core::helpers::stl_to_eigen < cube_t < T >>> j.get<stl_cube_t<T>>());
+    m = std::move(core::helpers::stl_to_eigen<cube_t<T>>(j.get<stl_cube_t<T>>()));
   }
 };
 
@@ -93,7 +94,6 @@ namespace sqsgen {
       return parse_error{key.data, msg, code, parameter};
     }
   };
-
   template <class... Args> using parse_result_t = std::variant<parse_error, Args...>;
 
   template <class... Args> bool holds_result(parse_result_t<Args...> const& a) {
@@ -105,6 +105,56 @@ namespace sqsgen {
   }
 
   template <class A> A get_result(parse_result_t<A> const& a) { return std::get<A>(a); }
+
+  template <class A, class Fn>
+  parse_result_t<std::optional<A>> validate(std::optional<parse_result_t<A>>&& a, Fn&& fn) {
+    if (a.has_value()) {
+      if (holds_result(a.value())) {
+        auto result = fn(std::forward<std::decay_t<A>>(get_result(a.value())));
+        if (holds_result(result)) return std::make_optional(get_result(result));
+        return std::get<parse_error>(result);
+      }
+      return std::get<parse_error>(a.value());
+    }
+    return std::nullopt;
+  }
+
+  template <class... Ts> struct overloaded : Ts... {
+    using Ts::operator()...;
+  };
+
+  template <class Collapse, class... Args, class... Fn>
+  parse_result_t<std::optional<Collapse>> validate(std::optional<parse_result_t<Args...>>&& a,
+                                                   Fn&&... fn) {
+    if (a.has_value()) {
+      if (holds_result(a.value())) {
+        auto error_case = [](parse_error&& error) -> parse_result_t<Collapse> { return error; };
+        auto result = std::visit(overloaded{error_case, fn...},
+                                 std::forward<parse_result_t<Args...>>(a.value()));
+        if (holds_result(result)) return std::make_optional(get_result(result));
+        return std::get<parse_error>(result);
+      }
+      return std::get<parse_error>(a.value());
+    }
+    return std::nullopt;
+  }
+  template <class Collapse, class... Args, class... Fn>
+  parse_result_t<Collapse> validate(parse_result_t<Args...>&& a, Fn&&... fn) {
+    if (holds_result(a)) {
+      auto error_case = [](parse_error&& error) -> parse_result_t<Collapse> { return error; };
+      return std::visit(overloaded{error_case, fn...},
+                        std::forward<parse_result_t<Args...>>(a));
+    }
+    return std::get<parse_error>(a);
+  }
+
+  template <class... Options, class Option>
+  parse_result_t<Options...> forward_variant(std::variant<parse_error, Option>&& opt) {
+    if (std::holds_alternative<parse_error>(opt)) {
+      return std::get<parse_error>(opt);
+    }
+    return std::get<Option>(opt);
+  }
 
   template <core::helpers::string_literal key, class Option>
   parse_result_t<Option> get_as(nlohmann::json const& json) {
