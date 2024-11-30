@@ -38,8 +38,8 @@ namespace sqsgen::io::config {
   }
 
   template <core::helpers::string_literal key>
-  parse_result_t<index_set_t> validate_symbols(std::vector<std::string> const& species,
-                                               configuration_t const& conf) {
+  parse_result_t<index_set_t> validate_species_strings(std::vector<std::string> const& species,
+                                                       configuration_t const& conf) {
     auto distinct_species = core::count_species(conf);
     vset<specie_t> unique_species;
     for (auto s : species) {
@@ -69,9 +69,11 @@ namespace sqsgen::io::config {
         get_either_optional<key, std::vector<int>, std::vector<std::string>, std::string>(j),
         [&](std::vector<int>&& indices) -> out_t { return validate_indices<key>(indices, conf); },
         [&](std::vector<std::string>&& species) -> out_t {
-          return validate_symbols<key>(species, conf);
+          return validate_species_strings<key>(species, conf);
         },
-        [&](std::string&& specie) -> out_t { return validate_symbols<key>({specie}, conf); });
+        [&](std::string&& specie) -> out_t {
+          return validate_species_strings<key>(std::vector{specie}, conf);
+        });
   }
 
   template <core::helpers::string_literal key>
@@ -109,13 +111,13 @@ namespace sqsgen::io::config {
     for (auto& [k, value] : j.items()) {
       if (core::SYMBOL_MAP.contains(k)) {
         specie_t specie = core::atom::from_symbol(k).Z;
-        auto num_result = get_as<int>(k, value);
-        if (holds_error(num_result)) return std::get<parse_error>(num_result);
+        auto num_result = get_as<KEY_NONE, int>(value);
+        if (holds_error(num_result)) return std::get<parse_error>(num_result).with_key(k);
         auto amount = get_result(num_result);
         if (amount > indices.size() || amount < 0)
           return parse_error::from_key_and_msg<CODE_BAD_VALUE>(
-              k,
-              std::format("You want to distribute {} \"{}\" atoms on the sublattice", amount, k));
+              k, std::format("You want to distribute {} \"{}\" atoms on a sublattice with {} sites",
+                             amount, k, indices.size()));
         composition[specie] = amount;
       }
     }
@@ -124,26 +126,35 @@ namespace sqsgen::io::config {
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
           "Could not find any valid species in the composition definition");
 
+    auto num_sites = fold_left(composition | views::elements<1>, 0UL, std::plus<>{});
+    if (num_sites != indices.size())
+      return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(std::format(
+          "The total number of distributed atoms is {} but the sublattice contains {} sites",
+          num_sites, indices.size()));
+
     return sublattice{indices, composition};
   }
 
   template <core::helpers::string_literal key>
   parse_result_t<std::vector<sublattice>> parse_composition(nlohmann::json const& jj,
                                                             configuration_t const& conf) {
+    using namespace core::helpers;
     if (!jj.count(key.data))
       return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a composition");
     const nlohmann::json& j = jj.at(key.data);
     std::vector<sublattice> sublattices(j.is_array() ? j.size() : 1);
-    for (auto const& json : (j.is_array() ? core::helpers::as<std::vector>{}(j) : std::vector{j})) {
+    for (auto const& json : (j.is_array() ? as<std::vector>{}(j) : std::vector{j})) {
       auto sl
           = parse_sublattice<key>(json, conf, std::forward<std::vector<sublattice>>(sublattices));
       if (holds_error(sl)) return std::get<parse_error>(sl);
       sublattices.push_back(get_result(sl));
     }
     if (sublattices.empty())
-      return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("Could find a species definition");
+      return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("Could not parse a valid sublattice");
+
+
     return sublattices;
   }
 
-}  // namespace sqsgen::io::parser
+}  // namespace sqsgen::io::config
 #endif  // SQSGEN_IO_CONFIG_COMPOSITION_H
