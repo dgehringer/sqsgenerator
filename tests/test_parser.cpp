@@ -5,20 +5,19 @@
 #include <gtest/gtest.h>
 
 #include "helpers.h"
-#include "io/parser.h"
+#include "sqsgen/config.h"
 #include "nlohmann/json.hpp"
 #include "sqsgen/core/structure.h"
-#include "sqsgen/io/parser.h"
-#include "sqsgen/io/parser/structure_config.h"
+#include "sqsgen/io/config/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::testing {
   using json = nlohmann::json;
-  using namespace sqsgen::io::parser;
+  using namespace sqsgen::io::config;
 
   template <core::helpers::string_literal key, parse_error_code code, class... Args>
   void assert_holds_error(nlohmann::json const& a) {
-    auto r = io::parser::from_json<double>(a);
+    auto r = io::config::parse_structure_config<double>(a);
     ASSERT_TRUE(holds_error(r));
     parse_error error = std::get<parse_error>(r);
     ASSERT_EQ(key.data, error.key);
@@ -30,11 +29,11 @@ namespace sqsgen::testing {
       coords_t<T>{{0.0, 0.0, 0.0}, {0.0, 0.5, 0.5}, {0.5, 0.0, 0.5}, {0.5, 0.5, 0.0}},
       std::vector<specie_t>{11, 12, 13, 14}};
 
-  TEST(test_parse_structure, empty) { ASSERT_TRUE(holds_error(io::parser::from_json<double>({}))); }
+  TEST(test_parse_structure, empty) { ASSERT_TRUE(holds_error(io::config::parse_structure_config<double>({}))); }
 
   TEST(test_parse_structure, required_fields_success) {
     auto s = TEST_FCC_STRUCTURE<double>;
-    auto r1 = io::parser::from_json<double>({
+    auto r1 = io::config::parse_structure_config<double>({
         {"lattice", s.lattice},
         {"coords", s.frac_coords},
         {"species", s.species},
@@ -42,7 +41,7 @@ namespace sqsgen::testing {
     ASSERT_TRUE(holds_result(r1));
     helpers::assert_structure_equal(s, get_result(r1).structure());
 
-    auto r2 = io::parser::from_json<double>({
+    auto r2 = io::config::parse_structure_config<double>({
         {"lattice", s.lattice},
         {"coords", s.frac_coords},
         {"species", std::vector<std::string>{"Na", "Mg", "Al", "Si"}},
@@ -53,7 +52,7 @@ namespace sqsgen::testing {
 
   TEST(test_parse_structure, required_fields_errors) {
     auto s = TEST_FCC_STRUCTURE<double>;
-    auto r1 = io::parser::from_json<double>({
+    auto r1 = io::config::parse_structure_config<double>({
         {"lattice", s.lattice},
         {"coords", s.frac_coords},
         {"species", 4},
