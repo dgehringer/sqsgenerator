@@ -91,7 +91,11 @@ namespace sqsgen::io::config {
                     });
   }
 
-  template <class T> static parse_result_t<structure_config<T>> parse_structure_config(const nlohmann::json& j) {
+  template <core::helpers::string_literal key, class T>
+  parse_result_t<structure_config<T>> parse_structure_config(const nlohmann::json& jj) {
+    if (!jj.count(key.data))
+      return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a composition");
+    const nlohmann::json& j = jj.at(key.data);
     auto structure_data = combine<lattice_t<T>, coords_t<T>>(get_as<"lattice", lattice_t<T>>(j),
                                                              get_as<"coords", coords_t<T>>(j));
     if (holds_error(structure_data)) return std::get<parse_error>(structure_data);
