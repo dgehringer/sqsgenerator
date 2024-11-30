@@ -20,7 +20,7 @@ namespace sqsgen::testing {
       auto r = fn(a);
       ASSERT_TRUE(holds_error(r));
       parse_error error = std::get<parse_error>(r);
-      ASSERT_EQ(key, error.key);
+      ASSERT_EQ(key, error.key) << error.msg;
       ASSERT_EQ(code, error.code) << error.msg;
     };
   }
@@ -37,14 +37,13 @@ namespace sqsgen::testing {
   TEST(test_parse_structure, required_fields_success) {
     auto s = TEST_FCC_STRUCTURE<double>;
     json document = {{"structure",
-                  {
-                            {"lattice", s.lattice},
-                            {"coords", s.frac_coords},
-                            {"species", s.species},
-                        }}};
+                      {
+                          {"lattice", s.lattice},
+                          {"coords", s.frac_coords},
+                          {"species", s.species},
+                      }}};
 
     auto r1 = io::config::parse_structure_config<"structure", double>(document);
-
 
     ASSERT_TRUE(holds_result(r1));
     helpers::assert_structure_equal(s, get_result(r1).structure());
@@ -91,12 +90,120 @@ namespace sqsgen::testing {
     assert_holds_error("lattice", CODE_OUT_OF_RANGE, document);
   }
 
-  TEST(test_parse_composition, empty) {
+  TEST(test_parse_composition, error_species) {
     auto s = TEST_FCC_STRUCTURE<double>;
-    json document{{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}};
+    json document{
+        {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
     auto key = "composition";
-    document[key] = json::array();
 
+    auto parse_composition = [](json const& doc) -> parse_result_t<std::vector<sublattice>> {
+      auto structure = io::config::parse_structure_config<"structure", double>(doc);
+      return io::config::parse_composition<"composition">(doc, get_result(structure).species);
+    };
+
+    auto assert_holds_error = make_assert_holds_error(parse_composition);
+    assert_holds_error(key, CODE_NOT_FOUND, document);
+
+    document[key] = json::array();
+    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+
+    document[key] = {{"Ni", -1}};
+    assert_holds_error("Ni", CODE_BAD_VALUE, document);
+
+    // enclosing in list must result in same error
+    document[key] = {{{"Ni", -1}}};
+    assert_holds_error("Ni", CODE_BAD_VALUE, document);
+
+    document[key] = {{"Ni", "1"}};
+    assert_holds_error("Ni", CODE_TYPE_ERROR, document);
+
+    // enclosing in list must result in same error
+    document[key] = {{{"Ni", "1"}}};
+    assert_holds_error("Ni", CODE_TYPE_ERROR, document);
+
+    document[key] = {{"_Ni", "1"}};
+    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+
+    // enclosing in list must result in same error
+    document[key] = {{{"_Ni", "1"}}};
+    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+
+    document[key] = {{"Ni", 3}, {"Fe", 2}};
+    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+
+    // enclosing in list must result in same error
+    document[key] = {{{"Ni", 3}, {"Fe", 2}}};
+    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+  }
+
+  TEST(test_parse_composition, error_which) {
+    auto s = TEST_FCC_STRUCTURE<double>;
+    json document{
+          {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
+    auto key = "composition";
+
+    auto parse_composition = [](json const& doc) -> parse_result_t<std::vector<sublattice>> {
+      auto structure = io::config::parse_structure_config<"structure", double>(doc);
+      return io::config::parse_composition<"composition">(doc, get_result(structure).species);
+    };
+
+    auto assert_holds_error = make_assert_holds_error(parse_composition);
+    assert_holds_error(key, CODE_NOT_FOUND, document);
+
+    // test invalid index
+    document[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {-1, 2}}};
+    assert_holds_error("sites", CODE_OUT_OF_RANGE, document);
+    // test invalid indices empty
+    document[key] = {{"Ni", 2}, {"Co", 2}, {"sites", std::vector<int>{}}};
+    assert_holds_error("sites", CODE_OUT_OF_RANGE, document);
+
+    // test too few sites
+    document[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {0, 2}}};
+    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+
+    // test species not in structure
+    document[key] = {{"Ni", 2}, {"Co", 2}, {"sites", "Fr"}};
+    assert_holds_error("sites", CODE_OUT_OF_RANGE, document);
+
+    // test too few sites - by symbol
+    document[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {"Si", "Mg"}}};
+    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+
+    // test too many sites - by symbol
+    document[key] = {{"Ni", 1}, {"_Co", 1}, {"sites", {"Si", "Mg"}}};
+    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+  }
+  TEST(test_parse_composition, error_multiple) {
+    auto s = TEST_FCC_STRUCTURE<double>;
+    json document{
+              {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
+    auto key = "composition";
+
+    auto parse_composition = [](json const& doc) -> parse_result_t<std::vector<sublattice>> {
+      auto structure = io::config::parse_structure_config<"structure", double>(doc);
+      return io::config::parse_composition<"composition">(doc, get_result(structure).species);
+    };
+
+    auto assert_holds_error = make_assert_holds_error(parse_composition);
+    assert_holds_error(key, CODE_NOT_FOUND, document);
+
+    // test invalid index
+    json sl1 = {{"Ni", 1}, {"Co", 1}, {"sites", {0, 1}}};
+    json sl2 = {{"Ni", 1}, {"Co", 1}, {"sites", {1, 2}}};
+    document[key] = {sl1, sl2};
+    assert_holds_error("sites", CODE_BAD_VALUE, document);
+
+    // overlap by species array
+    document[key][1]["sites"] = {"Na", "Si"};
+    assert_holds_error("sites", CODE_BAD_VALUE, document);
+
+    // sublattice overlap by species definition
+    document[key][1]["sites"] = "Mg";
+    assert_holds_error("sites", CODE_BAD_VALUE, document);
+
+    document[key][1].erase("sites");
+    document[key][1]["Ni"] = 2;
+    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
   }
 
   /*TEST(test_parse_structure, which) {
