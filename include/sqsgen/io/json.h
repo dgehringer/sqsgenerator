@@ -94,6 +94,12 @@ namespace sqsgen {
                                 std::optional<std::string> parameter = std::nullopt) {
       return parse_error{key.data, msg, code, parameter};
     }
+
+    template <parse_error_code code>
+    static parse_error from_key_and_msg(std::string const& key, const std::string& msg,
+                                        std::optional<std::string> parameter = std::nullopt) {
+      return parse_error{key, msg, code, parameter};
+    }
   };
   template <class... Args> using parse_result_t = std::variant<parse_error, Args...>;
 
@@ -143,8 +149,7 @@ namespace sqsgen {
   parse_result_t<Collapse> validate(parse_result_t<Args...>&& a, Fn&&... fn) {
     if (holds_result(a)) {
       auto error_case = [](parse_error&& error) -> parse_result_t<Collapse> { return error; };
-      return std::visit(overloaded{error_case, fn...},
-                        std::forward<parse_result_t<Args...>>(a));
+      return std::visit(overloaded{error_case, fn...}, std::forward<parse_result_t<Args...>>(a));
     }
     return std::get<parse_error>(a);
   }
@@ -169,6 +174,21 @@ namespace sqsgen {
           std::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
     } catch (std::out_of_range const& e) {
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
+    }
+  }
+
+  template <class Option>
+  parse_result_t<Option> get_as(std::string const& key, nlohmann::json const& json) {
+    try {
+      return json.at(key).get<Option>();
+    } catch (nlohmann::json::out_of_range const& e) {
+      return parse_error::from_key_and_msg<CODE_TYPE_ERROR>(key, "out of range or not found - {}",
+                                                            e.what());
+    } catch (nlohmann::json::type_error const& e) {
+      return parse_error::from_key_and_msg<CODE_TYPE_ERROR>(
+          key, std::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
+    } catch (std::out_of_range const& e) {
+      return parse_error::from_key_and_msg<CODE_OUT_OF_RANGE>(key, e.what());
     }
   };
 
