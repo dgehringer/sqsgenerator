@@ -79,7 +79,8 @@ namespace sqsgen {
     CODE_NOT_FOUND = 0,
     CODE_TYPE_ERROR = 1,
     CODE_OUT_OF_RANGE = 2,
-    CODE_BAD_VALUE = 3
+    CODE_BAD_VALUE = 3,
+    CODE_BAD_ARGUMENT = 4,
   };
 
   struct parse_error {
