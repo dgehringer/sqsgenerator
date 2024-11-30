@@ -63,47 +63,6 @@ namespace sqsgen::io::parser {
   }
 
   template <core::helpers::string_literal key>
-  parse_result_t<std::optional<std::vector<int>>> parse_which(nlohmann::json const& j,
-                                                              configuration_t const& conf) {
-    using result_t = std::vector<int>;
-    using out_t = parse_result_t<result_t>;
-    return validate<result_t>(
-        get_either_optional<key, std::vector<int>, std::vector<std::string>>(j),
-        [&](std::vector<int>&& indices) -> out_t {
-          for (auto index : indices)
-            if (!(0 <= index && index < conf.size()))
-              return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-                  std::format("Invalid index {}, the specified structure contains {} sites", index,
-                              conf.size()));
-          if (indices.empty())
-            return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-                "You cannot specify an empty slice");
-          return indices;
-        },
-        [&](std::vector<std::string>&& species) -> out_t {
-          auto distinct_species = core::count_species(conf);
-          std::set<specie_t> unique_species;
-          for (auto s : species) {
-            if (!core::SYMBOL_MAP.contains(s))
-              return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-                  std::format("An atomic element with name {} is not known to me", s));
-            auto ordinal = core::atom::from_symbol(s).Z;
-            if (!distinct_species.contains(ordinal))
-              return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(std::format(
-                  "The specified structure does not contain a site with species {}", s));
-            unique_species.insert(ordinal);
-          }
-          std::vector<int> indices;
-          core::helpers::for_each(
-              [&](auto i) {
-                if (unique_species.contains(conf.at(i))) return indices.push_back(i);
-              },
-              conf.size());
-          return indices;
-        });
-  }
-
-  template <core::helpers::string_literal key>
   parse_result_t<std::optional<std::array<int, 3>>> parse_supercell(nlohmann::json const& j) {
     return validate(get_optional<key, std::array<int, 3>>(j),
                     [&](auto&& supercell) -> parse_result_t<std::array<int, 3>> {
@@ -123,13 +82,10 @@ namespace sqsgen::io::parser {
     auto configuration_data = parse_species<"species">(j, coords.rows());
     if (holds_error(configuration_data)) return std::get<parse_error>(configuration_data);
     auto configuration = get_result(configuration_data);
-    auto which_data = parse_which<"which">(j, configuration);
-    if (holds_error(which_data)) return std::get<parse_error>(which_data);
-    auto which = get_result(which_data);
     auto supercell_data = parse_supercell<"supercell">(j);
     if (holds_error(supercell_data)) return std::get<parse_error>(supercell_data);
     auto supercell = get_result(supercell_data);
-    return structure_config{lattice, coords, configuration, supercell, which};
+    return structure_config{lattice, coords, configuration, supercell};
   }
 };  // namespace sqsgen::io::parser
 // namespace sqsgen::io::parser
