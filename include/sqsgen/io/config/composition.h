@@ -10,7 +10,7 @@
 #include "sqsgen/io/json.h"
 #include "sqsgen/types.h"
 
-namespace sqsgen::io::parser {
+namespace sqsgen::io::config {
 
   namespace ranges = std::ranges;
   namespace views = ranges::views;
