@@ -14,6 +14,7 @@
 #include "helpers/hash.h"
 #include "helpers/numeric.h"
 #include "helpers/static_string.h"
+#include "helpers/sorted_vector.h"
 #include "helpers/templates.h"
 #include "sqsgen/types.h"
 
@@ -72,7 +73,7 @@ namespace sqsgen::core::helpers {
   template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
     requires std::is_integral_v<U>
   index_mapping_t<T, U> make_index_mapping(R&& r) {
-    auto elements = as<std::vector>{}(as<std::set>{}(r));
+    auto elements = as<sorted_vector>{}(r);
     std::sort(elements.begin(), elements.end());
     U index = 0;
     std::map<U, T> index_map;
