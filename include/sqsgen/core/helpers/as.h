@@ -11,6 +11,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "sorted_vector.h"
+
 namespace sqsgen::core::helpers {
   namespace ranges = std::ranges;
   template <template <class...> class> struct as {};
@@ -31,6 +33,15 @@ namespace sqsgen::core::helpers {
     template <ranges::range R> auto operator()(R&& r) {
       using value_t = std::decay_t<ranges::range_value_t<R>>;
       return operator()<std::hash<value_t>, R>(std::forward<R>(r));
+    }
+  };
+
+  template <> struct as<sorted_vector> {
+    template <ranges::range R> auto operator()(R&& r) {
+      using value_t = std::decay_t<ranges::range_value_t<R>>;
+      sorted_vector<value_t> result{};
+      result.merge(std::forward<R>(r));
+      return result;
     }
   };
 
