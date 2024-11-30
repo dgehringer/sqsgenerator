@@ -53,6 +53,11 @@ namespace sqsgen::core::helpers {
       return i == end() || cmp(t, *i) ? end() : i;
     }
 
+    bool operator==(const sorted_vector& rhs) const {
+      if (size() != rhs.size()) return false;
+      return _values == rhs._values;
+    }
+
     template <ranges::range R> void merge(R&& r) {
       ranges::for_each(r, [&](auto&& val) { insert(val); });
     }
