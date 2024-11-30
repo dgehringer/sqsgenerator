@@ -68,6 +68,8 @@ NLOHMANN_JSON_NAMESPACE_END
 
 namespace sqsgen {
 
+  static constexpr auto KEY_NONE = core::helpers::string_literal("");
+
   NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_SINGLE, "single"}, {PREC_DOUBLE, "double"}})
   NLOHMANN_JSON_SERIALIZE_ENUM(IterationMode, {
                                                   {ITERATION_MODE_INVALID, nullptr},
@@ -88,6 +90,10 @@ namespace sqsgen {
     std::string msg;
     parse_error_code code;
     std::optional<std::string> parameter = std::nullopt;
+
+    parse_error with_key(std::string const& new_key) {
+      return parse_error{new_key, msg, code, parameter};
+    }
 
     template <core::helpers::string_literal key, parse_error_code code>
     static parse_error from_msg(const std::string& msg,
@@ -162,10 +168,13 @@ namespace sqsgen {
     return std::get<Option>(opt);
   }
 
-  template <core::helpers::string_literal key, class Option>
+  template <core::helpers::string_literal key = "", class Option>
   parse_result_t<Option> get_as(nlohmann::json const& json) {
     try {
-      return json.at(key.data).template get<Option>();
+      if constexpr (key == KEY_NONE) {
+        return json.get<Option>();
+      } else
+        return json.at(key.data).template get<Option>();
     } catch (nlohmann::json::out_of_range const& e) {
       return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range or not found - {}",
                                                          e.what());
