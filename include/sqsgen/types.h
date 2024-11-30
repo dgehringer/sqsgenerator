@@ -11,12 +11,17 @@
 #include <set>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <vector>
+#include "sqsgen/core/helpers/sorted_vector.h"
 
 namespace sqsgen {
 
   using specie_t = std::uint_fast8_t;
   using rank_t = mppp::integer<2>;
   using configuration_t = std::vector<specie_t>;
+
+  template <class T>
+  using vset = core::helpers::sorted_vector<T>;
+
 
   template <class T> using counter = std::map<T, size_t>;
 
@@ -67,7 +72,7 @@ namespace sqsgen {
   };
 
   struct sublattice {
-    std::set<usize_t> sites;
+    vset<usize_t> sites;
     composition_t composition;
   };
 
