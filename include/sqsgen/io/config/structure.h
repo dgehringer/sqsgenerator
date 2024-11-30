@@ -2,17 +2,34 @@
 // Created by Dominik Gehringer on 18.11.24.
 //
 
-#ifndef SQSGEN_IO_PARSER_STRUCTURE_CONFIG_H
-#define SQSGEN_IO_PARSER_STRUCTURE_CONFIG_H
+#ifndef SQSGEN_IO_CONFIG_STRUCTURE_H
+#define SQSGEN_IO_CONFIG_STRUCTURE_H
 
 #include <optional>
 
-#include "sqsgen/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/io/json.h"
 #include "sqsgen/types.h"
 
-namespace sqsgen::io::parser {
+namespace sqsgen::io::config {
+
+  template <class T> class structure_config {
+  public:
+    static constexpr auto DEFAULT_SUPERCELL = std::array{1, 1, 1};
+    lattice_t<T> lattice;
+    coords_t<T> coords;
+    configuration_t species;
+    std::optional<std::array<int, 3>> supercell = std::nullopt;
+
+    core::structure<T> structure(bool supercell = true) {
+      core::structure<T> structure(lattice, coords, species);
+      if (supercell) {
+        auto [a, b, c] = this->supercell.value_or(DEFAULT_SUPERCELL);
+        structure = structure.supercell(a, b, c);
+      }
+      return structure;
+    }
+  };
 
   template <core::helpers::string_literal key>
   parse_result_t<configuration_t> validate_ordinals(std::vector<int>&& ordinals, auto num_sites) {
@@ -39,13 +56,13 @@ namespace sqsgen::io::parser {
           std::format("Number of coordinates ({}) does not match number of species {}", num_sites,
                       symbols.size()));
     configuration_t conf;
-    for (const auto& element : symbols) {
-      if (core::SYMBOL_MAP.contains(element)) {
+    for (const auto& element : symbols)
+      if (core::SYMBOL_MAP.contains(element))
         conf.push_back(core::atom::from_symbol(element).Z);
-      } else
+      else
         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
             std::format("An atomic element with name {} is not known to me", element));
-    }
+
     return conf;
   }
 
@@ -74,7 +91,7 @@ namespace sqsgen::io::parser {
                     });
   }
 
-  template <class T> static parse_result_t<structure_config<T>> from_json(const nlohmann::json& j) {
+  template <class T> static parse_result_t<structure_config<T>> parse_structure_config(const nlohmann::json& j) {
     auto structure_data = combine<lattice_t<T>, coords_t<T>>(get_as<"lattice", lattice_t<T>>(j),
                                                              get_as<"coords", coords_t<T>>(j));
     if (holds_error(structure_data)) return std::get<parse_error>(structure_data);
@@ -87,6 +104,6 @@ namespace sqsgen::io::parser {
     auto supercell = get_result(supercell_data);
     return structure_config{lattice, coords, configuration, supercell};
   }
-};  // namespace sqsgen::io::parser
-// namespace sqsgen::io::parser
-#endif  // SQSGEN_IO_PARSER_STRUCTURE_CONFIG_H
+};  // namespace sqsgen::io::config
+// namespace sqsgen::io::config
+#endif  // SQSGEN_IO_CONFIG_STRUCTURE_H
