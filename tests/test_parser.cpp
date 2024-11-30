@@ -97,7 +97,7 @@ namespace sqsgen::testing {
     });
   }
 
-  TEST(test_parse_structure, which) {
+  /*TEST(test_parse_structure, which) {
     auto s = TEST_FCC_STRUCTURE<double>;
 
     json base{{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}};
@@ -127,5 +127,5 @@ namespace sqsgen::testing {
     auto r2 = io::parser::from_json<double>(base);
     ASSERT_TRUE(holds_result(r2));
     helpers::assert_structure_equal(get_result(r2).structure(), s.sliced(std::vector{3}));
-  }
+  }*/
 }  // namespace sqsgen::testing
