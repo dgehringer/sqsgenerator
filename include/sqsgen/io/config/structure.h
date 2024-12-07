@@ -15,20 +15,21 @@ namespace sqsgen::io::config {
 
   template <class T> class structure_config {
   public:
-    static constexpr auto DEFAULT_SUPERCELL = std::array{1, 1, 1};
     lattice_t<T> lattice;
     coords_t<T> coords;
     configuration_t species;
-    std::optional<std::array<int, 3>> supercell = std::nullopt;
+    std::array<int, 3> supercell;
 
     core::structure<T> structure(bool supercell = true) {
       core::structure<T> structure(lattice, coords, species);
       if (supercell) {
-        auto [a, b, c] = this->supercell.value_or(DEFAULT_SUPERCELL);
+        auto [a, b, c] = this->supercell;
         structure = structure.supercell(a, b, c);
       }
       return structure;
     }
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(structure_config, lattice, coords, species, supercell);
   };
 
   template <core::helpers::string_literal key>
@@ -80,8 +81,8 @@ namespace sqsgen::io::config {
   }
 
   template <core::helpers::string_literal key>
-  parse_result_t<std::optional<std::array<int, 3>>> parse_supercell(nlohmann::json const& j) {
-    return validate(get_optional<key, std::array<int, 3>>(j),
+  parse_result_t<std::array<int, 3>> parse_supercell(nlohmann::json const& j) {
+    return validate(get_optional<key, std::array<int, 3>>(j), {1, 1, 1},
                     [&](auto&& supercell) -> parse_result_t<std::array<int, 3>> {
                       for (auto amount : supercell)
                         if (amount < 0)

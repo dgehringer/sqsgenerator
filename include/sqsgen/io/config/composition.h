@@ -21,7 +21,7 @@ namespace sqsgen::io::config {
     std::vector<sublattice> sublattices;
   };
 
-  template <core::helpers::string_literal key>
+  template <string_literal key>
   parse_result_t<index_set_t> validate_indices(std::vector<int> const& indices,
                                                configuration_t const& conf) {
     index_set_t parsed;
@@ -62,11 +62,12 @@ namespace sqsgen::io::config {
   }
 
   template <core::helpers::string_literal key>
-  parse_result_t<std::optional<index_set_t>> parse_sites(nlohmann::json const& j,
-                                                         configuration_t const& conf) {
+  parse_result_t<index_set_t> parse_sites(nlohmann::json const& j, configuration_t const& conf,
+                                          index_set_t&& remaining) {
     using out_t = parse_result_t<index_set_t>;
     return validate<index_set_t>(
         get_either_optional<key, std::vector<int>, std::vector<std::string>, std::string>(j),
+        std::forward<index_set_t>(remaining),
         [&](std::vector<int>&& indices) -> out_t { return validate_indices<key>(indices, conf); },
         [&](std::vector<std::string>&& species) -> out_t {
           return validate_species_strings<key>(species, conf);
@@ -82,31 +83,28 @@ namespace sqsgen::io::config {
     using namespace core::helpers;
     if (!j.is_object())
       return parse_error::from_msg<key, CODE_BAD_VALUE>("the JSON value is not an object");
-    auto sites_result = parse_sites<"sites">(j, conf);
-    if (holds_error(sites_result)) return std::get<parse_error>(sites_result);
-    auto sites = get_result(sites_result);
     index_set_t occupied_sites = fold_left(sublattices, index_set_t{}, [](auto&& occ, auto&& sl) {
       occ.merge(sl.sites);
       return occ;
     });
-    index_set_t indices;
-    if (sites.has_value()) {
-      // make sure that sublattices do not overlap
-      for (auto&& site : sites.value())
-        if (occupied_sites.contains(site))
-          return parse_error::from_msg<"sites", CODE_BAD_VALUE>(std::format(
-              "The site with index {} is contained in more than one sublattice. Make sure that the "
-              "\"sites\" argument does not contain overlapping index ranges",
-              site));
-      indices = sites.value();
-    } else {
-      index_set_t remaining_indices(
-          range(conf.size()) | views::filter([&](auto i) { return !occupied_sites.contains(i); }));
-      if (remaining_indices.empty())
-        return parse_error::from_msg<"sites", CODE_OUT_OF_RANGE>(
-            "There are no remaining species left for the sublattice");
-      indices = remaining_indices;
-    }
+    index_set_t remaining_indices(
+        range(conf.size()) | views::filter([&](auto i) { return !occupied_sites.contains(i); }));
+    if (remaining_indices.empty())
+      return parse_error::from_msg<"sites", CODE_OUT_OF_RANGE>(
+          "There are no remaining species left for the sublattice");
+
+    auto sites_result = parse_sites<"sites">(j, conf, std::move(remaining_indices));
+    if (holds_error(sites_result)) return std::get<parse_error>(sites_result);
+    auto sites = get_result(sites_result);
+
+    // make sure that sublattices do not overlap
+    for (auto&& site : sites)
+      if (occupied_sites.contains(site))
+        return parse_error::from_msg<"sites", CODE_BAD_VALUE>(std::format(
+            "The site with index {} is contained in more than one sublattice. Make sure that the "
+            "\"sites\" argument does not contain overlapping index ranges",
+            site));
+
     composition_t composition;
     for (auto& [k, value] : j.items()) {
       if (core::SYMBOL_MAP.contains(k)) {
@@ -114,10 +112,10 @@ namespace sqsgen::io::config {
         auto num_result = get_as<KEY_NONE, int>(value);
         if (holds_error(num_result)) return std::get<parse_error>(num_result).with_key(k);
         auto amount = get_result(num_result);
-        if (amount > indices.size() || amount < 0)
+        if (amount > sites.size() || amount < 0)
           return parse_error::from_key_and_msg<CODE_BAD_VALUE>(
               k, std::format("You want to distribute {} \"{}\" atoms on a sublattice with {} sites",
-                             amount, k, indices.size()));
+                             amount, k, sites.size()));
         composition[specie] = amount;
       }
     }
@@ -127,12 +125,12 @@ namespace sqsgen::io::config {
           "Could not find any valid species in the composition definition");
 
     auto num_sites = fold_left(composition | views::elements<1>, 0UL, std::plus<>{});
-    if (num_sites != indices.size())
+    if (num_sites != sites.size())
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(std::format(
           "The total number of distributed atoms is {} but the sublattice contains {} sites",
-          num_sites, indices.size()));
+          num_sites, sites.size()));
 
-    return sublattice{indices, composition};
+    return sublattice{sites, composition};
   }
 
   template <core::helpers::string_literal key>
@@ -151,8 +149,6 @@ namespace sqsgen::io::config {
     }
     if (sublattices.empty())
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("Could not parse a valid sublattice");
-
-
     return sublattices;
   }
 
