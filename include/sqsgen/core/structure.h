@@ -68,23 +68,6 @@ namespace sqsgen::core {
       return distances;
     }
 
-    template <class T> std::vector<T> distances(matrix_t<T> const &distance_matrix,
-                                                T atol = std::numeric_limits<T>::epsilon(),
-                                                T rtol = 1e-9) {
-      const auto flattened = distance_matrix.reshaped();
-      std::unordered_set<T> unique_distances(flattened.begin(), flattened.end());
-      std::vector<T> dists(unique_distances.begin(), unique_distances.end());
-      std::sort(dists.begin(), dists.end());
-      auto reduced = helpers::fold_left(dists, std::vector<T>{T(0)}, [&](auto &&vec, auto dist) {
-        if (helpers::is_close(vec.back(), dist, atol, rtol)) {
-          vec[vec.size() - 1] = 0.5 * (dist + vec.back());
-        } else
-          vec.push_back(dist);
-        return vec;
-      });
-      return reduced;
-    }
-
     template <class T> shell_matrix_t shell_matrix(matrix_t<T> const &distance_matrix,
                                                    std::vector<T> const &dists, T atol, T rtol) {
       assert(distance_matrix.rows() == distance_matrix.cols());
@@ -148,13 +131,76 @@ namespace sqsgen::core {
 
   }  // namespace detail
 
+  template <class T> std::vector<T> distances_naive(structure<T> &structure,
+                                                    T atol = std::numeric_limits<T>::epsilon(),
+                                                    T rtol = 1e-9) {
+    helpers::sorted_vector<T> dists(structure.distance_matrix().reshaped());
+    auto reduced = helpers::fold_left(dists, std::vector<T>{T(0)}, [&](auto &&vec, auto dist) {
+      if (helpers::is_close(vec.back(), dist, atol, rtol))
+        vec[vec.size() - 1] = 0.5 * (dist + vec.back());
+      else
+        vec.push_back(dist);
+      return vec;
+    });
+    return reduced;
+  }
+
+  template <class T>
+  std::vector<T> distances_histogram(structure<T> &structure, T bin_width, T peak_isolation) {
+    auto distances = helpers::as<std::vector>{}(
+        structure.distance_matrix().reshaped()
+        | views::filter([](auto dist) { return dist > 0.0 && !helpers::is_close(dist, 0.0); }));
+    std::sort(distances.begin(), distances.end());
+    auto min_dist{distances.front()}, max_dist{distances.back()};
+
+    auto num_edges{static_cast<std::size_t>((max_dist - min_dist) / bin_width) + 2};
+    auto edges
+        = helpers::as<std::vector>{}(views::iota(0UL, num_edges) | views::transform([&](auto i) {
+                                       return T(min_dist) + i * bin_width;
+                                     }));
+
+    if (edges.size() < 10)
+      throw std::invalid_argument(
+          "Not enough edges to create a histogram, please increase the bin width");
+    auto freqs = std::map<usize_t, std::vector<T>>{{0, {}}};
+    usize_t index{0}, bin{0};
+    while (index < distances.size() && bin < num_edges - 1) {
+      T lower{edges[bin]}, upper{edges[bin + 1]}, value{distances[index]};
+      if (lower <= value && value < upper) {
+        freqs[bin].push_back(value);
+        ++index;
+      } else
+        freqs[++bin] = std::vector<T>{};
+    }
+    // make sure our histogramm contians the same number of distances as the corresponding input
+    // vector
+    assert(helpers::fold_left(
+               views::elements<1>(freqs) | views::transform([&](auto v) { return v.size(); }), 0,
+               std::plus{})
+           == distances.size());
+    const auto get_freq
+        = [&](auto i) { return freqs.contains(i) ? freqs.at(i) : std::vector<T>{}; };
+    assert(freqs.size() == num_edges - 1);
+    std::vector<T> shells;
+    for (auto i = 1; i < num_edges - 2; i++) {
+      auto prev{get_freq(i - 1)}, f{get_freq(i)}, next{get_freq(i + 1)};
+      auto threshold = static_cast<std::size_t>((1.0 - peak_isolation) * static_cast<T>(f.size()));
+      if (threshold > prev.size() && threshold > next.size()) {
+        assert(freqs.size() > 0);
+        shells.push_back(*std::max_element(f.begin(), f.end()));
+      }
+    }
+
+    if (shells.front() != 0.0 && !helpers::is_close(shells.front(), 0.0))
+      shells.insert(shells.begin(), 0.0);
+    return shells;
+  }
+
   template <class T>
     requires std::is_arithmetic_v<T>
   class structure {
   private:
-    std::optional<std::vector<T>> _distances = std::nullopt;
     std::optional<matrix_t<T>> _distance_matrix = std::nullopt;
-    std::optional<shell_matrix_t> _shell_matrix = std::nullopt;
 
   public:
     lattice_t<T> lattice;
@@ -176,8 +222,6 @@ namespace sqsgen::core {
         fc.row(index) = sites[index].frac_coords;
       };
       frac_coords = fc;
-      _distances = std::nullopt;
-      _shell_matrix = std::nullopt;
       _distance_matrix = std::nullopt;
     }
 
@@ -205,16 +249,10 @@ namespace sqsgen::core {
       return _distance_matrix.value();
     }
 
-    [[nodiscard]] const std::vector<T> &distances() {
-      if (!_distances.has_value()) _distances = detail::distances(distance_matrix());
-      return _distances.value();
-    }
-
-    [[nodiscard]] const shell_matrix_t &shell_matrix(T atol = std::numeric_limits<T>::epsilon(),
-                                                     T rtol = 1.0e-9) {
-      if (!_shell_matrix.has_value())
-        _shell_matrix = detail::shell_matrix(distance_matrix(), distances(), atol, rtol);
-      return _shell_matrix.value();
+    [[nodiscard]] shell_matrix_t shell_matrix(std::vector<T> const &distances,
+                                              T atol = std::numeric_limits<T>::epsilon(),
+                                              T rtol = 1.0e-9) {
+      return detail::shell_matrix(distance_matrix(), distances, atol, rtol);
     }
 
     [[nodiscard]] structure supercell(std::size_t a, std::size_t b, std::size_t c) const {
