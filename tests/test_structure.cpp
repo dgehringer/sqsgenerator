@@ -6,6 +6,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <nlohmann/json.hpp>
 
 #include "helpers.h"
 #include "sqsgen/core/helpers.h"
@@ -24,17 +25,9 @@ namespace sqsgen::testing {
     core::structure<T> structure;
     core::structure<T> supercell;
     std::array<std::size_t, 3> shape;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(SupercellTestData, structure, supercell, shape);
   };
-
-  template <class T> void to_json(json& j, SupercellTestData<T> const& st) {
-    j = json{{"structure", st.structure}, {"supercell", st.supercell}, {"shape", st.shape}};
-  }
-
-  template <class T> void from_json(const json& j, SupercellTestData<T>& st) {
-    j.at("structure").get_to(st.structure);
-    j.at("supercell").get_to(st.supercell);
-    j.at("shape").get_to(st.shape);
-  }
 
   template <class T> class StructureTestData : public core::structure<T> {
   public:
@@ -66,22 +59,16 @@ namespace sqsgen::testing {
     };
   }
 
-  template <class T, template <class> class Matrix = matrix_t>
-  Matrix<T> matrix_from_json(json const& j, std::string const& name) {
-    return core::helpers::stl_to_eigen<Matrix<T>>(j.at(name).get<stl_matrix_t<T>>());
-  }
-
   template <class T> void from_json(const json& j, StructureTestData<T>& st) {
     auto species = j.at("species").get<std::vector<std::string>>();
 
     auto ordinals = core::helpers::as<std::vector>{}(
         species | views::transform([](auto const& s) { return core::atom::from_symbol(s).Z; }));
 
-    st = StructureTestData<T>(std::move(matrix_from_json<T, lattice_t>(j, "lattice")),
-                              std::move(matrix_from_json<T, coords_t>(j, "frac_coords")),
-                              std::move(ordinals),
-                              std::move(matrix_from_json<T>(j, "distance_matrix")),
-                              std::move(matrix_from_json<std::size_t>(j, "shell_matrix")));
+    st = StructureTestData<T>(j.at("lattice").get<lattice_t<T>>(),
+                              j.at("frac_coords").get<coords_t<T>>(), std::move(ordinals),
+                              j.at("distance_matrix").get<matrix_t<T>>(),
+                              j.at("shell_matrix").get<matrix_t<std::size_t>>());
   }
 
   class StructureTestFixture : public ::testing::Test {
@@ -132,7 +119,7 @@ namespace sqsgen::testing {
   TEST_F(StructureTestFixture, shell_matrix) {
     for (const auto& test_case : this->test_cases) {
       auto structure = test_case.structure();
-      auto m = structure.shell_matrix();
+      auto m = structure.shell_matrix(distances_naive(structure));
 
       ASSERT_EQ(test_case.shell_matrix.rows(), m.rows());
       ASSERT_EQ(test_case.shell_matrix.cols(), m.cols());
@@ -161,7 +148,7 @@ namespace sqsgen::testing {
           std::get<0>(shape), std::get<1>(shape), std::get<2>(shape));
 
       for (const auto& site : supercell_computed.sites()) {
-        auto equals_site = [&](auto other) { return site_equals(site, other); };
+        auto equals_site = [&](const auto& other) { return site_equals(site, other); };
         auto expected_sites = test_case.supercell.sites();
         auto same_site = std::find_if(expected_sites.begin(), expected_sites.end(), equals_site);
         if (same_site == expected_sites.end()) ASSERT_TRUE(false);
