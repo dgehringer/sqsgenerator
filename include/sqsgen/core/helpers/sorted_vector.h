@@ -36,7 +36,8 @@ namespace sqsgen::core::helpers {
       std::sort(begin(), end(), cmp);
     }
 
-    bool empty() const { return _values.empty(); }
+
+    [[nodiscard]] bool empty() const { return _values.empty(); }
 
     bool contains(const T& value) const { return find(value) != end(); }
 
