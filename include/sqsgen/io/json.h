@@ -113,43 +113,6 @@ namespace sqsgen::io {
   }
 
 
-  template <string_literal key, class... Options>
-  std::optional<parse_result_t<Options...>> get_either_optional(nlohmann::json const& json) {
-    if (json.contains(key.data)) {
-      std::variant<parse_error, Options...> result
-          = parse_error::from_msg<key, CODE_UNKNOWN>(std::format("failed to load {}", key.data));
-      ((result
-        = holds_error(result) ? forward_variant<Options...>(get_as<key, Options>(json)) : result),
-       ...);
-      return result;
-    }
-    return std::nullopt;
-  }
-
-  template <string_literal key, class... Options>
-  parse_result_t<Options...> get_either(nlohmann::json const& json) {
-    return get_either_optional<key, Options...>(json).value_or(
-        parse_error::from_msg<key, CODE_NOT_FOUND>("could not find key {}", key.data));
-  }
-
-  template <string_literal key, class Value>
-  std::optional<parse_result_t<Value>> get_optional(nlohmann::json const& json) {
-    return get_either_optional<key, Value>(json);
-  }
-
-  template <class... Args>
-  parse_result_t<std::tuple<Args...>> combine(parse_result_t<Args>&&... args) {
-    std::optional<parse_error> error = std::nullopt;
-    ((error = error.has_value()
-                  ? error
-                  : (holds_error<Args>(args) ? std::make_optional(std::get<parse_error>(args))
-                                             : std::nullopt)),
-     ...);
-    if (error.has_value()) {
-      return error.value();
-    }
-    return std::make_tuple(std::get<Args>(args)...);
-  }
 }  // namespace sqsgen
 
 #endif  // SQSGEN_IO_JSON_H
