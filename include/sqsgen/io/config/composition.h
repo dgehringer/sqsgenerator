@@ -22,8 +22,8 @@ namespace sqsgen::io::config {
   };
 
   template <string_literal key>
-  parse_result_t<index_set_t> validate_indices(std::vector<int> const& indices,
-                                               configuration_t const& conf) {
+  parse_result<index_set_t> validate_indices(std::vector<int> const& indices,
+                                             configuration_t const& conf) {
     index_set_t parsed;
     for (auto index : indices)
       if (0 <= index && index < conf.size())
@@ -34,7 +34,7 @@ namespace sqsgen::io::config {
 
     if (parsed.empty())
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("You cannot specify an empty slice");
-    return parsed;
+    return {parsed};
   }
 
   template <core::helpers::string_literal key>
@@ -62,10 +62,26 @@ namespace sqsgen::io::config {
   }
 
   template <core::helpers::string_literal key>
-  parse_result_t<index_set_t> parse_sites(nlohmann::json const& j, configuration_t const& conf,
-                                          index_set_t&& remaining) {
-    using out_t = parse_result_t<index_set_t>;
-    return validate<index_set_t>(
+  parse_result<index_set_t> parse_sites(nlohmann::json const& j, configuration_t const& conf,
+                                        index_set_t&& remaining) {
+    using out_t = parse_result<index_set_t>;
+    return fmap(
+               [&](auto&& result) {
+                 return result.template collapse<index_set_t>(
+                     [&](std::vector<int>&& indices) -> out_t {
+                       return validate_indices<key>(indices, conf);
+                     },
+                     [&](std::vector<std::string>&& species) -> out_t {
+                       return validate_species_strings<key>(species, conf);
+                     },
+                     [&](std::string&& specie) -> out_t {
+                       return validate_species_strings<key>(std::vector{specie}, conf);
+                     });
+               },
+               get_either_optional<key, std::vector<int>, std::vector<std::string>, std::string>(j))
+        .value_or(remaining);
+
+    /*return validate<index_set_t>(
         get_either_optional<key, std::vector<int>, std::vector<std::string>, std::string>(j),
         std::forward<index_set_t>(remaining),
         [&](std::vector<int>&& indices) -> out_t { return validate_indices<key>(indices, conf); },
@@ -74,7 +90,7 @@ namespace sqsgen::io::config {
         },
         [&](std::string&& specie) -> out_t {
           return validate_species_strings<key>(std::vector{specie}, conf);
-        });
+        });*/
   }
 
   template <core::helpers::string_literal key>
