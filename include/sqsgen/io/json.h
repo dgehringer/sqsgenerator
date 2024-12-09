@@ -10,8 +10,8 @@
 
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
-#include "sqsgen/types.h"
 #include "sqsgen/io/parsing.h"
+#include "sqsgen/types.h"
 
 // partial specialization (full specialization works too)
 NLOHMANN_JSON_NAMESPACE_BEGIN
@@ -93,26 +93,35 @@ namespace sqsgen::io {
                                                   {ITERATION_MODE_SYSTEMATIC, "systematic"},
                                               })
 
+  template <> struct accessor<nlohmann::json> {
 
-  template <string_literal key = "", class Option>
-  parse_result_t<Option> get_as(nlohmann::json const& json) {
-    try {
-      if constexpr (key == KEY_NONE) {
-        return json.get<Option>();
-      } else
-        return json.at(key.data).template get<Option>();
-    } catch (nlohmann::json::out_of_range const& e) {
-      return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range or not found - {}",
-                                                         e.what());
-    } catch (nlohmann::json::type_error const& e) {
-      return parse_error::from_msg<key, CODE_TYPE_ERROR>(
-          std::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
-    } catch (std::out_of_range const& e) {
-      return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
+    static bool contains(nlohmann::json const& json, std::string && key) {
+      return json.contains(std::forward<std::string>(key));
     }
-  }
+
+    template <string_literal key = "", class Option>
+    static parse_result<Option> get_as(nlohmann::json const& json) {
+      try {
+        if constexpr (key == KEY_NONE) {
+          return json.get<Option>();
+        } else {
+
+          if (json.contains(key.data)) return {json.at(key.data).template get<Option>()};
+          return parse_error::from_msg<key, CODE_NOT_FOUND>(
+              std::format("could not find key '{}'", key.data));
+        }
+      } catch (nlohmann::json::out_of_range const& e) {
+        return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range - found - {}", e.what());
+      } catch (nlohmann::json::type_error const& e) {
+        return parse_error::from_msg<key, CODE_TYPE_ERROR>(
+            std::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
+      } catch (std::out_of_range const& e) {
+        return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
+      }
+    }
+  };
 
 
-}  // namespace sqsgen
+}  // namespace sqsgen::io
 
 #endif  // SQSGEN_IO_JSON_H
