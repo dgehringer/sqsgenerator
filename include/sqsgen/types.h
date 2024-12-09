@@ -71,6 +71,12 @@ namespace sqsgen {
     ITERATION_MODE_SYSTEMATIC,
   };
 
+  enum ShellDetectionMode {
+    SHELL_DETECTION_MODE_INVALID = -1,
+    SHELL_DETECTION_MODE_NAIVE,
+    SHELL_DETECTION_MODE_PEAK_ISOLATION
+  };
+
   struct sublattice {
     vset<usize_t> sites;
     composition_t composition;
