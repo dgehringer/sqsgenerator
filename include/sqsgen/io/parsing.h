@@ -50,7 +50,7 @@ namespace sqsgen::io {
   };
 
   template <class... Args> using unpacked_t
-      = std::conditional_t<sizeof...(Args) == 1, std::tuple_element_t<0, Args...>,
+      = std::conditional_t<sizeof...(Args) == 1, std::tuple_element_t<0, std::tuple<Args...>>,
                            std::variant<Args...>>;
 
   template <class... Args> struct parse_result {
@@ -58,22 +58,81 @@ namespace sqsgen::io {
     std::variant<parse_error, Args...> _value;
 
   public:
+    parse_result(std::variant<parse_error, Args...>&& value) : _value(value) {}
+    parse_result(parse_error && error) : _value(error) {}
+
     [[nodiscard]] bool failed() const { return std::holds_alternative<parse_error>(_value); }
     [[nodiscard]] bool ok() const { return !failed(); }
     [[nodiscard]] parse_error error() const { return std::get<parse_error>(_value); }
     unpacked_t<Args...> result() const {
-      if (failed()) {throw std::bad_variant_access{};}
+      if (failed()) {
+        throw std::bad_variant_access{};
+      }
       if constexpr (sizeof...(Args) == 1) {
         return std::get<Args...>(_value);
       } else {
         std::optional<std::variant<Args...>> v = std::nullopt;
-        ((v = v.has_value() ? v : (std::holds_alternative<Args>(_value) ?  std::get<Args>(_value) : std::nullopt)), ...);
+        ((v = v.has_value()
+                  ? v
+                  : (std::holds_alternative<Args>(_value) ? std::get<Args>(_value) : std::nullopt)),
+         ...);
         if (v.has_value()) return v.value();
         throw std::bad_variant_access{};
       }
     }
-    unpacked_t<Args...> value_or(unpacked_t<Args...>&& value) { return failed() ? value : result(); }
+    unpacked_t<Args...> value_or(unpacked_t<Args...>&& value) {
+      return failed() ? value : result();
+    }
+
+    template <class Collapse, class... Fn> parse_result<Collapse> collapse(Fn&&... fn) {
+      return std::visit(overloaded{[](parse_error&& error) -> parse_result<Collapse> {
+                                     return {error};
+                                   },
+                                   fn...},
+                        std::forward<decltype(_value)>(_value));
+    }
+
+    template <class Fn>
+    parse_result<std::decay_t<std::invoke_result_t<Fn, Args...>>> mapM(Fn&& fn) {
+      static_assert(sizeof...(Args) == 1, "mapM requires 1 argument");
+      return failed() ? parse_result(error())
+                      : fn(std::forward<Args...>(std::get<Args...>(_value)));
+    }
   };
+
+  template <class> struct accessor {};
+
+  template <class Fn, class A>
+  std::optional<std::decay_t<std::invoke_result_t<Fn, A>>> fmap(Fn&& fn, std::optional<A>&& opt) {
+    if (opt.has_value()) return  fn(std::forward<A>(opt.value()));
+    return std::nullopt;
+  }
+
+  namespace detail {
+    template <class... Options, class Option>
+    parse_result<Options...> forward_superset(parse_result<Option>&& result) {
+      if (result.failed()) {
+        return {result.error()};
+      }
+      return {result.result()};
+    }
+  }  // namespace detail
+
+  template <string_literal key, class... Options, class Document,
+            class Doc = std::decay_t<Document>>
+  std::optional<parse_result<Options...>> get_either_optional(Document const& doc) {
+    using result_t = parse_result<Options...>;
+    if (accessor<Doc>::contains(doc, key.data)) {
+      result_t result = {parse_error::from_msg<key, CODE_UNKNOWN>(
+          std::format("unknown error failed to load {}", key.data))};
+      ((result = result.failed() ? detail::forward_superset<Options...>(
+                                       accessor<Doc>::template get_as<key, Options>(doc))
+                                 : result),
+       ...);
+      return result;
+    }
+    return std::nullopt;
+  }
 
   template <class... Args> using parse_result_t = std::variant<parse_error, Args...>;
 
@@ -143,19 +202,6 @@ namespace sqsgen::io {
       return std::get<parse_error>(opt);
     }
     return std::get<Option>(opt);
-  }
-
-  template <string_literal key, class... Options>
-  std::optional<parse_result_t<Options...>> get_either_optional(nlohmann::json const& json) {
-    if (json.contains(key.data)) {
-      std::variant<parse_error, Options...> result
-          = parse_error::from_msg<key, CODE_UNKNOWN>(std::format("failed to load {}", key.data));
-      ((result
-        = holds_error(result) ? forward_variant<Options...>(get_as<key, Options>(json)) : result),
-       ...);
-      return result;
-    }
-    return std::nullopt;
   }
 
   template <string_literal key, class... Options>
