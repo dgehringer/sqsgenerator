@@ -99,6 +99,19 @@ namespace sqsgen::io {
       return json.contains(std::forward<std::string>(key));
     }
 
+
+    static auto get(nlohmann::json const& json, std::string && key) {
+        return json.at(key);
+    }
+
+    static bool is_document(nlohmann::json const& json) {
+      return json.is_object();
+    }
+
+    static bool is_list(nlohmann::json const& json) {
+      return json.is_array();
+    }
+
     template <string_literal key = "", class Option>
     static parse_result<Option> get_as(nlohmann::json const& json) {
       try {

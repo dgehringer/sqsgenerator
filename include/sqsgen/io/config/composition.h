@@ -61,8 +61,8 @@ namespace sqsgen::io::config {
     return indices;
   }
 
-  template <core::helpers::string_literal key>
-  parse_result<index_set_t> parse_sites(nlohmann::json const& j, configuration_t const& conf,
+  template <string_literal key, class Document>
+  parse_result<index_set_t> parse_sites(Document const& j, configuration_t const& conf,
                                         index_set_t&& remaining) {
     using out_t = parse_result<index_set_t>;
     return fmap(
@@ -80,24 +80,35 @@ namespace sqsgen::io::config {
                },
                get_either_optional<key, std::vector<int>, std::vector<std::string>, std::string>(j))
         .value_or(remaining);
-
-    /*return validate<index_set_t>(
-        get_either_optional<key, std::vector<int>, std::vector<std::string>, std::string>(j),
-        std::forward<index_set_t>(remaining),
-        [&](std::vector<int>&& indices) -> out_t { return validate_indices<key>(indices, conf); },
-        [&](std::vector<std::string>&& species) -> out_t {
-          return validate_species_strings<key>(species, conf);
-        },
-        [&](std::string&& specie) -> out_t {
-          return validate_species_strings<key>(std::vector{specie}, conf);
-        });*/
   }
 
-  template <core::helpers::string_literal key>
-  parse_result_t<sublattice> parse_sublattice(nlohmann::json const& j, configuration_t const& conf,
-                                              std::vector<sublattice>&& sublattices) {
-    using namespace core::helpers;
-    if (!j.is_object())
+  template <string_literal key, class Document>
+  parse_result<composition_t> parse_composition(Document const& document, index_set_t&& sites) {
+    composition_t composition;
+    for (auto& pair : document) {
+      auto k = pair.first;
+      if (core::SYMBOL_MAP.contains(k)) {
+        specie_t specie = core::atom::from_symbol(k).Z;
+        auto num_result = accessor<Document>::template get_as<KEY_NONE, int>(pair.second);
+        if (holds_error(num_result)) return std::get<parse_error>(num_result).with_key(k);
+        auto amount = get_result(num_result);
+        if (amount > sites.size() || amount < 0)
+          return parse_error::from_key_and_msg<CODE_BAD_VALUE>(
+              k, std::format("You want to distribute {} \"{}\" atoms on a sublattice with {} sites",
+                             amount, k, sites.size()));
+        composition[specie] = amount;
+      }
+    }
+    if (composition.empty())
+      return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
+          "You have not distributed any valid species on the (sub)lattice");
+    return {composition};
+  }
+
+  template <string_literal key, class Document>
+  parse_result<sublattice> parse_sublattice(Document const& j, configuration_t const& conf,
+                                            std::vector<sublattice>&& sublattices) {
+    if (!accessor<Document>::is_document(j))
       return parse_error::from_msg<key, CODE_BAD_VALUE>("the JSON value is not an object");
     index_set_t occupied_sites = fold_left(sublattices, index_set_t{}, [](auto&& occ, auto&& sl) {
       occ.merge(sl.sites);
@@ -107,9 +118,31 @@ namespace sqsgen::io::config {
         range(conf.size()) | views::filter([&](auto i) { return !occupied_sites.contains(i); }));
     if (remaining_indices.empty())
       return parse_error::from_msg<"sites", CODE_OUT_OF_RANGE>(
-          "There are no remaining species left for the sublattice");
+          "There are no remaining species left for the  sublattice");
 
-    auto sites_result = parse_sites<"sites">(j, conf, std::move(remaining_indices));
+    return parse_sites<"sites">(j, conf, std::move(remaining_indices))
+        .and_then([&](auto&& sites) -> parse_result<index_set_t> {
+          for (auto&& site : sites)
+            if (occupied_sites.contains(site))
+              return parse_error::from_msg<"sites", CODE_BAD_VALUE>(
+                  std::format("The site with index {} is contained in more than one sublattice. "
+                              "Make sure that the "
+                              "\"sites\" argument does not contain overlapping index ranges",
+                              site));
+          return sites;
+        })
+        .and_then([&](auto&& sites) -> parse_result<sublattice> {
+          // parse composition
+          auto composition = parse_composition<key>(j, std::forward<decltype(sites)>(sites));
+          if (composition.failed()) return composition.error();
+          auto num_sites = fold_left(composition.result() | views::elements<1>, 0UL, std::plus<>{});
+          if (num_sites != sites.size())
+            return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(std::format(
+                "The total number of distributed atoms is {} but the sublattice contains {} sites",
+                num_sites, sites.size()));
+          return {sublattice{sites, composition.result()}};
+        });
+    /*auto sites_result = parse_sites<"sites">(j, conf, std::move(remaining_indices));
     if (holds_error(sites_result)) return std::get<parse_error>(sites_result);
     auto sites = get_result(sites_result);
 
@@ -146,26 +179,28 @@ namespace sqsgen::io::config {
           "The total number of distributed atoms is {} but the sublattice contains {} sites",
           num_sites, sites.size()));
 
-    return sublattice{sites, composition};
+    return sublattice{sites, composition};*/
   }
 
-  template <core::helpers::string_literal key>
-  parse_result_t<std::vector<sublattice>> parse_composition(nlohmann::json const& jj,
-                                                            configuration_t const& conf) {
+  template <string_literal key, class Document>
+  parse_result<std::vector<sublattice>> parse_composition(Document const& document,
+                                                          configuration_t const& conf) {
     using namespace core::helpers;
-    if (!jj.count(key.data))
+
+    if (!accessor<Document>::contains(document, key.data))
       return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a composition");
-    const nlohmann::json& j = jj.at(key.data);
-    std::vector<sublattice> sublattices(j.is_array() ? j.size() : 1);
-    for (auto const& json : (j.is_array() ? as<std::vector>{}(j) : std::vector{j})) {
+    const auto doc = accessor<Document>::get(document, key.data);
+    std::vector<sublattice> sublattices;
+    for (auto const& json :
+         (accessor<Document>::is_list(doc) ? as<std::vector>{}(doc) : std::vector{doc})) {
       auto sl
           = parse_sublattice<key>(json, conf, std::forward<std::vector<sublattice>>(sublattices));
-      if (holds_error(sl)) return std::get<parse_error>(sl);
-      sublattices.push_back(get_result(sl));
+      if (sl.failed()) return sl.error();
+      sublattices.push_back(sl.result());
     }
     if (sublattices.empty())
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("Could not parse a valid sublattice");
-    return sublattices;
+    return {sublattices};
   }
 
 }  // namespace sqsgen::io::config

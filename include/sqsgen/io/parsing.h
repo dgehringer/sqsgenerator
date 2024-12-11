@@ -49,6 +49,46 @@ namespace sqsgen::io {
     using Ts::operator()...;
   };
 
+  template <class Needle, class... Haystack> static constexpr bool matches_any() {
+    return (std::is_same_v<Needle, Haystack> || ...);
+  }
+
+  namespace detail {
+
+    template <class T, class U> struct combine_types {
+      using type = std::tuple<T, U>;
+      static type combine(T&& t, U&& u) {
+        return std::make_tuple(std::forward<T>(t), std::forward<U>(u));
+      }
+    };
+    template <class T, class... U> struct combine_types<T, std::tuple<U...>> {
+      using type = std::tuple<T, U...>;
+      static type combine(T&& t, std::tuple<U...>&& u) {
+        return std::tuple_cat(std::make_tuple(std::forward<T>(t)),
+                              std::forward<std::tuple<U...>>(u));
+      }
+    };
+    template <class... T, class U> struct combine_types<std::tuple<T...>, U> {
+      using type = std::tuple<T..., U>;
+      static type combine(std::tuple<T...>&& t, U&& u) {
+        return std::tuple_cat(std::forward<std::tuple<T...>>(t),
+                              std::make_tuple(std::forward<U>(u)));
+      }
+    };
+    template <class... T, class... U> struct combine_types<std::tuple<T...>, std::tuple<U...>> {
+      using type = std::tuple<T..., U...>;
+      static type combine(std::tuple<T...>&& t, std::tuple<U...>&& u) {
+        return std::tuple_cat(std::forward<std::tuple<T...>>(t), std::forward<std::tuple<U...>>(u));
+      }
+
+
+    };
+
+  }  // namespace detail
+
+  template<std::size_t N, class ... Args>
+  using has_args = std::conditional_t<N == sizeof...(Args), std::true_type, std::false_type>;
+
   template <class... Args> using unpacked_t
       = std::conditional_t<sizeof...(Args) == 1, std::tuple_element_t<0, std::tuple<Args...>>,
                            std::variant<Args...>>;
@@ -59,7 +99,12 @@ namespace sqsgen::io {
 
   public:
     parse_result(std::variant<parse_error, Args...>&& value) : _value(value) {}
-    parse_result(parse_error && error) : _value(error) {}
+    parse_result(parse_error&& error) : _value(error) {}
+
+    template <class Arg = std::tuple_element_t<0, std::tuple<Args...>>> requires has_args<1, Args...>::value
+    parse_result(Arg && arg) : _value(arg) {
+      static_assert(sizeof...(Args) == 1);
+    }
 
     [[nodiscard]] bool failed() const { return std::holds_alternative<parse_error>(_value); }
     [[nodiscard]] bool ok() const { return !failed(); }
@@ -86,27 +131,32 @@ namespace sqsgen::io {
 
     template <class Collapse, class... Fn> parse_result<Collapse> collapse(Fn&&... fn) {
       return std::visit(overloaded{[](parse_error&& error) -> parse_result<Collapse> {
-                                     return {error};
+                                     return parse_result{error};
                                    },
                                    fn...},
                         std::forward<decltype(_value)>(_value));
     }
 
-    template <class Fn>
-    parse_result<std::decay_t<std::invoke_result_t<Fn, Args...>>> mapM(Fn&& fn) {
+    template <class Fn> std::decay_t<std::invoke_result_t<Fn, Args...>> and_then(Fn&& fn) {
       static_assert(sizeof...(Args) == 1, "mapM requires 1 argument");
-      return failed() ? parse_result(error())
+      return failed() ? parse_result{error()}
                       : fn(std::forward<Args...>(std::get<Args...>(_value)));
+    }
+
+    template <class Other>
+    parse_result<typename detail::combine_types<Args..., Other>::type> combine(parse_result<Other>&& other) {
+      static_assert(sizeof...(Args) == 1,
+                    "combine only allows for nonvariant parse_results - requires 1 argument");
+
+      return (failed()
+                  ? parse_result{error()}
+                  : (other.failed() ? parse_result{other.error()}
+                                    : parse_result{detail::combine_types<Args..., Other>::combine(
+                                          result(), other.result())}));
     }
   };
 
   template <class> struct accessor {};
-
-  template <class Fn, class A>
-  std::optional<std::decay_t<std::invoke_result_t<Fn, A>>> fmap(Fn&& fn, std::optional<A>&& opt) {
-    if (opt.has_value()) return  fn(std::forward<A>(opt.value()));
-    return std::nullopt;
-  }
 
   namespace detail {
     template <class... Options, class Option>
@@ -117,6 +167,12 @@ namespace sqsgen::io {
       return {result.result()};
     }
   }  // namespace detail
+
+  template <class Fn, class A>
+  std::optional<std::decay_t<std::invoke_result_t<Fn, A>>> fmap(Fn&& fn, std::optional<A>&& opt) {
+    if (opt.has_value()) return fn(std::forward<A>(opt.value()));
+    return std::nullopt;
+  }
 
   template <string_literal key, class... Options, class Document,
             class Doc = std::decay_t<Document>>
@@ -132,6 +188,17 @@ namespace sqsgen::io {
       return result;
     }
     return std::nullopt;
+  }
+
+  template <string_literal key, class... Options, class Document>
+  parse_result<Options...> get_either(Document const& json) {
+    return get_either_optional<key, Options...>(json).value_or(
+        parse_error::from_msg<key, CODE_NOT_FOUND>("could not find key {}", key.data));
+  }
+
+  template <string_literal key, class As, class Document>
+  parse_result<As> get_as(Document const& json) {
+    return get_either<key, As>(json);
   }
 
   template <class... Args> using parse_result_t = std::variant<parse_error, Args...>;
@@ -202,12 +269,6 @@ namespace sqsgen::io {
       return std::get<parse_error>(opt);
     }
     return std::get<Option>(opt);
-  }
-
-  template <string_literal key, class... Options>
-  parse_result_t<Options...> get_either(nlohmann::json const& json) {
-    return get_either_optional<key, Options...>(json).value_or(
-        parse_error::from_msg<key, CODE_NOT_FOUND>("could not find key {}", key.data));
   }
 
   template <string_literal key, class Value>

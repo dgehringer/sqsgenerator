@@ -80,21 +80,31 @@ namespace sqsgen::io::config {
         });
   }
 
-  template <core::helpers::string_literal key>
-  parse_result_t<std::array<int, 3>> parse_supercell(nlohmann::json const& j) {
-    return validate(get_optional<key, std::array<int, 3>>(j), {1, 1, 1},
-                    [&](auto&& supercell) -> parse_result_t<std::array<int, 3>> {
-                      for (auto amount : supercell)
-                        if (amount < 0)
-                          return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-                              "A supercell replication factor must be positive");
-                      return supercell;
-                    });
+  template <string_literal key, class Document>
+  parse_result<std::array<int, 3>> parse_supercell(Document const& doc) {
+    return fmap(
+               [&](auto&& supercell) -> parse_result_t<std::array<int, 3>> {
+                 for (auto amount : supercell)
+                   if (amount < 0)
+                     return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
+                         "A supercell replication factor must be positive");
+                 return supercell;
+               },
+               get_either_optional<key, std::array<int, 3>>(doc))
+        .value_or({1, 1, 1});
   }
 
-  template <core::helpers::string_literal key, class T>
-  parse_result_t<structure_config<T>> parse_structure_config(const nlohmann::json& jj) {
-    if (!jj.count(key.data))
+  template <string_literal key, class T, class Document>
+  parse_result<structure_config<T>> parse_structure_config(Document const& document) {
+    if (accessor<Document>::contains(document, key.data))
+      return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a structure");
+    const auto doc = accessor<Document>::get(document, key.data);
+
+    get_as<"lattice", lattice_t<T>>(doc)
+        .combine(get_as<"coordinates", coords_t<T>>(doc))
+        .combine(parse_supercell<"supercell">(doc));
+    return structure_config<T>{};
+    /*if (!jj.count(key.data))
       return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a composition");
     const nlohmann::json& j = jj.at(key.data);
     auto structure_data = combine<lattice_t<T>, coords_t<T>>(get_as<"lattice", lattice_t<T>>(j),
@@ -107,7 +117,7 @@ namespace sqsgen::io::config {
     auto supercell_data = parse_supercell<"supercell">(j);
     if (holds_error(supercell_data)) return std::get<parse_error>(supercell_data);
     auto supercell = get_result(supercell_data);
-    return structure_config{lattice, coords, configuration, supercell};
+    return structure_config{lattice, coords, configuration, supercell};*/
   }
 };  // namespace sqsgen::io::config
 // namespace sqsgen::io::config
