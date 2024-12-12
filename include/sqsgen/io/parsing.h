@@ -49,12 +49,11 @@ namespace sqsgen::io {
     using Ts::operator()...;
   };
 
-  template <class Needle, class... Haystack> static constexpr bool matches_any() {
-    return (std::is_same_v<Needle, Haystack> || ...);
-  }
+  template <class Needle, class... Haystack> using matches_any
+      = std::conditional_t<(std::is_same_v<Needle, Haystack> || ...), std::true_type,
+                           std::false_type>;
 
   namespace detail {
-
     template <class T, class U> struct combine_types {
       using type = std::tuple<T, U>;
       static type combine(T&& t, U&& u) {
@@ -80,36 +79,37 @@ namespace sqsgen::io {
       static type combine(std::tuple<T...>&& t, std::tuple<U...>&& u) {
         return std::tuple_cat(std::forward<std::tuple<T...>>(t), std::forward<std::tuple<U...>>(u));
       }
-
-
     };
+
+    template <std::size_t N, class... Args> using has_args
+    = std::conditional_t<N == sizeof...(Args), std::true_type, std::false_type>;
+
+    template <class... Args> using unpacked_t
+        = std::conditional_t<sizeof...(Args) == 1, std::tuple_element_t<0, std::tuple<Args...>>,
+                             std::variant<Args...>>;
+
 
   }  // namespace detail
 
-  template<std::size_t N, class ... Args>
-  using has_args = std::conditional_t<N == sizeof...(Args), std::true_type, std::false_type>;
-
-  template <class... Args> using unpacked_t
-      = std::conditional_t<sizeof...(Args) == 1, std::tuple_element_t<0, std::tuple<Args...>>,
-                           std::variant<Args...>>;
 
   template <class... Args> struct parse_result {
   private:
     std::variant<parse_error, Args...> _value;
+    template<class> struct is_parse_result : std::false_type {};
+    template<class ...Other> struct is_parse_result<parse_result<Other...>> : std::true_type {};
 
   public:
     parse_result(std::variant<parse_error, Args...>&& value) : _value(value) {}
     parse_result(parse_error&& error) : _value(error) {}
 
-    template <class Arg = std::tuple_element_t<0, std::tuple<Args...>>> requires has_args<1, Args...>::value
-    parse_result(Arg && arg) : _value(arg) {
-      static_assert(sizeof...(Args) == 1);
-    }
+    template <class Arg>
+      requires matches_any<Arg, Args...>::value
+    parse_result(Arg&& arg) : _value(arg) {}
 
     [[nodiscard]] bool failed() const { return std::holds_alternative<parse_error>(_value); }
     [[nodiscard]] bool ok() const { return !failed(); }
     [[nodiscard]] parse_error error() const { return std::get<parse_error>(_value); }
-    unpacked_t<Args...> result() const {
+    detail::unpacked_t<Args...> result() const {
       if (failed()) {
         throw std::bad_variant_access{};
       }
@@ -125,34 +125,37 @@ namespace sqsgen::io {
         throw std::bad_variant_access{};
       }
     }
-    unpacked_t<Args...> value_or(unpacked_t<Args...>&& value) {
+    detail::unpacked_t<Args...> value_or(detail::unpacked_t<Args...>&& value) {
       return failed() ? value : result();
     }
 
     template <class Collapse, class... Fn> parse_result<Collapse> collapse(Fn&&... fn) {
       return std::visit(overloaded{[](parse_error&& error) -> parse_result<Collapse> {
-                                     return parse_result{error};
+                                     return parse_result<Collapse>{error};
                                    },
                                    fn...},
                         std::forward<decltype(_value)>(_value));
     }
 
-    template <class Fn> std::decay_t<std::invoke_result_t<Fn, Args...>> and_then(Fn&& fn) {
-      static_assert(sizeof...(Args) == 1, "mapM requires 1 argument");
-      return failed() ? parse_result{error()}
+    template <class Fn> requires detail::has_args<1, Args...>::value
+    std::decay_t<std::invoke_result_t<Fn, Args...>> and_then(Fn&& fn) {
+      using out_t = std::decay_t<std::invoke_result_t<Fn, Args...>>;
+      using forward_t = std::conditional_t<is_parse_result<out_t>::value, out_t, parse_result<out_t>>;
+      return failed() ? forward_t{error()}
                       : fn(std::forward<Args...>(std::get<Args...>(_value)));
     }
 
-    template <class Other>
-    parse_result<typename detail::combine_types<Args..., Other>::type> combine(parse_result<Other>&& other) {
+    template <class Other, class Arg = std::tuple_element_t<0, std::tuple<Args...>>>
+      requires detail::has_args<1, Args...>::value
+    parse_result<typename detail::combine_types<Arg, Other>::type> combine(
+        parse_result<Other>&& other) {
       static_assert(sizeof...(Args) == 1,
                     "combine only allows for nonvariant parse_results - requires 1 argument");
-
-      return (failed()
-                  ? parse_result{error()}
-                  : (other.failed() ? parse_result{other.error()}
-                                    : parse_result{detail::combine_types<Args..., Other>::combine(
-                                          result(), other.result())}));
+      using result_t = parse_result<typename detail::combine_types<Arg, Other>::type>;
+      return (failed() ? result_t{error()}
+                       : (other.failed() ? result_t{other.error()}
+                                         : result_t{detail::combine_types<Arg, Other>::combine(
+                                               result(), other.result())}));
     }
   };
 

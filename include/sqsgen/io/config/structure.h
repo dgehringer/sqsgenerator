@@ -32,8 +32,8 @@ namespace sqsgen::io::config {
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(structure_config, lattice, coords, species, supercell);
   };
 
-  template <core::helpers::string_literal key>
-  parse_result_t<configuration_t> validate_ordinals(std::vector<int>&& ordinals, auto num_sites) {
+  template <string_literal key>
+  parse_result<configuration_t> validate_ordinals(std::vector<int>&& ordinals, auto num_sites) {
     if (ordinals.size() != num_sites)
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
           std::format("Number of coordinates ({}) does not match number of species {}", num_sites,
@@ -49,8 +49,8 @@ namespace sqsgen::io::config {
     return conf;
   }
 
-  template <core::helpers::string_literal key>
-  parse_result_t<configuration_t> validate_symbols(std::vector<std::string>&& symbols,
+  template <string_literal key>
+  parse_result<configuration_t> validate_symbols(std::vector<std::string>&& symbols,
                                                    auto num_sites) {
     if (symbols.size() != num_sites)
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
@@ -67,57 +67,52 @@ namespace sqsgen::io::config {
     return conf;
   }
 
-  template <core::helpers::string_literal key>
-  parse_result_t<configuration_t> parse_species(nlohmann::json const& j, auto num_sites) {
-    using out_t = parse_result_t<configuration_t>;
-    return validate<configuration_t>(
-        get_either<key, std::vector<int>, std::vector<std::string>>(j),
-        [=](std::vector<int>&& ordinals) -> out_t {
-          return validate_ordinals<key>(std::forward<std::vector<int>>(ordinals), num_sites);
-        },
-        [=](std::vector<std::string>&& symbols) -> out_t {
-          return validate_symbols<key>(std::forward<std::vector<std::string>>(symbols), num_sites);
-        });
+  template <string_literal key, class Document>
+  parse_result<configuration_t> parse_species(Document const& doc, auto num_sites) {
+    return get_either<key, std::vector<int>, std::vector<std::string>>(doc)
+        .template collapse<configuration_t>(
+            [=](std::vector<int>&& ordinals) {
+              return validate_ordinals<key>(std::forward<std::vector<int>>(ordinals), num_sites);
+            },
+            [=](std::vector<std::string>&& symbols) {
+              return validate_symbols<key>(std::forward<std::vector<std::string>>(symbols),
+                                           num_sites);
+            });
   }
 
   template <string_literal key, class Document>
   parse_result<std::array<int, 3>> parse_supercell(Document const& doc) {
+    using result_t = parse_result<std::array<int, 3>>;
     return fmap(
-               [&](auto&& supercell) -> parse_result_t<std::array<int, 3>> {
-                 for (auto amount : supercell)
-                   if (amount < 0)
-                     return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-                         "A supercell replication factor must be positive");
-                 return supercell;
+               [&](auto&& cell) {
+                 return cell.and_then([&](auto&& supercell) -> result_t {
+                   for (auto amount : supercell)
+                     if (amount < 0)
+                       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
+                           "A supercell replication factor must be positive");
+                   return result_t{supercell};
+                 });
                },
                get_either_optional<key, std::array<int, 3>>(doc))
-        .value_or({1, 1, 1});
+        .value_or(result_t{std::array{1, 1, 1}});
   }
 
   template <string_literal key, class T, class Document>
   parse_result<structure_config<T>> parse_structure_config(Document const& document) {
-    if (accessor<Document>::contains(document, key.data))
+    if (!accessor<Document>::contains(document, key.data))
       return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a structure");
     const auto doc = accessor<Document>::get(document, key.data);
-
-    get_as<"lattice", lattice_t<T>>(doc)
-        .combine(get_as<"coordinates", coords_t<T>>(doc))
-        .combine(parse_supercell<"supercell">(doc));
-    return structure_config<T>{};
-    /*if (!jj.count(key.data))
-      return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a composition");
-    const nlohmann::json& j = jj.at(key.data);
-    auto structure_data = combine<lattice_t<T>, coords_t<T>>(get_as<"lattice", lattice_t<T>>(j),
-                                                             get_as<"coords", coords_t<T>>(j));
-    if (holds_error(structure_data)) return std::get<parse_error>(structure_data);
-    auto [lattice, coords] = get_result(structure_data);
-    auto configuration_data = parse_species<"species">(j, coords.rows());
-    if (holds_error(configuration_data)) return std::get<parse_error>(configuration_data);
-    auto configuration = get_result(configuration_data);
-    auto supercell_data = parse_supercell<"supercell">(j);
-    if (holds_error(supercell_data)) return std::get<parse_error>(supercell_data);
-    auto supercell = get_result(supercell_data);
-    return structure_config{lattice, coords, configuration, supercell};*/
+    return get_as<"lattice", lattice_t<T>>(doc)
+        .combine(get_as<"coords", coords_t<T>>(doc))
+        .combine(parse_supercell<"supercell">(doc))
+        .and_then([&](auto&& data) {
+          auto [lattice, coords, supercell] = data;
+          return parse_species<"species">(doc, coords.rows())
+              .and_then([&](auto&& species) -> parse_result<structure_config<T>> {
+                return structure_config<T>{std::move(lattice), std::move(coords),
+                                           species, std::move(supercell)};
+              });
+        });
   }
 };  // namespace sqsgen::io::config
 // namespace sqsgen::io::config

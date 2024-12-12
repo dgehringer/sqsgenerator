@@ -112,6 +112,10 @@ namespace sqsgen::io {
       return json.is_array();
     }
 
+    static auto items(nlohmann::json const& json) {
+      return json.items();
+    }
+
     template <string_literal key = "", class Option>
     static parse_result<Option> get_as(nlohmann::json const& json) {
       try {
@@ -121,7 +125,7 @@ namespace sqsgen::io {
 
           if (json.contains(key.data)) return {json.at(key.data).template get<Option>()};
           return parse_error::from_msg<key, CODE_NOT_FOUND>(
-              std::format("could not find key '{}'", key.data));
+              std::format("could not find key {}", key.data));
         }
       } catch (nlohmann::json::out_of_range const& e) {
         return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range - found - {}", e.what());
