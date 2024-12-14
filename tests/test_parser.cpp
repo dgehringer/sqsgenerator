@@ -64,44 +64,61 @@ namespace sqsgen::testing {
   }
 
   TEST(test_parse_structure, required_fields_errors) {
+    using namespace py::literals;
+    py::scoped_interpreter guard{};
     auto s = TEST_FCC_STRUCTURE<double>;
-    json document = {{"structure",
+    nlohmann::json json = {{"structure",
                       {
                           {"lattice", s.lattice},
                           {"coords", s.frac_coords},
                           {"species", 4},
                       }}};
+    py::dict dict("structure"_a = py::dict("lattice"_a = s.lattice, "coords"_a = s.frac_coords,
+                                          "species"_a = 4));
 
-    auto assert_holds_error = [&](std::string const& key, parse_error_code code) {
-      auto r = io::config::parse_structure_config<"structure", double>(document);
-      ASSERT_TRUE(r.failed());
-      parse_error error = r.error();
+    auto assert_holds_error = [&](std::string const& key, parse_error_code jcode, std::optional<parse_error_code> dcode = std::nullopt) {
+      auto rjson = io::config::parse_structure_config<"structure", double>(json);
+      auto rdict = io::config::parse_structure_config<"structure", double>(py::object(dict));
+      ASSERT_TRUE(rjson.failed());
+      ASSERT_TRUE(rdict.failed());
+      parse_error error = rjson.error();
       ASSERT_EQ(key, error.key) << error.msg;
-      ASSERT_EQ(code, error.code) << error.msg;
+      ASSERT_EQ(jcode, error.code) << error.msg;
+      auto dict_code = dcode.value_or(jcode);
+      ASSERT_EQ(dict_code, rdict.error().code);
     };
 
-    document["structure"].erase("species");
+
+    json["structure"].erase("species");
+    dict["structure"].attr("pop")("species");
     assert_holds_error("species", CODE_NOT_FOUND);
-    document["structure"]["species"] = {1, 2, 3};
+    json["structure"]["species"] = {1, 2, 3};
+    dict["structure"]["species"] = std::vector{1, 2, 3};
     assert_holds_error("species", CODE_OUT_OF_RANGE);
 
     // test invalid atomic speices
-    document["structure"]["species"] = {1, 2, 3, -5};
+    json["structure"]["species"] = {1, 2, 3, -5};
+    dict["structure"]["species"] = std::vector{1, 2, 3, -5};
     assert_holds_error("species", CODE_OUT_OF_RANGE);
 
-    document["structure"]["species"] = {"Al", "Mg", "Si", "??"};
+    json["structure"]["species"] = {"Al", "Mg", "Si", "??"};
+    dict["structure"]["species"] = std::vector{"Al", "Mg", "Si", "??"};
     // test invalid atomic species
     assert_holds_error("species", CODE_OUT_OF_RANGE);
 
-    document["structure"]["species"] = {"Al", "Mg", "Si", "Ge"};
-    document["structure"]["coords"] = std::vector{1, 2, 3, 4};
+    json["structure"]["species"] = {"Al", "Mg", "Si", "Ge"};
+    json["structure"]["coords"] = {1, 2, 3, 4};
+    dict["structure"]["species"] = std::vector{"Al", "Mg", "Si", "Ge"};
+    dict["structure"]["coords"] = std::vector{1, 2, 3, 4};
     // test wrong shape for coords
     assert_holds_error("coords", CODE_TYPE_ERROR);
 
     // test wrong shape for lattice
-    document["structure"]["lattice"] = s.frac_coords;
-    document["structure"]["coords"] = s.lattice;
-    assert_holds_error("lattice", CODE_OUT_OF_RANGE);
+    json["structure"]["lattice"] = s.frac_coords;
+    json["structure"]["coords"] = s.lattice;
+    dict["structure"]["lattice"] = s.frac_coords;
+    dict["structure"]["coords"] = s.lattice;
+    assert_holds_error("lattice", CODE_OUT_OF_RANGE, CODE_TYPE_ERROR);
   }
 
   TEST(test_parse_composition, error_species) {
