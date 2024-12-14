@@ -20,7 +20,7 @@ namespace sqsgen::io {
       configuration_t species;
       std::array<int, 3> supercell;
 
-      core::structure<T> structure(bool supercell = true) {
+      core::structure<T> structure(bool supercell = true) const {
         core::structure<T> structure(lattice, coords, species);
         if (supercell) {
           auto [a, b, c] = this->supercell;
