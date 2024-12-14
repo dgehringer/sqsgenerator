@@ -12,6 +12,7 @@
 #include "sqsgen/config.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/structure.h"
+#include "sqsgen/io/config/settings.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::testing {
@@ -275,6 +276,21 @@ namespace sqsgen::testing {
     dict[key].cast<py::list>()[1].attr("pop")("sites");
     dict[key].cast<py::list>()[1]["Ni"] = 2;
     assert_holds_error(key, CODE_OUT_OF_RANGE);
+  }
+
+  TEST(test_parse_shell_radii, naive) {
+    py::scoped_interpreter guard{};
+
+    auto [json, dict] = make_test_structure_config<double>();
+
+    auto parse_radii
+    = []<class Doc>(Doc const& doc) -> parse_result<std::vector<double>> {
+      auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
+      return config::parse_shell_radii<"shell_radii", Doc>(doc, structure.result());
+    };
+    auto sc = config::parse_structure_config<"structure", double>(json).result();
+
+    config::parse_shell_radii<"shell_radii">(json, sc);
   }
   /*
     TEST(test_parse_shell_weights, errors) {
