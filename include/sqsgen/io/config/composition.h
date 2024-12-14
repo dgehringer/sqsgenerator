@@ -7,7 +7,7 @@
 
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
-#include "sqsgen/io/json.h"
+#include "sqsgen/io/parsing.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::io::config {
