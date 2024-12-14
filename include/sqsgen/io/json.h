@@ -82,8 +82,6 @@ NLOHMANN_JSON_NAMESPACE_END
 
 namespace sqsgen::io {
 
-  static constexpr auto KEY_NONE = string_literal("");
-
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(sublattice, sites, composition);
 
   NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_SINGLE, "single"}, {PREC_DOUBLE, "double"}})

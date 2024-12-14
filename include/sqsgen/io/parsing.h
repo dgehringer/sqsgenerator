@@ -11,7 +11,10 @@
 #include "sqsgen/core/helpers.h"
 
 namespace sqsgen::io {
+
   using namespace sqsgen::core::helpers;
+
+  static constexpr auto KEY_NONE = string_literal("");
 
   enum parse_error_code {
     CODE_UNKNOWN = -1,
@@ -82,21 +85,19 @@ namespace sqsgen::io {
     };
 
     template <std::size_t N, class... Args> using has_args
-    = std::conditional_t<N == sizeof...(Args), std::true_type, std::false_type>;
+        = std::conditional_t<N == sizeof...(Args), std::true_type, std::false_type>;
 
     template <class... Args> using unpacked_t
         = std::conditional_t<sizeof...(Args) == 1, std::tuple_element_t<0, std::tuple<Args...>>,
                              std::variant<Args...>>;
 
-
   }  // namespace detail
-
 
   template <class... Args> struct parse_result {
   private:
     std::variant<parse_error, Args...> _value;
-    template<class> struct is_parse_result : std::false_type {};
-    template<class ...Other> struct is_parse_result<parse_result<Other...>> : std::true_type {};
+    template <class> struct is_parse_result : std::false_type {};
+    template <class... Other> struct is_parse_result<parse_result<Other...>> : std::true_type {};
 
   public:
     parse_result(std::variant<parse_error, Args...>&& value) : _value(value) {}
@@ -137,12 +138,13 @@ namespace sqsgen::io {
                         std::forward<decltype(_value)>(_value));
     }
 
-    template <class Fn> requires detail::has_args<1, Args...>::value
+    template <class Fn>
+      requires detail::has_args<1, Args...>::value
     std::decay_t<std::invoke_result_t<Fn, Args...>> and_then(Fn&& fn) {
       using out_t = std::decay_t<std::invoke_result_t<Fn, Args...>>;
-      using forward_t = std::conditional_t<is_parse_result<out_t>::value, out_t, parse_result<out_t>>;
-      return failed() ? forward_t{error()}
-                      : fn(std::forward<Args...>(std::get<Args...>(_value)));
+      using forward_t
+          = std::conditional_t<is_parse_result<out_t>::value, out_t, parse_result<out_t>>;
+      return failed() ? forward_t{error()} : fn(std::forward<Args...>(std::get<Args...>(_value)));
     }
 
     template <class Other, class Arg = std::tuple_element_t<0, std::tuple<Args...>>>
