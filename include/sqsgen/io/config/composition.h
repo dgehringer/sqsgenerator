@@ -150,21 +150,24 @@ namespace sqsgen::io::config {
   parse_result<std::vector<sublattice>> parse_composition(Document const& document,
                                                           configuration_t const& conf) {
     using namespace core::helpers;
-
     if (!accessor<Document>::contains(document, key.data))
       return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a composition");
     const auto doc = accessor<Document>::get(document, key.data);
-    std::vector<sublattice> sublattices;
-    for (auto const& d :
-         (accessor<Document>::is_list(doc) ? as<std::vector>{}(doc) : std::vector{doc})) {
-      auto sl
-          = parse_sublattice<key>(d, conf, std::forward<std::vector<sublattice>>(sublattices));
-      if (sl.failed()) return sl.error();
-      sublattices.push_back(sl.result());
+    if (accessor<std::decay_t<decltype(doc)>>::is_list(doc)) {
+      std::vector<sublattice> sublattices;
+      for (auto const& d : doc) {
+        auto sl
+            = parse_sublattice<key>(d, conf, std::forward<std::vector<sublattice>>(sublattices));
+        if (sl.failed()) return sl.error();
+        sublattices.push_back(sl.result());
+      }
+      if (sublattices.empty())
+        return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("Could not parse a valid sublattice");
+      return {sublattices};
     }
-    if (sublattices.empty())
-      return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("Could not parse a valid sublattice");
-    return {sublattices};
+    return parse_sublattice<key>(doc, conf, {})
+        .and_then(
+            [&](auto&& sl) -> parse_result<std::vector<sublattice>> { return std::vector{sl}; });
   }
 
 }  // namespace sqsgen::io::config
