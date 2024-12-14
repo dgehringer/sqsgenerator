@@ -15,32 +15,39 @@
 namespace sqsgen::io {
   namespace py = pybind11;
 
-
-
-  template <> struct accessor<py::object> {
-    static bool contains(py::object const& d, std::string&& key) {
+  template <> struct accessor<py::handle> {
+    static bool contains(py::handle const& d, std::string&& key) {
       if (py::isinstance<py::dict>(d)) return d.contains(std::forward<std::string>(key));
       return false;
     }
 
-    static auto get(py::object const& d, std::string&& key) {
+    static auto get(py::handle const& d, std::string&& key) {
       if (contains(d, std::forward<std::string>(key))) {
-        return py::object(d[key.c_str()]);
+        return py::handle(d[key.c_str()]);
       }
       throw std::out_of_range(std::forward<std::string>(key));
     }
 
-    static bool is_document(py::object const& o) { return py::isinstance<py::dict>(o); }
+    static bool is_document(py::handle const& o) { return py::isinstance<py::dict>(o); }
 
-    static bool is_list(py::object const& o) { return py::isinstance<py::list>(o); }
+    static bool is_list(py::handle const& o) { return py::isinstance<py::list>(o); }
 
-    static auto items(py::object const& d) {
-      if (is_document(d)) return as<std::vector>{}(d);
+    static auto items(py::handle const& d) {
+      if (is_document(d)) {
+        std::vector<std::pair<std::string, py::handle>> items;
+        py::dict dict = d.cast<py::dict>();
+        items.reserve(py::len(dict));
+        for (auto const& item : dict) {
+          if (!py::isinstance<py::str>(item.first)) throw std::invalid_argument("dictionary is only allowed to have strings as keys");
+          items.push_back({item.first.cast<py::str>(), item.second});
+        };
+        return items;
+      };
       throw std::invalid_argument("object is not a dictionary");
     }
 
     template <string_literal key = "", class Option>
-    static parse_result<Option> get_as(py::object const& d) {
+    static parse_result<Option> get_as(py::handle const& d) {
       try {
         if constexpr (key == KEY_NONE) {
           return d.cast<Option>();
@@ -58,7 +65,31 @@ namespace sqsgen::io {
     }
   };
 
+  template <> struct accessor<py::object> {
+    static bool is_document(py::object const& o) {
+      return accessor<py::handle>::is_document(o);
+    }
 
+    static bool contains(py::object const& d, std::string&& key) {
+      return accessor<py::handle>::contains(d,  std::forward<std::string>(key));
+    }
+
+    static auto items(py::object const& d) {
+      return accessor<py::handle>::items(d);
+    }
+
+    static auto get(py::object const& d, std::string&& key) {
+      return accessor<py::handle>::get(d,  std::forward<std::string>(key));
+    }
+
+    static auto is_list(py::object const& o) {
+      return accessor<py::handle>::is_list(o);
+    }
+    template <string_literal key = "", class Option>
+    static parse_result<Option> get_as(py::object const& d) {
+      return accessor<py::handle>::get_as<key, Option>(d);
+    }
+  };
 
   template <class> struct py_dict_converter;
 

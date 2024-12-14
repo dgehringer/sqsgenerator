@@ -166,10 +166,8 @@ namespace sqsgen::io {
   namespace detail {
     template <class... Options, class Option>
     parse_result<Options...> forward_superset(parse_result<Option>&& result) {
-      if (result.failed()) {
-        return {result.error()};
-      }
-      return {result.result()};
+      if (result.failed()) return result.error();
+      return result.result();
     }
   }  // namespace detail
 
@@ -183,6 +181,7 @@ namespace sqsgen::io {
             class Doc = std::decay_t<Document>>
   std::optional<parse_result<Options...>> get_either_optional(Document const& doc) {
     using result_t = parse_result<Options...>;
+
     if (accessor<Doc>::contains(doc, key.data)) {
       result_t result = {parse_error::from_msg<key, CODE_UNKNOWN>(
           std::format("unknown error failed to load {}", key.data))};
