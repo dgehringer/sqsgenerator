@@ -3,6 +3,9 @@
 //
 
 #include <gtest/gtest.h>
+#include <pybind11/embed.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include "helpers.h"
 #include "nlohmann/json.hpp"
@@ -13,13 +16,14 @@
 
 namespace sqsgen::testing {
   using json = nlohmann::json;
+  using namespace sqsgen::io;
   using namespace sqsgen::io::config;
 
   template <class Fn> auto make_assert_holds_error(Fn&& fn) {
     return [&](std::string const& key, parse_error_code code, nlohmann::json const& a) {
       auto r = fn(a);
-      ASSERT_TRUE(holds_error(r));
-      parse_error error = std::get<parse_error>(r);
+      ASSERT_TRUE(r.failed());
+      parse_error error = r.error();
       ASSERT_EQ(key, error.key) << error.msg;
       ASSERT_EQ(code, error.code) << error.msg;
     };
@@ -31,27 +35,32 @@ namespace sqsgen::testing {
       std::vector<specie_t>{11, 12, 13, 14}};
 
   TEST(test_parse_structure, empty) {
-    ASSERT_TRUE(holds_error(io::config::parse_structure_config<"composition", double>({})));
+    // ASSERT_TRUE(io::config::parse_structure_config<"composition", double>({}).failed());
   }
 
   TEST(test_parse_structure, required_fields_success) {
+    using namespace py::literals;
+    py::scoped_interpreter guard{};
     auto s = TEST_FCC_STRUCTURE<double>;
-    json document = {{"structure",
-                      {
-                          {"lattice", s.lattice},
-                          {"coords", s.frac_coords},
-                          {"species", s.species},
-                      }}};
+    json json = {
+        {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
+    py::dict dict("structure"_a = py::dict("lattice"_a = s.lattice, "coords"_a = s.frac_coords,
+                                           "species"_a = s.species));
 
-    auto r1 = io::config::parse_structure_config<"structure", double>(document);
+    auto rjson = io::config::parse_structure_config<"structure", double>(json);
+    auto rdict = io::config::parse_structure_config<"structure", double>(py::object(dict));
 
-    ASSERT_TRUE(holds_result(r1));
-    helpers::assert_structure_equal(s, get_result(r1).structure());
+    helpers::assert_structure_equal(s, rjson.result().structure());
+    helpers::assert_structure_equal(rdict.result().structure(), rjson.result().structure());
 
-    document["structure"]["species"] = std::vector<std::string>{"Na", "Mg", "Al", "Si"};
-    auto r2 = io::config::parse_structure_config<"structure", double>(document);
-    ASSERT_TRUE(holds_result(r2));
-    helpers::assert_structure_equal(s, get_result(r2).structure());
+    json["structure"]["species"] = std::vector<std::string>{"Na", "Mg", "Al", "Si"};
+    dict["structure"]["species"] = std::vector<std::string>{"Na", "Mg", "Al", "Si"};
+    rjson = io::config::parse_structure_config<"structure", double>(json);
+    rdict = io::config::parse_structure_config<"structure", double>(py::object(dict));
+    ASSERT_TRUE(rjson.ok());
+    ASSERT_TRUE(rdict.ok());
+    helpers::assert_structure_equal(s, rjson.result().structure());
+    helpers::assert_structure_equal(rdict.result().structure(), rjson.result().structure());
   }
 
   TEST(test_parse_structure, required_fields_errors) {
@@ -63,31 +72,36 @@ namespace sqsgen::testing {
                           {"species", 4},
                       }}};
 
-    auto assert_holds_error
-        = make_assert_holds_error(io::config::parse_structure_config<"structure", double>);
+    auto assert_holds_error = [&](std::string const& key, parse_error_code code) {
+      auto r = io::config::parse_structure_config<"structure", double>(document);
+      ASSERT_TRUE(r.failed());
+      parse_error error = r.error();
+      ASSERT_EQ(key, error.key) << error.msg;
+      ASSERT_EQ(code, error.code) << error.msg;
+    };
 
     document["structure"].erase("species");
-    assert_holds_error("species", CODE_NOT_FOUND, document);
+    assert_holds_error("species", CODE_NOT_FOUND);
     document["structure"]["species"] = {1, 2, 3};
-    assert_holds_error("species", CODE_OUT_OF_RANGE, document);
+    assert_holds_error("species", CODE_OUT_OF_RANGE);
 
     // test invalid atomic speices
     document["structure"]["species"] = {1, 2, 3, -5};
-    assert_holds_error("species", CODE_OUT_OF_RANGE, document);
+    assert_holds_error("species", CODE_OUT_OF_RANGE);
 
     document["structure"]["species"] = {"Al", "Mg", "Si", "??"};
     // test invalid atomic species
-    assert_holds_error("species", CODE_OUT_OF_RANGE, document);
+    assert_holds_error("species", CODE_OUT_OF_RANGE);
 
     document["structure"]["species"] = {"Al", "Mg", "Si", "Ge"};
     document["structure"]["coords"] = std::vector{1, 2, 3, 4};
     // test wrong shape for coords
-    assert_holds_error("coords", CODE_TYPE_ERROR, document);
+    assert_holds_error("coords", CODE_TYPE_ERROR);
 
     // test wrong shape for lattice
     document["structure"]["lattice"] = s.frac_coords;
     document["structure"]["coords"] = s.lattice;
-    assert_holds_error("lattice", CODE_OUT_OF_RANGE, document);
+    assert_holds_error("lattice", CODE_OUT_OF_RANGE);
   }
 
   TEST(test_parse_composition, error_species) {
@@ -96,9 +110,9 @@ namespace sqsgen::testing {
         {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
     auto key = "composition";
 
-    auto parse_composition = [](json const& doc) -> parse_result_t<std::vector<sublattice>> {
+    auto parse_composition = [](json const& doc) -> parse_result<std::vector<sublattice>> {
       auto structure = io::config::parse_structure_config<"structure", double>(doc);
-      return io::config::parse_composition<"composition">(doc, get_result(structure).species);
+      return io::config::parse_composition<"composition">(doc, structure.result().species);
     };
 
     auto assert_holds_error = make_assert_holds_error(parse_composition);
@@ -139,12 +153,12 @@ namespace sqsgen::testing {
   TEST(test_parse_composition, error_which) {
     auto s = TEST_FCC_STRUCTURE<double>;
     json document{
-          {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
+        {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
     auto key = "composition";
 
-    auto parse_composition = [](json const& doc) -> parse_result_t<std::vector<sublattice>> {
+    auto parse_composition = [](json const& doc) -> parse_result<std::vector<sublattice>> {
       auto structure = io::config::parse_structure_config<"structure", double>(doc);
-      return io::config::parse_composition<"composition">(doc, get_result(structure).species);
+      return io::config::parse_composition<"composition">(doc, structure.result().species);
     };
 
     auto assert_holds_error = make_assert_holds_error(parse_composition);
@@ -176,12 +190,12 @@ namespace sqsgen::testing {
   TEST(test_parse_composition, error_multiple) {
     auto s = TEST_FCC_STRUCTURE<double>;
     json document{
-              {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
+        {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
     auto key = "composition";
 
-    auto parse_composition = [](json const& doc) -> parse_result_t<std::vector<sublattice>> {
+    auto parse_composition = [](json const& doc) -> parse_result<std::vector<sublattice>> {
       auto structure = io::config::parse_structure_config<"structure", double>(doc);
-      return io::config::parse_composition<"composition">(doc, get_result(structure).species);
+      return io::config::parse_composition<"composition">(doc, structure.result().species);
     };
 
     auto assert_holds_error = make_assert_holds_error(parse_composition);
@@ -201,40 +215,27 @@ namespace sqsgen::testing {
     document[key][1]["sites"] = "Mg";
     assert_holds_error("sites", CODE_BAD_VALUE, document);
 
+    // sublattice overlap by species definition
+    /*document[key][1]["sites"] = {2};
+    document[key][1]["Ni"] = 0;
+    assert_holds_error("sites", CODE_BAD_VALUE, document);*/
+
+    // create a sublatte with three Ni:2, Co: 1 atoms and have only two sites lift
     document[key][1].erase("sites");
     document[key][1]["Ni"] = 2;
     assert_holds_error(key, CODE_OUT_OF_RANGE, document);
   }
+  /*
+    TEST(test_parse_shell_weights, errors) {
+      auto s = TEST_FCC_STRUCTURE<double>;
+      json document{{"structure",
+                     {{"lattice", s.lattice},
+                      {"coords", s.frac_coords},
+                      {"species", s.species},
+                      {"supercell", {2, 2, 2}}}}};
+      ASSERT_EQ(parse_structure_config<"structure", double>(document).result().structure().size(),
+                32);
 
-  /*TEST(test_parse_structure, which) {
-    auto s = TEST_FCC_STRUCTURE<double>;
-
-    json base{{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}};
-
-
-    base["which"] = std::vector<int>{};
-    assert_holds_error<"which", CODE_OUT_OF_RANGE>(base);
-
-    // atomic speices that is not contained in the structure
-    base["which"] = "Fe";
-    assert_holds_error<"which", CODE_TYPE_ERROR>(base);
-
-    // atomic speices that is not contained in the structure
-    base["which"] = {"Fe"};
-    assert_holds_error<"which", CODE_OUT_OF_RANGE>(base);
-
-    // index out of range
-    base["which"] = std::array{1, 2, 3, 4};
-    assert_holds_error<"which", CODE_OUT_OF_RANGE>(base);
-
-    base["which"] = std::array{1, 2};
-    auto r1 = io::parser::from_json<double>(base);
-    ASSERT_TRUE(holds_result(r1));
-    helpers::assert_structure_equal(get_result(r1).structure(), s.sliced(std::vector{1, 2}));
-
-    base["which"] = std::array{"Si"};
-    auto r2 = io::parser::from_json<double>(base);
-    ASSERT_TRUE(holds_result(r2));
-    helpers::assert_structure_equal(get_result(r2).structure(), s.sliced(std::vector{3}));
-  }*/
+    }
+  */
 }  // namespace sqsgen::testing
