@@ -18,21 +18,39 @@ namespace sqsgen::testing {
   using json = nlohmann::json;
   using namespace sqsgen::io;
   using namespace sqsgen::io::config;
-
-  template <class Fn> auto make_assert_holds_error(Fn&& fn) {
-    return [&](std::string const& key, parse_error_code code, nlohmann::json const& a) {
-      auto r = fn(a);
-      ASSERT_TRUE(r.failed());
-      parse_error error = r.error();
-      ASSERT_EQ(key, error.key) << error.msg;
-      ASSERT_EQ(code, error.code) << error.msg;
-    };
-  }
+  namespace py = pybind11;
+  using namespace py::literals;
 
   template <class T> const static auto TEST_FCC_STRUCTURE = core::structure<T>{
       lattice_t<T>{{1, 0, 0}, {0, 2, 0}, {0, 0, 3}},
       coords_t<T>{{0.0, 0.0, 0.0}, {0.0, 0.5, 0.5}, {0.5, 0.0, 0.5}, {0.5, 0.5, 0.0}},
       std::vector<specie_t>{11, 12, 13, 14}};
+
+  template <class T> static auto make_test_structure_config() {
+    return std::pair{
+        nlohmann::json{{"structure",
+                        {{"lattice", TEST_FCC_STRUCTURE<T>.lattice},
+                         {"coords", TEST_FCC_STRUCTURE<T>.frac_coords},
+                         {"species", TEST_FCC_STRUCTURE<T>.species}}}},
+        py::dict("structure"_a = py::dict("lattice"_a = TEST_FCC_STRUCTURE<T>.lattice,
+                                          "coords"_a = TEST_FCC_STRUCTURE<T>.frac_coords,
+                                          "species"_a = TEST_FCC_STRUCTURE<T>.species))};
+  }
+
+  template <class Fn> auto make_assert_holds_error(json& j, py::dict& d, Fn&& fn) {
+    return [&](std::string const& key, parse_error_code jcode,
+               std::optional<parse_error_code> dcode = std::nullopt) {
+      auto rjson = fn(j);
+      auto rdict = fn(py::object(d));
+      ASSERT_TRUE(rjson.failed());
+      ASSERT_TRUE(rdict.failed());
+      parse_error error = rjson.error();
+      ASSERT_EQ(key, error.key) << error.msg;
+      ASSERT_EQ(jcode, error.code) << error.msg;
+      auto dict_code = dcode.value_or(jcode);
+      ASSERT_EQ(dict_code, rdict.error().code);
+    };
+  }
 
   TEST(test_parse_structure, empty) {
     // ASSERT_TRUE(io::config::parse_structure_config<"composition", double>({}).failed());
@@ -64,30 +82,16 @@ namespace sqsgen::testing {
   }
 
   TEST(test_parse_structure, required_fields_errors) {
-    using namespace py::literals;
     py::scoped_interpreter guard{};
-    auto s = TEST_FCC_STRUCTURE<double>;
-    nlohmann::json json = {{"structure",
-                      {
-                          {"lattice", s.lattice},
-                          {"coords", s.frac_coords},
-                          {"species", 4},
-                      }}};
-    py::dict dict("structure"_a = py::dict("lattice"_a = s.lattice, "coords"_a = s.frac_coords,
-                                          "species"_a = 4));
 
-    auto assert_holds_error = [&](std::string const& key, parse_error_code jcode, std::optional<parse_error_code> dcode = std::nullopt) {
-      auto rjson = io::config::parse_structure_config<"structure", double>(json);
-      auto rdict = io::config::parse_structure_config<"structure", double>(py::object(dict));
-      ASSERT_TRUE(rjson.failed());
-      ASSERT_TRUE(rdict.failed());
-      parse_error error = rjson.error();
-      ASSERT_EQ(key, error.key) << error.msg;
-      ASSERT_EQ(jcode, error.code) << error.msg;
-      auto dict_code = dcode.value_or(jcode);
-      ASSERT_EQ(dict_code, rdict.error().code);
+    auto [json, dict] = make_test_structure_config<double>();
+    json["structure"]["species"] = 4;
+    dict["structure"]["species"] = 4;
+
+    auto parse = []<class Doc>(Doc const& doc) {
+      return io::config::parse_structure_config<"structure", double>(doc);
     };
-
+    auto assert_holds_error = make_assert_holds_error(json, dict, parse);
 
     json["structure"].erase("species");
     dict["structure"].attr("pop")("species");
@@ -114,6 +118,7 @@ namespace sqsgen::testing {
     assert_holds_error("coords", CODE_TYPE_ERROR);
 
     // test wrong shape for lattice
+    auto s = TEST_FCC_STRUCTURE<double>;
     json["structure"]["lattice"] = s.frac_coords;
     json["structure"]["coords"] = s.lattice;
     dict["structure"]["lattice"] = s.frac_coords;
@@ -122,125 +127,154 @@ namespace sqsgen::testing {
   }
 
   TEST(test_parse_composition, error_species) {
-    auto s = TEST_FCC_STRUCTURE<double>;
-    json document{
-        {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
+    py::scoped_interpreter guard{};
+    auto [json, dict] = make_test_structure_config<double>();
     auto key = "composition";
 
-    auto parse_composition = [](json const& doc) -> parse_result<std::vector<sublattice>> {
-      auto structure = io::config::parse_structure_config<"structure", double>(doc);
-      return io::config::parse_composition<"composition">(doc, structure.result().species);
+    auto in_list = [](py::object const& obj) {
+      py::list list;
+      list.append(obj);
+      return list;
+    };
+    auto parse_composition
+        = []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
+      auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
+      return config::parse_composition<"composition", Doc>(doc, structure.result().species);
     };
 
-    auto assert_holds_error = make_assert_holds_error(parse_composition);
-    assert_holds_error(key, CODE_NOT_FOUND, document);
+    auto assert_holds_error = make_assert_holds_error(json, dict, parse_composition);
+    assert_holds_error(key, CODE_NOT_FOUND);
 
-    document[key] = json::array();
-    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+    json[key] = json::array();
+    dict[key] = py::list();
+    assert_holds_error(key, CODE_OUT_OF_RANGE);
 
-    document[key] = {{"Ni", -1}};
-    assert_holds_error("Ni", CODE_BAD_VALUE, document);
-
-    // enclosing in list must result in same error
-    document[key] = {{{"Ni", -1}}};
-    assert_holds_error("Ni", CODE_BAD_VALUE, document);
-
-    document[key] = {{"Ni", "1"}};
-    assert_holds_error("Ni", CODE_TYPE_ERROR, document);
+    json[key] = {{"Ni", -1}};
+    dict[key] = py::dict("Ni"_a = -1);
+    assert_holds_error("Ni", CODE_BAD_VALUE);
 
     // enclosing in list must result in same error
-    document[key] = {{{"Ni", "1"}}};
-    assert_holds_error("Ni", CODE_TYPE_ERROR, document);
+    json[key] = {{{"Ni", -1}}};
+    dict[key] = in_list(py::dict("Ni"_a = -1));
+    assert_holds_error("Ni", CODE_BAD_VALUE);
 
-    document[key] = {{"_Ni", "1"}};
-    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
-
-    // enclosing in list must result in same error
-    document[key] = {{{"_Ni", "1"}}};
-    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
-
-    document[key] = {{"Ni", 3}, {"Fe", 2}};
-    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+    json[key] = {{"Ni", "1"}};
+    dict[key] = py::dict("Ni"_a = "1");
+    assert_holds_error("Ni", CODE_TYPE_ERROR);
 
     // enclosing in list must result in same error
-    document[key] = {{{"Ni", 3}, {"Fe", 2}}};
-    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+    json[key] = {{{"Ni", "1"}}};
+    dict[key] = in_list(py::dict("Ni"_a = "1"));
+    assert_holds_error("Ni", CODE_TYPE_ERROR);
+
+    json[key] = {{"_Ni", "1"}};
+    dict[key] = py::dict("_Ni"_a = "1");
+    assert_holds_error(key, CODE_OUT_OF_RANGE);
+
+    // enclosing in list must result in same error
+    json[key] = {{{"_Ni", "1"}}};
+    dict[key] = in_list(py::dict("_Ni"_a = "1"));
+    assert_holds_error(key, CODE_OUT_OF_RANGE);
+
+    json[key] = {{"Ni", 3}, {"Fe", 2}};
+    dict[key] = py::dict("Ni"_a = 3, "Fe"_a = 2);
+    assert_holds_error(key, CODE_OUT_OF_RANGE);
+
+    // enclosing in list must result in same error
+    json[key] = {{{"Ni", 3}, {"Fe", 2}}};
+    dict[key] = in_list(py::dict("Ni"_a = 3, "Fe"_a = 2));
+    assert_holds_error(key, CODE_OUT_OF_RANGE);
   }
 
   TEST(test_parse_composition, error_which) {
-    auto s = TEST_FCC_STRUCTURE<double>;
-    json document{
-        {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
+    py::scoped_interpreter guard{};
+    auto [json, dict] = make_test_structure_config<double>();
+
+    auto assert_holds_error = make_assert_holds_error(
+        json, dict, []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
+          auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
+          return config::parse_composition<"composition", Doc>(doc, structure.result().species);
+        });
     auto key = "composition";
 
-    auto parse_composition = [](json const& doc) -> parse_result<std::vector<sublattice>> {
-      auto structure = io::config::parse_structure_config<"structure", double>(doc);
-      return io::config::parse_composition<"composition">(doc, structure.result().species);
-    };
-
-    auto assert_holds_error = make_assert_holds_error(parse_composition);
-    assert_holds_error(key, CODE_NOT_FOUND, document);
+    assert_holds_error(key, CODE_NOT_FOUND);
 
     // test invalid index
-    document[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {-1, 2}}};
-    assert_holds_error("sites", CODE_OUT_OF_RANGE, document);
+    json[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {-1, 2}}};
+    dict[key] = py::dict("Ni"_a = 2, "Co"_a = 2, "sites"_a = std::vector{-1, 2});
+    assert_holds_error("sites", CODE_OUT_OF_RANGE);
     // test invalid indices empty
-    document[key] = {{"Ni", 2}, {"Co", 2}, {"sites", std::vector<int>{}}};
-    assert_holds_error("sites", CODE_OUT_OF_RANGE, document);
+    json[key] = {{"Ni", 2}, {"Co", 2}, {"sites", std::vector<int>{}}};
+    dict[key] = py::dict("Ni"_a = 2, "Co"_a = 2, "sites"_a = py::list());
+    assert_holds_error("sites", CODE_OUT_OF_RANGE);
 
     // test too few sites
-    document[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {0, 2}}};
-    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+    json[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {0, 2}}};
+    dict[key] = py::dict("Ni"_a = 2, "Co"_a = 2, "sites"_a = std::vector{0, 2});
+    assert_holds_error(key, CODE_OUT_OF_RANGE);
 
     // test species not in structure
-    document[key] = {{"Ni", 2}, {"Co", 2}, {"sites", "Fr"}};
-    assert_holds_error("sites", CODE_OUT_OF_RANGE, document);
+    json[key] = {{"Ni", 2}, {"Co", 2}, {"sites", "Fr"}};
+    dict[key] = py::dict("Ni"_a = 2, "Co"_a = 2, "sites"_a = "Fr");
+    assert_holds_error("sites", CODE_OUT_OF_RANGE);
 
     // test too few sites - by symbol
-    document[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {"Si", "Mg"}}};
-    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+    json[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {"Si", "Mg"}}};
+    dict[key] = py::dict("Ni"_a = 2, "Co"_a = 2, "sites"_a = std::vector{"Si", "Mg"});
+    assert_holds_error(key, CODE_OUT_OF_RANGE);
 
-    // test too many sites - by symbol
-    document[key] = {{"Ni", 1}, {"_Co", 1}, {"sites", {"Si", "Mg"}}};
-    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+    // test too many sites - by symbol -> invalid symbol
+    json[key] = {{"Ni", 1}, {"_Co", 1}, {"sites", {"Si", "Mg"}}};
+    dict[key] = py::dict("Ni"_a = 1, "_Co"_a = 1, "sites"_a = std::vector{"Si", "Mg"});
+    assert_holds_error(key, CODE_OUT_OF_RANGE);
   }
   TEST(test_parse_composition, error_multiple) {
-    auto s = TEST_FCC_STRUCTURE<double>;
-    json document{
-        {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
+    py::scoped_interpreter guard{};
+    auto [json, dict] = make_test_structure_config<double>();
+
+    auto assert_holds_error = make_assert_holds_error(
+        json, dict, []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
+          auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
+          return config::parse_composition<"composition", Doc>(doc, structure.result().species);
+        });
     auto key = "composition";
-
-    auto parse_composition = [](json const& doc) -> parse_result<std::vector<sublattice>> {
-      auto structure = io::config::parse_structure_config<"structure", double>(doc);
-      return io::config::parse_composition<"composition">(doc, structure.result().species);
-    };
-
-    auto assert_holds_error = make_assert_holds_error(parse_composition);
-    assert_holds_error(key, CODE_NOT_FOUND, document);
+    assert_holds_error(key, CODE_NOT_FOUND);
 
     // test invalid index
-    json sl1 = {{"Ni", 1}, {"Co", 1}, {"sites", {0, 1}}};
-    json sl2 = {{"Ni", 1}, {"Co", 1}, {"sites", {1, 2}}};
-    document[key] = {sl1, sl2};
-    assert_holds_error("sites", CODE_BAD_VALUE, document);
+    nlohmann::json sl1 = {{"Ni", 1}, {"Co", 1}, {"sites", {0, 1}}};
+    nlohmann::json sl2 = {{"Ni", 1}, {"Co", 1}, {"sites", {1, 2}}};
+    json[key] = {sl1, sl2};
+    py::list sl;
+    sl.append(py::dict("Ni"_a = 1, "Co"_a = 1, "sites"_a = std::vector{0, 1}));
+    sl.append(py::dict("Ni"_a = 1, "Co"_a = 1, "sites"_a = std::vector{1, 2}));
+    dict[key] = sl;
+    assert_holds_error("sites", CODE_BAD_VALUE);
 
     // overlap by species array
-    document[key][1]["sites"] = {"Na", "Si"};
-    assert_holds_error("sites", CODE_BAD_VALUE, document);
+    json[key][1]["sites"] = {"Na", "Si"};
+    dict[key].cast<py::list>()[1]["sites"] = std::vector{"Na", "Si"};
+    assert_holds_error("sites", CODE_BAD_VALUE);
 
     // sublattice overlap by species definition
-    document[key][1]["sites"] = "Mg";
-    assert_holds_error("sites", CODE_BAD_VALUE, document);
+    json[key][1]["sites"] = "Mg";
+    dict[key].cast<py::list>()[1]["sites"] = "Mg";
+    assert_holds_error("sites", CODE_BAD_VALUE);
 
     // sublattice overlap by species definition
-    /*document[key][1]["sites"] = {2};
-    document[key][1]["Ni"] = 0;
-    assert_holds_error("sites", CODE_BAD_VALUE, document);*/
+    /*json[key][1]["sites"] = {2};
+    json[key][1]["Ni"] = 0;
+    py::list sites;
+    sites.append(2);
+    dict[key].cast<py::list>()[1]["sites"] = sites;
+    dict[key].cast<py::list>()[1]["Ni"] = 0;
+    assert_holds_error("sites", CODE_BAD_VALUE);*/
 
-    // create a sublatte with three Ni:2, Co: 1 atoms and have only two sites lift
-    document[key][1].erase("sites");
-    document[key][1]["Ni"] = 2;
-    assert_holds_error(key, CODE_OUT_OF_RANGE, document);
+    // create a sublattice with three Ni:2, Co: 1 atoms and have only two sites lift
+    json[key][1].erase("sites");
+    json[key][1]["Ni"] = 2;
+    dict[key].cast<py::list>()[1].attr("pop")("sites");
+    dict[key].cast<py::list>()[1]["Ni"] = 2;
+    assert_holds_error(key, CODE_OUT_OF_RANGE);
   }
   /*
     TEST(test_parse_shell_weights, errors) {
