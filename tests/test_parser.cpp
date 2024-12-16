@@ -274,19 +274,63 @@ namespace sqsgen::testing {
     assert_holds_error(key, CODE_OUT_OF_RANGE);
   }
 
-  TEST(test_parse_shell_radii, naive) {
+  PYBIND11_EMBEDDED_MODULE(ShellRadiiDetection, m) {
+    py::enum_<ShellRadiiDetection>(m, "ShellRadiiDetection")
+        .value("naive", SHELL_RADII_DETECTION_NAIVE)
+        .value("peak", SHELL_RADII_DETECTION_PEAK)
+        .export_values();
+  }
+
+  template<class Doc>
+  auto parse_radii(Doc const& doc) -> parse_result<std::vector<double>> {
+    auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
+    return config::parse_shell_radii<"shell_radii", double, Doc>(doc, structure.result());
+  };
+
+  TEST(test_parse_shell_radii, default_case) {
+    using namespace sqsgen::io;
     py::scoped_interpreter guard{};
+    auto module = py::module::import("ShellRadiiDetection");
 
-    auto [json, dict] = make_test_structure_config<double>();
+    auto [json, dict] = make_test_structure_config<double>(std::array{2, 2, 2});
 
-    auto parse_radii
-    = []<class Doc>(Doc const& doc) -> parse_result<std::vector<double>> {
-      auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-      return config::parse_shell_radii<"shell_radii", Doc>(doc, structure.result());
-    };
-    auto sc = config::parse_structure_config<"structure", double>(json).result();
+    auto rdefault_dict = parse_radii(py::object(dict));
+    auto rdefault_json = parse_radii(json);
+    ASSERT_TRUE(rdefault_dict.ok());
+    ASSERT_TRUE(rdefault_json.ok());
 
-    config::parse_shell_radii<"shell_radii">(json, sc);
+    json["shell_radii"] = "peak";
+    dict["shell_radii"] = module.attr("ShellRadiiDetection").attr("peak");
+    auto rpeak_dict = parse_radii(py::object(dict));
+    auto rpeak_json = parse_radii(json);
+
+    ASSERT_TRUE(rpeak_dict.ok());
+    ASSERT_TRUE(rpeak_json.ok());
+
+    helpers::assert_vector_equal(rdefault_dict.result(), rpeak_dict.result());
+    helpers::assert_vector_equal(rdefault_json.result(), rpeak_json.result());
+  }
+
+ TEST(test_parse_shell_radii, perfect_lattice) {
+    using namespace sqsgen::io;
+    py::scoped_interpreter guard{};
+    auto module = py::module::import("ShellRadiiDetection");
+
+    auto [json, dict] = make_test_structure_config<double>(std::array{2, 2, 2});
+    json["bin_width"] = 0.001;
+    dict["bin_width"] = 0.001;
+    auto rdefault_dict = parse_radii(py::object(dict));
+    auto rdefault_json = parse_radii(json);
+
+    json["shell_radii"] = "naive";
+    dict["shell_radii"] = module.attr("ShellRadiiDetection").attr("naive");
+    auto rnaive_dict = parse_radii(py::object(dict));
+    auto rnaive_json = parse_radii(json);
+
+    // For a perfect lattice it does not matter whether we use naive or histogram method
+    // assuming the bin_width is small enough
+    helpers::assert_vector_equal(rdefault_dict.result(), rnaive_dict.result());
+    helpers::assert_vector_equal(rdefault_json.result(), rnaive_json.result());
   }
   /*
     TEST(test_parse_shell_weights, errors) {
