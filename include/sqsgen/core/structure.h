@@ -131,7 +131,7 @@ namespace sqsgen::core {
 
   }  // namespace detail
 
-  template <class T> std::vector<T> distances_naive(structure<T> &structure,
+  template <class T> std::vector<T> distances_naive(structure<T> &&structure,
                                                     T atol = std::numeric_limits<T>::epsilon(),
                                                     T rtol = 1e-9) {
     helpers::sorted_vector<T> dists(structure.distance_matrix().reshaped());
@@ -146,7 +146,7 @@ namespace sqsgen::core {
   }
 
   template <class T>
-  std::vector<T> distances_histogram(structure<T> &structure, T bin_width, T peak_isolation) {
+  std::vector<T> distances_histogram(structure<T> &&structure, T bin_width, T peak_isolation) {
     auto distances = helpers::as<std::vector>{}(
         structure.distance_matrix().reshaped()
         | views::filter([](auto dist) { return dist > 0.0 && !helpers::is_close(dist, 0.0); }));
@@ -182,7 +182,7 @@ namespace sqsgen::core {
         = [&](auto i) { return freqs.contains(i) ? freqs.at(i) : std::vector<T>{}; };
     assert(freqs.size() == num_edges - 1);
     std::vector<T> shells;
-    for (auto i = 1; i < num_edges - 2; i++) {
+    for (auto i = 0; i <= num_edges; i++) {
       auto prev{get_freq(i - 1)}, f{get_freq(i)}, next{get_freq(i + 1)};
       auto threshold = static_cast<std::size_t>((1.0 - peak_isolation) * static_cast<T>(f.size()));
       if (threshold > prev.size() && threshold > next.size()) {
