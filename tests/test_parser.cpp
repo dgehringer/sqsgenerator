@@ -266,15 +266,6 @@ namespace sqsgen::testing {
     dict[key].cast<py::list>()[1]["sites"] = "Mg";
     assert_holds_error("sites", CODE_BAD_VALUE);
 
-    // sublattice overlap by species definition
-    /*json[key][1]["sites"] = {2};
-    json[key][1]["Ni"] = 0;
-    py::list sites;
-    sites.append(2);
-    dict[key].cast<py::list>()[1]["sites"] = sites;
-    dict[key].cast<py::list>()[1]["Ni"] = 0;
-    assert_holds_error("sites", CODE_BAD_VALUE);*/
-
     // create a sublattice with three Ni:2, Co: 1 atoms and have only two sites lift
     json[key][1].erase("sites");
     json[key][1]["Ni"] = 2;
