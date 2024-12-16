@@ -8,7 +8,6 @@
 #include <optional>
 #include <string>
 
-#include "sqsgen/io/json.h"
 #include "sqsgen/core/helpers.h"
 
 namespace sqsgen::io {
