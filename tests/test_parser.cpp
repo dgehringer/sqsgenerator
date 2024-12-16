@@ -27,15 +27,20 @@ namespace sqsgen::testing {
       coords_t<T>{{0.0, 0.0, 0.0}, {0.0, 0.5, 0.5}, {0.5, 0.0, 0.5}, {0.5, 0.5, 0.0}},
       std::vector<specie_t>{11, 12, 13, 14}};
 
-  template <class T> static auto make_test_structure_config() {
+  template <class T>
+  static auto make_test_structure_config(std::optional<std::array<int, 3>> supercell
+                                         = std::nullopt) {
+    auto default_supercell = std::array<int, 3>({1, 1, 1});
     return std::pair{
         nlohmann::json{{"structure",
                         {{"lattice", TEST_FCC_STRUCTURE<T>.lattice},
                          {"coords", TEST_FCC_STRUCTURE<T>.frac_coords},
-                         {"species", TEST_FCC_STRUCTURE<T>.species}}}},
+                         {"species", TEST_FCC_STRUCTURE<T>.species},
+                         {"supercell", supercell.value_or(default_supercell)}}}},
         py::dict("structure"_a = py::dict("lattice"_a = TEST_FCC_STRUCTURE<T>.lattice,
                                           "coords"_a = TEST_FCC_STRUCTURE<T>.frac_coords,
-                                          "species"_a = TEST_FCC_STRUCTURE<T>.species))};
+                                          "species"_a = TEST_FCC_STRUCTURE<T>.species,
+                                          "supercell"_a = supercell.value_or(default_supercell)))};
   }
 
   template <class Fn> auto make_assert_holds_error(json& j, py::dict& d, Fn&& fn) {
