@@ -80,63 +80,57 @@ template <class T> struct adl_serializer<core::structure<T>> {
 };
 NLOHMANN_JSON_NAMESPACE_END
 
-namespace sqsgen::io {
-
+namespace sqsgen {
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(sublattice, sites, composition);
 
   NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_SINGLE, "single"}, {PREC_DOUBLE, "double"}})
-  NLOHMANN_JSON_SERIALIZE_ENUM(IterationMode, {
-                                                  {ITERATION_MODE_INVALID, nullptr},
-                                                  {ITERATION_MODE_RANDOM, "random"},
-                                                  {ITERATION_MODE_SYSTEMATIC, "systematic"},
-                                              })
+  NLOHMANN_JSON_SERIALIZE_ENUM(ShellRadiiDetection,
+                               {{ShellRadiiDetection::SHELL_RADII_DETECTION_INVALID, nullptr},
+                                {ShellRadiiDetection::SHELL_RADII_DETECTION_NAIVE, "naive"},
+                                {ShellRadiiDetection::SHELL_RADII_DETECTION_PEAK, "peak"}})
+  NLOHMANN_JSON_SERIALIZE_ENUM(IterationMode,
+                               {
+                                   {IterationMode::ITERATION_MODE_INVALID, nullptr},
+                                   {IterationMode::ITERATION_MODE_RANDOM, "random"},
+                                   {IterationMode::ITERATION_MODE_SYSTEMATIC, "systematic"},
+                               })
 
-  template <> struct accessor<nlohmann::json> {
-
-    static bool contains(nlohmann::json const& json, std::string && key) {
-      return json.contains(std::forward<std::string>(key));
-    }
-
-
-    static auto get(nlohmann::json const& json, std::string && key) {
-        return json.at(key);
-    }
-
-    static bool is_document(nlohmann::json const& json) {
-      return json.is_object();
-    }
-
-    static bool is_list(nlohmann::json const& json) {
-      return json.is_array();
-    }
-
-    static auto items(nlohmann::json const& json) {
-      return json.items();
-    }
-
-    template <string_literal key = "", class Option>
-    static parse_result<Option> get_as(nlohmann::json const& json) {
-      try {
-        if constexpr (key == KEY_NONE) {
-          return json.get<Option>();
-        } else {
-
-          if (json.contains(key.data)) return {json.at(key.data).template get<Option>()};
-          return parse_error::from_msg<key, CODE_NOT_FOUND>(
-              std::format("could not find key {}", key.data));
-        }
-      } catch (nlohmann::json::out_of_range const& e) {
-        return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range - found - {}", e.what());
-      } catch (nlohmann::json::type_error const& e) {
-        return parse_error::from_msg<key, CODE_TYPE_ERROR>(
-            std::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
-      } catch (std::out_of_range const& e) {
-        return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
+  namespace io {
+    template <> struct accessor<nlohmann::json> {
+      static bool contains(nlohmann::json const& json, std::string&& key) {
+        return json.contains(std::forward<std::string>(key));
       }
-    }
-  };
 
+      static auto get(nlohmann::json const& json, std::string&& key) { return json.at(key); }
 
-}  // namespace sqsgen::io
+      static bool is_document(nlohmann::json const& json) { return json.is_object(); }
+
+      static bool is_list(nlohmann::json const& json) { return json.is_array(); }
+
+      static auto items(nlohmann::json const& json) { return json.items(); }
+
+      template <string_literal key = "", class Option>
+      static parse_result<Option> get_as(nlohmann::json const& json) {
+        try {
+          if constexpr (key == KEY_NONE) {
+            return json.get<Option>();
+          } else {
+            if (json.contains(key.data)) return {json.at(key.data).template get<Option>()};
+            return parse_error::from_msg<key, CODE_NOT_FOUND>(
+                std::format("could not find key {}", key.data));
+          }
+        } catch (nlohmann::json::out_of_range const& e) {
+          return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range - found - {}", e.what());
+        } catch (nlohmann::json::type_error const& e) {
+          return parse_error::from_msg<key, CODE_TYPE_ERROR>(
+              std::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
+        } catch (std::out_of_range const& e) {
+          return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
+        }
+      }
+    };
+  }  // namespace io
+
+}  // namespace sqsgen
 
 #endif  // SQSGEN_IO_JSON_H
