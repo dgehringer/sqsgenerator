@@ -4,11 +4,9 @@
 
 #ifndef SQSGEN_IO_CONFIG_SETTINGS_H
 #define SQSGEN_IO_CONFIG_SETTINGS_H
-#include <nlohmann/json.hpp>
 
-#include "io/json.h"
-#include "structure.h"
-#include "types.h"
+#include "sqsgen/types.h"
+#include "sqsgen/core/helpers.h"
 
 namespace sqsgen::io::config {
 
@@ -28,32 +26,31 @@ namespace sqsgen::io::config {
   parse_result<std::vector<T>> parse_shell_radii(Document const& doc,
                                                  structure_config<T> const& structure) {
     using out_t = parse_result<std::vector<T>>;
-    return get_either_optional<key, ShellDetectionMode, std::vector<T>>(doc)
-        .value_or(
-            parse_result<ShellDetectionMode, std::vector<T>>{SHELL_DETECTION_MODE_PEAK_ISOLATION})
+    return get_either_optional<key, ShellRadiiDetection, std::vector<T>>(doc)
+        .value_or(parse_result<ShellRadiiDetection, std::vector<T>>{SHELL_RADII_DETECTION_PEAK})
         .template collapse<std::vector<T>>(
-            [&](ShellDetectionMode&& mode) -> out_t {
-              if (mode == SHELL_DETECTION_MODE_INVALID) {
+            [&](ShellRadiiDetection&& mode) -> out_t {
+              if (mode == SHELL_RADII_DETECTION_INVALID) {
                 return parse_error::from_msg<key, CODE_BAD_VALUE>(
                     R"(Invalid shell radii detection mode must be either "naive" or "peak")");
               }
-              if (mode == SHELL_DETECTION_MODE_NAIVE) {
+              if (mode == SHELL_RADII_DETECTION_NAIVE) {
                 return get_optional<"atol", T>(doc)
                     .value_or(T(atol_default<T>))
                     .combine(get_optional<"rtol", T>(doc).value_or(T(rtol_default<T>)))
                     .and_then([&](auto&& params) -> out_t {
                       auto [atol, rtol] = params;
-                      return core::distances_naive(structure.structure(), atol, rtol);
+                      return core::distances_naive(std::move(structure.structure()), atol, rtol);
                     });
               }
-              if (mode == SHELL_DETECTION_MODE_PEAK_ISOLATION) {
-                get_optional<"bin_width", T>(doc)
+              if (mode == SHELL_RADII_DETECTION_PEAK) {
+                return get_optional<"bin_width", T>(doc)
                     .value_or(T(bin_width_default<T>))
                     .combine(get_optional<"peak_isolation", T>(doc).value_or(
                         T(peak_isolation_default<T>)))
                     .and_then([&](auto&& params) -> out_t {
                       auto [bin_width, peak_isolation] = params;
-                      return core::distances_histogram(structure.structure(), bin_width,
+                      return core::distances_histogram(std::move(structure.structure()), bin_width,
                                                        peak_isolation);
                     });
               }
@@ -63,10 +60,14 @@ namespace sqsgen::io::config {
               if (radii.empty())
                 return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
                     "You need to define at least one coordination shells");
+              for (auto&& r : radii)
+                if (r < 0)
+                  return parse_error::from_msg<key, CODE_BAD_VALUE>(
+                      std::format("You cannot specify a shell radius that is less than 0 ({})", r));
+              if (radii.front() != 0.0 && !core::helpers::is_close(radii.front(), 0.0))
+                radii.insert(radii.begin(), 0.0);
               return radii;
             });
-
-    return std::vector<T>{};
   }
 
 }  // namespace sqsgen::io::config
