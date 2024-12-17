@@ -71,10 +71,10 @@ namespace sqsgen {
     ITERATION_MODE_SYSTEMATIC,
   };
 
-  enum ShellDetectionMode {
-    SHELL_DETECTION_MODE_INVALID = -1,
-    SHELL_DETECTION_MODE_NAIVE,
-    SHELL_DETECTION_MODE_PEAK_ISOLATION
+  enum ShellRadiiDetection {
+    SHELL_RADII_DETECTION_INVALID = -1,
+    SHELL_RADII_DETECTION_NAIVE,
+    SHELL_RADII_DETECTION_PEAK
   };
 
   struct sublattice {
