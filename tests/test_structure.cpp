@@ -119,7 +119,7 @@ namespace sqsgen::testing {
   TEST_F(StructureTestFixture, shell_matrix) {
     for (const auto& test_case : this->test_cases) {
       auto structure = test_case.structure();
-      auto m = structure.shell_matrix(distances_naive(structure));
+      auto m = structure.shell_matrix(distances_naive(std::forward<core::structure<double>>(structure)));
 
       ASSERT_EQ(test_case.shell_matrix.rows(), m.rows());
       ASSERT_EQ(test_case.shell_matrix.cols(), m.cols());
