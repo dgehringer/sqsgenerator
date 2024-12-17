@@ -18,6 +18,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 
 find_package(GMP REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 CPMAddPackage("gh:bluescarni/mppp@1.0.4")
 CPMAddPackage("gh:nlohmann/json@3.11.3")
 CPMAddPackage(
@@ -29,8 +30,9 @@ CPMAddPackage(
         "EIGEN_BUILD_PKGCONFIG OFF"     # Optional, disables pkg-config
         "BUILD_TESTING OFF"             # Disable building and running tests
 )
-
+CPMAddPackage("gh:gabime/spdlog@1.15.0")
 CPMAddPackage("gh:Nicoshev/rapidhash#rapidhash_v1.0")
+CPMAddPackage("gh:pybind/pybind11@2.13.6")
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include" "${rapidhash_SOURCE_DIR}")
 
@@ -48,6 +50,7 @@ endif ()
 list(APPEND SQSGEN_LIBS "mp++")
 list(APPEND SQSGEN_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_LIBS "nlohmann_json")
+list(APPEND SQSGEN_LIBS "spdlog::spdlog_header_only")
 
 
 message(STATUS "SQSGEN_LIBS=${SQSGEN_LIBS}")
@@ -62,7 +65,13 @@ add_executable(sqsgenerator main.cpp
         include/sqsgen/core/helpers/numeric.h
         include/sqsgen/core/helpers/for_each.h
         include/sqsgen/core/helpers/hash.h
-        include/sqsgen/config.h)
+        include/sqsgen/config.h
+        include/sqsgen/io/config/structure.h
+        include/sqsgen/io/config/composition.h
+        include/sqsgen/core/helpers/sorted_vector.h
+        include/sqsgen/io/config/settings.h
+        include/sqsgen/io/parsing.h)
 
 target_link_libraries(sqsgenerator PRIVATE ${SQSGEN_LIBS})
-
+target_link_libraries(sqsgenerator PRIVATE ${Python3_LIBRARIES})
+target_link_libraries(sqsgenerator PRIVATE pybind11::pybind11)

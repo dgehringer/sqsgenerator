@@ -20,6 +20,7 @@ include_directories(${SQSGEN_INCLUDE_DIR})
 list(APPEND SQSGEN_TEST_LIBS "mp++")
 list(APPEND SQSGEN_TEST_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_TEST_LIBS "nlohmann_json")
+list(APPEND SQSGEN_TEST_LIBS "spdlog::spdlog_header_only")
 list(APPEND SQSGEN_TEST_LIBS "gtest_main")
 
 message(STATUS "SQSGEN_TEST_LIBS=${SQSGEN_TEST_LIBS}")
@@ -32,8 +33,8 @@ add_executable(test_permutation
         "${SQSGEN_INCLUDE_DIR}/core/helpers.h"
         "${SQSGEN_INCLUDE_DIR}/types.h"
         "${SQSGEN_INCLUDE_DIR}/core/permutation.h"
-        "${SQSGEN_SOURCE_DIR}/core/permutation.cpp"
         ../include/sqsgen/core/helpers/hash.h
+        ../include/sqsgen/core/helpers/sorted_vector.h
 )
 target_link_libraries(test_permutation ${SQSGEN_TEST_LIBS})
 add_test(NAME test_permutation COMMAND test_permutation)
@@ -46,6 +47,7 @@ add_executable(test_structure
         "${SQSGEN_INCLUDE_DIR}/io/json.h"
         helpers.h
         ../include/sqsgen/core/helpers/hash.h
+        ../include/sqsgen/core/helpers/sorted_vector.h
 )
 target_link_libraries(test_structure ${SQSGEN_TEST_LIBS})
 add_test(NAME test_structure COMMAND test_structure)
@@ -63,3 +65,21 @@ add_executable(test_shuffle
 )
 target_link_libraries(test_shuffle ${SQSGEN_TEST_LIBS})
 add_test(NAME test_shuffle COMMAND test_shuffle)
+
+
+add_executable(test_parser
+        "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
+        "${SQSGEN_TEST_SOURCE_DIR}/test_parser.cpp"
+        "${SQSGEN_INCLUDE_DIR}/core/helpers.h"
+        "${SQSGEN_INCLUDE_DIR}/types.h"
+        "${SQSGEN_INCLUDE_DIR}/io/json.h"
+        helpers.h
+        ../include/sqsgen/io/config/composition.h
+        ../include/sqsgen/core/helpers/sorted_vector.h
+        ../include/sqsgen/io/config/settings.h
+        ../include/sqsgen/io/dict.h
+)
+target_link_libraries(test_parser ${SQSGEN_TEST_LIBS})
+target_link_libraries(test_parser pybind11::pybind11)
+target_link_libraries(test_parser "${Python3_LIBRARIES}")
+add_test(NAME test_parser COMMAND test_parser)
