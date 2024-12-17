@@ -8,6 +8,7 @@
 #include <Eigen/Dense>
 #include <unordered_set>
 
+#include "spdlog/spdlog.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/permutation.h"
@@ -106,7 +107,7 @@ namespace sqsgen::core {
       std::size_t index;
       specie_t specie;
       row_t frac_coords;
-      [[nodiscard]] sqsgen::core::atom atom() const { return atom::from_z(specie); }
+      [[nodiscard]] atom atom() const { return atom::from_z(specie); }
 
       bool operator<(site const &other) const {
         return specie < other.specie && frac_coords(0) < other.frac_coords(0)
@@ -194,6 +195,60 @@ namespace sqsgen::core {
     if (shells.front() != 0.0 && !helpers::is_close(shells.front(), 0.0))
       shells.insert(shells.begin(), 0.0);
     return shells;
+  }
+
+  template <class T> Eigen::Tensor<T, 3> compute_prefactors(shell_matrix_t const &shell_matrix,
+                                                            shell_weights_t<T> const &weights,
+                                                            configuration_t const &configuration) {
+    using namespace helpers;
+    if (weights.empty()) throw std::out_of_range("no coordination shells selected");
+    auto neighbors = as<std::map>{}(weights | views::elements<0> | views::transform([&](auto &&s) {
+                                      return std::make_pair(s, T{0});
+                                    }));
+    auto num_sites{configuration.size()};
+    for (auto i = 0; i < num_sites; i++) {
+      for (auto j = i + 1; j < num_sites; j++) {
+        auto neighbor_shell{shell_matrix(i, j)};
+        if (neighbors.count(neighbor_shell)) {
+          assert(neighbor_shell == shell_matrix(j, i));
+          neighbors[neighbor_shell] += 2.0;
+        }
+      }
+    }
+    for (const auto &[shell, count] : neighbors) {
+      auto atoms_per_shell {static_cast<T>(count) / static_cast<double>(num_sites)};
+      if (atoms_per_shell < 1)
+        spdlog::warn(
+            R"(The coordination shell {} contains no or only one lattice position(s) increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
+            shell);
+      if (!is_close(atoms_per_shell, static_cast<T>(static_cast<usize_t>(atoms_per_shell))))
+        spdlog::warn("The coordination shell {} does not contain an integer number of sites. I hope you know what you are doing");
+      neighbors[shell] = atoms_per_shell;
+    }
+
+    auto shell_map = std::get<1>(make_index_mapping<usize_t>(weights | views::elements<0>));
+    auto conf_map = std::get<0>(make_index_mapping<usize_t>(configuration));
+
+    auto hist
+        = count_species(configuration | views::transform([&](auto &&s) { return shell_map[s]; }));
+    auto num_species{hist.size()};
+    auto num_shells{weights.size()};
+
+    Eigen::Tensor<T, 3> prefactors(num_shells, num_sites, num_sites);
+
+    for (auto s = 0; s < num_shells; s++) {
+      T M_i{static_cast<T>(neighbors[shell_map[s]])};
+      for (auto a = 0; a < num_species; a++) {
+        T x_a{static_cast<T>(hist[a]) / static_cast<T>(num_sites)};
+        for (auto b = a; b < num_species; b++) {
+          T x_b{static_cast<T>(hist[b]) / static_cast<T>(num_sites)};
+          T prefactor{1.0 / (M_i * x_a * x_b * static_cast<T>(num_sites))};
+          prefactors(s, a, b) = prefactor;
+          prefactors(s, b, a) = prefactor;
+        }
+      }
+    }
+    return prefactors;
   }
 
   template <class T>
