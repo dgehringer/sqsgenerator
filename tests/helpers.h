@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "core/structure.h"
+#include "sqsgen/core/helpers.h"
 
 namespace sqsgen::testing::helpers {
   template <class Matrix> void assert_matrix_equal(const Matrix& lhs, const Matrix& rhs,
@@ -22,20 +22,6 @@ namespace sqsgen::testing::helpers {
     }
   }
 
-  template <class T>
-  void assert_structure_equal(core::structure<T> const& lhs, core::structure<T> const& rhs, T epsilon = 1.0e-7) {
-    ASSERT_EQ(lhs.size(), rhs.size()) << "Size of lhs and rhs are not equal";
-    auto lhs_sites = core::helpers::as<std::vector>{}(lhs.sites());
-    auto rhs_sites = core::helpers::as<std::vector>{}(rhs.sites());
-    for (int i = 0; i < lhs.size(); ++i) {
-      auto lsite = lhs_sites[i];
-      auto rsite = rhs_sites[i];
-      ASSERT_EQ(lsite.specie, rsite.specie);
-      ASSERT_NEAR(lsite.frac_coords(0), rsite.frac_coords(0), epsilon);
-      ASSERT_NEAR(lsite.frac_coords(1), rsite.frac_coords(1), epsilon);
-      ASSERT_NEAR(lsite.frac_coords(2), rsite.frac_coords(2), epsilon);
-    }
-  }
 
   template <class T>
   void assert_vector_equal(const std::vector<T>& lhs, const std::vector<T>& rhs) {
@@ -43,6 +29,15 @@ namespace sqsgen::testing::helpers {
     for (auto i = 0; i < lhs.size(); ++i)
       ASSERT_EQ(lhs[i], rhs[i]) << std::format("Error at position {} ({} != {})", i, lhs[i],
                                                rhs[i]);
+  }
+
+  template <class T> void assert_vector_is_close(const std::vector<T>& lhs,
+                                                 const std::vector<T>& rhs, T atol = 1.0e-5,
+                                                 T rtol = 1.0e-3) {
+    ASSERT_EQ(lhs.size(), rhs.size());
+    for (auto i = 0; i < lhs.size(); ++i)
+      ASSERT_TRUE(core::helpers::is_close(lhs[i], rhs[i], atol, rtol))
+          << std::format("Error at position {} ({} != {})", i, lhs[i], rhs[i]);
   }
 
 };  // namespace sqsgen::testing::helpers

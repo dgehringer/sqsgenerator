@@ -12,20 +12,12 @@ namespace sqsgen::core {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  template <ranges::range R>
-    requires std::is_same_v<ranges::range_value_t<R>, specie_t>
-  counter<specie_t> count_species(const R &r) {
-    counter<specie_t> result{};
-    for (auto specie : r) {
-      if (result.contains(specie))
-        ++result[specie];
-      else
-        result.emplace(specie, 1);
-    }
-    return result;
+
+  inline counter<specie_t> count_species(configuration_t const&c) {
+    return helpers::count(c);
   }
 
-  template <ranges::input_range R, class T = ranges::range_value_t<R> >
+  template <ranges::input_range R, class T = ranges::range_value_t<R>>
   rank_t num_permutations_impl(R &&freqs) {
     auto num_atoms = helpers::fold_left_first(freqs, std::plus{}).value_or(0);
     return helpers::factorial<rank_t, T>(num_atoms)
@@ -34,15 +26,15 @@ namespace sqsgen::core {
                  .value_or(1);
   }
 
-  static rank_t num_permutations(const counter<specie_t> &hist) {
+  static rank_t num_permutations(counter<specie_t> const&hist) {
     return num_permutations_impl(views::values(hist));
   }
 
-  static rank_t num_permutations(const configuration_t &conf) {
+  static rank_t num_permutations( configuration_t const& conf) {
     return num_permutations(count_species(conf));
   }
 
-  inline rank_t rank_permutation(const configuration_t &configuration) {
+  inline rank_t rank_permutation( configuration_t const&configuration) {
     auto num_atoms{configuration.size()}, num_species{count_species(configuration).size()};
     rank_t rank{1}, suffix_permutations{1};
     std::vector hist(num_species, 0);

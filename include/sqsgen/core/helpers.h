@@ -86,6 +86,17 @@ namespace sqsgen::core::helpers {
     return index_mapping_t<T, U>(reverse_map, index_map);
   }
 
+  template <ranges::range R, class T = ranges::range_value_t<R>> counter<T> count(R &&r) {
+    counter<T> result{};
+    for (auto e : r) {
+      if (result.contains(e))
+        ++result[e];
+      else
+        result.emplace(e, 1);
+    }
+    return result;
+  }
+
 }  // namespace sqsgen::core::helpers
 
 #endif  // SQSGEN_CORE_HELPERS_H
