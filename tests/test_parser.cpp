@@ -11,8 +11,9 @@
 #include "nlohmann/json.hpp"
 #include "sqsgen/config.h"
 #include "sqsgen/core/structure.h"
-#include "sqsgen/io/config/structure.h"
 #include "sqsgen/io/config/settings.h"
+#include "sqsgen/io/config/structure.h"
+#include "sqsgen/io/json.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::testing {
@@ -21,6 +22,22 @@ namespace sqsgen::testing {
   using namespace sqsgen::io::config;
   namespace py = pybind11;
   using namespace py::literals;
+
+  template <class T> void assert_structure_equal(core::structure<T> const& lhs,
+                                               core::structure<T> const& rhs,
+                                               T epsilon = 1.0e-7) {
+    ASSERT_EQ(lhs.size(), rhs.size()) << "Size of lhs and rhs are not equal";
+    auto lhs_sites = core::helpers::as<std::vector>{}(lhs.sites());
+    auto rhs_sites = core::helpers::as<std::vector>{}(rhs.sites());
+    for (int i = 0; i < lhs.size(); ++i) {
+      auto lsite = lhs_sites[i];
+      auto rsite = rhs_sites[i];
+      ASSERT_EQ(lsite.specie, rsite.specie);
+      ASSERT_NEAR(lsite.frac_coords(0), rsite.frac_coords(0), epsilon);
+      ASSERT_NEAR(lsite.frac_coords(1), rsite.frac_coords(1), epsilon);
+      ASSERT_NEAR(lsite.frac_coords(2), rsite.frac_coords(2), epsilon);
+    }
+  }
 
   template <class T> const static auto TEST_FCC_STRUCTURE = core::structure<T>{
       lattice_t<T>{{1, 0, 0}, {0, 2, 0}, {0, 0, 3}},
@@ -74,8 +91,8 @@ namespace sqsgen::testing {
     auto rjson = io::config::parse_structure_config<"structure", double>(json);
     auto rdict = io::config::parse_structure_config<"structure", double>(py::object(dict));
 
-    helpers::assert_structure_equal(s, rjson.result().structure());
-    helpers::assert_structure_equal(rdict.result().structure(), rjson.result().structure());
+    assert_structure_equal(s, rjson.result().structure());
+    assert_structure_equal(rdict.result().structure(), rjson.result().structure());
 
     json["structure"]["species"] = std::vector<std::string>{"Na", "Mg", "Al", "Si"};
     dict["structure"]["species"] = std::vector<std::string>{"Na", "Mg", "Al", "Si"};
@@ -83,8 +100,8 @@ namespace sqsgen::testing {
     rdict = io::config::parse_structure_config<"structure", double>(py::object(dict));
     ASSERT_TRUE(rjson.ok());
     ASSERT_TRUE(rdict.ok());
-    helpers::assert_structure_equal(s, rjson.result().structure());
-    helpers::assert_structure_equal(rdict.result().structure(), rjson.result().structure());
+    assert_structure_equal(s, rjson.result().structure());
+    assert_structure_equal(rdict.result().structure(), rjson.result().structure());
   }
 
   TEST(test_parse_structure, required_fields_errors) {
