@@ -6,9 +6,12 @@
 #define SQSGEN_IO_CONFIG_STRUCTURE_H
 
 #include <nlohmann/json.hpp>
-#include "sqsgen/core/helpers.h"
-#include "sqsgen/io/parsing.h"
 #include "sqsgen/types.h"
+#include "sqsgen/core/atom.h"
+#include "sqsgen/core/helpers.h"
+#include "sqsgen/core/structure.h"
+#include "sqsgen/io/parsing.h"
+
 
 namespace sqsgen::io {
   namespace config {
@@ -19,6 +22,7 @@ namespace sqsgen::io {
       coords_t<T> coords;
       configuration_t species;
       std::array<int, 3> supercell;
+
 
       core::structure<T> structure(bool supercell = true) const {
         core::structure<T> structure(lattice, coords, species);
