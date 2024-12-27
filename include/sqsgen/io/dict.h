@@ -34,12 +34,13 @@ namespace sqsgen::io {
 
     static auto items(py::handle const& d) {
       if (is_document(d)) {
-        std::vector<std::pair<std::string, py::handle>> items;
-        py::dict dict = d.cast<py::dict>();
+        std::vector<std::pair<py::handle, py::handle>> items;
+        auto dict = d.cast<py::dict>();
         items.reserve(py::len(dict));
         for (auto const& item : dict) {
-          if (!py::isinstance<py::str>(item.first)) throw std::invalid_argument("dictionary is only allowed to have strings as keys");
-          items.push_back({item.first.cast<py::str>(), item.second});
+          // if (!py::isinstance<py::str>(item.first)) throw std::invalid_argument("dictionary is
+          // only allowed to have strings as keys");
+          items.emplace_back(item.first, item.second);
         };
         return items;
       };
@@ -66,25 +67,19 @@ namespace sqsgen::io {
   };
 
   template <> struct accessor<py::object> {
-    static bool is_document(py::object const& o) {
-      return accessor<py::handle>::is_document(o);
-    }
+    static bool is_document(py::object const& o) { return accessor<py::handle>::is_document(o); }
 
     static bool contains(py::object const& d, std::string&& key) {
-      return accessor<py::handle>::contains(d,  std::forward<std::string>(key));
+      return accessor<py::handle>::contains(d, std::forward<std::string>(key));
     }
 
-    static auto items(py::object const& d) {
-      return accessor<py::handle>::items(d);
-    }
+    static auto items(py::object const& d) { return accessor<py::handle>::items(d); }
 
     static auto get(py::object const& d, std::string&& key) {
-      return accessor<py::handle>::get(d,  std::forward<std::string>(key));
+      return accessor<py::handle>::get(d, std::forward<std::string>(key));
     }
 
-    static auto is_list(py::object const& o) {
-      return accessor<py::handle>::is_list(o);
-    }
+    static auto is_list(py::object const& o) { return accessor<py::handle>::is_list(o); }
     template <string_literal key = "", class Option>
     static parse_result<Option> get_as(py::object const& d) {
       return accessor<py::handle>::get_as<key, Option>(d);
@@ -95,8 +90,8 @@ namespace sqsgen::io {
 
   template <class T> py::dict to_dict(T const& val) { return py_dict_converter<T>::to_dict(val); }
 
-  template <class T> struct py_dict_converter<config::structure_config<T>> {
-    static py::dict to_dict(config::structure_config<T> const& config) {
+  template <class T> struct py_dict_converter<structure_config<T>> {
+    static py::dict to_dict(structure_config<T> const& config) {
       using namespace py::literals;
       return py::dict("lattice"_a = config.lattice, "coords"_a = config.coords,
                       "species"_a = config.species, "supercell"_a = config.supercell);
