@@ -13,7 +13,9 @@
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/settings.h"
 #include "sqsgen/io/config/structure.h"
+#include "sqsgen/io/config/composition.h"
 #include "sqsgen/io/json.h"
+#include "sqsgen/io/dict.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::testing {
@@ -162,7 +164,7 @@ namespace sqsgen::testing {
     auto parse_composition
         = []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
       auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-      return config::parse_composition<"composition", Doc>(doc, structure.result().species);
+      return config::parse_composition<"composition", "sites", Doc>(doc, structure.result().species);
     };
 
     auto assert_holds_error = make_assert_holds_error(json, dict, parse_composition);
@@ -174,21 +176,21 @@ namespace sqsgen::testing {
 
     json[key] = {{"Ni", -1}};
     dict[key] = py::dict("Ni"_a = -1);
-    assert_holds_error("Ni", CODE_BAD_VALUE);
+    assert_holds_error(key, CODE_BAD_VALUE);
 
     // enclosing in list must result in same error
     json[key] = {{{"Ni", -1}}};
     dict[key] = in_list(py::dict("Ni"_a = -1));
-    assert_holds_error("Ni", CODE_BAD_VALUE);
+    assert_holds_error(key, CODE_BAD_VALUE);
 
     json[key] = {{"Ni", "1"}};
     dict[key] = py::dict("Ni"_a = "1");
-    assert_holds_error("Ni", CODE_TYPE_ERROR);
+    assert_holds_error(key, CODE_TYPE_ERROR);
 
     // enclosing in list must result in same error
     json[key] = {{{"Ni", "1"}}};
     dict[key] = in_list(py::dict("Ni"_a = "1"));
-    assert_holds_error("Ni", CODE_TYPE_ERROR);
+    assert_holds_error(key, CODE_TYPE_ERROR);
 
     json[key] = {{"_Ni", "1"}};
     dict[key] = py::dict("_Ni"_a = "1");
@@ -201,22 +203,22 @@ namespace sqsgen::testing {
 
     json[key] = {{"Ni", 3}, {"Fe", 2}};
     dict[key] = py::dict("Ni"_a = 3, "Fe"_a = 2);
-    assert_holds_error(key, CODE_OUT_OF_RANGE);
+    assert_holds_error("sites", CODE_OUT_OF_RANGE);
 
     // enclosing in list must result in same error
     json[key] = {{{"Ni", 3}, {"Fe", 2}}};
     dict[key] = in_list(py::dict("Ni"_a = 3, "Fe"_a = 2));
-    assert_holds_error(key, CODE_OUT_OF_RANGE);
+    assert_holds_error("sites", CODE_OUT_OF_RANGE);
   }
 
-  TEST(test_parse_composition, error_which) {
+  TEST(test_parse_composition, error_sites) {
     py::scoped_interpreter guard{};
     auto [json, dict] = make_test_structure_config<double>();
 
     auto assert_holds_error = make_assert_holds_error(
         json, dict, []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
           auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-          return config::parse_composition<"composition", Doc>(doc, structure.result().species);
+          return config::parse_composition<"composition", "sites", Doc>(doc, structure.result().species);
         });
     auto key = "composition";
 
@@ -234,7 +236,7 @@ namespace sqsgen::testing {
     // test too few sites
     json[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {0, 2}}};
     dict[key] = py::dict("Ni"_a = 2, "Co"_a = 2, "sites"_a = std::vector{0, 2});
-    assert_holds_error(key, CODE_OUT_OF_RANGE);
+    assert_holds_error("sites", CODE_OUT_OF_RANGE);
 
     // test species not in structure
     json[key] = {{"Ni", 2}, {"Co", 2}, {"sites", "Fr"}};
@@ -244,12 +246,12 @@ namespace sqsgen::testing {
     // test too few sites - by symbol
     json[key] = {{"Ni", 2}, {"Co", 2}, {"sites", {"Si", "Mg"}}};
     dict[key] = py::dict("Ni"_a = 2, "Co"_a = 2, "sites"_a = std::vector{"Si", "Mg"});
-    assert_holds_error(key, CODE_OUT_OF_RANGE);
+    assert_holds_error("sites", CODE_OUT_OF_RANGE);
 
     // test too many sites - by symbol -> invalid symbol
     json[key] = {{"Ni", 1}, {"_Co", 1}, {"sites", {"Si", "Mg"}}};
     dict[key] = py::dict("Ni"_a = 1, "_Co"_a = 1, "sites"_a = std::vector{"Si", "Mg"});
-    assert_holds_error(key, CODE_OUT_OF_RANGE);
+    assert_holds_error("sites", CODE_OUT_OF_RANGE);
   }
   TEST(test_parse_composition, error_multiple) {
     py::scoped_interpreter guard{};
@@ -258,7 +260,7 @@ namespace sqsgen::testing {
     auto assert_holds_error = make_assert_holds_error(
         json, dict, []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
           auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-          return config::parse_composition<"composition", Doc>(doc, structure.result().species);
+          return config::parse_composition<"composition", "sites", Doc>(doc, structure.result().species);
         });
     auto key = "composition";
     assert_holds_error(key, CODE_NOT_FOUND);
@@ -288,7 +290,7 @@ namespace sqsgen::testing {
     json[key][1]["Ni"] = 2;
     dict[key].cast<py::list>()[1].attr("pop")("sites");
     dict[key].cast<py::list>()[1]["Ni"] = 2;
-    assert_holds_error(key, CODE_OUT_OF_RANGE);
+    assert_holds_error("sites", CODE_OUT_OF_RANGE);
   }
 
   PYBIND11_EMBEDDED_MODULE(ShellRadiiDetection, m) {
