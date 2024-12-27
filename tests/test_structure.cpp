@@ -205,7 +205,8 @@ namespace sqsgen::testing {
     ASSERT_EQ(sites.size(), 1);
   }
 
-  TEST(Structure, prefactors) {
+  TEST(Structure, prefactors_single) {
+    // recompute coordination numbers using prefactor mode
     auto fcc_one_species = core::structure<double>{lattice_t<double>::Identity(),
                                                    coords_t<double>{{0.0, 0.0, 0.0},
                                                                     {0.0, 0.5, 0.5},
