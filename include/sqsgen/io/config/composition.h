@@ -4,11 +4,13 @@
 
 #ifndef SQSGEN_IO_CONFIG_COMPOSITION_H
 #define SQSGEN_IO_CONFIG_COMPOSITION_H
+#include <pybind11/pybind11.h>
 
+#include "sqsgen/config.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
+#include "sqsgen/io/json.h"
 #include "sqsgen/io/parsing.h"
-#include "sqsgen/types.h"
 
 namespace sqsgen::io::config {
 
@@ -16,10 +18,6 @@ namespace sqsgen::io::config {
   namespace views = ranges::views;
 
   using index_set_t = vset<usize_t>;
-
-  class composition_config {
-    std::vector<sublattice> sublattices;
-  };
 
   template <string_literal key>
   parse_result<index_set_t> validate_indices(std::vector<int> const& indices,
@@ -83,23 +81,35 @@ namespace sqsgen::io::config {
   }
 
   template <string_literal key, class Document>
-  parse_result<composition_t> parse_composition(Document const& document, index_set_t&& sites) {
+  parse_result<std::string> parse_symbol_string(auto value) {
+    if constexpr (std::is_same_v<std::decay_t<Document>, nlohmann::json>) {
+      return value;
+    } else if constexpr (std::is_same_v<std::decay_t<Document>, pybind11::handle>
+                         || std::is_same_v<std::decay_t<Document>, pybind11::object>) {
+      return accessor<Document>::template get_as<KEY_NONE, std::string>(value);
+    } else
+      return parse_error::from_msg<key, CODE_TYPE_ERROR>("Unknown document type");
+  }
+
+  template <string_literal key, class Document>
+  parse_result<composition_t> parse_distribution(Document const& document, index_set_t&& sites) {
     composition_t composition;
+    using pair_t = std::pair<std::string, int>;
     for (auto& [k, v] : accessor<Document>::items(document)) {
-      if (core::SYMBOL_MAP.contains(k)) {
-        specie_t specie = core::atom::from_symbol(k).Z;
-        auto r = accessor<Document>::template get_as<KEY_NONE, int>(v).and_then(
-            [&](auto&& amount) -> parse_result<int> {
-              if (amount > sites.size() || amount < 0)
-                return parse_error::from_key_and_msg<CODE_BAD_VALUE>(
-                    k, std::format(
+      auto rkey = parse_symbol_string<key, Document>(k);
+      if (rkey.ok() && !core::SYMBOL_MAP.contains(rkey.result())) continue;
+      auto r = rkey.combine(accessor<Document>::template get_as<KEY_NONE, int>(v))
+                   .and_then([&](auto s_and_a) -> parse_result<pair_t> {
+                     auto [specie, amount] = s_and_a;
+                     if (amount > sites.size() || amount < 0)
+                       return parse_error::from_msg<key, CODE_BAD_VALUE>(std::format(
                            "You want to distribute {} \"{}\" atoms on a sublattice with {} sites",
-                           amount, k, sites.size()));
-              return amount;
-            });
-        if (r.failed()) return r.error().with_key(k);
-        composition[specie] = r.result();
-      }
+                           amount, specie, sites.size()));
+                     return pair_t{specie, amount};
+                   });
+      if (r.failed()) return r.error().with_key(key.data);
+      auto [specie, amount] = r.result();
+      composition[core::atom::from_symbol(specie).Z] = amount;
     }
     if (composition.empty())
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
@@ -107,7 +117,7 @@ namespace sqsgen::io::config {
     return composition;
   }
 
-  template <string_literal key, class Document>
+  template <string_literal key, string_literal sitesKey = "sites", class Document>
   parse_result<sublattice> parse_sublattice(Document const& j, configuration_t const& conf,
                                             std::vector<sublattice>&& sublattices) {
     if (!accessor<Document>::is_document(j))
@@ -119,10 +129,10 @@ namespace sqsgen::io::config {
     index_set_t remaining_indices(
         range(conf.size()) | views::filter([&](auto i) { return !occupied_sites.contains(i); }));
     if (remaining_indices.empty())
-      return parse_error::from_msg<"sites", CODE_OUT_OF_RANGE>(
-          "There are no remaining species left for the  sublattice");
+      return parse_error::from_msg<sitesKey, CODE_OUT_OF_RANGE>(
+          "There are no remaining species left for the sublattice");
 
-    return parse_sites<"sites">(j, conf, std::move(remaining_indices))
+    return parse_sites<sitesKey>(j, conf, std::move(remaining_indices))
         .and_then([&](auto&& sites) -> parse_result<index_set_t> {
           for (auto&& site : sites)
             if (occupied_sites.contains(site))
@@ -135,18 +145,18 @@ namespace sqsgen::io::config {
         })
         .and_then([&](auto&& sites) -> parse_result<sublattice> {
           // parse composition
-          auto composition = parse_composition<key>(j, std::forward<decltype(sites)>(sites));
+          auto composition = parse_distribution<key>(j, std::forward<decltype(sites)>(sites));
           if (composition.failed()) return composition.error();
           auto num_sites = fold_left(composition.result() | views::elements<1>, 0UL, std::plus<>{});
           if (num_sites != sites.size())
-            return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(std::format(
+            return parse_error::from_msg<sitesKey, CODE_OUT_OF_RANGE>(std::format(
                 "The total number of distributed atoms is {} but the sublattice contains {} sites",
                 num_sites, sites.size()));
           return sublattice{sites, composition.result()};
         });
   }
 
-  template <string_literal key, class Document>
+  template <string_literal key, string_literal sitesKey = "sites", class Document>
   parse_result<std::vector<sublattice>> parse_composition(Document const& document,
                                                           configuration_t const& conf) {
     using namespace core::helpers;
@@ -157,7 +167,7 @@ namespace sqsgen::io::config {
       std::vector<sublattice> sublattices;
       for (auto const& d : doc) {
         auto sl
-            = parse_sublattice<key>(d, conf, std::forward<std::vector<sublattice>>(sublattices));
+            = parse_sublattice<key, sitesKey>(d, conf, std::forward<std::vector<sublattice>>(sublattices));
         if (sl.failed()) return sl.error();
         sublattices.push_back(sl.result());
       }
@@ -165,7 +175,7 @@ namespace sqsgen::io::config {
         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("Could not parse a valid sublattice");
       return {sublattices};
     }
-    return parse_sublattice<key>(doc, conf, {})
+    return parse_sublattice<key, sitesKey>(doc, conf, {})
         .and_then(
             [&](auto&& sl) -> parse_result<std::vector<sublattice>> { return std::vector{sl}; });
   }

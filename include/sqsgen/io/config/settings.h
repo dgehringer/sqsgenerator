@@ -5,8 +5,9 @@
 #ifndef SQSGEN_IO_CONFIG_SETTINGS_H
 #define SQSGEN_IO_CONFIG_SETTINGS_H
 
-#include "sqsgen/types.h"
+#include "sqsgen/config.h"
 #include "sqsgen/core/helpers.h"
+#include "sqsgen/io/parsing.h"
 
 namespace sqsgen::io::config {
 
@@ -17,10 +18,33 @@ namespace sqsgen::io::config {
   template <class T> static constexpr T bin_width_default = 0.05;       // Angstrom
   template <class T> static constexpr T peak_isolation_default = 0.25;  // Angstrom
 
-  template <class T> struct settings {
-    shell_weights_t<T> shell_weights;
-    std::vector<T> shells;
-  };
+  template <string_literal key, class T, class Document>
+  parse_result<shell_weights_t<T>> parse_shell_weights(Document const& doc, auto num_shells) {
+    if (!accessor<decltype(doc)>::is_document(doc))
+      parse_error::from_msg<key, CODE_BAD_VALUE>("\"shell_weights\" must be a JSON object");
+    shell_weights_t<T> weights;
+    for (auto&& [si, w] : accessor<Document>::items(doc)) {
+      std::optional<usize_t> shell_index;
+      try {
+        shell_index = std::stoul(si);
+      } catch (std::invalid_argument const& e) {
+        return parse_error::from_msg<key, CODE_BAD_VALUE>(
+            std::format("Could not parse shell index: {}", e.what()));
+      } catch (std::out_of_range const& e) {
+        return parse_error::from_msg<key, CODE_BAD_VALUE>(
+            std::format("Could not parse shell index: {}", e.what()));
+      }
+      if (shell_index == 0)
+        return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
+            "There is not point int including self-interactions");
+      if (shell_index >= num_shells)
+        return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(std::format(
+            "There are {} shells in total. You passed {} as index.", num_shells, shell_index));
+      assert(shell_index.has_value());
+      auto weight = accessor<decltype(doc)>::template get_as<KEY_NONE, int>(w);
+      if (weight.failed()) return weights.error().with_key(key.data);
+    }
+  }
 
   template <string_literal key, class T, class Document>
   parse_result<std::vector<T>> parse_shell_radii(Document const& doc,

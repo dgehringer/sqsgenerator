@@ -16,26 +16,6 @@
 namespace sqsgen::io {
   namespace config {
 
-    template <class T> class structure_config {
-    public:
-      lattice_t<T> lattice;
-      coords_t<T> coords;
-      configuration_t species;
-      std::array<int, 3> supercell;
-
-
-      core::structure<T> structure(bool supercell = true) const {
-        core::structure<T> structure(lattice, coords, species);
-        if (supercell) {
-          auto [a, b, c] = this->supercell;
-          structure = structure.supercell(a, b, c);
-        }
-        return structure;
-      }
-
-      NLOHMANN_DEFINE_TYPE_INTRUSIVE(structure_config, lattice, coords, species, supercell);
-    };
-
     template <string_literal key>
     parse_result<configuration_t> validate_ordinals(std::vector<int>&& ordinals, auto num_sites) {
       if (ordinals.size() != num_sites)

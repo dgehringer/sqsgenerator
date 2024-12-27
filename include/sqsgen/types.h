@@ -46,7 +46,6 @@ namespace sqsgen {
 
   using usize_t = std::uint_fast32_t;
 
-  using composition_t = std::map<specie_t, usize_t>;
 
   using shell_matrix_t = matrix_t<usize_t>;
 
@@ -77,10 +76,6 @@ namespace sqsgen {
     SHELL_RADII_DETECTION_PEAK
   };
 
-  struct sublattice {
-    vset<usize_t> sites;
-    composition_t composition;
-  };
 
 }  // namespace sqsgen
 #endif  // SQSGEN_TYPES_HPP
