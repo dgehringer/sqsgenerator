@@ -206,7 +206,7 @@ namespace sqsgen::core {
       auto atoms_per_shell{static_cast<T>(count) / static_cast<T>(configuration.size())};
       if (atoms_per_shell < 1)
         spdlog::warn(
-            R"(The coordination shell {} contains no or only one lattice position(s) increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
+            R"(The coordination shell {} contains no or only one lattice position(s). Increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
             shell);
       if (!is_close(atoms_per_shell, static_cast<T>(static_cast<usize_t>(atoms_per_shell))))
         spdlog::warn(
