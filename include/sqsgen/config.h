@@ -24,7 +24,6 @@ namespace sqsgen {
     configuration_t species;
     std::array<int, 3> supercell;
 
-
     core::structure<T> structure(bool supercell = true) const {
       core::structure<T> structure(lattice, coords, species);
       if (supercell) {
@@ -33,8 +32,6 @@ namespace sqsgen {
       }
       return structure;
     }
-
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(structure_config, lattice, coords, species, supercell);
   };
 
   template <class T> struct configuration {
