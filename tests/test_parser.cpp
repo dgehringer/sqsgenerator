@@ -11,11 +11,12 @@
 #include "nlohmann/json.hpp"
 #include "sqsgen/config.h"
 #include "sqsgen/core/structure.h"
-#include "sqsgen/io/config/settings.h"
-#include "sqsgen/io/config/structure.h"
 #include "sqsgen/io/config/composition.h"
-#include "sqsgen/io/json.h"
+#include "sqsgen/io/config/settings.h"
+#include "sqsgen/io/config/shell_radii.h"
+#include "sqsgen/io/config/structure.h"
 #include "sqsgen/io/dict.h"
+#include "sqsgen/io/json.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::testing {
@@ -26,8 +27,8 @@ namespace sqsgen::testing {
   using namespace py::literals;
 
   template <class T> void assert_structure_equal(core::structure<T> const& lhs,
-                                               core::structure<T> const& rhs,
-                                               T epsilon = 1.0e-7) {
+                                                 core::structure<T> const& rhs,
+                                                 T epsilon = 1.0e-7) {
     ASSERT_EQ(lhs.size(), rhs.size()) << "Size of lhs and rhs are not equal";
     auto lhs_sites = core::helpers::as<std::vector>{}(lhs.sites());
     auto rhs_sites = core::helpers::as<std::vector>{}(rhs.sites());
@@ -40,6 +41,11 @@ namespace sqsgen::testing {
       ASSERT_NEAR(lsite.frac_coords(2), rsite.frac_coords(2), epsilon);
     }
   }
+  template <class... Args> py::list as_pylist(Args&&... obj) {
+    py::list list;
+    (list.append(py::handle(obj)), ...);
+    return list;
+  };
 
   template <class T> const static auto TEST_FCC_STRUCTURE = core::structure<T>{
       lattice_t<T>{{1, 0, 0}, {0, 2, 0}, {0, 0, 3}},
@@ -62,23 +68,50 @@ namespace sqsgen::testing {
                                           "supercell"_a = supercell.value_or(default_supercell)))};
   }
 
+  template <class T>
+  static auto make_test_structure_and_composition(std::optional<std::array<int, 3>> supercell
+                                                  = std::nullopt) {
+    auto [a, b, c] = supercell.value_or(std::array{1, 1, 1});
+    auto n = a * b * c;
+    auto [json, dict] = make_test_structure_config<T>(std::move(supercell));
+    dict["composition"] = py::dict("Ni"_a = 2 * n, "Co"_a = 2 * n);
+    json["composition"] = nlohmann::json{{"Ni", 2 * n}, {"Co", 2 * n}};
+    return std::make_pair(json, dict);
+  }
+
+  template <class T> static auto make_test_structure_and_composition_multiple(
+      std::optional<std::array<int, 3>> supercell = std::nullopt) {
+    auto [a, b, c] = supercell.value_or(std::array{1, 1, 1});
+    auto n = a * b * c;
+    auto [json, dict] = make_test_structure_config<T>(std::move(supercell));
+
+    dict["composition"]
+        = as_pylist(py::dict("Ni"_a = n, "Co"_a = n, "sites"_a = std::vector{"Al", "Mg"}),
+                    py::dict("B"_a = n, "N"_a = n));
+    json["composition"]
+        = nlohmann::json{
+          {{"Ni", n}, {"Co", n}, {"sites", {"Al", "Mg"}}}, {{"B", n}, {"N", n}}};
+    return std::make_pair(json, dict);
+  }
+
   template <class Fn> auto make_assert_holds_error(json& j, py::dict& d, Fn&& fn) {
     return [&](std::string const& key, parse_error_code jcode,
                std::optional<parse_error_code> dcode = std::nullopt) {
       auto rjson = fn(j);
-      auto rdict = fn(py::object(d));
+      auto rdict = fn(py::handle(d));
       ASSERT_TRUE(rjson.failed());
       ASSERT_TRUE(rdict.failed());
       parse_error error = rjson.error();
       ASSERT_EQ(key, error.key) << error.msg;
       ASSERT_EQ(jcode, error.code) << error.msg;
       auto dict_code = dcode.value_or(jcode);
-      ASSERT_EQ(dict_code, rdict.error().code);
+      ASSERT_EQ(dict_code, rdict.error().code) << rdict.error().msg;
     };
   }
 
   TEST(test_parse_structure, empty) {
-    // ASSERT_TRUE(io::config::parse_structure_config<"composition", double>({}).failed());
+    auto rjson = io::config::parse_structure_config<"composition", double>(nlohmann::json{});
+    ASSERT_TRUE(rjson.failed());
   }
 
   TEST(test_parse_structure, required_fields_success) {
@@ -91,7 +124,7 @@ namespace sqsgen::testing {
                                            "species"_a = s.species));
 
     auto rjson = io::config::parse_structure_config<"structure", double>(json);
-    auto rdict = io::config::parse_structure_config<"structure", double>(py::object(dict));
+    auto rdict = io::config::parse_structure_config<"structure", double>(py::handle(dict));
 
     assert_structure_equal(s, rjson.result().structure());
     assert_structure_equal(rdict.result().structure(), rjson.result().structure());
@@ -99,7 +132,7 @@ namespace sqsgen::testing {
     json["structure"]["species"] = std::vector<std::string>{"Na", "Mg", "Al", "Si"};
     dict["structure"]["species"] = std::vector<std::string>{"Na", "Mg", "Al", "Si"};
     rjson = io::config::parse_structure_config<"structure", double>(json);
-    rdict = io::config::parse_structure_config<"structure", double>(py::object(dict));
+    rdict = io::config::parse_structure_config<"structure", double>(py::handle(dict));
     ASSERT_TRUE(rjson.ok());
     ASSERT_TRUE(rdict.ok());
     assert_structure_equal(s, rjson.result().structure());
@@ -156,15 +189,11 @@ namespace sqsgen::testing {
     auto [json, dict] = make_test_structure_config<double>();
     auto key = "composition";
 
-    auto in_list = [](py::object const& obj) {
-      py::list list;
-      list.append(obj);
-      return list;
-    };
     auto parse_composition
         = []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
       auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-      return config::parse_composition<"composition", "sites", Doc>(doc, structure.result().species);
+      return config::parse_composition<"composition", "sites", Doc>(doc,
+                                                                    structure.result().species);
     };
 
     auto assert_holds_error = make_assert_holds_error(json, dict, parse_composition);
@@ -180,7 +209,7 @@ namespace sqsgen::testing {
 
     // enclosing in list must result in same error
     json[key] = {{{"Ni", -1}}};
-    dict[key] = in_list(py::dict("Ni"_a = -1));
+    dict[key] = as_pylist(py::dict("Ni"_a = -1));
     assert_holds_error(key, CODE_BAD_VALUE);
 
     json[key] = {{"Ni", "1"}};
@@ -189,7 +218,7 @@ namespace sqsgen::testing {
 
     // enclosing in list must result in same error
     json[key] = {{{"Ni", "1"}}};
-    dict[key] = in_list(py::dict("Ni"_a = "1"));
+    dict[key] = as_pylist(py::dict("Ni"_a = "1"));
     assert_holds_error(key, CODE_TYPE_ERROR);
 
     json[key] = {{"_Ni", "1"}};
@@ -198,7 +227,7 @@ namespace sqsgen::testing {
 
     // enclosing in list must result in same error
     json[key] = {{{"_Ni", "1"}}};
-    dict[key] = in_list(py::dict("_Ni"_a = "1"));
+    dict[key] = as_pylist(py::dict("_Ni"_a = "1"));
     assert_holds_error(key, CODE_OUT_OF_RANGE);
 
     json[key] = {{"Ni", 3}, {"Fe", 2}};
@@ -207,7 +236,7 @@ namespace sqsgen::testing {
 
     // enclosing in list must result in same error
     json[key] = {{{"Ni", 3}, {"Fe", 2}}};
-    dict[key] = in_list(py::dict("Ni"_a = 3, "Fe"_a = 2));
+    dict[key] = as_pylist(py::dict("Ni"_a = 3, "Fe"_a = 2));
     assert_holds_error("sites", CODE_OUT_OF_RANGE);
   }
 
@@ -218,7 +247,8 @@ namespace sqsgen::testing {
     auto assert_holds_error = make_assert_holds_error(
         json, dict, []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
           auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-          return config::parse_composition<"composition", "sites", Doc>(doc, structure.result().species);
+          return config::parse_composition<"composition", "sites", Doc>(doc,
+                                                                        structure.result().species);
         });
     auto key = "composition";
 
@@ -260,7 +290,8 @@ namespace sqsgen::testing {
     auto assert_holds_error = make_assert_holds_error(
         json, dict, []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
           auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-          return config::parse_composition<"composition", "sites", Doc>(doc, structure.result().species);
+          return config::parse_composition<"composition", "sites", Doc>(doc,
+                                                                        structure.result().species);
         });
     auto key = "composition";
     assert_holds_error(key, CODE_NOT_FOUND);
@@ -269,10 +300,9 @@ namespace sqsgen::testing {
     nlohmann::json sl1 = {{"Ni", 1}, {"Co", 1}, {"sites", {0, 1}}};
     nlohmann::json sl2 = {{"Ni", 1}, {"Co", 1}, {"sites", {1, 2}}};
     json[key] = {sl1, sl2};
-    py::list sl;
-    sl.append(py::dict("Ni"_a = 1, "Co"_a = 1, "sites"_a = std::vector{0, 1}));
-    sl.append(py::dict("Ni"_a = 1, "Co"_a = 1, "sites"_a = std::vector{1, 2}));
-    dict[key] = sl;
+
+    dict[key] = as_pylist(py::dict("Ni"_a = 1, "Co"_a = 1, "sites"_a = std::vector{0, 1}),
+                          py::dict("Ni"_a = 1, "Co"_a = 1, "sites"_a = std::vector{1, 2}));
     assert_holds_error("sites", CODE_BAD_VALUE);
 
     // overlap by species array
@@ -298,12 +328,24 @@ namespace sqsgen::testing {
         .value("naive", SHELL_RADII_DETECTION_NAIVE)
         .value("peak", SHELL_RADII_DETECTION_PEAK)
         .export_values();
+
+    py::enum_<SublatticeMode>(m, "SublatticeMode")
+        .value("interact", SUBLATTIC_MODE_INTERACT)
+        .value("split", SUBLATTIC_MODE_SPLIT)
+        .export_values();
   }
 
-  template<class Doc>
-  auto parse_radii(Doc const& doc) -> parse_result<std::vector<double>> {
-    auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-    return config::parse_shell_radii<"shell_radii", double, Doc>(doc, structure.result());
+  template <class Doc> parse_result<stl_matrix_t<double>> parse_radii(Doc const& doc) {
+    using result_t = parse_result<stl_matrix_t<double>>;
+    return config::parse_structure_config<"structure", double, Doc>(doc).and_then(
+        [&](auto&& sc) -> result_t {
+          auto structure = sc.structure();
+          return config::parse_composition<"composition", "sites", Doc>(doc, structure.species)
+              .and_then([&](auto&& composition) -> result_t {
+                return config::parse_shell_radii<"shell_radii">(
+                    doc, std::forward<decltype(structure)>(structure), composition);
+              });
+        });
   };
 
   TEST(test_parse_shell_radii, default_case) {
@@ -311,16 +353,16 @@ namespace sqsgen::testing {
     py::scoped_interpreter guard{};
     auto module = py::module::import("ShellRadiiDetection");
 
-    auto [json, dict] = make_test_structure_config<double>(std::array{2, 2, 2});
+    auto [json, dict] = make_test_structure_and_composition<double>(std::array{2, 2, 2});
 
-    auto rdefault_dict = parse_radii(py::object(dict));
+    auto rdefault_dict = parse_radii(py::handle(dict));
     auto rdefault_json = parse_radii(json);
     ASSERT_TRUE(rdefault_dict.ok());
     ASSERT_TRUE(rdefault_json.ok());
 
     json["shell_radii"] = "peak";
     dict["shell_radii"] = module.attr("ShellRadiiDetection").attr("peak");
-    auto rpeak_dict = parse_radii(py::object(dict));
+    auto rpeak_dict = parse_radii(py::handle(dict));
     auto rpeak_json = parse_radii(json);
 
     ASSERT_TRUE(rpeak_dict.ok());
@@ -330,12 +372,12 @@ namespace sqsgen::testing {
     helpers::assert_vector_equal(rdefault_json.result(), rpeak_json.result());
   }
 
- TEST(test_parse_shell_radii, perfect_lattice) {
+  TEST(test_parse_shell_radii, perfect_lattice) {
     using namespace sqsgen::io;
     py::scoped_interpreter guard{};
     auto module = py::module::import("ShellRadiiDetection");
 
-    auto [json, dict] = make_test_structure_config<double>(std::array{2, 2, 2});
+    auto [json, dict] = make_test_structure_and_composition<double>(std::array{2, 2, 2});
     json["bin_width"] = 0.001;
     dict["bin_width"] = 0.001;
     auto rdefault_dict = parse_radii(py::object(dict));
@@ -350,6 +392,56 @@ namespace sqsgen::testing {
     // assuming the bin_width is small enough
     helpers::assert_vector_equal(rdefault_dict.result(), rnaive_dict.result());
     helpers::assert_vector_equal(rdefault_json.result(), rnaive_json.result());
+  }
+
+  TEST(test_parse_shell_radii, perfect_lattice_multiple_sublattices) {
+    using namespace sqsgen::io;
+    py::scoped_interpreter guard{};
+    auto module = py::module::import("ShellRadiiDetection");
+
+    auto [json, dict] = make_test_structure_and_composition_multiple<double>(std::array{2, 2, 2});
+    json["sublattice_mode"] = "split";
+    dict["sublattice_mode"] = module.attr("SublatticeMode").attr("split");
+    json["bin_width"] = 0.001;
+    dict["bin_width"] = 0.001;
+
+    auto rdefault_dict = parse_radii(py::handle(dict));
+    auto rdefault_json = parse_radii(json);
+    auto naive_mode = module.attr("ShellRadiiDetection").attr("naive");
+    // auto peak_mode = module.attr("ShellRadiiDetection").attr("peak");
+    json["shell_radii"] = {"naive", "naive"};
+    dict["shell_radii"] = as_pylist(naive_mode, naive_mode);
+    auto rnaive_dict = parse_radii(py::handle(dict));
+    auto rnaive_json = parse_radii(json);
+
+    // For a perfect lattice it does not matter whether we use naive or histogram method
+    // assuming the bin_width is small enough
+    helpers::assert_vector_equal(rdefault_dict.result(), rnaive_dict.result());
+    helpers::assert_vector_equal(rdefault_json.result(), rnaive_json.result());
+  }
+
+  TEST(test_parse_shell_weights, errors) {
+    using namespace sqsgen::io;
+    py::scoped_interpreter guard{};
+    auto key = "shell_weights";
+
+    auto [json, dict] = make_test_structure_config<double>();
+    json[key] = {};
+    dict[key] = py::dict();
+    dict[key][py::int_(0)] = 0;
+
+    /*auto assert_holds_error = make_assert_holds_error(
+        json, dict, []<class Doc>(Doc const& doc) -> parse_result<shell_weights_t<double>> {
+          auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
+          auto s = structure.result().structure();
+          auto composition = config::parse_composition<"composition", "sites">(doc, s.species);
+          auto radii = parse_shell_radii<"shell_radii", double>(doc, std::forward<decltype(s)>(s),
+                                                                composition.result());
+          auto num_shells = radii.result().size();
+          return config::parse_weights<"shell_weights", double>(doc, num_shells);
+        });*/
+
+    // assert_holds_error("shell_weights", CODE_BAD_VALUE);
   }
   /*
     TEST(test_parse_shell_weights, errors) {
