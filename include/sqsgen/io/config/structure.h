@@ -5,7 +5,6 @@
 #ifndef SQSGEN_IO_CONFIG_STRUCTURE_H
 #define SQSGEN_IO_CONFIG_STRUCTURE_H
 
-#include <nlohmann/json.hpp>
 #include "sqsgen/types.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
@@ -47,7 +46,6 @@ namespace sqsgen::io {
         else
           return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
               std::format("An atomic element with name {} is not known to me", element));
-
       return conf;
     }
 
