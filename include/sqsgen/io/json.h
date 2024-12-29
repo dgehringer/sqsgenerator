@@ -95,6 +95,12 @@ namespace sqsgen {
                                    {IterationMode::ITERATION_MODE_SYSTEMATIC, "systematic"},
                                })
 
+  NLOHMANN_JSON_SERIALIZE_ENUM(SublatticeMode,
+                             {
+                                 {SublatticeMode::SUBLATTIC_MODE_INVALID, nullptr},
+                                 {SublatticeMode::SUBLATTIC_MODE_INTERACT, "interact"},
+                                 {SublatticeMode::SUBLATTIC_MODE_SPLIT, "split"},
+                             })
   namespace io {
     template <> struct accessor<nlohmann::json> {
       static bool contains(nlohmann::json const& json, std::string&& key) {
