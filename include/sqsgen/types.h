@@ -76,6 +76,12 @@ namespace sqsgen {
     SHELL_RADII_DETECTION_PEAK
   };
 
+  enum SublatticeMode {
+    SUBLATTIC_MODE_INVALID = -1,
+    SUBLATTIC_MODE_INTERACT,
+    SUBLATTIC_MODE_SPLIT,
+  };
+
 
 }  // namespace sqsgen
 #endif  // SQSGEN_TYPES_HPP
