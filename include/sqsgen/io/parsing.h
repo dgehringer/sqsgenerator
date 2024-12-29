@@ -182,7 +182,7 @@ namespace sqsgen::io {
   std::optional<parse_result<Options...>> get_either_optional(Document const& doc) {
     using result_t = parse_result<Options...>;
 
-    if (accessor<Doc>::contains(doc, key.data)) {
+    if (accessor<Doc>::contains(doc, key.data) || key == KEY_NONE) {
       result_t result = {parse_error::from_msg<key, CODE_UNKNOWN>(
           std::format("unknown error failed to load {}", key.data))};
       ((result = result.failed() ? detail::forward_superset<Options...>(
