@@ -48,15 +48,15 @@ namespace sqsgen::io {
     }
   };
 
-  template <class... Ts> struct overloaded : Ts... {
-    using Ts::operator()...;
-  };
-
-  template <class Needle, class... Haystack> using matches_any
-      = std::conditional_t<(std::is_same_v<Needle, Haystack> || ...), std::true_type,
-                           std::false_type>;
-
   namespace detail {
+    template <class... Ts> struct overloaded : Ts... {
+      using Ts::operator()...;
+    };
+
+    template <class Needle, class... Haystack> using matches_any
+        = std::conditional_t<(std::is_same_v<Needle, Haystack> || ...), std::true_type,
+                             std::false_type>;
+
     template <class T, class U> struct combine_types {
       using type = std::tuple<T, U>;
       static type combine(T&& t, U&& u) {
@@ -104,7 +104,7 @@ namespace sqsgen::io {
     parse_result(parse_error&& error) : _value(error) {}
 
     template <class Arg>
-      requires matches_any<Arg, Args...>::value
+      requires detail::matches_any<Arg, Args...>::value
     parse_result(Arg&& arg) : _value(arg) {}
 
     [[nodiscard]] bool failed() const { return std::holds_alternative<parse_error>(_value); }
@@ -131,10 +131,10 @@ namespace sqsgen::io {
     }
 
     template <class Collapse, class... Fn> parse_result<Collapse> collapse(Fn&&... fn) {
-      return std::visit(overloaded{[](parse_error&& error) -> parse_result<Collapse> {
-                                     return parse_result<Collapse>{error};
-                                   },
-                                   fn...},
+      return std::visit(detail::overloaded{[](parse_error&& error) -> parse_result<Collapse> {
+                                             return parse_result<Collapse>{error};
+                                           },
+                                           fn...},
                         std::forward<decltype(_value)>(_value));
     }
 
@@ -176,6 +176,10 @@ namespace sqsgen::io {
     if (opt.has_value()) return fn(std::forward<A>(opt.value()));
     return std::nullopt;
   }
+
+  template <template <class...> class, class>
+  struct lift {};
+
 
   template <string_literal key, class... Options, class Document,
             class Doc = std::decay_t<Document>>
