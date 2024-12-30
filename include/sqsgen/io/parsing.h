@@ -175,11 +175,30 @@ namespace sqsgen::io {
   std::optional<std::decay_t<std::invoke_result_t<Fn, A>>> fmap(Fn&& fn, std::optional<A>&& opt) {
     if (opt.has_value()) return fn(std::forward<A>(opt.value()));
     return std::nullopt;
+  };
+
+  template <string_literal key, class Fn, class... Ranges> parse_result<std::vector<
+      std::decay_t<std::invoke_result_t<Fn, std::decay_t<ranges::range_value_t<Ranges>>...>>>>
+  lift(Fn&& fn, Ranges&&... ranges) {
+    using result_t
+        = std::decay_t<std::invoke_result_t<Fn, std::decay_t<ranges::range_value_t<Ranges>>...>>;
+    auto arglen = ranges::size(std::get<0>(std::forward_as_tuple(ranges...)));
+    bool all_same_size = ((ranges::size(ranges) == arglen) && ...);
+    if (!all_same_size)
+      return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("The sizes do not match");
+    auto ptr = std::make_tuple(ranges::begin(ranges)...);
+    std::vector<result_t> results;
+    for (auto i = 0u; i < arglen; ++i) {
+      auto r = [&]<std::size_t... I>(std::index_sequence<I...>) {
+        return fn((*std::get<I>(ptr))...);
+      }(std::make_index_sequence<sizeof...(Ranges)>{});
+      if (r.failed()) return r.error();
+      results.emplace_back(std::move(r.result()));
+      [&]<std::size_t... I>(std::index_sequence<I...>) {
+        return (ranges::next(std::get<I>(ptr)), ...);
+      }(std::make_index_sequence<sizeof...(Ranges)>{});
+    }
   }
-
-  template <template <class...> class, class>
-  struct lift {};
-
 
   template <string_literal key, class... Options, class Document,
             class Doc = std::decay_t<Document>>
