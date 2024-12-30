@@ -78,7 +78,6 @@ namespace sqsgen::core::helpers {
       using return_t = std::map<key_t, value_t>;
       return_t result{};
       for (const auto& [key, value] : r) result[key] = value;
-      ;
       return result;
     }
   };
