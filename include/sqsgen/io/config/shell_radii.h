@@ -5,7 +5,6 @@
 #ifndef SQSGEN_IO_CONFIG_SHELL_RADII_H
 #define SQSGEN_IO_CONFIG_SHELL_RADII_H
 
-#include <mp++/detail/parse_complex.hpp>
 
 #include "sqsgen/config.h"
 #include "sqsgen/core/helpers.h"
@@ -15,7 +14,7 @@ namespace sqsgen::io::config {
 
   using namespace sqsgen::core::helpers;
 
-  template <class T> using result_t = parse_result<stl_matrix_t<T>>;
+  template <class T> using radii_t = parse_result<stl_matrix_t<T>>;
 
   template <class T> static constexpr T atol_default = 1.0e-3;
   template <class T> static constexpr T rtol_default = 1.0e-5;
@@ -73,24 +72,24 @@ namespace sqsgen::io::config {
     }
 
     template <string_literal key, class T, class Document>
-    result_t<T> parse_shell_radii_interact(Document const& doc, core::structure<T>&& structure) {
+    radii_t<T> parse_shell_radii_interact(Document const& doc, core::structure<T>&& structure) {
       return parse_radii<key, T>(
                  doc,
                  get_either_optional<key, ShellRadiiDetection, std::vector<T>>(doc).value_or(
                      detail::accepted_types_t<T>{SHELL_RADII_DETECTION_PEAK}),
                  std::forward<core::structure<T>>(structure))
-          .and_then([&](auto&& radii) -> result_t<T> { return stl_matrix_t<T>{radii}; });
+          .and_then([&](auto&& radii) -> radii_t<T> { return stl_matrix_t<T>{radii}; });
     }
 
     template <string_literal key, class T, class Document>
-    result_t<T> parse_shell_radii_split(Document const& doc, core::structure<T>&& structure,
+    radii_t<T> parse_shell_radii_split(Document const& doc, core::structure<T>&& structure,
                                         std::vector<sublattice> const& sublattices) {
       if (accessor<Document>::contains(doc, key.data)) {
         // otherwise we expect to object to be a list and hold the radii spec. for each sl
         auto list = accessor<Document>::get(doc, key.data);
         if (!accessor<std::decay_t<decltype(list)>>::is_list(list))
           return parse_error::from_msg<key, CODE_TYPE_ERROR>(
-              "You have want to run a split sublattice mode, and did not specify valid modes. You "
+              "You want to run a split sublattice mode, and did not specify valid modes. You "
               "have to specify the shell radii per sublattice");
         stl_matrix_t<T> radii;
         auto index = 0;
@@ -120,11 +119,11 @@ namespace sqsgen::io::config {
   }  // namespace detail
 
   template <string_literal key, class T, class Document>
-  result_t<T> parse_shell_radii(Document const& doc, core::structure<T>&& structure,
+  radii_t<T> parse_shell_radii(Document const& doc, core::structure<T>&& structure,
                                 std::vector<sublattice> const& composition) {
     return get_optional<"sublattice_mode", SublatticeMode>(doc)
         .value_or(parse_result<SublatticeMode>{SUBLATTIC_MODE_INTERACT})
-        .and_then([&](auto&& mode) -> result_t<T> {
+        .and_then([&](auto&& mode) -> radii_t<T> {
           if (mode == SUBLATTIC_MODE_INTERACT)
             return detail::parse_shell_radii_interact<key, T>(
                 doc, std::forward<core::structure<T>>(structure));
