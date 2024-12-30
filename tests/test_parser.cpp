@@ -12,8 +12,8 @@
 #include "sqsgen/config.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/composition.h"
-#include "sqsgen/io/config/settings.h"
 #include "sqsgen/io/config/shell_radii.h"
+#include "sqsgen/io/config/shell_weights.h"
 #include "sqsgen/io/config/structure.h"
 #include "sqsgen/io/dict.h"
 #include "sqsgen/io/json.h"
@@ -89,8 +89,7 @@ namespace sqsgen::testing {
         = as_pylist(py::dict("Ni"_a = n, "Co"_a = n, "sites"_a = std::vector{"Al", "Mg"}),
                     py::dict("B"_a = n, "N"_a = n));
     json["composition"]
-        = nlohmann::json{
-          {{"Ni", n}, {"Co", n}, {"sites", {"Al", "Mg"}}}, {{"B", n}, {"N", n}}};
+        = nlohmann::json{{{"Ni", n}, {"Co", n}, {"sites", {"Al", "Mg"}}}, {{"B", n}, {"N", n}}};
     return std::make_pair(json, dict);
   }
 
@@ -430,16 +429,13 @@ namespace sqsgen::testing {
     dict[key] = py::dict();
     dict[key][py::int_(0)] = 0;
 
-    /*auto assert_holds_error = make_assert_holds_error(
-        json, dict, []<class Doc>(Doc const& doc) -> parse_result<shell_weights_t<double>> {
-          auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-          auto s = structure.result().structure();
-          auto composition = config::parse_composition<"composition", "sites">(doc, s.species);
-          auto radii = parse_shell_radii<"shell_radii", double>(doc, std::forward<decltype(s)>(s),
-                                                                composition.result());
-          auto num_shells = radii.result().size();
-          return config::parse_weights<"shell_weights", double>(doc, num_shells);
-        });*/
+    auto assert_holds_error = make_assert_holds_error(
+        json, dict, []<class Doc>(Doc const& doc) -> parse_result<weights_t<double>> {
+          auto radii = parse_radii(doc);
+          auto num_shells = as<std::vector>{}(
+              radii.result() | views::transform([](auto&& r) { return static_cast<usize_t>(r.size()); }));
+          return config::parse_shell_weights<"shell_weights", double>(doc, num_shells);
+        });
 
     // assert_holds_error("shell_weights", CODE_BAD_VALUE);
   }
