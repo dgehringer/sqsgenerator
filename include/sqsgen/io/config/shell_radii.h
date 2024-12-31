@@ -5,7 +5,6 @@
 #ifndef SQSGEN_IO_CONFIG_SHELL_RADII_H
 #define SQSGEN_IO_CONFIG_SHELL_RADII_H
 
-
 #include "sqsgen/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/io/parsing.h"
@@ -83,7 +82,7 @@ namespace sqsgen::io::config {
 
     template <string_literal key, class T, class Document>
     radii_t<T> parse_shell_radii_split(Document const& doc, core::structure<T>&& structure,
-                                        std::vector<sublattice> const& sublattices) {
+                                       std::vector<sublattice> const& sublattices) {
       if (accessor<Document>::contains(doc, key.data)) {
         // otherwise we expect to object to be a list and hold the radii spec. for each sl
         auto list = accessor<Document>::get(doc, key.data);
@@ -91,36 +90,26 @@ namespace sqsgen::io::config {
           return parse_error::from_msg<key, CODE_TYPE_ERROR>(
               "You want to run a split sublattice mode, and did not specify valid modes. You "
               "have to specify the shell radii per sublattice");
-        stl_matrix_t<T> radii;
-        auto index = 0;
-        for (auto&& sl_radii_doc : list) {
-          if (index >= sublattices.size())
-            return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-                "You have specified more values than sublattices availabe");
-          auto r = parse_radii<key, T>(
-              doc, get_either<KEY_NONE, ShellRadiiDetection, std::vector<T>>(sl_radii_doc),
-              std::move(structure.sliced(sublattices[index].sites)));
-          // forward with proper key
-          if (r.failed()) return r.error().with_key(key.data);
-          radii.push_back(r.result());
-          index++;
-        }
-        return radii;
+        auto default_radii = [&](auto && subdoc, auto && sublattice) {
+          return parse_radii<key, T>(
+              doc, get_either<KEY_NONE, ShellRadiiDetection, std::vector<T>>(subdoc),
+              std::move(structure.sliced(sublattice.sites)));
+        };
+        return lift<key>(default_radii, as<std::vector>{}(list), sublattices);
       }
       // nothing is specified return the default value
-      return as<std::vector>{}(sublattices | views::transform([&](auto&& sl) -> std::vector<T> {
-                                 return detail::parse_radii<key, T>(
-                                            doc,
-                                            detail::accepted_types_t<T>{SHELL_RADII_DETECTION_PEAK},
-                                            std::move(structure.sliced(sl.sites)))
-                                     .result();
-                               }));
+      auto default_radii = [&](auto&& sublattice) -> parse_result<std::vector<T>> {
+        return detail::parse_radii<key, T>(doc,
+                                           detail::accepted_types_t<T>{SHELL_RADII_DETECTION_PEAK},
+                                           std::move(structure.sliced(sublattice.sites)));
+      };
+      return lift<key>(default_radii, sublattices);
     }
   }  // namespace detail
 
   template <string_literal key, class T, class Document>
   radii_t<T> parse_shell_radii(Document const& doc, core::structure<T>&& structure,
-                                std::vector<sublattice> const& composition) {
+                               std::vector<sublattice> const& composition) {
     return get_optional<"sublattice_mode", SublatticeMode>(doc)
         .value_or(parse_result<SublatticeMode>{SUBLATTIC_MODE_INTERACT})
         .and_then([&](auto&& mode) -> radii_t<T> {
