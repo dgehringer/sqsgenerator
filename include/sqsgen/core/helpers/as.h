@@ -26,7 +26,11 @@ namespace sqsgen::core::helpers {
     std::vector<std::decay_t<ranges::range_value_t<R>>> operator()(R&& r) {
       if constexpr (std::is_same_v<std::decay_t<R>, py::handle> || std::is_same_v<std::decay_t<R>, py::object> ) {
         std::vector<py::handle> vec;
-        for (auto& e : r) vec.push_back(e);
+        auto it = py::iter(r);
+        while (it != py::iterator::sentinel()) {
+          vec.push_back(*it);
+          ++it;
+        }
         return vec;
       }
       return {std::begin(r), std::end(r)};
