@@ -169,6 +169,25 @@ namespace sqsgen::io {
       if (result.failed()) return result.error();
       return result.result();
     }
+
+    template <class Fn, class... Ranges> struct parse_result_from_fn {
+      using type
+          = std::decay_t<std::invoke_result_t<Fn, std::decay_t<ranges::range_value_t<Ranges>>...>>;
+    };
+
+    template <class> struct parse_result_unwrap {};
+
+    template <class... Args>
+      requires has_args<1, Args...>::value
+    struct parse_result_unwrap<parse_result<Args...>> {
+      using type = std::tuple_element_t<0, std::tuple<Args...>>;
+    };
+
+    template <class Fn, class... Ranges> struct parse_result_inner_type_from_fn {
+      using type =
+          typename parse_result_unwrap<typename parse_result_from_fn<Fn, Ranges...>::type>::type;
+    };
+
   }  // namespace detail
 
   template <class Fn, class A>
@@ -177,17 +196,16 @@ namespace sqsgen::io {
     return std::nullopt;
   };
 
-  template <string_literal key, class Fn, class... Ranges> parse_result<std::vector<
-      std::decay_t<std::invoke_result_t<Fn, std::decay_t<ranges::range_value_t<Ranges>>...>>>>
+  template <string_literal key, class Fn, class... Ranges>
+  parse_result<std::vector<typename detail::parse_result_inner_type_from_fn<Fn, Ranges...>::type>>
   lift(Fn&& fn, Ranges&&... ranges) {
-    using result_t
-        = std::decay_t<std::invoke_result_t<Fn, std::decay_t<ranges::range_value_t<Ranges>>...>>;
+    using inner_t = typename detail::parse_result_inner_type_from_fn<Fn, Ranges...>::type;
     auto arglen = ranges::size(std::get<0>(std::forward_as_tuple(ranges...)));
     bool all_same_size = ((ranges::size(ranges) == arglen) && ...);
     if (!all_same_size)
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("The sizes do not match");
     auto ptr = std::make_tuple(ranges::begin(ranges)...);
-    std::vector<result_t> results;
+    std::vector<inner_t> results;
     for (auto i = 0u; i < arglen; ++i) {
       auto r = [&]<std::size_t... I>(std::index_sequence<I...>) {
         return fn((*std::get<I>(ptr))...);
@@ -198,6 +216,7 @@ namespace sqsgen::io {
         return (ranges::next(std::get<I>(ptr)), ...);
       }(std::make_index_sequence<sizeof...(Ranges)>{});
     }
+    return results;
   }
 
   template <string_literal key, class... Options, class Document,
