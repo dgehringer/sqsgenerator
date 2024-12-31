@@ -10,16 +10,25 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include "sorted_vector.h"
 
 namespace sqsgen::core::helpers {
   namespace ranges = std::ranges;
+  namespace py = pybind11;
   template <template <class...> class> struct as {};
 
   template <> struct as<std::vector> {
+
     template <ranges::range R>
     std::vector<std::decay_t<ranges::range_value_t<R>>> operator()(R&& r) {
+      if constexpr (std::is_same_v<std::decay_t<R>, py::handle> || std::is_same_v<std::decay_t<R>, py::object> ) {
+        std::vector<py::handle> vec;
+        for (auto& e : r) vec.push_back(e);
+        return vec;
+      }
       return {std::begin(r), std::end(r)};
     }
   };
@@ -81,5 +90,6 @@ namespace sqsgen::core::helpers {
       return result;
     }
   };
+
 }  // namespace sqsgen::core::helpers
 #endif  // SQSGEN_CORE_HELPERS_AS_H
