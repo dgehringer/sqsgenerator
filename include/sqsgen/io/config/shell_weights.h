@@ -94,25 +94,16 @@ namespace sqsgen::io::config {
           if (mode == SUBLATTIC_MODE_SPLIT) {
             std::vector<shell_weights_t<T>> w;
             if (accessor<std::decay_t<decltype(doc)>>::is_document(doc)) {
-              for (auto&& nshells : num_shells) {
-                auto r = detail::parse_weights<key, T>(doc, nshells);
-                if (r.failed()) return r.error();
-                w.push_back(r.result());
-              }
-              return w;
+              return lift<key>(
+                  [&](auto&& nshells) { return detail::parse_weights<key, T>(doc, nshells); },
+                  num_shells);
             }
             if (accessor<std::decay_t<decltype(doc)>>::is_list(doc)) {
-              auto index = 0;
-              for (auto&& d : doc) {
-                if (index >= num_shells.size())
-                  return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-                      "You have specified more values than sublattices availabe");
-                auto r = detail::parse_weights<key, T>(doc, num_shells[index]);
-                if (r.failed()) return r.error();
-                w.push_back(r.result());
-                index++;
-              }
-              return w;
+              return lift<key>(
+                  [](auto&& subdoc, auto&& nshells) {
+                    return detail::parse_weights<key, T>(subdoc, nshells);
+                  },
+                  as<std::vector>{}(doc), num_shells);
             }
           }
           return parse_error::from_msg<key, CODE_BAD_VALUE>(
