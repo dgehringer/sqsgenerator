@@ -407,7 +407,7 @@ namespace sqsgen::testing {
     auto rdefault_dict = parse_radii(py::handle(dict));
     auto rdefault_json = parse_radii(json);
     auto naive_mode = module.attr("ShellRadiiDetection").attr("naive");
-    // auto peak_mode = module.attr("ShellRadiiDetection").attr("peak");
+
     json["shell_radii"] = {"naive", "naive"};
     dict["shell_radii"] = as_pylist(naive_mode, naive_mode);
     auto rnaive_dict = parse_radii(py::handle(dict));
@@ -424,32 +424,76 @@ namespace sqsgen::testing {
     py::scoped_interpreter guard{};
     auto key = "shell_weights";
 
-    auto [json, dict] = make_test_structure_config<double>();
-    json[key] = {};
+    auto [json, dict] = make_test_structure_and_composition<double>();
+    json[key] = {{"0", 0.0}};
     dict[key] = py::dict();
     dict[key][py::int_(0)] = 0;
 
-    auto assert_holds_error = make_assert_holds_error(
-        json, dict, []<class Doc>(Doc const& doc) -> parse_result<weights_t<double>> {
-          auto radii = parse_radii(doc);
-          auto num_shells = as<std::vector>{}(
-              radii.result() | views::transform([](auto&& r) { return static_cast<usize_t>(r.size()); }));
-          return config::parse_shell_weights<"shell_weights", double>(doc, num_shells);
-        });
+    auto assert_holds_error = make_assert_holds_error(json, dict, []<class Doc>(Doc const& doc) {
+      auto radii = parse_radii(doc);
+      auto num_shells = as<std::vector>{}(radii.result() | views::transform([](auto&& r) {
+                                            return static_cast<usize_t>(r.size());
+                                          }));
+      return config::parse_shell_weights<"shell_weights", double>(doc, num_shells);
+    });
 
-    // assert_holds_error("shell_weights", CODE_BAD_VALUE);
+    assert_holds_error("shell_weights", CODE_BAD_VALUE);
+
+    json[key].erase("0");
+    dict[key].attr("pop")(py::int_{0});
+    json[key]["200"] = 200.0;
+    dict[key][py::int_(200)] = 200.0;
+
+    assert_holds_error("shell_weights", CODE_OUT_OF_RANGE);
+
+    // we have interacting mode by default, therefore lists should result in a TYPE_ERROR
+    nlohmann::json jshells{{"1", 1.0}, {"2", 2.0}};
+    json[key] = {jshells, jshells};
+    py::dict dshells;
+    dshells[py::int_(1)] = 1.0;
+    dshells[py::int_(2)] = 2.0;
+    dict[key] = as_pylist(dshells, dshells);
+    assert_holds_error("shell_weights", CODE_BAD_VALUE);
   }
-  /*
-    TEST(test_parse_shell_weights, errors) {
-      auto s = TEST_FCC_STRUCTURE<double>;
-      json document{{"structure",
-                     {{"lattice", s.lattice},
-                      {"coords", s.frac_coords},
-                      {"species", s.species},
-                      {"supercell", {2, 2, 2}}}}};
-      ASSERT_EQ(parse_structure_config<"structure", double>(document).result().structure().size(),
-                32);
 
-    }
-  */
+  TEST(test_parse_shell_weights, weights_default) {
+    using namespace sqsgen::io;
+    py::scoped_interpreter guard{};
+    auto module = py::module::import("ShellRadiiDetection");
+
+    auto [json, dict] = make_test_structure_and_composition<double>(std::array{2, 2, 2});
+
+    auto parse_weights = []<class Doc>(Doc const& doc) -> weights_t<double> {
+      auto radii = parse_radii(doc);
+      auto num_shells = as<std::vector>{}(radii.result() | views::transform([](auto&& r) {
+                                            return static_cast<usize_t>(r.size());
+                                          }));
+      return config::parse_shell_weights<"shell_weights", double>(doc, num_shells);
+    };
+
+    auto rjson = parse_weights(json);
+    auto rdict = parse_weights(json);
+    ASSERT_TRUE(rjson.ok());
+    ASSERT_TRUE(rdict.ok());
+    ASSERT_EQ(rjson.result().size(), rdict.result().size());
+    ASSERT_EQ(rjson.result().size(), 1);
+    ASSERT_EQ(rdict.result(), rjson.result());
+
+    std::tie(json, dict)
+        = make_test_structure_and_composition_multiple<double>(std::array{2, 2, 2});
+    json["sublattice_mode"] = "split";
+    dict["sublattice_mode"] = module.attr("SublatticeMode").attr("split");
+    rjson = parse_weights(json);
+    rdict = parse_weights(json);
+    ASSERT_TRUE(rjson.ok());
+    ASSERT_TRUE(rdict.ok());
+    ASSERT_EQ(rjson.result().size(), rdict.result().size());
+    ASSERT_EQ(rjson.result().size(), 2);
+    ASSERT_EQ(rdict.result(), rjson.result());
+    shell_weights_t<double> w{{1, 1.0},       {2, 1.0 / 2.0}, {3, 1.0 / 3.0}, {4, 1.0 / 4.0},
+                              {5, 1.0 / 5.0}, {6, 1.0 / 6.0}, {7, 1.0 / 7.0}};
+    ASSERT_EQ(rjson.result()[0], w);
+    ASSERT_EQ(rjson.result()[1], w);
+  }
+
 }  // namespace sqsgen::testing
