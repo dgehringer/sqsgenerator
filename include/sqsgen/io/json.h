@@ -12,6 +12,7 @@
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/parsing.h"
 #include "sqsgen/types.h"
+#include "sqsgen/config.h"
 
 // partial specialization (full specialization works too)
 NLOHMANN_JSON_NAMESPACE_BEGIN
@@ -83,6 +84,7 @@ NLOHMANN_JSON_NAMESPACE_END
 namespace sqsgen {
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(sublattice, sites, composition);
 
+
   NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_SINGLE, "single"}, {PREC_DOUBLE, "double"}})
   NLOHMANN_JSON_SERIALIZE_ENUM(ShellRadiiDetection,
                                {{ShellRadiiDetection::SHELL_RADII_DETECTION_INVALID, nullptr},
@@ -97,9 +99,9 @@ namespace sqsgen {
 
   NLOHMANN_JSON_SERIALIZE_ENUM(SublatticeMode,
                              {
-                                 {SublatticeMode::SUBLATTIC_MODE_INVALID, nullptr},
-                                 {SublatticeMode::SUBLATTIC_MODE_INTERACT, "interact"},
-                                 {SublatticeMode::SUBLATTIC_MODE_SPLIT, "split"},
+                                 {SublatticeMode::SUBLATTICE_MODE_INVALID, nullptr},
+                                 {SublatticeMode::SUBLATTICE_MODE_INTERACT, "interact"},
+                                 {SublatticeMode::SUBLATTICE_MODE_SPLIT, "split"},
                              })
   namespace io {
     template <> struct accessor<nlohmann::json> {
