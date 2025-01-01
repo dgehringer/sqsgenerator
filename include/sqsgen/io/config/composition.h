@@ -168,7 +168,7 @@ namespace sqsgen::io::config {
     if (!accessor<Document>::contains(document, key.data))
       return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a composition");
     auto mode = get_either_optional<"sublattice_mode", SublatticeMode>(document).value_or(
-        SUBLATTIC_MODE_INTERACT);
+        SUBLATTICE_MODE_INTERACT);
     if (mode.failed()) return mode.error();
     const auto doc = accessor<Document>::get(document, key.data);
     auto split_error = parse_error::from_msg<key, CODE_BAD_VALUE>(
@@ -183,10 +183,10 @@ namespace sqsgen::io::config {
       }
       if (sublattices.empty())
         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("Could not parse a valid sublattice");
-      if (sublattices.size() < 2 && mode.result() == SUBLATTIC_MODE_SPLIT) return split_error;
+      if (sublattices.size() < 2 && mode.result() == SUBLATTICE_MODE_SPLIT) return split_error;
       return {sublattices};
     }
-    if (mode.result() == SUBLATTIC_MODE_SPLIT) return split_error;
+    if (mode.result() == SUBLATTICE_MODE_SPLIT) return split_error;
     return detail::parse_sublattice<key, sitesKey>(doc, conf, {})
         .and_then(
             [&](auto&& sl) -> parse_result<std::vector<sublattice>> { return std::vector{sl}; });

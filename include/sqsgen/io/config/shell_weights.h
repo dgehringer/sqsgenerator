@@ -82,16 +82,16 @@ namespace sqsgen::io::config {
   weights_t<T> parse_shell_weights(Document const& document,
                                    std::vector<usize_t> const& num_shells) {
     return get_optional<"sublattice_mode", SublatticeMode>(document)
-        .value_or(parse_result<SublatticeMode>{SUBLATTIC_MODE_INTERACT})
+        .value_or(parse_result<SublatticeMode>{SUBLATTICE_MODE_INTERACT})
         .and_then([&](auto&& mode) -> weights_t<T> {
           // in case the "key" is not present we return the default value
           if (!accessor<Document>::contains(document, key.data))
             return detail::default_weights<T>(num_shells);
           auto doc = accessor<Document>::get(document, key.data);
-          if (mode == SUBLATTIC_MODE_INTERACT)
+          if (mode == SUBLATTICE_MODE_INTERACT)
             return detail::parse_weights<key, T>(doc, num_shells[0])
                 .and_then([](auto&& w) -> weights_t<T> { return std::vector{w}; });
-          if (mode == SUBLATTIC_MODE_SPLIT) {
+          if (mode == SUBLATTICE_MODE_SPLIT) {
             std::vector<shell_weights_t<T>> w;
             if (accessor<std::decay_t<decltype(doc)>>::is_document(doc)) {
               return lift<key>(

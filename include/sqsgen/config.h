@@ -37,9 +37,11 @@ namespace sqsgen {
   template <class T> struct configuration {
     structure_config<T> structure;
     std::vector<sublattice> composition;
-    std::vector<T> shell_radii;
-
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(configuration, structure, composition);
+    stl_matrix_t<T> shell_radii;
+    std::vector<shell_weights_t<T>> shell_weights;
+    std::vector<cube_t<T>> pair_weights;
+    std::vector<cube_t<T>> target_objective;
+    std::vector<cube_t<T>> prefactors;
   };
 
 

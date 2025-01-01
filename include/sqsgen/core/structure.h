@@ -231,7 +231,8 @@ namespace sqsgen::core {
         T x_a{static_cast<T>(hist[conf_map[a]]) / static_cast<T>(num_sites)};
         for (auto b = a; b < num_species; b++) {
           T x_b{static_cast<T>(hist[conf_map[b]]) / static_cast<T>(num_sites)};
-          T prefactor{1.0 / (M_i * x_a * x_b * static_cast<T>(num_sites))};
+          T w {weights[shell_map[s]]};
+          T prefactor{w / (M_i * x_a * x_b * static_cast<T>(num_sites))};
           prefactors(s, a, b) = prefactor;
           prefactors(s, b, a) = prefactor;
         }

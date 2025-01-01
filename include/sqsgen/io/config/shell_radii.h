@@ -111,12 +111,12 @@ namespace sqsgen::io::config {
   radii_t<T> parse_shell_radii(Document const& doc, core::structure<T>&& structure,
                                std::vector<sublattice> const& composition) {
     return get_optional<"sublattice_mode", SublatticeMode>(doc)
-        .value_or(parse_result<SublatticeMode>{SUBLATTIC_MODE_INTERACT})
+        .value_or(parse_result<SublatticeMode>{SUBLATTICE_MODE_INTERACT})
         .and_then([&](auto&& mode) -> radii_t<T> {
-          if (mode == SUBLATTIC_MODE_INTERACT)
+          if (mode == SUBLATTICE_MODE_INTERACT)
             return detail::parse_shell_radii_interact<key, T>(
                 doc, std::forward<core::structure<T>>(structure));
-          if (mode == SUBLATTIC_MODE_SPLIT) {
+          if (mode == SUBLATTICE_MODE_SPLIT) {
             return detail::parse_shell_radii_split<key, T>(
                 doc, std::forward<core::structure<T>>(structure), composition);
           }
