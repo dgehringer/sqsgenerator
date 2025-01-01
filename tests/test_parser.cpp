@@ -329,8 +329,8 @@ namespace sqsgen::testing {
         .export_values();
 
     py::enum_<SublatticeMode>(m, "SublatticeMode")
-        .value("interact", SUBLATTIC_MODE_INTERACT)
-        .value("split", SUBLATTIC_MODE_SPLIT)
+        .value("interact", SUBLATTICE_MODE_INTERACT)
+        .value("split", SUBLATTICE_MODE_SPLIT)
         .export_values();
   }
 
@@ -494,6 +494,17 @@ namespace sqsgen::testing {
                               {5, 1.0 / 5.0}, {6, 1.0 / 6.0}, {7, 1.0 / 7.0}};
     ASSERT_EQ(rjson.result()[0], w);
     ASSERT_EQ(rjson.result()[1], w);
+  }
+
+  TEST(test_parse_arrays, prefactors) {
+    py::scoped_interpreter guard{};
+    auto l = as_pylist(py::float_(1.0), py::float_(2.0), py::float_(3.0), py::float_(4.0), py::float_(5.0));
+    auto ll = as_pylist(l, l, l, l);
+    py::print(ll);
+
+    auto vec = ll.cast<stl_matrix_t<double>>();
+    auto mat = ll.cast<matrix_t<double>>();
+    std::cout << mat << std::endl;
   }
 
 }  // namespace sqsgen::testing
