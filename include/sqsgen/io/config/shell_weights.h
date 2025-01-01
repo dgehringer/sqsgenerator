@@ -42,7 +42,7 @@ namespace sqsgen::io::config {
     template <string_literal key, class T, class Document>
     parse_result<shell_weights_t<T>> parse_weights(Document const& doc, auto num_shells) {
       if (!accessor<Document>::is_document(doc))
-        parse_error::from_msg<key, CODE_BAD_VALUE>("\"shell_weights\" must be a JSON object");
+        return parse_error::from_msg<key, CODE_BAD_VALUE>("\"shell_weights\" must be an object");
       shell_weights_t<T> weights;
       for (auto&& [si, w] : accessor<Document>::items(doc)) {
         auto r = parse_shell_index<key, Document>(si)
@@ -67,7 +67,7 @@ namespace sqsgen::io::config {
       return weights;
     }
 
-    template <class T> weights_t<T> default_weights(std::vector<usize_t> const& num_shells) {
+    template <class T> std::vector<shell_weights_t<T>> default_weights(std::vector<usize_t> const& num_shells) {
       return as<std::vector>{}(num_shells | views::transform([](auto nshells) {
                                  return as<std::map>{}(
                                      core::helpers::range<usize_t>({1, nshells - 1})
