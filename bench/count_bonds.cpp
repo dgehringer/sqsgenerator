@@ -60,7 +60,8 @@ namespace sqsgen::bench {
               {1, 2, 1, 3})
               .supercell(2, 2, 3);
     auto shell_weights = shell_weights_t<double>{{1, 1}, {2, 0.3}, {3, 1.0 / 3}, {4, 0.25}};
-    auto [pairs, map, rmap] = supercell.template pairs<usize_t>(shell_weights);
+    auto radii = core::distances_naive(std::forward<core::structure<double>>(supercell));
+    auto [pairs, map, rmap] = supercell.template pairs<usize_t>(radii, shell_weights);
     auto species = supercell.packed_species();
 
     auto num_species = std::stoul(std::format("{}", core::count_species(species).size()));
@@ -162,6 +163,42 @@ namespace sqsgen::bench {
     });
   }
 
+  void bench_count_bond_half_off_sorted_memset(ankerl::nanobench::Bench* bench) {
+    auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
+    core::shuffler shuffler{};
+    std::vector<usize_t> bonds(num_shells * num_params);
+    std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) {
+      return absolute(p.i - p.j) < absolute(q.i - q.j) && p.i < q.i;
+    });
+    bench->run("draft-half-off-sorted-memset", [&]() {
+      shuffler.shuffle(species);
+      memset(bonds.data(), 0, bonds.size() * sizeof(usize_t));
+      for (auto& [i, j, s] : pairs) {
+        auto si{species[i]};
+        auto sj{species[j]};
+        ++bonds[s * num_params + sj * num_species + si];
+      }
+    });
+  }
+
+  void bench_count_bond_half_off_sorted_shells(ankerl::nanobench::Bench* bench) {
+    auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
+    core::shuffler shuffler{};
+    std::vector<usize_t> bonds(num_shells * num_params);
+    std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) {
+      return p.shell > q.shell;
+    });
+    bench->run("draft-half-off-sorted-shells", [&]() {
+      shuffler.shuffle(species);
+      std::fill(bonds.begin(), bonds.end(), 0);
+      for (auto& [i, j, s] : pairs) {
+        auto si{species[i]};
+        auto sj{species[j]};
+        ++bonds[s * num_params + sj * num_species + si];
+      }
+    });
+  }
+
   void bench_count_bond_half_off_sorted_static(ankerl::nanobench::Bench* bench) {
     auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
     core::shuffler shuffler{};
@@ -229,6 +266,8 @@ int main() {
   bench_count_bond_current_species_size_type(&bcurr);
   bench_count_bond_half_off(&bcurr);
   bench_count_bond_half_off_sorted(&bcurr);
+  bench_count_bond_half_off_sorted_memset(&bcurr);
+  bench_count_bond_half_off_sorted_shells(&bcurr);
   bench_count_bond_half_off_sorted_static(&bcurr);
   bench_count_bond_half_off_sorted_static_memory_layout(&bcurr);
 
