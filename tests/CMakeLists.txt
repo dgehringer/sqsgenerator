@@ -22,6 +22,8 @@ list(APPEND SQSGEN_TEST_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_TEST_LIBS "nlohmann_json")
 list(APPEND SQSGEN_TEST_LIBS "spdlog::spdlog_header_only")
 list(APPEND SQSGEN_TEST_LIBS "gtest_main")
+list(APPEND SQSGEN_TEST_LIBS "pybind11::pybind11")
+list(APPEND SQSGEN_TEST_LIBS "${Python3_LIBRARIES}")
 
 message(STATUS "SQSGEN_TEST_LIBS=${SQSGEN_TEST_LIBS}")
 
@@ -50,8 +52,6 @@ add_executable(test_structure
         ../include/sqsgen/core/helpers/sorted_vector.h
 )
 target_link_libraries(test_structure ${SQSGEN_TEST_LIBS})
-target_link_libraries(test_structure pybind11::pybind11)
-target_link_libraries(test_structure "${Python3_LIBRARIES}")
 add_test(NAME test_structure COMMAND test_structure)
 add_custom_command(TARGET test_structure POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -83,6 +83,4 @@ add_executable(test_parser
         ../include/sqsgen/io/config/shell_weights.h
 )
 target_link_libraries(test_parser ${SQSGEN_TEST_LIBS})
-target_link_libraries(test_parser pybind11::pybind11)
-target_link_libraries(test_parser "${Python3_LIBRARIES}")
 add_test(NAME test_parser COMMAND test_parser)
