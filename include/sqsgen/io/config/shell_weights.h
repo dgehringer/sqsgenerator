@@ -10,6 +10,7 @@
 #include <nlohmann/json.hpp>
 
 #include "sqsgen/core/helpers.h"
+#include "sqsgen/io/config/shared.h"
 #include "sqsgen/io/parsing.h"
 
 namespace sqsgen::io::config {
@@ -66,7 +67,8 @@ namespace sqsgen::io::config {
       return weights;
     }
 
-    template <class T> std::vector<shell_weights_t<T>> default_weights(std::vector<usize_t> const& num_shells) {
+    template <class T>
+    std::vector<shell_weights_t<T>> default_weights(std::vector<usize_t> const& num_shells) {
       return as<std::vector>{}(num_shells | views::transform([](auto nshells) {
                                  return as<std::map>{}(
                                      core::helpers::range<usize_t>({1, nshells - 1})
@@ -80,35 +82,31 @@ namespace sqsgen::io::config {
   template <string_literal key, class T, class Document>
   weights_t<T> parse_shell_weights(Document const& document,
                                    std::vector<usize_t> const& num_shells) {
-    return get_optional<"sublattice_mode", SublatticeMode>(document)
-        .value_or(parse_result<SublatticeMode>{SUBLATTICE_MODE_INTERACT})
-        .and_then([&](auto&& mode) -> weights_t<T> {
-          // in case the "key" is not present we return the default value
-          if (!accessor<Document>::contains(document, key.data))
-            return detail::default_weights<T>(num_shells);
-          auto doc = accessor<Document>::get(document, key.data);
+    if (!accessor<Document>::contains(document, key.data))
+      return detail::default_weights<T>(num_shells);
+    auto doc = accessor<Document>::get(document, key.data);
+    return parse_for_mode<key, Document>(
+        [&] {
+          return detail::parse_weights<key, T>(doc, num_shells[0])
+              .and_then([](auto&& w) -> weights_t<T> { return std::vector{w}; });
+        },
+        [&]() -> weights_t<T> {
           using accessor_t = accessor<std::decay_t<decltype(doc)>>;
-          if (mode == SUBLATTICE_MODE_INTERACT)
-            return detail::parse_weights<key, T>(doc, num_shells[0])
-                .and_then([](auto&& w) -> weights_t<T> { return std::vector{w}; });
-          if (mode == SUBLATTICE_MODE_SPLIT) {
-            std::vector<shell_weights_t<T>> w;
-            if (accessor_t::is_document(doc)) {
-              return lift<key>(
-                  [&](auto&& nshells) { return detail::parse_weights<key, T>(doc, nshells); },
-                  num_shells);
-            }
-            if (accessor_t::is_list(doc)) {
-              return lift<key>(
-                  [](auto&& subdoc, auto&& nshells) {
-                    return detail::parse_weights<key, T>(subdoc, nshells);
-                  },
-                 accessor_t::range(doc), num_shells);
-            }
+          if (accessor_t::is_document(doc)) {
+            return lift<key>(
+                [&](auto&& nshells) { return detail::parse_weights<key, T>(doc, nshells); },
+                num_shells);
           }
-          return parse_error::from_msg<key, CODE_BAD_VALUE>(
-              R"(Invalid sublattice mode. Must be either "interact" or "split")");
-        });
+          if (accessor_t::is_list(doc)) {
+            return lift<key>(
+                [](auto&& subdoc, auto&& nshells) {
+                  return detail::parse_weights<key, T>(subdoc, nshells);
+                },
+                accessor_t::range(doc), num_shells);
+          }
+          return parse_error::from_msg<key, CODE_BAD_VALUE>("Cannot interpret value");
+        },
+        document);
   }
 
 }  // namespace sqsgen::io::config
