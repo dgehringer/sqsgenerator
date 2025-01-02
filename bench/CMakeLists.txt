@@ -9,6 +9,7 @@ list(APPEND SQSGEN_BENCH_LIBS "mp++")
 list(APPEND SQSGEN_BENCH_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_BENCH_LIBS "nlohmann_json")
 list(APPEND SQSGEN_BENCH_LIBS "nanobench")
+list(APPEND SQSGEN_BENCH_LIBS "spdlog::spdlog_header_only")
 
 include_directories(${SQSGEN_INCLUDE_DIR})
 add_executable(bench_clear_array "${SQSGEN_BENCH_SOURCE_DIR}/clear_array.cpp")
