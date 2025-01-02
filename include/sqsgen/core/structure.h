@@ -129,6 +129,9 @@ namespace sqsgen::core {
       };
     };
 
+    inline usize_t count_species(configuration_t const &configuration) {
+      return static_cast<usize_t>(helpers::sorted_vector<specie_t>(configuration).size());
+    }
   }  // namespace detail
 
   template <class T> std::vector<T> distances_naive(structure<T> &&structure,
@@ -196,8 +199,8 @@ namespace sqsgen::core {
     return shells;
   }
 
-  template <class T> Eigen::Tensor<T, 3> compute_prefactors(shell_matrix_t const &shell_matrix,
-                                                            shell_weights_t<T> const &weights,
+  template <class T> cube_t<T> compute_prefactors(shell_matrix_t const &shell_matrix,
+                                                            shell_weights_t<T>  & weights,
                                                             configuration_t const &configuration) {
     using namespace helpers;
     if (weights.empty()) throw std::out_of_range("no coordination shells selected");
@@ -231,8 +234,7 @@ namespace sqsgen::core {
         T x_a{static_cast<T>(hist[conf_map[a]]) / static_cast<T>(num_sites)};
         for (auto b = a; b < num_species; b++) {
           T x_b{static_cast<T>(hist[conf_map[b]]) / static_cast<T>(num_sites)};
-          T w{weights[shell_map[s]]};
-          T prefactor{w / (M_i * x_a * x_b * static_cast<T>(num_sites))};
+          T prefactor{1.0 / (M_i * x_a * x_b * static_cast<T>(num_sites))};
           prefactors(s, a, b) = prefactor;
           prefactors(s, b, a) = prefactor;
         }
@@ -252,6 +254,7 @@ namespace sqsgen::core {
     coords_t<T> frac_coords;
     std::vector<specie_t> species;
     std::array<bool, 3> pbc = {true, true, true};
+    usize_t num_species;
 
     structure() = default;
 
@@ -268,12 +271,13 @@ namespace sqsgen::core {
       };
       frac_coords = fc;
       _distance_matrix = std::nullopt;
+      num_species = detail::count_species(species);
     }
 
     structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
               const std::vector<specie_t> &species,
               const std::array<bool, 3> &pbc = {true, true, true})
-        : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc) {
+        : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc), num_species(detail::count_species(species)) {
       if (frac_coords.rows() != species.size() || species.empty())
         throw std::invalid_argument(
             "frac coords must have the same size as the species input and must not be empty");
@@ -281,7 +285,7 @@ namespace sqsgen::core {
 
     structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords, std::vector<specie_t> &&species,
               std::array<bool, 3> &&pbc = {true, true, true})
-        : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc) {
+        : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc), num_species(detail::count_species(species)) {
       if (frac_coords.rows() != species.size() || species.empty())
         throw std::invalid_argument(
             "frac coords must have the same size as the species input and must not be empty");
