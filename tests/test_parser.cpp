@@ -379,12 +379,12 @@ namespace sqsgen::testing {
     auto [json, dict] = make_test_structure_and_composition<double>(std::array{2, 2, 2});
     json["bin_width"] = 0.001;
     dict["bin_width"] = 0.001;
-    auto rdefault_dict = parse_radii(py::object(dict));
+    auto rdefault_dict = parse_radii(py::handle(dict));
     auto rdefault_json = parse_radii(json);
 
     json["shell_radii"] = "naive";
     dict["shell_radii"] = module.attr("ShellRadiiDetection").attr("naive");
-    auto rnaive_dict = parse_radii(py::object(dict));
+    auto rnaive_dict = parse_radii(py::handle(dict));
     auto rnaive_json = parse_radii(json);
 
     // For a perfect lattice it does not matter whether we use naive or histogram method
