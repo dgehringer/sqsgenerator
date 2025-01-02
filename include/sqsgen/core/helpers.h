@@ -52,7 +52,7 @@ namespace sqsgen::core::helpers {
   }
 
   template <class Tensor>
-  Tensor stl_to_eigen(std::vector<std::vector<std::vector<typename Tensor::Scalar>>> const& v) {
+  Tensor stl_to_eigen(stl_cube_t<typename Tensor::Scalar> const& v) {
     if (v.size() == 0) throw std::invalid_argument("empty vector");
     auto first_size = v.front().size();
     if (first_size == 0) throw std::invalid_argument("empty vector in first dimension");
