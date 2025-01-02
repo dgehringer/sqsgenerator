@@ -196,7 +196,7 @@ namespace sqsgen::core {
     return shells;
   }
 
-  template <class T> Eigen::Tensor<T, 3> compute_prefactors(shell_matrix_t  const&shell_matrix,
+  template <class T> Eigen::Tensor<T, 3> compute_prefactors(shell_matrix_t const &shell_matrix,
                                                             shell_weights_t<T> const &weights,
                                                             configuration_t const &configuration) {
     using namespace helpers;
@@ -231,7 +231,7 @@ namespace sqsgen::core {
         T x_a{static_cast<T>(hist[conf_map[a]]) / static_cast<T>(num_sites)};
         for (auto b = a; b < num_species; b++) {
           T x_b{static_cast<T>(hist[conf_map[b]]) / static_cast<T>(num_sites)};
-          T w {weights[shell_map[s]]};
+          T w{weights[shell_map[s]]};
           T prefactor{w / (M_i * x_a * x_b * static_cast<T>(num_sites))};
           prefactors(s, a, b) = prefactor;
           prefactors(s, b, a) = prefactor;
@@ -371,12 +371,13 @@ namespace sqsgen::core {
 
     template <class Size = usize_t>
       requires std::is_integral_v<Size>
-    auto pairs(shell_weights_t<T> const &weights, bool pack = true) {
+    auto pairs(std::vector<T> const &radii, shell_weights_t<T> const &weights, bool pack = true,
+               T atol = std::numeric_limits<T>::epsilon(), T rtol = 1.0e-9) {
       using namespace helpers;
       auto [shell_map, reverse_map] = make_index_mapping<Size>(weights | views::elements<0>);
       std::vector<atom_pair<Size>> pairs;
       pairs.reserve(size() * size() / 2);
-      auto sm = shell_matrix();
+      auto sm = shell_matrix(radii, atol, rtol);
       for (Size i = 0; i < size(); ++i) {
         for (Size j = i + 1; j < size(); ++j)
           pairs.push_back({i, j, static_cast<Size>(pack ? shell_map[sm(i, j)] : sm(i, j))});
