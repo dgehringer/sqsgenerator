@@ -77,9 +77,9 @@ namespace sqsgen {
   };
 
   enum SublatticeMode {
-    SUBLATTIC_MODE_INVALID = -1,
-    SUBLATTIC_MODE_INTERACT,
-    SUBLATTIC_MODE_SPLIT,
+    SUBLATTICE_MODE_INVALID = -1,
+    SUBLATTICE_MODE_INTERACT,
+    SUBLATTICE_MODE_SPLIT,
   };
 
 
