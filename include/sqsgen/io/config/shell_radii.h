@@ -86,16 +86,18 @@ namespace sqsgen::io::config {
       if (accessor<Document>::contains(doc, key.data)) {
         // otherwise we expect to object to be a list and hold the radii spec. for each sl
         auto list = accessor<Document>::get(doc, key.data);
-        if (!accessor<std::decay_t<decltype(list)>>::is_list(list))
+        using accessor_t = accessor<std::decay_t<decltype(list)>>;
+        if (!accessor_t::is_list(list))
           return parse_error::from_msg<key, CODE_TYPE_ERROR>(
               "You want to run a split sublattice mode, and did not specify valid modes. You "
               "have to specify the shell radii per sublattice");
+        auto is_list = accessor_t::is_list(list);
         auto default_radii = [&](auto && subdoc, auto && sublattice) {
           return parse_radii<key, T>(
               doc, get_either<KEY_NONE, ShellRadiiDetection, std::vector<T>>(subdoc),
               std::move(structure.sliced(sublattice.sites)));
         };
-        return lift<key>(default_radii, as<std::vector>{}(list), sublattices);
+        return lift<key>(default_radii, accessor_t::range(list), sublattices);
       }
       // nothing is specified return the default value
       auto default_radii = [&](auto&& sublattice) -> parse_result<std::vector<T>> {

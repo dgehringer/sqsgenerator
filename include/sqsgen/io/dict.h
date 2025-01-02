@@ -94,6 +94,7 @@ namespace sqsgen::io {
     }
 
     static auto is_list(py::object const& o) { return accessor<py::handle>::is_list(o); }
+
     template <string_literal key = "", class Option>
     static parse_result<Option> get_as(py::object const& d) {
       return accessor<py::handle>::get_as<key, Option>(d);
