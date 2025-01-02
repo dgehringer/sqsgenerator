@@ -32,6 +32,16 @@ namespace sqsgen::io {
 
     static bool is_list(py::handle const& o) { return py::isinstance<py::list>(o); }
 
+    static auto range(py::handle const& o) {
+      std::vector<py::handle> vec;
+      auto it = py::iter(o);
+      while (it != py::iterator::sentinel()) {
+        vec.push_back(*it);
+        ++it;
+      }
+      return vec;
+    }
+
     static auto items(py::handle const& d) {
       if (is_document(d)) {
         std::vector<std::pair<py::handle, py::handle>> items;
@@ -77,6 +87,10 @@ namespace sqsgen::io {
 
     static auto get(py::object const& d, std::string&& key) {
       return accessor<py::handle>::get(d, std::forward<std::string>(key));
+    }
+
+    static auto range(py::object const& d) {
+      return accessor<py::handle>::range(d);
     }
 
     static auto is_list(py::object const& o) { return accessor<py::handle>::is_list(o); }

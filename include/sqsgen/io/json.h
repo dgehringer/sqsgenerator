@@ -117,6 +117,10 @@ namespace sqsgen {
 
       static auto items(nlohmann::json const& json) { return json.items(); }
 
+      static auto range(nlohmann::json const& json) {
+        return std::vector{json.begin(), json.end()};
+      }
+
       template <string_literal key = "", class Option>
       static parse_result<Option> get_as(nlohmann::json const& json) {
         try {
