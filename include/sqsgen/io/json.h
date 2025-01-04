@@ -45,7 +45,7 @@ template <class T> struct adl_serializer<coords_t<T>> {
 template <class T> struct adl_serializer<cube_t<T>> {
   static void to_json(json& j, const cube_t<T>& m) { j = core::helpers::eigen_to_stl(m); }
 
-  static void from_json(const json& j, coords_t<T>& m) {
+  static void from_json(const json& j, cube_t<T>& m) {
     m = std::move(core::helpers::stl_to_eigen<cube_t<T>>(j.get<stl_cube_t<T>>()));
   }
 };
