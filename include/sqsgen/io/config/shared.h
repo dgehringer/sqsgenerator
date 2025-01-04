@@ -55,9 +55,8 @@ namespace sqsgen::io::config {
 
   template <string_literal key, class Document, class InteractFn, class SplitFn>
     requires std::is_same_v<std::invoke_result_t<InteractFn>, std::invoke_result_t<SplitFn>>
-  parse_result<typename detail::parse_result_inner_type_from_fn<InteractFn>::type> parse_for_mode(InteractFn&& interact_fn,
-                                                                          SplitFn&& split_fn,
-                                                                          Document const& doc) {
+  parse_result<typename detail::parse_result_inner_type_from_fn<InteractFn>::type> parse_for_mode(
+      InteractFn&& interact_fn, SplitFn&& split_fn, Document const& doc) {
     using return_t = typename detail::parse_result_inner_type_from_fn<InteractFn>::type;
     return get_optional<"sublattice_mode", SublatticeMode>(doc)
         .value_or(parse_result<SublatticeMode>{SUBLATTICE_MODE_INTERACT})

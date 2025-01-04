@@ -100,7 +100,6 @@ namespace sqsgen::io::config {
             return parse_error::from_msg<key, CODE_TYPE_ERROR>(
                 "You want to run a split sublattice mode, and did not specify valid modes. You "
                 "have to specify the shell radii per sublattice");
-          auto is_list = accessor_t::is_list(list);
           auto default_radii = [&](auto&& subdoc, auto&& sublattice) {
             return parse_radii<key, T>(
                 doc, get_either<KEY_NONE, ShellRadiiDetection, std::vector<T>>(subdoc),
