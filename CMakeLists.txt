@@ -71,7 +71,10 @@ add_executable(sqsgenerator main.cpp
         include/sqsgen/core/helpers/sorted_vector.h
         include/sqsgen/io/parsing.h
         include/sqsgen/io/config/shell_radii.h
-        include/sqsgen/io/config/shell_weights.h)
+        include/sqsgen/io/config/shell_weights.h
+        include/sqsgen/io/config/arrays.h
+        include/sqsgen/io/config/shared.h
+        include/sqsgen/io/config/combined.h)
 
 target_link_libraries(sqsgenerator PRIVATE ${SQSGEN_LIBS})
 target_link_libraries(sqsgenerator PRIVATE ${Python3_LIBRARIES})

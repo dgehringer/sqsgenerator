@@ -81,6 +81,9 @@ add_executable(test_parser
         ../include/sqsgen/io/dict.h
         ../include/sqsgen/io/config/shell_radii.h
         ../include/sqsgen/io/config/shell_weights.h
+        ../include/sqsgen/io/config/arrays.h
+        ../include/sqsgen/io/config/shared.h
+        ../include/sqsgen/io/config/combined.h
 )
 target_link_libraries(test_parser ${SQSGEN_TEST_LIBS})
 add_test(NAME test_parser COMMAND test_parser)
