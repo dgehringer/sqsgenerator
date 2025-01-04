@@ -129,8 +129,52 @@ namespace sqsgen::core {
       };
     };
 
-    inline usize_t count_species(configuration_t const &configuration) {
+    inline usize_t compute_num_species(configuration_t const &configuration) {
       return static_cast<usize_t>(helpers::sorted_vector<specie_t>(configuration).size());
+    }
+
+    template <class T> cube_t<T> compute_prefactors(shell_matrix_t const &shell_matrix,
+                                                    shell_weights_t<T> const &weights,
+                                                    configuration_t const &configuration) {
+      using namespace helpers;
+      if (weights.empty()) throw std::out_of_range("no coordination shells selected");
+      auto neighbors = count(shell_matrix.reshaped());
+      for (const auto &[shell, count] : neighbors) {
+        auto atoms_per_shell{static_cast<T>(count) / static_cast<T>(configuration.size())};
+        if (atoms_per_shell < 1)
+          spdlog::warn(
+              R"(The coordination shell {} contains no or only one lattice position(s). Increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
+              shell);
+        if (!is_close(atoms_per_shell, static_cast<T>(static_cast<usize_t>(atoms_per_shell))))
+          spdlog::warn(
+              "The coordination shell {} does not contain an integer number of sites. I hope you "
+              "know what you are doing");
+        neighbors[shell] = atoms_per_shell;
+      }
+
+      auto shell_map = std::get<1>(make_index_mapping<usize_t>(weights | views::elements<0>));
+      auto conf_map = std::get<1>(make_index_mapping<usize_t>(configuration));
+
+      auto hist = core::count_species(configuration);
+      auto num_sites{configuration.size()};
+      auto num_species{static_cast<long>(hist.size())};
+      auto num_shells{weights.size()};
+
+      Eigen::Tensor<T, 3> prefactors(num_shells, num_species, num_species);
+
+      for (auto s = 0; s < num_shells; s++) {
+        T M_i{static_cast<T>(neighbors[shell_map[s]])};
+        for (auto a = 0; a < num_species; a++) {
+          T x_a{static_cast<T>(hist[conf_map[a]]) / static_cast<T>(num_sites)};
+          for (auto b = a; b < num_species; b++) {
+            T x_b{static_cast<T>(hist[conf_map[b]]) / static_cast<T>(num_sites)};
+            T prefactor{1.0 / (M_i * x_a * x_b * static_cast<T>(num_sites))};
+            prefactors(s, a, b) = prefactor;
+            prefactors(s, b, a) = prefactor;
+          }
+        }
+      }
+      return prefactors;
     }
   }  // namespace detail
 
@@ -199,48 +243,11 @@ namespace sqsgen::core {
     return shells;
   }
 
-  template <class T> cube_t<T> compute_prefactors(shell_matrix_t const &shell_matrix,
-                                                            shell_weights_t<T>  & weights,
-                                                            configuration_t const &configuration) {
-    using namespace helpers;
-    if (weights.empty()) throw std::out_of_range("no coordination shells selected");
-    auto neighbors = count(shell_matrix.reshaped());
-    for (const auto &[shell, count] : neighbors) {
-      auto atoms_per_shell{static_cast<T>(count) / static_cast<T>(configuration.size())};
-      if (atoms_per_shell < 1)
-        spdlog::warn(
-            R"(The coordination shell {} contains no or only one lattice position(s). Increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
-            shell);
-      if (!is_close(atoms_per_shell, static_cast<T>(static_cast<usize_t>(atoms_per_shell))))
-        spdlog::warn(
-            "The coordination shell {} does not contain an integer number of sites. I hope you "
-            "know what you are doing");
-      neighbors[shell] = atoms_per_shell;
-    }
-
-    auto shell_map = std::get<1>(make_index_mapping<usize_t>(weights | views::elements<0>));
-    auto conf_map = std::get<1>(make_index_mapping<usize_t>(configuration));
-
-    auto hist = count_species(configuration);
-    auto num_sites{configuration.size()};
-    auto num_species{static_cast<long>(hist.size())};
-    auto num_shells{weights.size()};
-
-    Eigen::Tensor<T, 3> prefactors(num_shells, num_species, num_species);
-
-    for (auto s = 0; s < num_shells; s++) {
-      T M_i{static_cast<T>(neighbors[shell_map[s]])};
-      for (auto a = 0; a < num_species; a++) {
-        T x_a{static_cast<T>(hist[conf_map[a]]) / static_cast<T>(num_sites)};
-        for (auto b = a; b < num_species; b++) {
-          T x_b{static_cast<T>(hist[conf_map[b]]) / static_cast<T>(num_sites)};
-          T prefactor{1.0 / (M_i * x_a * x_b * static_cast<T>(num_sites))};
-          prefactors(s, a, b) = prefactor;
-          prefactors(s, b, a) = prefactor;
-        }
-      }
-    }
-    return prefactors;
+  template <class T> cube_t<T> compute_prefactors(structure<T> &&structure,
+                                                  std::vector<T> const &shell_radii,
+                                                  shell_weights_t<T> const &weights) {
+    return detail::compute_prefactors<T>(structure.shell_matrix(shell_radii), weights,
+                                         structure.species);
   }
 
   template <class T>
@@ -271,13 +278,17 @@ namespace sqsgen::core {
       };
       frac_coords = fc;
       _distance_matrix = std::nullopt;
-      num_species = detail::count_species(species);
+      num_species = detail::compute_num_species(species);
     }
 
     structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
               const std::vector<specie_t> &species,
               const std::array<bool, 3> &pbc = {true, true, true})
-        : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc), num_species(detail::count_species(species)) {
+        : lattice(lattice),
+          frac_coords(frac_coords),
+          species(species),
+          pbc(pbc),
+          num_species(detail::compute_num_species(species)) {
       if (frac_coords.rows() != species.size() || species.empty())
         throw std::invalid_argument(
             "frac coords must have the same size as the species input and must not be empty");
@@ -285,7 +296,11 @@ namespace sqsgen::core {
 
     structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords, std::vector<specie_t> &&species,
               std::array<bool, 3> &&pbc = {true, true, true})
-        : lattice(lattice), frac_coords(frac_coords), species(species), pbc(pbc), num_species(detail::count_species(species)) {
+        : lattice(lattice),
+          frac_coords(frac_coords),
+          species(species),
+          pbc(pbc),
+          num_species(detail::compute_num_species(species)) {
       if (frac_coords.rows() != species.size() || species.empty())
         throw std::invalid_argument(
             "frac coords must have the same size as the species input and must not be empty");
@@ -298,10 +313,10 @@ namespace sqsgen::core {
       return _distance_matrix.value();
     }
 
-    [[nodiscard]] shell_matrix_t shell_matrix(std::vector<T> const &distances,
+    [[nodiscard]] shell_matrix_t shell_matrix(std::vector<T> const &shell_radii,
                                               T atol = std::numeric_limits<T>::epsilon(),
                                               T rtol = 1.0e-9) {
-      return detail::shell_matrix(distance_matrix(), distances, atol, rtol);
+      return detail::shell_matrix(distance_matrix(), shell_radii, atol, rtol);
     }
 
     [[nodiscard]] structure supercell(std::size_t a, std::size_t b, std::size_t c) const {
