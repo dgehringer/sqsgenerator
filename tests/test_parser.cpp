@@ -11,10 +11,7 @@
 #include "nlohmann/json.hpp"
 #include "sqsgen/config.h"
 #include "sqsgen/core/structure.h"
-#include "sqsgen/io/config/composition.h"
-#include "sqsgen/io/config/shell_radii.h"
-#include "sqsgen/io/config/shell_weights.h"
-#include "sqsgen/io/config/structure.h"
+#include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/dict.h"
 #include "sqsgen/io/json.h"
 #include "sqsgen/types.h"
@@ -345,7 +342,7 @@ namespace sqsgen::testing {
                     doc, std::forward<decltype(structure)>(structure), composition);
               });
         });
-  };
+  }
 
   TEST(test_parse_shell_radii, default_case) {
     using namespace sqsgen::io;
@@ -431,10 +428,7 @@ namespace sqsgen::testing {
 
     auto assert_holds_error = make_assert_holds_error(json, dict, []<class Doc>(Doc const& doc) {
       auto radii = parse_radii(doc);
-      auto num_shells = as<std::vector>{}(radii.result() | views::transform([](auto&& r) {
-                                            return static_cast<usize_t>(r.size());
-                                          }));
-      return config::parse_shell_weights<"shell_weights", double>(doc, num_shells);
+      return config::parse_shell_weights<"shell_weights", double>(doc, radii.result());
     });
 
     assert_holds_error("shell_weights", CODE_BAD_VALUE);
@@ -465,10 +459,7 @@ namespace sqsgen::testing {
 
     auto parse_weights = []<class Doc>(Doc const& doc) -> weights_t<double> {
       auto radii = parse_radii(doc);
-      auto num_shells = as<std::vector>{}(radii.result() | views::transform([](auto&& r) {
-                                            return static_cast<usize_t>(r.size());
-                                          }));
-      return config::parse_shell_weights<"shell_weights", double>(doc, num_shells);
+      return config::parse_shell_weights<"shell_weights", double>(doc, radii.result());
     };
 
     auto rjson = parse_weights(json);
@@ -498,13 +489,15 @@ namespace sqsgen::testing {
 
   TEST(test_parse_arrays, prefactors) {
     py::scoped_interpreter guard{};
-    auto l = as_pylist(py::float_(1.0), py::float_(2.0), py::float_(3.0), py::float_(4.0), py::float_(5.0));
-    auto ll = as_pylist(l, l, l, l);
-    py::print(ll);
+    auto [json, dict] = make_test_structure_and_composition<double>(std::array{2, 2, 2});
 
-    auto vec = ll.cast<stl_matrix_t<double>>();
-    auto mat = ll.cast<matrix_t<double>>();
-    std::cout << mat << std::endl;
+    const auto parse_both = [&] {
+      return std::make_tuple(config::parse_config<double>(json),
+                             config::parse_config<double>(py::handle(dict)));
+    };
+
+    auto [rjson, rdict] = parse_both();
+    ASSERT_TRUE(rjson.ok());
   }
 
 }  // namespace sqsgen::testing
