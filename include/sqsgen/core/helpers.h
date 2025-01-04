@@ -6,15 +6,14 @@
 #define SQSGEN_CORE_HELPERS_H
 
 #include <ranges>
-#include <unordered_set>
 
 #include "helpers/as.h"
 #include "helpers/fold.h"
 #include "helpers/for_each.h"
 #include "helpers/hash.h"
 #include "helpers/numeric.h"
-#include "helpers/static_string.h"
 #include "helpers/sorted_vector.h"
+#include "helpers/static_string.h"
 #include "helpers/templates.h"
 #include "sqsgen/types.h"
 
@@ -31,12 +30,12 @@ namespace sqsgen::core::helpers {
     return result;
   }
 
-
-
-  template <class Matrix, int Rows = Matrix::Base::RowsAtCompileTime, int Cols = Matrix::Base::ColsAtCompileTime>
+  template <class Matrix, int Rows = Matrix::Base::RowsAtCompileTime,
+            int Cols = Matrix::Base::ColsAtCompileTime>
   Matrix stl_to_eigen(std::vector<std::vector<typename Matrix::Scalar>> const& v) {
     if (v.size() == 0) throw std::invalid_argument("empty vector");
-    auto first_size = v.front().size();
+    using index_t = typename Matrix::Index;
+    index_t first_size = v.front().size();
     if (first_size == 0) throw std::invalid_argument("empty vector as first argument");
     if (!ranges::all_of(v, [&](auto const& row) { return row.size() == first_size; }))
       throw std::invalid_argument("not all vector have the same size");
@@ -47,26 +46,29 @@ namespace sqsgen::core::helpers {
                                           Cols, v.size(), first_size));
 
     Matrix result(v.size(), first_size);
-    helpers::for_each([&](auto i, auto j) { result(i, j) = v[i][j]; }, v.size(), first_size);
+    helpers::for_each([&](auto i, auto j) { result(i, j) = v[i][j]; },
+                      static_cast<index_t>(v.size()), first_size);
     return result;
   }
 
-  template <class Tensor>
-  Tensor stl_to_eigen(stl_cube_t<typename Tensor::Scalar> const& v) {
-    if (v.size() == 0) throw std::invalid_argument("empty vector");
-    auto first_size = v.front().size();
+  template <class Tensor> Tensor stl_to_eigen(stl_cube_t<typename Tensor::Scalar> const& v) {
+    using index_t = typename Tensor::Index;
+    index_t zero_size = v.size();
+    if (zero_size == 0) throw std::invalid_argument("empty vector");
+
+    index_t first_size = v.front().size();
     if (first_size == 0) throw std::invalid_argument("empty vector in first dimension");
-    auto second_size = v.front().front().size();
+    index_t second_size = v.front().front().size();
     if (second_size == 0) throw std::invalid_argument("empty vector in second dimension");
     if (!ranges::all_of(v, [&](auto const& face) {
           return face.size() == first_size && ranges::all_of(face, [&](auto const& row) {
-                   return row.size() == second_size;
+                   return static_cast<index_t>(row.size()) == second_size;
                  });
         }))
       throw std::invalid_argument("not all vector have the same size");
     Tensor result(v.size(), first_size, second_size);
-    helpers::for_each([&](auto i, auto j, auto, auto k) { result(i, j, k) = v[i][j][k]; }, v.size(),
-                      first_size, second_size);
+    helpers::for_each([&](auto i, auto j, auto k) { result(i, j, k) = v[i][j][k]; },
+                      zero_size, first_size, second_size);
     return result;
   }
 
@@ -86,7 +88,7 @@ namespace sqsgen::core::helpers {
     return index_mapping_t<T, U>(reverse_map, index_map);
   }
 
-  template <ranges::range R, class T = ranges::range_value_t<R>> counter<T> count(R &&r) {
+  template <ranges::range R, class T = ranges::range_value_t<R>> counter<T> count(R&& r) {
     counter<T> result{};
     for (auto e : r) {
       if (result.contains(e))
