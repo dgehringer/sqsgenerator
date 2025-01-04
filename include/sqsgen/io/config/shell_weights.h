@@ -80,10 +80,12 @@ namespace sqsgen::io::config {
   }  // namespace detail
 
   template <string_literal key, class T, class Document>
-  weights_t<T> parse_shell_weights(Document const& document,
-                                   std::vector<usize_t> const& num_shells) {
+  weights_t<T> parse_shell_weights(Document const& document, stl_matrix_t<T> const& shell_radii) {
+    const auto num_shells = as<std::vector>{}(
+        shell_radii | views::transform([](auto&& r) { return static_cast<usize_t>(r.size()); }));
     if (!accessor<Document>::contains(document, key.data))
       return detail::default_weights<T>(num_shells);
+
     auto doc = accessor<Document>::get(document, key.data);
     return parse_for_mode<key, Document>(
         [&] {
