@@ -128,15 +128,15 @@ namespace sqsgen::io::config {
 
       return parse_for_mode<key>(
           [&]() -> result_t {
+            auto structs = std::vector{structure.apply_composition(composition)};
             if (value_present) {
               auto doc = accessor<Document>::get(document, key.data);
-              return lift<key>(parser, std::vector{doc}, std::vector{structure}, shell_weights);
+              return lift<key>(parser, std::vector{doc}, structs, shell_weights);
             }
-            return lift<key>(defaults, std::vector{structure}, shell_weights, r...);
+            return lift<key>(defaults, structs, shell_weights, r...);
           },
           [&]() -> result_t {
-            auto structs = detail::decompose_structure(std::forward<core::structure<T>>(structure),
-                                                       composition);
+            auto structs = structure.apply_composition_and_decompose(composition);
             if (value_present) {
               auto doc = accessor<Document>::get(document, key.data);
               using accessor_t = accessor<std::decay_t<decltype(doc)>>;
