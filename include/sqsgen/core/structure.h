@@ -363,13 +363,31 @@ namespace sqsgen::core {
     template <class Fn> auto sorted_with_indices(Fn &&fn) const {
       auto s = helpers::as<std::vector>{}(sites());
       std::sort(s.begin(), s.end(), std::forward<Fn>(fn));
-      auto indices
-          = helpers::as<std::vector>{}(s | views::transform([](auto site) { return site.index; }));
-      return std::make_tuple(structure(lattice, s), indices);
+      return std::make_tuple(
+          structure(lattice, s),
+          helpers::as<std::vector>{}(s | views::transform([](auto site) { return site.index; })));
     }
 
     template <class Fn> auto sorted(Fn &&fn) const {
       return std::get<0>(sorted_with_indices(std::forward<Fn>(fn)));
+    }
+
+    structure apply_composition(std::vector<sublattice> const &composition) {
+      auto copy = structure(*this);
+      for (const auto &[sites, species] : composition) {
+        auto index = sites.begin();
+        for (auto &&[specie, amount] : species)
+          for (auto _ = 0; _ < amount; _++, ++index) copy.species[*index] = specie;
+      }
+      copy.num_species = detail::compute_num_species(copy.species);
+      return copy;
+    }
+
+    std::vector<structure> apply_composition_and_decompose(
+        std::vector<sublattice> const &composition) {
+      auto with_species = apply_composition(composition);
+      return helpers::as<std::vector>{}(
+          composition | views::transform([&](auto &&sl) { return with_species.sliced(sl.sites); }));
     }
 
     template <class Fn> auto filtered(Fn &&fn) const {
