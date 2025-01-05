@@ -11,6 +11,7 @@
 #include <set>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <vector>
+
 #include "sqsgen/core/helpers/sorted_vector.h"
 
 namespace sqsgen {
@@ -19,9 +20,7 @@ namespace sqsgen {
   using rank_t = mppp::integer<2>;
   using configuration_t = std::vector<specie_t>;
 
-  template <class T>
-  using vset = core::helpers::sorted_vector<T>;
-
+  template <class T> using vset = core::helpers::sorted_vector<T>;
 
   template <class T> using counter = std::map<T, size_t>;
 
@@ -46,7 +45,6 @@ namespace sqsgen {
 
   using usize_t = std::uint_fast32_t;
 
-
   using shell_matrix_t = matrix_t<usize_t>;
 
   template <class T> using bounds_t = std::pair<T, T>;
@@ -64,7 +62,7 @@ namespace sqsgen {
     PREC_DOUBLE = 1,
   };
 
-  enum IterationMode  {
+  enum IterationMode {
     ITERATION_MODE_INVALID = -1,
     ITERATION_MODE_RANDOM,
     ITERATION_MODE_SYSTEMATIC,
@@ -82,6 +80,12 @@ namespace sqsgen {
     SUBLATTICE_MODE_SPLIT,
   };
 
+  using composition_t = std::map<specie_t, usize_t>;
+
+  struct sublattice {
+    vset<usize_t> sites;
+    composition_t composition;
+  };
 
 }  // namespace sqsgen
 #endif  // SQSGEN_TYPES_HPP

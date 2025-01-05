@@ -10,13 +10,6 @@
 
 namespace sqsgen {
 
-  using composition_t = std::map<specie_t, usize_t>;
-
-  struct sublattice {
-    vset<usize_t> sites;
-    composition_t composition;
-  };
-
   template <class T> class structure_config {
   public:
     lattice_t<T> lattice;
@@ -43,6 +36,7 @@ namespace sqsgen {
     std::vector<cube_t<T>> pair_weights;
     std::vector<cube_t<T>> target_objective;
     IterationMode mode;
+    std::optional<rank_t> iterations;
   };
 
 
