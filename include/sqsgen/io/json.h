@@ -8,11 +8,11 @@
 #include <nlohmann/json.hpp>
 #include <utility>
 
+#include "sqsgen/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/parsing.h"
 #include "sqsgen/types.h"
-#include "sqsgen/config.h"
 
 // partial specialization (full specialization works too)
 NLOHMANN_JSON_NAMESPACE_BEGIN
@@ -27,7 +27,9 @@ template <class T> struct adl_serializer<matrix_t<T>> {
 };
 
 template <class T> struct adl_serializer<lattice_t<T>> {
-  static void to_json(json& j, const lattice_t<T>& m) { j = core::helpers::eigen_to_stl(m); }
+  static void to_json(json& j, const lattice_t<T>& m) {
+    j = core::helpers::eigen_to_stl<lattice_t<T>>(m);
+  }
 
   static void from_json(const json& j, lattice_t<T>& m) {
     m = std::move(core::helpers::stl_to_eigen<lattice_t<T>>(j.get<stl_matrix_t<T>>()));
@@ -35,7 +37,7 @@ template <class T> struct adl_serializer<lattice_t<T>> {
 };
 
 template <class T> struct adl_serializer<coords_t<T>> {
-  static void to_json(json& j, const coords_t<T>& m) { j = core::helpers::eigen_to_stl(m); }
+  static void to_json(json& j, const coords_t<T>& m) { j = core::helpers::eigen_to_stl<coords_t<T>>(m); }
 
   static void from_json(const json& j, coords_t<T>& m) {
     m = std::move(core::helpers::stl_to_eigen<coords_t<T>>(j.get<stl_matrix_t<T>>()));
@@ -84,7 +86,6 @@ NLOHMANN_JSON_NAMESPACE_END
 namespace sqsgen {
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(sublattice, sites, composition);
 
-
   NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_SINGLE, "single"}, {PREC_DOUBLE, "double"}})
   NLOHMANN_JSON_SERIALIZE_ENUM(ShellRadiiDetection,
                                {{ShellRadiiDetection::SHELL_RADII_DETECTION_INVALID, nullptr},
@@ -98,11 +99,11 @@ namespace sqsgen {
                                })
 
   NLOHMANN_JSON_SERIALIZE_ENUM(SublatticeMode,
-                             {
-                                 {SublatticeMode::SUBLATTICE_MODE_INVALID, nullptr},
-                                 {SublatticeMode::SUBLATTICE_MODE_INTERACT, "interact"},
-                                 {SublatticeMode::SUBLATTICE_MODE_SPLIT, "split"},
-                             })
+                               {
+                                   {SublatticeMode::SUBLATTICE_MODE_INVALID, nullptr},
+                                   {SublatticeMode::SUBLATTICE_MODE_INTERACT, "interact"},
+                                   {SublatticeMode::SUBLATTICE_MODE_SPLIT, "split"},
+                               })
   namespace io {
     template <> struct accessor<nlohmann::json> {
       static bool contains(nlohmann::json const& json, std::string&& key) {
@@ -120,7 +121,9 @@ namespace sqsgen {
       static auto range(nlohmann::json const& json) {
         std::vector<nlohmann::json> items;
         items.reserve(json.size());
-        for (auto& item : json) {items.push_back(item);}
+        for (auto& item : json) {
+          items.push_back(item);
+        }
         return items;
       }
 
