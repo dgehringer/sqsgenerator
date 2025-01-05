@@ -103,7 +103,7 @@ namespace sqsgen::core {
     public:
       friend class structure<T>;
       using row_t = Eigen::Vector3<T>;
-      std::size_t index;
+      usize_t index;
       specie_t specie;
       row_t frac_coords;
       [[nodiscard]] atom atom() const { return atom::from_z(specie); }
@@ -354,9 +354,10 @@ namespace sqsgen::core {
     [[nodiscard]] std::size_t size() const { return species.size(); }
 
     auto sites() const {
-      return ranges::iota_view(std::size_t(0), size()) | views::transform([&](auto i) {
-               return detail::site<T>{i, species[i], Eigen::Vector3<T>(frac_coords.row(i))};
-             });
+      return ranges::iota_view(static_cast<usize_t>(0), static_cast<usize_t>(size()))
+             | views::transform([&](auto i) {
+                 return detail::site<T>{i, species[i], Eigen::Vector3<T>(frac_coords.row(i))};
+               });
     }
 
     template <class Fn> auto sorted_with_indices(Fn &&fn) const {
@@ -382,7 +383,7 @@ namespace sqsgen::core {
       for (auto index : r) {
         if (index >= size() || index < 0)
           throw std::out_of_range(std::format("index out of range 0 <= {} < {}", index, size()));
-        sites.push_back(detail::site<T>{static_cast<std::size_t>(index), species[index],
+        sites.push_back(detail::site<T>{static_cast<usize_t>(index), species[index],
                                         Eigen::Vector3<T>(frac_coords.row(index))});
       }
       return structure(lattice, sites);
