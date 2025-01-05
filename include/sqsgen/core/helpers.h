@@ -30,6 +30,23 @@ namespace sqsgen::core::helpers {
     return result;
   }
 
+  template <class T> stl_cube_t<typename cube_t<T>::Scalar> eigen_to_stl(cube_t<T> const& c) {
+    const typename cube_t<T>::Dimensions& d = c.dimensions();
+    stl_cube_t<typename cube_t<T>::Scalar> result(d[0]);
+    for_each(
+        [&](auto&& i) {
+          result[i].resize(d[1]);
+          for_each([&](auto&& j) {
+            result[i][j].resize(d[2]);
+            for_each([&](auto&& k) {
+              result[i][j][k] = c(i, j, k);
+            }, d[2]);
+          }, d[1]);
+        },
+        d[0]);
+    return result;
+  }
+
   template <class Matrix, int Rows = Matrix::Base::RowsAtCompileTime,
             int Cols = Matrix::Base::ColsAtCompileTime>
   Matrix stl_to_eigen(std::vector<std::vector<typename Matrix::Scalar>> const& v) {
@@ -67,8 +84,8 @@ namespace sqsgen::core::helpers {
         }))
       throw std::invalid_argument("not all vector have the same size");
     Tensor result(v.size(), first_size, second_size);
-    helpers::for_each([&](auto i, auto j, auto k) { result(i, j, k) = v[i][j][k]; },
-                      zero_size, first_size, second_size);
+    helpers::for_each([&](auto i, auto j, auto k) { result(i, j, k) = v[i][j][k]; }, zero_size,
+                      first_size, second_size);
     return result;
   }
 
