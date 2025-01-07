@@ -12,6 +12,8 @@ namespace sqsgen::core::helpers {
     return std::abs(a - b) <= (atol + rtol * std::abs(b));
   }
 
+  template <class T> T absolute(T a) { return a > 0 ? a : -a; }
+
   template <typename Out, typename In>
     requires std::is_convertible_v<In, Out>
   Out factorial(In n) {
