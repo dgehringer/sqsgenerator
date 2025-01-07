@@ -106,7 +106,7 @@ namespace sqsgen::core {
       usize_t index;
       specie_t specie;
       row_t frac_coords;
-      [[nodiscard]] atom atom() const { return atom::from_z(specie); }
+      [[nodiscard]] sqsgen::core::atom atom() const { return atom::from_z(specie); }
 
       bool operator<(site const &other) const {
         return specie < other.specie && frac_coords(0) < other.frac_coords(0)
