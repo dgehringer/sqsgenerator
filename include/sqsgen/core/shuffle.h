@@ -32,24 +32,16 @@ namespace sqsgen::core {
 
   class shuffler {
   public:
-    explicit shuffler(std::optional<std::uint64_t> seed = std::nullopt)
-        : seed(seed.value_or(make_random_seed())) {}
-
-    template<class T>
-    void shuffle(std::vector<T> &configuration) {
-      for (auto i = static_cast<uint32_t>(configuration.size()); i > 1; i--) {
-        uint32_t p = random_bounded(i, seed);               // number in [0,i)
-        std::swap(configuration[i - 1], configuration[p]);  // swap the values at i-1 and p
-      }
-    }
-
-    void shuffle(configuration_t &configuration, std::vector<bounds_t<usize_t>> const& bounds) {
-      for (auto &bound : bounds) {
+    explicit shuffler(std::vector<bounds_t<usize_t>> const &bounds,
+                      std::optional<std::uint64_t> seed = std::nullopt)
+        : _seed(seed.value_or(make_random_seed())), _bounds(bounds) {}
+    void shuffle(configuration_t &configuration) {
+      for (auto &bound : _bounds) {
         auto [lower_bound, upper_bound] = bound;
         assert(upper_bound > lower_bound);
         auto window_size = upper_bound - lower_bound;
         for (usize_t i = window_size; i > 1; i--) {
-          usize_t p = random_bounded(i, seed);  // number in [0,i)
+          usize_t p = random_bounded(i, _seed);  // number in [0,i)
           std::swap(configuration[lower_bound + i - 1],
                     configuration[p + lower_bound]);  // swap the values at i-1 and p
         }
@@ -57,7 +49,8 @@ namespace sqsgen::core {
     }
 
   private:
-    std::uint64_t seed;
+    std::uint64_t _seed;
+    std::vector<bounds_t<usize_t>> _bounds;
   };
 
 }  // namespace sqsgen::core
