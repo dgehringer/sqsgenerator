@@ -61,6 +61,13 @@ namespace sqsgen::core {
     void stop() {
       if (!_stop.stop_requested()) _stop.request_stop();
     }
+    void join() {
+      if (!_threads.empty()) for (auto &t : _threads) t.join();
+    }
+
+    std::stop_token get_stop_token() {
+      return _stop.get_token();
+    }
 
   private:
     std::size_t _size;
