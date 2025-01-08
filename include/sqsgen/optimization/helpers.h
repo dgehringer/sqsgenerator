@@ -14,6 +14,21 @@ namespace sqsgen::optimization::helpers {
 
   namespace detail {}
 
+  template <class T> cube_t<T> scaled_pair_weights(cube_t<T> const& pair_weights, shell_weights_t<T> const& weights, usize_t num_species) {
+    auto w(pair_weights);
+    auto shells_rmap = std::get<1>(core::helpers::make_index_mapping<usize_t>(weights | views::elements<0>));
+    for (auto s = 0; s < weights.size(); ++s) {
+      auto w_s = weights.at(shells_rmap.at(s));
+      for (auto xi = 0; xi < num_species; ++xi)
+        for (auto eta = xi; eta < num_species; ++eta) {
+          w(s, xi, eta) *= w_s;
+          if (xi == eta) continue;
+          w(s, eta, xi) *= w_s;
+        }
+    }
+    return w;
+  }
+
   template <class T> auto compute_shuffling_bounds(core::structure<T> const& structure,
                                                    std::vector<sublattice> const& composition) {
     using namespace core::helpers;
