@@ -7,7 +7,6 @@
 
 #include "sqsgen/core/structure.h"
 
-
 namespace sqsgen {
 
   template <class T> class structure_config {
@@ -36,9 +35,10 @@ namespace sqsgen {
     std::vector<cube_t<T>> pair_weights;
     std::vector<cube_t<T>> target_objective;
     IterationMode mode;
-    std::optional<rank_t> iterations;
+    std::optional<iterations_t> iterations;
+    iterations_t chunk_size;
+    thread_config_t thread_config;
   };
-
 
 }  // namespace sqsgen
 
