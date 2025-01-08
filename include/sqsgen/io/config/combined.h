@@ -14,7 +14,8 @@
 
 namespace sqsgen::io::config {
 
-  static constexpr double iterations_default = 100000;
+  static constexpr iterations_t iterations_default = 500000;
+  static constexpr iterations_t chunk_size_default = 100000;
 
   template <string_literal key, class Document>
   parse_result<IterationMode> parse_mode(Document const& document) {
@@ -35,12 +36,37 @@ namespace sqsgen::io::config {
   }
 
   template <string_literal key, class Document>
-  parse_result<std::optional<rank_t>> parse_iterations(Document const& doc, IterationMode mode) {
-    using result_t = parse_result<std::optional<rank_t>>;
+  parse_result<std::optional<iterations_t>> parse_iterations(Document const& doc,
+                                                             IterationMode mode) {
+    using result_t = parse_result<std::optional<iterations_t>>;
     if (mode == ITERATION_MODE_SYSTEMATIC) return result_t{std::nullopt};
-    return get_optional<key, double>(doc)
-        .value_or(parse_result<double>{iterations_default})
-        .and_then([](auto&& iterations) -> result_t { return result_t{rank_t(iterations)}; });
+    return get_optional<key, iterations_t>(doc)
+        .value_or(parse_result<iterations_t>{iterations_default})
+        .and_then([](auto&& iterations) -> result_t { return result_t{iterations}; });
+  }
+
+  template <string_literal key, class Document>
+  parse_result<thread_config_t> parse_threads_per_rank(Document const& doc) {
+    using result_t = parse_result<thread_config_t>;
+    return get_either_optional<key, usize_t, std::vector<usize_t>>(doc)
+        .value_or(parse_result<usize_t, std::vector<usize_t>>{usize_t(0)})
+        .template collapse<thread_config_t>(
+            [&](usize_t&& num_threads) -> result_t { return {num_threads}; },
+            [&](std::vector<usize_t>&& num_threads) -> result_t { return {num_threads}; });
+  }
+
+  template <string_literal key, class Document>
+  parse_result<iterations_t> parse_chunk_size(Document const& doc,
+                                              std::optional<iterations_t> iterations) {
+    using result_t = parse_result<iterations_t>;
+    return get_optional<key, iterations_t>(doc)
+        .value_or(parse_result<iterations_t>{chunk_size_default})
+        .and_then([&](auto&& cs) -> result_t {
+          if (iterations.has_value() && cs >= iterations.value())
+            return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(std::format(
+                "\"chunk_size\" was set to {} and iterations set to {}", cs, iterations.value()));
+          return result_t{cs};
+        });
   }
 
   template <class T, class Document>
@@ -57,7 +83,7 @@ namespace sqsgen::io::config {
                 return config::parse_shell_radii<"shell_radii">(
                            doc, std::forward<decltype(structure)>(structure), composition)
                     .and_then([&](auto&& radii) {
-                      return config::parse_shell_weights<"shell_weights", double>(doc, radii)
+                      return config::parse_shell_weights<"shell_weights", T>(doc, radii)
                           .and_then([&](auto&& weights) {
                             return config::parse_prefactors<"prefactors", T>(
                                        doc, std::forward<decltype(structure)>(structure),
@@ -68,8 +94,12 @@ namespace sqsgen::io::config {
                                 .combine(config::parse_target_objective<"target_objective", T>(
                                     doc, std::forward<decltype(structure)>(structure), composition,
                                     weights))
+                                .combine(parse_chunk_size<"chunk_size">(doc, iterations))
+                                .combine(parse_threads_per_rank<"threads_per_rank">(doc))
                                 .and_then([&](auto&& arrays) -> parse_result<configuration<T>> {
-                                  auto [prefactors, pair_weights, target_objective] = arrays;
+                                  auto [prefactors, pair_weights, target_objective, chunk_size,
+                                        thread_config]
+                                      = arrays;
                                   return configuration<T>{
                                       std::forward<structure_config<T>>(sc),
                                       std::forward<std::vector<sublattice>>(composition),
@@ -80,7 +110,8 @@ namespace sqsgen::io::config {
                                       std::forward<std::vector<cube_t<T>>>(target_objective),
                                       mode,
                                       iterations,
-                                  };
+                                      chunk_size,
+                                      thread_config};
                                 });
                           });
                     });
