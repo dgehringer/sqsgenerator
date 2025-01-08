@@ -43,7 +43,13 @@ namespace sqsgen::core::helpers {
 
     auto size() const { return _values.size(); }
 
-    iterator insert(const T& t) {
+    iterator insert(T&& t) {
+      iterator i = std::lower_bound(begin(), end(), t, cmp);
+      if (i == end() || cmp(t, *i)) _values.insert(i, t);
+      return i;
+    }
+
+    iterator insert(T const& t) {
       iterator i = std::lower_bound(begin(), end(), t, cmp);
       if (i == end() || cmp(t, *i)) _values.insert(i, t);
       return i;

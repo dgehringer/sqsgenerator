@@ -168,7 +168,7 @@ namespace sqsgen::core {
           T x_a{static_cast<T>(hist[conf_map[a]]) / static_cast<T>(num_sites)};
           for (auto b = a; b < num_species; b++) {
             T x_b{static_cast<T>(hist[conf_map[b]]) / static_cast<T>(num_sites)};
-            T prefactor{1.0 / (M_i * x_a * x_b * static_cast<T>(num_sites))};
+            T prefactor{T(1.0) / (M_i * x_a * x_b * static_cast<T>(num_sites))};
             prefactors(s, a, b) = prefactor;
             prefactors(s, b, a) = prefactor;
           }
@@ -196,7 +196,7 @@ namespace sqsgen::core {
   std::vector<T> distances_histogram(structure<T> &&structure, T bin_width, T peak_isolation) {
     auto distances = helpers::as<std::vector>{}(
         structure.distance_matrix().reshaped()
-        | views::filter([](auto dist) { return dist > 0.0 && !helpers::is_close(dist, 0.0); }));
+        | views::filter([](auto dist) { return dist > 0.0 && !helpers::is_close<T>(dist, 0.0); }));
     std::sort(distances.begin(), distances.end());
     auto min_dist{distances.front()}, max_dist{distances.back()};
 
@@ -238,7 +238,7 @@ namespace sqsgen::core {
       }
     }
 
-    if (shells.front() != 0.0 && !helpers::is_close(shells.front(), 0.0))
+    if (shells.front() != 0.0 && !helpers::is_close<T>(shells.front(), 0.0))
       shells.insert(shells.begin(), 0.0);
     return shells;
   }
@@ -336,7 +336,7 @@ namespace sqsgen::core {
       std::vector<specie_t> supercell_species(num_atoms * num_copies);
       helpers::for_each(
           [&](auto i, auto j, auto k) {
-            using vec3_t = Eigen::Matrix<double, 1, 3>;
+            using vec3_t = Eigen::Matrix<T, 1, 3>;
             vec3_t translation = vec3_t{i, j, k} * iscale;
             helpers::for_each(
                 [&](auto index) {

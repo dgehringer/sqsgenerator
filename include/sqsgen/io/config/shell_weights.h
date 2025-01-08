@@ -73,7 +73,7 @@ namespace sqsgen::io::config {
                                  return as<std::map>{}(
                                      core::helpers::range<usize_t>({1, nshells - 1})
                                      | views::transform([&](usize_t&& i) {
-                                         return std::make_tuple(i, 1.0 / static_cast<T>(i));
+                                         return std::make_tuple(i, T(1.0) / static_cast<T>(i));
                                        }));
                                }));
     }
