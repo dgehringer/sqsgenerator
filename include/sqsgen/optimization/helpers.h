@@ -10,7 +10,7 @@
 namespace sqsgen::optimization::helpers {
 
   namespace ranges = std::ranges;
-  namespace vires = ranges::views;
+  namespace views = ranges::views;
 
   namespace detail {}
 
