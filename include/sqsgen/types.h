@@ -82,6 +82,10 @@ namespace sqsgen {
 
   using composition_t = std::map<specie_t, usize_t>;
 
+  using iterations_t = unsigned long long;
+
+  using thread_config_t = std::variant<usize_t, std::vector<usize_t>>;
+
   struct sublattice {
     vset<usize_t> sites;
     composition_t composition;
