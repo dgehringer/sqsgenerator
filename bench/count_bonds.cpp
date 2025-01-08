@@ -78,7 +78,7 @@ namespace sqsgen::bench {
 
   void bench_count_bond_current(ankerl::nanobench::Bench* bench) {
     auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
-    core::shuffler shuffler{};
+    core::shuffler shuffler{std::vector<bounds_t<usize_t>>{{0, species.size()}}};
     std::vector<usize_t> bonds(num_shells * num_params);
 
     bench->run("current", [&]() {
@@ -95,7 +95,7 @@ namespace sqsgen::bench {
 
   void bench_count_bond_current_sorted(ankerl::nanobench::Bench* bench) {
     auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
-    core::shuffler shuffler{};
+    core::shuffler shuffler{std::vector<bounds_t<usize_t>>{{0, species.size()}}};
     std::vector<usize_t> bonds(num_shells * num_params);
     std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) {
       return absolute(p.i - p.j) < absolute(q.i - q.j) && p.i < q.i;
@@ -114,12 +114,12 @@ namespace sqsgen::bench {
 
   void bench_count_bond_current_species_size_type(ankerl::nanobench::Bench* bench) {
     auto [pairs, species_, num_species, num_shells, num_params] = prepare_test_data();
-    core::shuffler shuffler{};
+    core::shuffler shuffler{std::vector<bounds_t<usize_t>>{{0, species_.size()}}};
     std::vector<usize_t> bonds(num_shells * num_params);
     std::vector<usize_t> species(species_.size());
     for (auto i = 0; i < species.size(); i++) species[i] = static_cast<usize_t>(species_[i]);
     bench->run("current-no-size-pad", [&]() {
-      shuffler.shuffle(species);
+      shuffler.shuffle(species_);
       std::fill(bonds.begin(), bonds.end(), 0);
       for (auto& [i, j, s] : pairs) {
         auto si{species[i]};
@@ -132,7 +132,7 @@ namespace sqsgen::bench {
 
   void bench_count_bond_half_off(ankerl::nanobench::Bench* bench) {
     auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
-    core::shuffler shuffler{};
+    core::shuffler shuffler{std::vector<bounds_t<usize_t>>{{0, species.size()}}};
     std::vector<usize_t> bonds(num_shells * num_params);
     bench->run("draft-half-off", [&]() {
       shuffler.shuffle(species);
@@ -147,7 +147,7 @@ namespace sqsgen::bench {
 
   void bench_count_bond_half_off_sorted(ankerl::nanobench::Bench* bench) {
     auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
-    core::shuffler shuffler{};
+    core::shuffler shuffler{std::vector<bounds_t<usize_t>>{{0, species.size()}}};
     std::vector<usize_t> bonds(num_shells * num_params);
     std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) {
       return absolute(p.i - p.j) < absolute(q.i - q.j) && p.i < q.i;
@@ -165,7 +165,7 @@ namespace sqsgen::bench {
 
   void bench_count_bond_half_off_sorted_memset(ankerl::nanobench::Bench* bench) {
     auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
-    core::shuffler shuffler{};
+    core::shuffler shuffler{std::vector<bounds_t<usize_t>>{{0, species.size()}}};
     std::vector<usize_t> bonds(num_shells * num_params);
     std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) {
       return absolute(p.i - p.j) < absolute(q.i - q.j) && p.i < q.i;
@@ -183,7 +183,7 @@ namespace sqsgen::bench {
 
   void bench_count_bond_half_off_sorted_shells(ankerl::nanobench::Bench* bench) {
     auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
-    core::shuffler shuffler{};
+    core::shuffler shuffler{std::vector<bounds_t<usize_t>>{{0, species.size()}}};
     std::vector<usize_t> bonds(num_shells * num_params);
     std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) {
       return p.shell > q.shell;
@@ -201,7 +201,7 @@ namespace sqsgen::bench {
 
   void bench_count_bond_half_off_sorted_static(ankerl::nanobench::Bench* bench) {
     auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
-    core::shuffler shuffler{};
+    core::shuffler shuffler{std::vector<bounds_t<usize_t>>{{0, species.size()}}};
     if (num_shells != 4) throw std::invalid_argument("num_shells must be 4");
     if (num_params != 9) throw std::invalid_argument("num_params must be 4");
     if (num_species != 3) throw std::invalid_argument("num_params must be 3");
@@ -222,7 +222,7 @@ namespace sqsgen::bench {
 
   void bench_count_bond_half_off_sorted_static_memory_layout(ankerl::nanobench::Bench* bench) {
     auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
-    core::shuffler shuffler{};
+    core::shuffler shuffler{std::vector<bounds_t<usize_t>>{{0, species.size()}}};
     if (num_shells != 4) throw std::invalid_argument("num_shells must be 4");
     if (num_params != 9) throw std::invalid_argument("num_params must be 4");
     if (num_species != 3) throw std::invalid_argument("num_params must be 3");
