@@ -9,6 +9,7 @@
 
 #include "helpers.h"
 #include "nlohmann/json.hpp"
+#include "sqsgen/optimization/sqs.h"
 #include "sqsgen/config.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/combined.h"
@@ -487,9 +488,9 @@ namespace sqsgen::testing {
     ASSERT_EQ(rjson.result()[1], w);
   }
 
-  TEST(test_parse_arrays, prefactors) {
+  TEST(test_parse_arrays, prefactors_interact) {
     py::scoped_interpreter guard{};
-    auto [json, dict] = make_test_structure_and_composition<double>(std::array{2, 2, 2});
+    auto [json, dict] = make_test_structure_and_composition_multiple<float>(std::array{3, 3, 3});
 
     const auto parse_both = [&] {
       return std::make_tuple(config::parse_config<double>(json),
@@ -497,7 +498,16 @@ namespace sqsgen::testing {
     };
 
     auto [rjson, rdict] = parse_both();
-    ASSERT_TRUE(rjson.ok());
+    ASSERT_TRUE(rjson.ok() && rdict.ok());
+
+
+    ASSERT_EQ(rjson.result().pair_weights.size(), 1);
+    ASSERT_EQ(rdict.result().pair_weights.size(), 1);
+    ASSERT_EQ(rjson.result().target_objective.size(), 1);
+    ASSERT_EQ(rdict.result().target_objective.size(), 1);
+    ASSERT_EQ(rjson.result().prefactors.size(), 1);
+    ASSERT_EQ(rdict.result().prefactors.size(), 1);
+    std::cout << json << std::endl;
   }
 
 }  // namespace sqsgen::testing
