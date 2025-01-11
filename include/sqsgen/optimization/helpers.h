@@ -119,7 +119,6 @@ namespace sqsgen::optimization::helpers {
           sro(s, eta, xi) = sigma_s_xi_eta;
           objective += pair_weights(s, xi, eta) * core::helpers::absolute(sigma_s_xi_eta - target(s, xi, eta));
         }
-
     return objective;
   }
 
