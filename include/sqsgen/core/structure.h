@@ -417,8 +417,10 @@ namespace sqsgen::core {
       pairs.reserve(size() * size() / 2);
       auto sm = shell_matrix(radii, atol, rtol);
       for (Size i = 0; i < size(); ++i) {
-        for (Size j = i + 1; j < size(); ++j)
+        for (Size j = i + 1; j < size(); ++j) {
+          if (!weights.contains(sm(i, j))) continue;
           pairs.push_back({i, j, static_cast<Size>(pack ? shell_map[sm(i, j)] : sm(i, j))});
+        }
       }
       pairs.shrink_to_fit();
       return std::make_tuple(pairs, shell_map, reverse_map);
