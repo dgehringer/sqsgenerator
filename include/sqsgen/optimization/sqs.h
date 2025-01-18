@@ -19,7 +19,7 @@ namespace sqsgen::optimization {
   template <class T, SublatticeMode Mode> struct optimizer_base {
     configuration<T> config;
     std::atomic<iterations_t> _finished;
-    std::atomic<iterations_t> _scheduled;
+    std::atomic<iterations_t> _offset;
     std::atomic<iterations_t> _working;
     std::atomic<T> _best_objective;
     sqs_result_collection<T, Mode> _results;
@@ -67,12 +67,15 @@ namespace sqsgen::optimization {
 
     void join() { _pool.join(); }
 
-    template <class Fn>
-    void schedule_chunk(Fn&& fn, rank_t total, rank_t start, iterations_t chunk_size) {
-      rank_t end{std::min(start + chunk_size, total)};
-      _scheduled.fetch_add(iterations_t{end - start});
-      std::cout << std::format("\t RANK {} scheduling range {} to {}\n", rank(), start.to_string(), end.to_string());
-      _pool.enqueue_fn<rank_t, rank_t>(fn, std::move(start), std::move(end));
+    auto make_scheduler(rank_t start, rank_t end, iterations_t chunk_size) {
+      return [this, start, end, chunk_size]<class Fn>(Fn&& fn) {
+        auto offset = _offset.load(std::memory_order_relaxed);
+        rank_t last{std::min(rank_t{start + offset + chunk_size}, end)};
+        iterations_t num_iterations{last - (start + offset)};
+        if (num_iterations == 0) return;
+        _offset.fetch_add(num_iterations);
+        _pool.enqueue_fn<rank_t, rank_t>(fn, rank_t{start + offset}, rank_t{last});
+      };
     };
 
     int rank() {
@@ -104,8 +107,7 @@ namespace sqsgen::optimization {
       };
     }
 
-    template<core::helpers::string_literal Name>
-    timer<Name> measure() {
+    template <core::helpers::string_literal Name> timer<Name> measure() {
       return timer<Name>{_timings};
     }
 
@@ -113,7 +115,7 @@ namespace sqsgen::optimization {
         : config(config),
           _best_objective(std::numeric_limits<T>::max()),
           _finished(0),
-          _scheduled(0),
+          _offset(0),
           _results(),
           _comm(config.thread_config),
           _pool(_comm.num_threads()),
@@ -162,15 +164,17 @@ namespace sqsgen::optimization {
       auto head = this->_comm.is_head();
       iterations_t chunk_size = config.chunk_size;
       auto [start, end] = this->iteration_range();
-      std::cout << std::format("RANK {} GOT RANGE: {} TO {} (CHUNK_SIZE={})\n", this->rank(),
-                               start.to_string(), end.to_string(), chunk_size);
+      std::cout << std::format("RANK {} GOT RANGE: {} TO {} (CHUNK_SIZE={}, NUM_PAIRS={})\n",
+                               this->rank(), start.to_string(), end.to_string(), chunk_size,
+                               pairs.size());
 
       const auto pull_results = this->make_result_puller(head, sorted, weights);
+      const auto schedule_chunk = this->make_scheduler(start, end, chunk_size);
 
       std::function<void(rank_t, rank_t)> worker
-          = [this, &species_packed, &shuffling, &worker, &pull_results, pairs,
+          = [this, &species_packed, &shuffling, &worker, &pull_results, &schedule_chunk, pairs,
              num_shells = weights.size(), num_species = sorted.num_species, total = end, prefactors,
-             target, pair_weights, chunk_size, head](rank_t&& rstart, rank_t&& rend) {
+             target, pair_weights, end, start, head](rank_t&& rstart, rank_t&& rend) {
               iterations_t iterations{rend - rstart};
               this->_working.fetch_add(iterations);
               configuration_t species(species_packed);
@@ -180,8 +184,10 @@ namespace sqsgen::optimization {
                   std::nullopt, std::numeric_limits<T>::infinity(), species, sro};
               auto m = this->template measure<"total">();
               this->_working.fetch_add(iterations);
-              helpers::scoped_execution([&] { this->template measure<"comm">(); this->pull_objective(); });
-              helpers::scoped_execution([&] { this->template measure<"comm">(); pull_results(); });
+              helpers::scoped_execution([&] { this->pull_objective(); });
+              helpers::scoped_execution([&] { pull_results(); });
+              std::cout << std::format("RANK {}: START {} to {}\n", this->rank(),
+                                       rstart.to_string(), rend.to_string());
               for (auto i = rstart; i < rend; ++i) {
                 if (this->stop_requested()) return;
                 shuffling.shuffle(species);
@@ -191,7 +197,7 @@ namespace sqsgen::optimization {
                                                          target, num_shells, num_species);
                 if (objective <= this->_best_objective.load()) {
                   // pull in changes from other ranks. Has another rank found a better
-                  auto _ = this->template measure<"comm">();
+                  auto _ = this->template measure<"sync">();
                   this->pull_objective();
                   this->update_objective(objective);
                   sqs_result<T, SUBLATTICE_MODE_INTERACT> current{std::nullopt, objective, species,
@@ -207,25 +213,21 @@ namespace sqsgen::optimization {
               }
               this->_working.fetch_add(-iterations);
               iterations_t finished = this->_finished.fetch_add(iterations);
-              std::cout << std::format("RANK {} finished rank {} to {}  of {}\n", this->rank(),
-                                       rstart.to_string(), rend.to_string(), finished);
-              if (finished >= total)
-                this->stop();
+              if (finished + iterations >= (end - start))
+               this->stop();
               else
-                this->schedule_chunk(worker, total, rend, chunk_size);
+                schedule_chunk(worker);
             };
       this->start();
-      for_each(
-          [&, chunk_size](auto i) {
-            this->schedule_chunk(worker, end, rank_t{i * chunk_size}, chunk_size);
-          },
-          this->_comm.num_threads());
+      for_each([&](auto) { schedule_chunk(worker); }, this->_comm.num_threads());
       this->join();
       this->pull_objective();
       pull_results();
 
-      for (const auto& [what, time]: this->_timings) {
-        std::cout << std::format("RANK {}: Time for {}: {} per iteration {}\n", this->rank(), what, time.load(), time.load() / static_cast<T>(iterations_t(end-start)));
+      for (const auto& [what, time] : this->_timings) {
+        std::cout << std::format("RANK {}: Time for {}: {} per iteration {}\n", this->rank(), what,
+                                 time.load(),
+                                 time.load() / static_cast<T>(iterations_t(end - start)));
       }
     }
 
