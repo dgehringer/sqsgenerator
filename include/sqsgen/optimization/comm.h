@@ -20,7 +20,21 @@ namespace sqsgen::optimization::comm {
   static constexpr int TAG_BETTER_OBJECTIVE = 1;
   static constexpr int TAG_RESULT = 2;
 
-  namespace detail {}  // namespace detail
+  namespace detail {
+    namespace ranges = std::ranges;
+    namespace views = ranges::views;
+    template <ranges::range R> auto sizes(R&& r) {
+      return r | views::transform([](auto&& v) { return v.size(); });
+    }
+
+    template <std::size_t Dim, ranges::range R> auto dimension(R&& r) {
+      return r | views::transform([](auto&& v) {
+               auto d = v.dimensions();
+               return d[Dim];
+             });
+    }
+
+  }  // namespace detail
 
   template <class T> class MPICommunicator {
 #ifdef WITH_MPI
@@ -75,15 +89,13 @@ namespace sqsgen::optimization::comm {
       }
     }
 
-    template<SublatticeMode Mode>
-    void send_result(sqs_result<T, Mode>&& result) {
+    template <SublatticeMode Mode> void send_result(sqs_result<T, Mode>&& result) {
       if constexpr (have_mpi) {
         result_comm<SEND>(_comm, _head_rank, std::move(result));
       }
     }
 
-    template<SublatticeMode Mode>
-    auto pull_results(sqs_result<T, Mode>& buffer) {
+    template <SublatticeMode Mode> auto pull_results(sqs_result<T, Mode>& buffer) {
       if constexpr (have_mpi) {
         return result_comm<RECV>(_comm, _head_rank, std::move(buffer));
       }
@@ -147,6 +159,68 @@ namespace sqsgen::optimization::comm {
       mpl::heterogeneous_layout l(
           result.objective, num_atoms, mpl::make_absolute(result.species.data(), species_layout),
           num_shells, num_species, mpl::make_absolute(sro_buff.data(), sro_layout));
+      if constexpr (Mode == SEND) {
+        auto req = comm.isend(mpl::absolute, l, to, mpl::tag_t(TAG_RESULT));
+        req.wait();
+        return {};
+      } else {
+        sqs_result_vector_t<SUBLATTICE_MODE_INTERACT> results{};
+        receive_messages(
+            [&, l](auto&& status) {
+              auto req = comm.irecv(mpl::absolute, l, status.source(), mpl::tag_t(TAG_RESULT));
+              req.wait();
+              result.sro = Eigen::TensorMap<cube_t<T>>(sro_buff.data(), num_shells, num_species,
+                                                       num_species);
+              results.push_back(result);
+            },
+            mpl::tag_t(TAG_RESULT), mpl::any_source);
+        return results;
+      }
+    }
+
+    template <bool Mode> sqs_result_vector_t<SUBLATTICE_MODE_SPLIT> result_comm(
+        mpl::communicator& comm, int to, sqs_result_t<SUBLATTICE_MODE_SPLIT>&& result) {
+      using namespace core::helpers;
+      std::vector<T> sro_buff;
+      configuration_t species_buff;
+      std::vector<T> objective_buff;
+      assert(result.sro.size() == result.species.size());
+      assert(result.sro.size() == result.objective.size());
+      std::size_t num_sublattices{result.species.size()};
+      std::vector<std::size_t> num_shells, num_atoms, num_species;
+      if constexpr (Mode == SEND) {
+        for (auto sro : result.sro)
+          sro_buff.insert(sro_buff.end(), sro.data(), sro.data() + sro.size());
+        for (auto species : result.species)
+          species_buff.insert(species_buff.end(), species.begin(), species.end());
+        for (auto objective : result.objective) objective_buff.push_back(objective);
+        num_shells = as<std::vector>{}(detail::dimension<0>(result.sro));
+        num_species = as<std::vector>{}(detail::dimension<1>(result.sro));
+        num_atoms = as<std::vector>{}(detail::sizes(result.species));
+        assert(num_atoms.size() == num_sublattices);
+        assert(num_species.size() == num_sublattices);
+        assert(num_shells.size() == num_sublattices);
+      } else {
+        sro_buff.resize(sum(detail::sizes(result.sro)));
+        species_buff.resize(sum(detail::sizes(result.species)));
+        objective_buff.resize(num_sublattices);
+        num_atoms.resize(num_sublattices);
+        num_species.resize(num_sublattices);
+        num_shells.resize(num_sublattices);
+      }
+      mpl::vector_layout<T> sro_layout(sro_buff.size());
+      mpl::vector_layout<T> objective_layout(objective_buff.size());
+      mpl::vector_layout<specie_t> species_layout(species_buff.size());
+      mpl::vector_layout<std::size_t> num_atoms_layout(num_atoms.size());
+      mpl::vector_layout<std::size_t> num_species_layout(num_species.size());
+      mpl::vector_layout<std::size_t> num_shells_layout(num_shells.size());
+      mpl::heterogeneous_layout l(num_sublattices,
+                                  mpl::make_absolute(num_atoms.data(), num_atoms_layout),
+                                  mpl::make_absolute(objective_buff.data(), objective_layout),
+                                  mpl::make_absolute(species_buff.data(), species_layout),
+                                  mpl::make_absolute(num_shells.data(), num_shells_layout),
+                                  mpl::make_absolute(num_species.data(), num_species_layout),
+                                  mpl::make_absolute(sro_buff.data(), sro_layout));
       if constexpr (Mode == SEND) {
         auto req = comm.isend(mpl::absolute, l, to, mpl::tag_t(TAG_RESULT));
         req.wait();
