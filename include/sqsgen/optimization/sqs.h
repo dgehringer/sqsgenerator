@@ -122,13 +122,12 @@ namespace sqsgen::optimization {
           _stop_token(_pool.get_stop_token()) {}
   };
 
-  template <class, IterationMode, SublatticeMode> class optimizer {};
 
-  template <class T> class optimizer<T, ITERATION_MODE_RANDOM, SUBLATTICE_MODE_INTERACT>
-      : public optimizer_base<T, SUBLATTICE_MODE_INTERACT> {
+  template <class T, IterationMode IMode, SublatticeMode SMode>
+  class optimizer : public optimizer_base<T, SMode> {
   public:
     explicit optimizer(configuration<T> config)
-        : optimizer_base<T, SUBLATTICE_MODE_INTERACT>(std::move(config)) {}
+        : optimizer_base<T, SMode>(std::move(config)) {}
     void run() {
       using namespace sqsgen::core::helpers;
       auto config = this->config;
@@ -141,6 +140,7 @@ namespace sqsgen::optimization {
        * site and the letter (A,B) the species: Region SL1 |       | v       v [0A, 1B, 0B, 1A,
        * 0A, 1A] -> [0A, 0A, 0B, 1A, 1A, 1B] ^       ^ |       | Region SL2
        */
+
       auto [sorted, bounds, sort_order]
           = helpers::compute_shuffling_bounds(structure, config.composition);
       auto [species_map, species_rmap] = make_index_mapping<specie_t>(sorted.species);
@@ -173,8 +173,8 @@ namespace sqsgen::optimization {
 
       std::function<void(rank_t, rank_t)> worker
           = [this, &species_packed, &shuffling, &worker, &pull_results, &schedule_chunk, pairs,
-             num_shells = weights.size(), num_species = sorted.num_species, total = end, prefactors,
-             target, pair_weights, end, start, head](rank_t&& rstart, rank_t&& rend) {
+             num_shells = weights.size(), num_species = sorted.num_species, prefactors,
+             target, pair_weights, start, end, head](rank_t&& rstart, rank_t&& rend) {
               iterations_t iterations{rend - rstart};
               this->_working.fetch_add(iterations);
               configuration_t species(species_packed);
@@ -186,8 +186,6 @@ namespace sqsgen::optimization {
               this->_working.fetch_add(iterations);
               helpers::scoped_execution([&] { this->pull_objective(); });
               helpers::scoped_execution([&] { pull_results(); });
-              std::cout << std::format("RANK {}: START {} to {}\n", this->rank(),
-                                       rstart.to_string(), rend.to_string());
               for (auto i = rstart; i < rend; ++i) {
                 if (this->stop_requested()) return;
                 shuffling.shuffle(species);
@@ -200,7 +198,7 @@ namespace sqsgen::optimization {
                   auto _ = this->template measure<"sync">();
                   this->pull_objective();
                   this->update_objective(objective);
-                  sqs_result<T, SUBLATTICE_MODE_INTERACT> current{std::nullopt, objective, species,
+                  sqs_result<T, SMode> current{std::nullopt, objective, species,
                                                                   sro};
                   if (!head)
                     this->send_result(std::move(current));
@@ -214,7 +212,7 @@ namespace sqsgen::optimization {
               this->_working.fetch_add(-iterations);
               iterations_t finished = this->_finished.fetch_add(iterations);
               if (finished + iterations >= (end - start))
-               this->stop();
+                this->stop();
               else
                 schedule_chunk(worker);
             };
