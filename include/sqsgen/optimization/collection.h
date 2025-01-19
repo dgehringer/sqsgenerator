@@ -30,6 +30,22 @@ namespace sqsgen::optimization {
     std::vector<T> objective;
     std::vector<configuration_t> species;
     std::vector<cube_t<T>> sro;
+
+    static sqs_result empty(std::vector<shell_weights_t<T>> const &weights,
+                            std::vector<core::structure<T>> const &structures) {
+      using namespace sqsgen::core::helpers;
+      assert(structures.size() == weights.size());
+      auto num_sl = structures.size();
+      return {std::nullopt, as<std::vector>{}(range(num_sl) | views::transform([](auto) {
+                                                return std::numeric_limits<T>::infinity();
+                                              })),
+              as<std::vector>{}(structures | views::transform([](auto s) { return s.species; })),
+              as<std::vector>{}(range(num_sl) | views::transform([&](auto index) {
+                                  return cube_t<T>(
+                                      weights[index].size(), structures[index].num_species,
+                                      structures[index].num_species, structures[index].num_species);
+                                }))};
+    }
   };
 
   template <class T, SublatticeMode Mode> using sqs_result_entry_t
