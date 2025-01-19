@@ -80,14 +80,15 @@ namespace sqsgen::io::config {
   }  // namespace detail
 
   template <string_literal key, class T, class Document>
-  weights_t<T> parse_shell_weights(Document const& document, stl_matrix_t<T> const& shell_radii) {
+  weights_t<T> parse_shell_weights(Document const& document, SublatticeMode mode,
+                                   stl_matrix_t<T> const& shell_radii) {
     const auto num_shells = as<std::vector>{}(
         shell_radii | views::transform([](auto&& r) { return static_cast<usize_t>(r.size()); }));
     if (!accessor<Document>::contains(document, key.data))
       return detail::default_weights<T>(num_shells);
 
     auto doc = accessor<Document>::get(document, key.data);
-    return parse_for_mode<key, Document>(
+    return parse_for_mode<key>(
         [&] {
           return detail::parse_weights<key, T>(doc, num_shells[0])
               .and_then([](auto&& w) -> weights_t<T> { return std::vector{w}; });
@@ -108,7 +109,7 @@ namespace sqsgen::io::config {
           }
           return parse_error::from_msg<key, CODE_BAD_VALUE>("Cannot interpret value");
         },
-        document);
+        mode);
   }
 
 }  // namespace sqsgen::io::config
