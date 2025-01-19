@@ -114,8 +114,8 @@ namespace sqsgen::io::config {
 
     template <string_literal key, class T, class Document, class DefaultFn, ranges::range... R>
     parse_result<array_t<T>> parse_array_with_default(
-        DefaultFn&& fn, Document const& document, core::structure<T>&& structure,
-        std::vector<sublattice> const& composition,
+        DefaultFn&& fn, Document const& document, SublatticeMode mode,
+        core::structure<T>&& structure, std::vector<sublattice> const& composition,
         std::vector<shell_weights_t<T>> const& shell_weights, R&&... r) {
       using result_t = parse_result<array_t<T>>;
       auto value_present = accessor<Document>::contains(document, key.data);
@@ -148,46 +148,45 @@ namespace sqsgen::io::config {
             }
             return lift<key>(defaults, structs, shell_weights, r...);
           },
-          document);
+          mode);
     }
-
   }  // namespace detail
 
   template <string_literal key, class T, class Document>
   parse_result<detail::array_t<T>> parse_prefactors(
-      Document const& document, core::structure<T>&& structure,
+      Document const& document, SublatticeMode mode, core::structure<T>&& structure,
       std::vector<sublattice> const& composition, stl_matrix_t<T> const& shell_radii,
       std::vector<shell_weights_t<T>> const& shell_weights) {
     return detail::parse_array_with_default<key, T>(
         [](auto&& st, auto&& w, auto&& radii) -> parse_result<cube_t<T>> {
           return core::compute_prefactors(std::forward<core::structure<T>>(st), radii, w);
         },
-        document, std::forward<core::structure<T>>(structure), composition, shell_weights,
+        document, mode, std::forward<core::structure<T>>(structure), composition, shell_weights,
         shell_radii);
   }
 
   template <string_literal key, class T, class Document>
   parse_result<detail::array_t<T>> parse_pair_weights(
-      Document const& document, core::structure<T>&& structure,
+      Document const& document, SublatticeMode mode, core::structure<T>&& structure,
       std::vector<sublattice> const& composition,
       std::vector<shell_weights_t<T>> const& shell_weights) {
     return detail::parse_array_with_default<key, T>(
         [](auto&& st, auto&& w) -> parse_result<cube_t<T>> {
           return detail::default_pair_weights<T>(w.size(), st.num_species);
         },
-        document, std::forward<core::structure<T>>(structure), composition, shell_weights);
+        document, mode, std::forward<core::structure<T>>(structure), composition, shell_weights);
   }
 
   template <string_literal key, class T, class Document>
   parse_result<detail::array_t<T>> parse_target_objective(
-      Document const& document, core::structure<T>&& structure,
+      Document const& document, SublatticeMode mode, core::structure<T>&& structure,
       std::vector<sublattice> const& composition,
       std::vector<shell_weights_t<T>> const& shell_weights) {
     return detail::parse_array_with_default<key, T>(
         [](auto&& st, auto&& w) -> parse_result<cube_t<T>> {
           return detail::stack_scalar<T>(0.0, w.size(), st.num_species);
         },
-        document, std::forward<core::structure<T>>(structure), composition, shell_weights);
+        document, mode, std::forward<core::structure<T>>(structure), composition, shell_weights);
   }
 
 }  // namespace sqsgen::io::config

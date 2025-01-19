@@ -119,9 +119,10 @@ namespace sqsgen::io::config {
   }  // namespace detail
 
   template <string_literal key, class T, class Document>
-  radii_t<T> parse_shell_radii(Document const& doc, core::structure<T>&& structure,
+  radii_t<T> parse_shell_radii(Document const& doc, SublatticeMode mode,
+                               core::structure<T>&& structure,
                                std::vector<sublattice> const& composition) {
-    return parse_for_mode<key, Document>(
+    return parse_for_mode<key>(
         [&] {
           return detail::shell_radii_parser<key, SUBLATTICE_MODE_INTERACT, T>::template parse(
               doc, std::forward<core::structure<T>>(structure));
@@ -129,7 +130,8 @@ namespace sqsgen::io::config {
         [&] {
           return detail::shell_radii_parser<key, SUBLATTICE_MODE_SPLIT, T>::template parse(
               doc, std::forward<core::structure<T>>(structure), composition);
-        }, doc);
+        },
+        mode);
   }
 
 }  // namespace sqsgen::io::config

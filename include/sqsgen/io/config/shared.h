@@ -53,20 +53,16 @@ namespace sqsgen::io::config {
     return results;
   }
 
-  template <string_literal key, class Document, class InteractFn, class SplitFn>
+  template <string_literal key, class InteractFn, class SplitFn>
     requires std::is_same_v<std::invoke_result_t<InteractFn>, std::invoke_result_t<SplitFn>>
   parse_result<typename detail::parse_result_inner_type_from_fn<InteractFn>::type> parse_for_mode(
-      InteractFn&& interact_fn, SplitFn&& split_fn, Document const& doc) {
-    using return_t = typename detail::parse_result_inner_type_from_fn<InteractFn>::type;
-    return get_optional<"sublattice_mode", SublatticeMode>(doc)
-        .value_or(parse_result<SublatticeMode>{SUBLATTICE_MODE_INTERACT})
-        .and_then([&](auto&& mode) -> parse_result<return_t> {
-          if (mode == SUBLATTICE_MODE_INTERACT) return interact_fn();
-          if (mode == SUBLATTICE_MODE_SPLIT) return split_fn();
-          return parse_error::from_msg<key, CODE_BAD_VALUE>(
-              R"(Invalid sublattice mode. Must be either "interact" or "split")");
-        });
+      InteractFn&& interact_fn, SplitFn&& split_fn, SublatticeMode mode) {
+    if (mode == SUBLATTICE_MODE_INTERACT) return interact_fn();
+    if (mode == SUBLATTICE_MODE_SPLIT) return split_fn();
+    return parse_error::from_msg<key, CODE_BAD_VALUE>(
+        R"(Invalid sublattice mode. Must be either "interact" or "split")");
   }
+
 }  // namespace sqsgen::io::config
 
 #endif  // SQSGEN_IO_CONFIG_SHARED_H

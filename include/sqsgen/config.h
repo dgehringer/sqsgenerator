@@ -27,6 +27,8 @@ namespace sqsgen {
   };
 
   template <class T> struct configuration {
+    SublatticeMode sublattice_mode;
+    IterationMode iteration_mode;
     structure_config<T> structure;
     std::vector<sublattice> composition;
     stl_matrix_t<T> shell_radii;
@@ -34,7 +36,6 @@ namespace sqsgen {
     std::vector<cube_t<T>> prefactors;
     std::vector<cube_t<T>> pair_weights;
     std::vector<cube_t<T>> target_objective;
-    IterationMode mode;
     std::optional<iterations_t> iterations;
     iterations_t chunk_size;
     thread_config_t thread_config;
