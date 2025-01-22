@@ -16,6 +16,109 @@
 
 namespace sqsgen::optimization {
 
+  namespace detail {
+    using namespace core::helpers;
+    namespace ranges = std::ranges;
+    namespace views = ranges::views;
+
+    template <ranges::sized_range... R> bool same_length(R&&... r) {
+      if constexpr (sizeof...(R) == 0)
+        return false;
+      else if constexpr (sizeof...(R) == 1)
+        return true;
+      else {
+        std::array<size_t, sizeof...(R)> lengths{ranges::size(r)...};
+        auto first_length = std::get<0>(lengths);
+        return ranges::all_of(lengths, [first_length](auto l) { return l == first_length; });
+      }
+    }
+
+    template <class T, SublatticeMode Mode> struct optimization_config {
+      core::structure<T> structure;
+      core::structure<T> sorted;
+      std::vector<bounds_t<usize_t>> bounds;
+      std::vector<usize_t> sort_order;
+      configuration_t species_packed;
+      index_mapping_t<specie_t, specie_t> species_map;
+      index_mapping_t<usize_t, usize_t> shell_map;
+      std::vector<core::atom_pair<usize_t>> pairs;
+      cube_t<T> pair_weights;
+      cube_t<T> prefactors;
+      cube_t<T> target_objective;
+      std::vector<T> shell_radii;
+      shell_weights_t<T> shell_weights;
+      core::shuffler shuffler;
+
+      static std::vector<optimization_config> from_config(configuration<T> config) {
+        auto [structures, sorted, bounds, sort_order] = decompose_sort_and_bounds(config);
+        if (detail::same_length(structures, sorted, bounds, sort_order, config.shell_radii,
+                                config.shell_weights, config.prefactors, config.target_objective,
+                                config.pair_weights))
+          throw std::invalid_argument("Incompatible configuration");
+        auto num_sublattices = sorted.size();
+
+        std::vector<optimization_config> configs;
+        configs.reserve(num_sublattices);
+        for (auto i = 0u; i < num_sublattices; i++) {
+          auto [species_packed, species_map, species_rmap, pairs, shells_map, shells_rmap,
+                pair_weights]
+              = shared(sorted[i], config.shell_radii[i], config.shell_weights[i],
+                       config.pair_weights[i]);
+          // core::shuffler shuffler(bounds[i]);
+          configs.emplace_back(optimization_config{
+              std::move(structures[i]), std::move(sorted[i]), bounds[i], std::move(sort_order[i]),
+              std::move(species_packed),
+              std::make_pair(std::move(species_map), std::move(species_rmap)),
+              std::make_pair(std::move(shells_map), std::move(shells_rmap)), std::move(pairs),
+              std::move(config.pair_weights[i]), std::move(config.prefactors[i]),
+              std::move(config.target_objective[i]), std::move(config.shell_radii[i]),
+              std::move(config.shell_weights[i]), core::shuffler{bounds[i]}});
+        }
+        return configs;
+      }
+
+    private:
+      static auto decompose_sort_and_bounds(configuration<T> const& config) {
+        if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
+          auto s = config.structure.structure().apply_composition(config.composition);
+
+          auto [sorted, bounds, sort_order]
+              = helpers::compute_shuffling_bounds(s, config.composition);
+
+          return std::make_tuple(std::vector{s}, std::vector{sorted},
+                                 stl_matrix_t<bounds_t<usize_t>>{bounds},
+                                 stl_matrix_t<usize_t>{sort_order});
+        } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
+          auto structures
+              = config.structure.structure().apply_composition_and_decompose(config.composition);
+          return std::make_tuple(
+              structures, structures,
+              as<std::vector>{}(structures | views::transform([](auto&& s) -> bounds_t<usize_t> {
+                                  return {0, s.size()};
+                                })),
+              as<std::vector>{}(structures | views::transform([](auto&& s) -> std::vector<usize_t> {
+                                  return as<std::vector>{}(range(static_cast<usize_t>(s.size())));
+                                })));
+        }
+      }
+      static auto shared(core::structure<T> sorted, std::vector<T> const& radii,
+                         shell_weights_t<T> const& weights, cube_t<T> const& pair_weights) {
+        auto [species_map, species_rmap] = make_index_mapping<specie_t>(sorted.species);
+        auto species_packed
+            = as<std::vector>{}(sorted.species | views::transform([&species_map](auto&& s) {
+                                  return species_map.at(s);
+                                }));
+        auto [pairs, shells_map, shells_rmap] = sorted.pairs(radii, weights);
+        std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) {
+          return absolute(p.i - p.j) < absolute(q.i - q.j) && p.i < q.i;
+        });
+        return std::make_tuple(
+            species_packed, species_map, species_rmap, pairs, shells_map, shells_rmap,
+            helpers::scaled_pair_weights(pair_weights, weights, sorted.num_species));
+      }
+    };
+  }  // namespace detail
+
   template <class T, SublatticeMode Mode> struct optimizer_base {
     configuration<T> config;
     std::atomic<iterations_t> _finished;
@@ -97,8 +200,7 @@ namespace sqsgen::optimization {
       }
     }
 
-    auto make_result_puller(bool head, core::structure<T> const& structure,
-                            shell_weights_t<T> const& weights) {
+    auto make_result_puller(bool head, auto const& structure, auto const& weights) {
       return [&, head] {
         auto buffer = sqs_result<T, Mode>::empty(weights, structure);
         if (head)
@@ -122,15 +224,15 @@ namespace sqsgen::optimization {
           _stop_token(_pool.get_stop_token()) {}
   };
 
-
-  template <class T, IterationMode IMode, SublatticeMode SMode>
-  class optimizer : public optimizer_base<T, SMode> {
+  template <class T, IterationMode IMode, SublatticeMode SMode> class optimizer
+      : public optimizer_base<T, SMode> {
   public:
-    explicit optimizer(configuration<T> config)
-        : optimizer_base<T, SMode>(std::move(config)) {}
+    explicit optimizer(configuration<T> config) : optimizer_base<T, SMode>(std::move(config)) {}
     void run() {
       using namespace sqsgen::core::helpers;
       auto config = this->config;
+      auto config_ = detail::optimization_config<T, SMode>::from_config(
+          std::forward<configuration<T>>(config));
       auto structure = config.structure.structure().apply_composition(config.composition);
       /* sort the structure by the sites sublattice index
        * therefore we obtain contiguous memory regions for each sublattice. We till then determine
@@ -171,51 +273,48 @@ namespace sqsgen::optimization {
       const auto pull_results = this->make_result_puller(head, sorted, weights);
       const auto schedule_chunk = this->make_scheduler(start, end, chunk_size);
 
-      std::function<void(rank_t, rank_t)> worker
-          = [this, &species_packed, &shuffling, &worker, &pull_results, &schedule_chunk, pairs,
-             num_shells = weights.size(), num_species = sorted.num_species, prefactors,
-             target, pair_weights, start, end, head](rank_t&& rstart, rank_t&& rend) {
-              iterations_t iterations{rend - rstart};
-              this->_working.fetch_add(iterations);
-              configuration_t species(species_packed);
-              cube_t<usize_t> bonds(num_shells, num_species, num_species);
-              cube_t<T> sro(num_shells, num_species, num_species);
-              sqs_result<T, SUBLATTICE_MODE_INTERACT> buffer{
-                  std::nullopt, std::numeric_limits<T>::infinity(), species, sro};
-              auto m = this->template measure<"total">();
-              this->_working.fetch_add(iterations);
-              helpers::scoped_execution([&] { this->pull_objective(); });
-              helpers::scoped_execution([&] { pull_results(); });
-              for (auto i = rstart; i < rend; ++i) {
-                if (this->stop_requested()) return;
-                shuffling.shuffle(species);
-                helpers::count_bonds(bonds, pairs, species);
-                // symmetrize bonds for each shell and compute objective function
-                T objective = helpers::compute_objective(sro, bonds, prefactors, pair_weights,
-                                                         target, num_shells, num_species);
-                if (objective <= this->_best_objective.load()) {
-                  // pull in changes from other ranks. Has another rank found a better
-                  auto _ = this->template measure<"sync">();
-                  this->pull_objective();
-                  this->update_objective(objective);
-                  sqs_result<T, SMode> current{std::nullopt, objective, species,
-                                                                  sro};
-                  if (!head)
-                    this->send_result(std::move(current));
-                  else {
-                    // this sqs_result_collection::insert is thread safe
-                    this->_results.insert_result(std::forward<decltype(current)>(current));
-                    pull_results();
-                  }
-                }
-              }
-              this->_working.fetch_add(-iterations);
-              iterations_t finished = this->_finished.fetch_add(iterations);
-              if (finished + iterations >= (end - start))
-                this->stop();
-              else
-                schedule_chunk(worker);
-            };
+      std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend) {
+        iterations_t iterations{rend - rstart};
+        this->_working.fetch_add(iterations);
+
+        configuration_t species(species_packed);
+        auto num_shells = 1;
+        auto num_species = 1;
+        cube_t<usize_t> bonds(num_shells, num_species, num_species);
+        cube_t<T> sro(num_shells, num_species, num_species);
+        auto m = this->template measure<"total">();
+        this->_working.fetch_add(iterations);
+        helpers::scoped_execution([&] { this->pull_objective(); });
+        helpers::scoped_execution([&] { pull_results(); });
+        for (auto i = rstart; i < rend; ++i) {
+          if (this->stop_requested()) return;
+          shuffling.shuffle(species);
+          helpers::count_bonds(bonds, pairs, species);
+          // symmetrize bonds for each shell and compute objective function
+          T objective = helpers::compute_objective(sro, bonds, prefactors, pair_weights, target,
+                                                   num_shells, num_species);
+          if (objective <= this->_best_objective.load()) {
+            // pull in changes from other ranks. Has another rank found a better
+            auto _ = this->template measure<"sync">();
+            this->pull_objective();
+            this->update_objective(objective);
+            sqs_result<T, SMode> current{std::nullopt, objective, species, sro};
+            if (!head)
+              this->send_result(std::move(current));
+            else {
+              // this sqs_result_collection::insert is thread safe
+              this->_results.insert_result(std::forward<decltype(current)>(current));
+              pull_results();
+            }
+          }
+        }
+        this->_working.fetch_add(-iterations);
+        iterations_t finished = this->_finished.fetch_add(iterations);
+        if (finished + iterations >= (end - start))
+          this->stop();
+        else
+          schedule_chunk(worker);
+      };
       this->start();
       for_each([&](auto) { schedule_chunk(worker); }, this->_comm.num_threads());
       this->join();

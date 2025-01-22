@@ -32,9 +32,9 @@ namespace sqsgen::core {
 
   class shuffler {
   public:
-    explicit shuffler(std::vector<bounds_t<usize_t>> const &bounds,
+    explicit shuffler(std::vector<bounds_t<usize_t>> bounds,
                       std::optional<std::uint64_t> seed = std::nullopt)
-        : _seed(seed.value_or(make_random_seed())), _bounds(bounds) {}
+        : _seed(seed.value_or(make_random_seed())), _bounds(std::move(bounds)) {}
     void shuffle(configuration_t &configuration) {
       for (auto &bound : _bounds) {
         auto [lower_bound, upper_bound] = bound;
