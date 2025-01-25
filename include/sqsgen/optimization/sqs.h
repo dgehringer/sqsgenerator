@@ -5,6 +5,7 @@
 #ifndef SQSGEN_OPTIMIZATION_SQS_H
 #define SQSGEN_OPTIMIZATION_SQS_H
 
+#include "sqs.h"
 #include "sqsgen/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/shuffle.h"
@@ -65,14 +66,21 @@ namespace sqsgen::optimization {
               = shared(sorted[i], config.shell_radii[i], config.shell_weights[i],
                        config.pair_weights[i]);
           // core::shuffler shuffler(bounds[i]);
-          configs.emplace_back(optimization_config{
-              std::move(structures[i]), std::move(sorted[i]), bounds[i], std::move(sort_order[i]),
-              std::move(species_packed),
-              std::make_pair(std::move(species_map), std::move(species_rmap)),
-              std::make_pair(std::move(shells_map), std::move(shells_rmap)), std::move(pairs),
-              std::move(config.pair_weights[i]), std::move(config.prefactors[i]),
-              std::move(config.target_objective[i]), std::move(config.shell_radii[i]),
-              std::move(config.shell_weights[i]), core::shuffler{bounds[i]}});
+          configs.emplace_back(
+              optimization_config{std::move(structures[i]),
+                                  std::move(sorted[i]),
+                                  {bounds[i]},
+                                  std::move(sort_order[i]),
+                                  std::move(species_packed),
+                                  std::make_pair(std::move(species_map), std::move(species_rmap)),
+                                  std::make_pair(std::move(shells_map), std::move(shells_rmap)),
+                                  std::move(pairs),
+                                  std::move(config.pair_weights[i]),
+                                  std::move(config.prefactors[i]),
+                                  std::move(config.target_objective[i]),
+                                  std::move(config.shell_radii[i]),
+                                  std::move(config.shell_weights[i]),
+                                  core::shuffler({bounds[i]})});
         }
         return configs;
       }
@@ -117,6 +125,10 @@ namespace sqsgen::optimization {
             helpers::scaled_pair_weights(pair_weights, weights, sorted.num_species));
       }
     };
+
+    template <class T, SublatticeMode Mode> using lift_t
+        = std::conditional_t<Mode == SUBLATTICE_MODE_INTERACT, T, std::vector<T>>;
+
   }  // namespace detail
 
   template <class T, SublatticeMode Mode> struct optimizer_base {
@@ -131,6 +143,7 @@ namespace sqsgen::optimization {
     std::stop_token _stop_token;
     std::optional<int> _rank;
     std::map<std::string, std::atomic<T>> _timings;
+    std::vector<detail::optimization_config<T, Mode>> opt_configs;
 
     template <core::helpers::string_literal Name> struct timer {
       std::chrono::time_point<std::chrono::high_resolution_clock> _start;
@@ -200,9 +213,8 @@ namespace sqsgen::optimization {
       }
     }
 
-    auto make_result_puller(bool head,
-                            std::vector<detail::optimization_config<T, Mode>> const& config) {
-      const auto make_empty = [&config] {
+    auto make_result_puller(bool head) {
+      const auto make_empty = [&config = opt_configs] {
         using namespace sqsgen::core::helpers;
         if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
           return sqs_result<T, Mode>::empty(config.front().shell_weights, config.front().structure);
@@ -225,6 +237,19 @@ namespace sqsgen::optimization {
       return timer<Name>{_timings};
     }
 
+    template <class Fn>
+    detail::lift_t<std::decay_t<std::invoke_result_t<Fn, detail::optimization_config<T, Mode>>>,
+                   Mode>
+    transpose_setting(Fn&& fn) {
+      if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
+        return fn(opt_configs.front());
+      } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
+        return core::helpers::as<std::vector>(
+            opt_configs | std::ranges::views::transform(std::forward<Fn>(fn)));
+      }
+      throw std::invalid_argument("unrecognized operation");
+    }
+
     explicit optimizer_base(configuration<T>&& config)
         : config(config),
           _best_objective(std::numeric_limits<T>::max()),
@@ -233,17 +258,18 @@ namespace sqsgen::optimization {
           _results(),
           _comm(config.thread_config),
           _pool(_comm.num_threads()),
-          _stop_token(_pool.get_stop_token()) {}
+          _stop_token(_pool.get_stop_token()),
+          opt_configs(detail::optimization_config<T, Mode>::from_config(config)) {}
   };
 
   template <class T, IterationMode IMode, SublatticeMode SMode> class optimizer
       : public optimizer_base<T, SMode> {
   public:
-    explicit optimizer(configuration<T> config) : optimizer_base<T, SMode>(std::move(config)) {}
+    explicit optimizer(configuration<T>&& config)
+        : optimizer_base<T, SMode>(std::forward<configuration<T>>(config)) {}
     void run() {
       using namespace sqsgen::core::helpers;
-      auto config = detail::optimization_config<T, SMode>::from_config(
-          std::forward<configuration<T>>(this->config));
+
       /* sort the structure by the sites sublattice index
        * therefore we obtain contiguous memory regions for each sublattice. We till then determine
        * the shuffling bounds.
@@ -259,39 +285,70 @@ namespace sqsgen::optimization {
       std::cout << std::format("RANK {} GOT RANGE: {} TO {} (CHUNK_SIZE={}, NUM_PAIRS=)\n",
                                this->rank(), start.to_string(), end.to_string(), chunk_size);
       iterations_t total{end - start};
-      const auto pull_results = this->make_result_puller(head, config);
+      const auto pull_results = this->make_result_puller(head);
       const auto schedule_chunk = this->make_scheduler(start, end, chunk_size);
+
+      auto num_sublattices = this->opt_configs.size();
+      auto pairs{this->transpose_setting([](auto&& c) { return c.pairs; })};
+      auto prefactors{this->transpose_setting([](auto&& c) { return c.prefactors; })};
+      auto pair_weights{this->transpose_setting([](auto&& c) { return c.pair_weights; })};
+      auto target_objective{this->transpose_setting([](auto&& c) { return c.target_objective; })};
+      auto shuffler{this->transpose_setting([](auto&& c) { return c.shuffler; })};
+      auto species{this->transpose_setting([](auto&& c) { return c.species_packed; })};
+      auto num_shells{this->transpose_setting([](auto&& c) { return c.shell_weights.size(); })};
+      auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
       std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend) {
         iterations_t iterations{rend - rstart};
         this->_working.fetch_add(iterations);
-        auto c = config.front();
 
-        configuration_t species(c.species_packed);
-        auto num_shells = c.shell_weights.size();
-        auto num_species = c.structure.num_species;
-        cube_t<usize_t> bonds(num_shells, num_species, num_species);
-        cube_t<T> sro(num_shells, num_species, num_species);
+        auto bonds{this->transpose_setting([](auto&& c) {
+          return cube_t<usize_t>(c.shell_weights.size(), c.sorted.num_species,
+                                 c.sorted.num_species);
+        })};
+        auto sro{this->transpose_setting([](auto&& c) {
+          return cube_t<T>(c.shell_weights.size(), c.sorted.num_species, c.sorted.num_species);
+        })};
+
         if (this->_finished.load(std::memory_order_relaxed) >= total) {
-          std::cout << "ALREADY-FINISHED: " << this->_finished.load(std::memory_order_relaxed) << std::endl;
+          std::cout << "ALREADY-FINISHED: " << this->_finished.load(std::memory_order_relaxed)
+                    << std::endl;
           return;
         }
+        auto objective = this->transpose_setting([](auto&& c) { return T(0); });
         auto m = this->template measure<"total">();
         this->_working.fetch_add(iterations);
         helpers::scoped_execution([&] { this->pull_objective(); });
         helpers::scoped_execution([&] { pull_results(); });
         for (auto i = rstart; i < rend; ++i) {
           if (this->stop_requested()) return;
-          c.shuffler.shuffle(species);
-          helpers::count_bonds(bonds, c.pairs, species);
+          if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
+            shuffler.shuffle(species);
+            helpers::count_bonds(bonds, pairs, species);
+            objective = helpers::compute_objective(sro, bonds, prefactors, pair_weights,
+                                                   target_objective, num_shells, num_species);
+          } else if constexpr (SMode == SUBLATTICE_MODE_SPLIT) {
+            std::vector<T> objectives(num_sublattices);
+            for (auto sigma = 0; sigma < num_sublattices; ++sigma) {
+              shuffler.at(sigma).shuffle(species.at(sigma));
+              helpers::count_bonds(bonds.at(sigma), pairs.at(sigma), species.at(sigma));
+              objective.at(sigma) = helpers::compute_objective(
+                  sro.at(sigma), bonds.at(sigma), prefactors.at(sigma), pair_weights.at(sigma),
+                  target_objective.at(sigma), num_shells.at(sigma), num_species.at(sigma));
+            }
+          }
+          T objective_value;
+          if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
+            objective_value = objective;
+          } else if constexpr (SMode == SUBLATTICE_MODE_SPLIT) {
+            objective_value = sum(objective);
+          }
           // symmetrize bonds for each shell and compute objective function
-          T objective = helpers::compute_objective(sro, bonds, c.prefactors, c.pair_weights,
-                                                   c.target_objective, num_shells, num_species);
-          if (objective <= this->_best_objective.load()) {
+          if (objective_value <= this->_best_objective.load()) {
             // pull in changes from other ranks. Has another rank found a better
             auto _ = this->template measure<"sync">();
             this->pull_objective();
-            this->update_objective(objective);
+            this->update_objective(objective_value);
             sqs_result<T, SMode> current{std::nullopt, objective, species, sro};
             if (!head)
               this->send_result(std::move(current));
