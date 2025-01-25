@@ -231,6 +231,9 @@ namespace sqsgen::optimization::comm {
             [&, l](auto&& status) {
               auto req = comm.irecv(mpl::absolute, l, status.source(), mpl::tag_t(TAG_RESULT));
               req.wait();
+              for (auto sigma = 0; sigma < num_sublattices; ++sigma) {
+
+              }
               result.sro = Eigen::TensorMap<cube_t<T>>(sro_buff.data(), num_shells, num_species,
                                                        num_species);
               results.push_back(result);
