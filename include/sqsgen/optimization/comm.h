@@ -118,7 +118,6 @@ namespace sqsgen::optimization::comm {
 
     void barrier() {
       if constexpr (have_mpi) {
-        std::cout << std::format("RANK {} barrier() @ {}\n", rank(), mpl::environment::wtime());
         _comm.barrier();
       }
     }
