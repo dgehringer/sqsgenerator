@@ -287,11 +287,11 @@ namespace sqsgen::optimization {
       auto pair_weights{this->transpose_setting([](auto&& c) { return c.pair_weights; })};
       auto target_objective{this->transpose_setting([](auto&& c) { return c.target_objective; })};
       auto shuffler{this->transpose_setting([](auto&& c) { return c.shuffler; })};
-      auto species{this->transpose_setting([](auto&& c) { return c.species_packed; })};
+      auto species_packed{this->transpose_setting([](auto&& c) { return c.species_packed; })};
       auto num_shells{this->transpose_setting([](auto&& c) { return c.shell_weights.size(); })};
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
-      std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend) {
+      std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend)  {
         iterations_t iterations{rend - rstart};
         this->_working.fetch_add(iterations);
 
@@ -302,23 +302,27 @@ namespace sqsgen::optimization {
         auto sro{this->transpose_setting([](auto&& c) {
           return cube_t<T>(c.shell_weights.size(), c.sorted.num_species, c.sorted.num_species);
         })};
-
         auto objective = this->transpose_setting([](auto&& c) { return T(0); });
+        auto species {species_packed};
         auto m = this->template measure<"total">();
         this->_working.fetch_add(iterations);
         helpers::scoped_execution([&] { this->pull_objective(); });
         helpers::scoped_execution([&] { pull_results(); });
+        if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC) {
+            species = core::unrank_permutation(species, rstart);
+        }
         for (auto i = rstart; i < rend; ++i) {
           if (this->stop_requested()) return;
+
           if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
-            shuffler.shuffle(species);
+            shuffler.template shuffle<IMode>(species);
             helpers::count_bonds(bonds, pairs, species);
             objective = helpers::compute_objective(sro, bonds, prefactors, pair_weights,
                                                    target_objective, num_shells, num_species);
           } else if constexpr (SMode == SUBLATTICE_MODE_SPLIT) {
             std::vector<T> objectives(num_sublattices);
             for (auto sigma = 0; sigma < num_sublattices; ++sigma) {
-              shuffler.at(sigma).shuffle(species.at(sigma));
+              shuffler.at(sigma).template shuffle<IMode>(species.at(sigma));
               helpers::count_bonds(bonds.at(sigma), pairs.at(sigma), species.at(sigma));
               objective.at(sigma) = helpers::compute_objective(
                   sro.at(sigma), bonds.at(sigma), prefactors.at(sigma), pair_weights.at(sigma),
@@ -355,13 +359,18 @@ namespace sqsgen::optimization {
         else
           schedule_chunk(worker);
       };
+      this->barrier();
       this->start();
       for_each([&](auto) { schedule_chunk(worker); }, this->_comm.num_threads());
       this->join();
+      /*
+       * A barrier is needed before the head rank pulls in the latest result. In case the head rank
+       * would finish first we would enter have race condition leading to MPI failure
+       */
       this->barrier();
+
       this->pull_objective();
       pull_results();
-
       for (const auto& [what, time] : this->_timings) {
         std::cout << std::format("RANK {}: Time for {}: {} per iteration {}\n", this->rank(), what,
                                  time.load(),

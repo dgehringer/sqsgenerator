@@ -12,13 +12,10 @@ namespace sqsgen::core {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-
-  inline counter<specie_t> count_species(configuration_t const&c) {
-    return helpers::count(c);
-  }
+  inline counter<specie_t> count_species(configuration_t const& c) { return helpers::count(c); }
 
   template <ranges::input_range R, class T = ranges::range_value_t<R>>
-  rank_t num_permutations_impl(R &&freqs) {
+  rank_t num_permutations_impl(R&& freqs) {
     auto num_atoms = helpers::fold_left_first(freqs, std::plus{}).value_or(0);
     return helpers::factorial<rank_t, T>(num_atoms)
            / helpers::fold_left_first(
@@ -26,15 +23,15 @@ namespace sqsgen::core {
                  .value_or(1);
   }
 
-  static rank_t num_permutations(counter<specie_t> const&hist) {
+  static rank_t num_permutations(counter<specie_t> const& hist) {
     return num_permutations_impl(views::values(hist));
   }
 
-  static rank_t num_permutations( configuration_t const& conf) {
+  static rank_t num_permutations(configuration_t const& conf) {
     return num_permutations(count_species(conf));
   }
 
-  inline rank_t rank_permutation( configuration_t const&configuration) {
+  inline rank_t rank_permutation(configuration_t const& configuration) {
     auto num_atoms{configuration.size()}, num_species{count_species(configuration).size()};
     rank_t rank{1}, suffix_permutations{1};
     std::vector hist(num_species, 0);
@@ -52,8 +49,8 @@ namespace sqsgen::core {
     return rank;
   }
 
-  inline configuration_t unrank_permutation(const configuration_t &configuration,
-                                            const counter<specie_t> &freqs, rank_t rank) {
+  inline configuration_t unrank_permutation(configuration_t const& configuration,
+                                            counter<specie_t> const& freqs, rank_t rank) {
     rank_t total_permutations = num_permutations(freqs);
     if (rank > total_permutations) {
       throw std::out_of_range("The rank is larger than the total number of permutations");
@@ -80,11 +77,11 @@ namespace sqsgen::core {
     return result;
   }
 
-  inline configuration_t unrank_permutation(const configuration_t &configuration, rank_t rank) {
+  inline configuration_t unrank_permutation(configuration_t const& configuration, rank_t rank) {
     return unrank_permutation(configuration, count_species(configuration), std::move(rank));
   }
 
-  inline bool next_permutation(configuration_t &configuration) {
+  inline bool next_permutation(configuration_t& configuration) {
     auto num_atoms{configuration.size()};
     auto l{num_atoms - 1}, k{num_atoms - 2};
 

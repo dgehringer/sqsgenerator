@@ -9,6 +9,7 @@
 
 #include "rapidhash.h"
 #include "sqsgen/types.h"
+#include "sqsgen/core/permutation.h"
 
 namespace sqsgen::core {
 
@@ -35,16 +36,22 @@ namespace sqsgen::core {
     explicit shuffler(std::vector<bounds_t<usize_t>> bounds,
                       std::optional<std::uint64_t> seed = std::nullopt)
         : _seed(seed.value_or(make_random_seed())), _bounds(std::move(bounds)) {}
+    template<IterationMode Mode>
     void shuffle(configuration_t &configuration) {
-      for (auto &bound : _bounds) {
-        auto [lower_bound, upper_bound] = bound;
-        assert(upper_bound > lower_bound);
-        auto window_size = upper_bound - lower_bound;
-        for (usize_t i = window_size; i > 1; i--) {
-          usize_t p = random_bounded(i, _seed);  // number in [0,i)
-          std::swap(configuration[lower_bound + i - 1],
-                    configuration[p + lower_bound]);  // swap the values at i-1 and p
+      if constexpr (Mode == ITERATION_MODE_RANDOM) {
+        for (auto &bound : _bounds) {
+          auto [lower_bound, upper_bound] = bound;
+          assert(upper_bound > lower_bound);
+          auto window_size = upper_bound - lower_bound;
+          for (usize_t i = window_size; i > 1; i--) {
+            usize_t p = random_bounded(i, _seed);  // number in [0,i)
+            std::swap(configuration[lower_bound + i - 1],
+                      configuration[p + lower_bound]);  // swap the values at i-1 and p
+          }
         }
+      }
+      else if constexpr (Mode == ITERATION_MODE_SYSTEMATIC) {
+        core::next_permutation(configuration);
       }
     }
 
