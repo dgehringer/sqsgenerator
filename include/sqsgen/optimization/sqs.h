@@ -183,6 +183,8 @@ namespace sqsgen::optimization {
 
     void join() { _pool.join(); }
 
+    void barrier() { _comm.barrier(); }
+
     auto make_scheduler(rank_t start, rank_t end, iterations_t chunk_size) {
       return [this, start, end, chunk_size]<class Fn>(Fn&& fn) {
         auto offset = _offset.load(std::memory_order_relaxed);
@@ -244,8 +246,8 @@ namespace sqsgen::optimization {
       if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
         return fn(opt_configs.front());
       } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
-        return core::helpers::as<std::vector>(
-            opt_configs | std::ranges::views::transform(std::forward<Fn>(fn)));
+        return core::helpers::as<std::vector>{}(
+            opt_configs | std::ranges::views::transform([&](auto&& conf) { return fn(conf); }));
       }
       throw std::invalid_argument("unrecognized operation");
     }
@@ -269,15 +271,6 @@ namespace sqsgen::optimization {
         : optimizer_base<T, SMode>(std::forward<configuration<T>>(config)) {}
     void run() {
       using namespace sqsgen::core::helpers;
-
-      /* sort the structure by the sites sublattice index
-       * therefore we obtain contiguous memory regions for each sublattice. We till then determine
-       * the shuffling bounds.
-       *
-       * Assume the given configuration, where the number (0,1) denotes the sublattice of each
-       * site and the letter (A,B) the species: Region SL1 |       | v       v [0A, 1B, 0B, 1A,
-       * 0A, 1A] -> [0A, 0A, 0B, 1A, 1A, 1B] ^       ^ |       | Region SL2
-       */
 
       auto head = this->_comm.is_head();
       iterations_t chunk_size = this->config.chunk_size;
@@ -310,11 +303,6 @@ namespace sqsgen::optimization {
           return cube_t<T>(c.shell_weights.size(), c.sorted.num_species, c.sorted.num_species);
         })};
 
-        if (this->_finished.load(std::memory_order_relaxed) >= total) {
-          std::cout << "ALREADY-FINISHED: " << this->_finished.load(std::memory_order_relaxed)
-                    << std::endl;
-          return;
-        }
         auto objective = this->transpose_setting([](auto&& c) { return T(0); });
         auto m = this->template measure<"total">();
         this->_working.fetch_add(iterations);
@@ -349,10 +337,10 @@ namespace sqsgen::optimization {
             auto _ = this->template measure<"sync">();
             this->pull_objective();
             this->update_objective(objective_value);
-            sqs_result<T, SMode> current{std::nullopt, objective, species, sro};
-            if (!head)
+            sqs_result<T, SMode> current(objective_value, objective, species, sro);
+            if (!head) {
               this->send_result(std::move(current));
-            else {
+            } else {
               // this sqs_result_collection::insert is thread safe
               this->_results.insert_result(std::forward<decltype(current)>(current));
               pull_results();
@@ -370,6 +358,7 @@ namespace sqsgen::optimization {
       this->start();
       for_each([&](auto) { schedule_chunk(worker); }, this->_comm.num_threads());
       this->join();
+      this->barrier();
       this->pull_objective();
       pull_results();
 

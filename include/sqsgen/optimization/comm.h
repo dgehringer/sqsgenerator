@@ -27,11 +27,9 @@ namespace sqsgen::optimization::comm {
       return r | views::transform([](auto&& v) { return v.size(); });
     }
 
-    template <std::size_t Dim, ranges::range R> auto dimension(R&& r) {
-      return r | views::transform([](auto&& v) {
-               auto d = v.dimensions();
-               return d[Dim];
-             });
+    template <std::size_t Dim, class R> auto dimension(R&& r) {
+      auto d = r.dimensions();
+      return d[Dim];
     }
 
   }  // namespace detail
@@ -117,6 +115,14 @@ namespace sqsgen::optimization::comm {
     }
 
     bool is_head() { return rank() == _head_rank; }
+
+    void barrier() {
+      if constexpr (have_mpi) {
+        std::cout << std::format("RANK {} barrier() @ {}\n", rank(), mpl::environment::wtime());
+        _comm.barrier();
+      }
+    }
+
     auto num_ranks() const {
       if constexpr (have_mpi) {
         return _comm.size();
@@ -153,9 +159,9 @@ namespace sqsgen::optimization::comm {
       mpl::vector_layout<T> sro_layout(result.sro.size());
       mpl::vector_layout<specie_t> species_layout(result.species.size());
       std::size_t num_atoms{result.species.size()};
-      const typename cube_t<T>::Dimensions& d = result.sro.dimensions();
-      auto num_shells{d[0]}, num_species{d[1]};
-      assert(result.sro.size() == d[0] * d[1] * d[2]);
+      auto num_shells{detail::dimension<0>(result.sro)},
+          num_species{detail::dimension<1>(result.sro)};
+      assert(result.sro.size() == num_shells * num_species * num_species);
       mpl::heterogeneous_layout l(
           result.objective, num_atoms, mpl::make_absolute(result.species.data(), species_layout),
           num_shells, num_species, mpl::make_absolute(sro_buff.data(), sro_layout));
@@ -184,25 +190,29 @@ namespace sqsgen::optimization::comm {
       std::vector<T> sro_buff;
       configuration_t species_buff;
       std::vector<T> objective_buff;
-      assert(result.sro.size() == result.species.size());
-      assert(result.sro.size() == result.objective.size());
-      std::size_t num_sublattices{result.species.size()};
-      std::vector<std::size_t> num_shells, num_atoms, num_species;
+      T total_objective;
+      std::size_t num_sublattices{result.sublattices.size()};
+      std::vector<long> num_shells, num_atoms, num_species;
       if constexpr (Mode == SEND) {
-        for (auto sro : result.sro)
-          sro_buff.insert(sro_buff.end(), sro.data(), sro.data() + sro.size());
-        for (auto species : result.species)
-          species_buff.insert(species_buff.end(), species.begin(), species.end());
-        for (auto objective : result.objective) objective_buff.push_back(objective);
-        num_shells = as<std::vector>{}(detail::dimension<0>(result.sro));
-        num_species = as<std::vector>{}(detail::dimension<1>(result.sro));
-        num_atoms = as<std::vector>{}(detail::sizes(result.species));
+        for (auto sl : result.sublattices) {
+          sro_buff.insert(sro_buff.end(), sl.sro.data(), sl.sro.data() + sl.sro.size());
+          species_buff.insert(species_buff.end(), sl.species.begin(), sl.species.end());
+          objective_buff.push_back(sl.objective);
+          num_shells.push_back(detail::dimension<0>(sl.sro));
+          num_species.push_back(detail::dimension<1>(sl.sro));
+          num_atoms = as<std::vector>{}(result.sublattices | views::transform([&](auto&& s) {
+                                          return static_cast<long>(s.species.size());
+                                        }));
+        }
+        total_objective = result.objective;
         assert(num_atoms.size() == num_sublattices);
         assert(num_species.size() == num_sublattices);
         assert(num_shells.size() == num_sublattices);
       } else {
-        sro_buff.resize(sum(detail::sizes(result.sro)));
-        species_buff.resize(sum(detail::sizes(result.species)));
+        sro_buff.resize(
+            sum(result.sublattices | views::transform([&](auto r) { return r.sro.size(); })));
+        species_buff.resize(
+            sum(result.sublattices | views::transform([&](auto r) { return r.species.size(); })));
         objective_buff.resize(num_sublattices);
         num_atoms.resize(num_sublattices);
         num_species.resize(num_sublattices);
@@ -211,10 +221,10 @@ namespace sqsgen::optimization::comm {
       mpl::vector_layout<T> sro_layout(sro_buff.size());
       mpl::vector_layout<T> objective_layout(objective_buff.size());
       mpl::vector_layout<specie_t> species_layout(species_buff.size());
-      mpl::vector_layout<std::size_t> num_atoms_layout(num_atoms.size());
-      mpl::vector_layout<std::size_t> num_species_layout(num_species.size());
-      mpl::vector_layout<std::size_t> num_shells_layout(num_shells.size());
-      mpl::heterogeneous_layout l(num_sublattices,
+      mpl::vector_layout<long> num_atoms_layout(num_atoms.size());
+      mpl::vector_layout<long> num_species_layout(num_species.size());
+      mpl::vector_layout<long> num_shells_layout(num_shells.size());
+      mpl::heterogeneous_layout l(total_objective, num_sublattices,
                                   mpl::make_absolute(num_atoms.data(), num_atoms_layout),
                                   mpl::make_absolute(objective_buff.data(), objective_layout),
                                   mpl::make_absolute(species_buff.data(), species_layout),
@@ -226,20 +236,29 @@ namespace sqsgen::optimization::comm {
         req.wait();
         return {};
       } else {
-        sqs_result_vector_t<SUBLATTICE_MODE_INTERACT> results{};
+        sqs_result_vector_t<SUBLATTICE_MODE_SPLIT> recieved{};
         receive_messages(
             [&, l](auto&& status) {
               auto req = comm.irecv(mpl::absolute, l, status.source(), mpl::tag_t(TAG_RESULT));
               req.wait();
+              std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>> sublattices;
+              long offset_sro{0}, offset_species{0};
               for (auto sigma = 0; sigma < num_sublattices; ++sigma) {
-
+                sublattices.push_back(sqs_result<T, SUBLATTICE_MODE_INTERACT>{
+                    objective_buff[sigma],
+                    configuration_t(species_buff.begin() + offset_species,
+                                    species_buff.begin() + offset_sro + num_species[sigma]),
+                    cube_t<T>(Eigen::TensorMap<cube_t<T>>(sro_buff.data() + offset_sro,
+                                                          num_shells[sigma], num_species[sigma],
+                                                          num_species[sigma]))});
+                offset_species += num_species[sigma];
+                offset_sro += num_shells[sigma] * num_species[sigma] * num_species[sigma];
               }
-              result.sro = Eigen::TensorMap<cube_t<T>>(sro_buff.data(), num_shells, num_species,
-                                                       num_species);
-              results.push_back(result);
+              recieved.push_back(
+                  sqs_result<T, SUBLATTICE_MODE_SPLIT>{total_objective, sublattices});
             },
             mpl::tag_t(TAG_RESULT), mpl::any_source);
-        return results;
+        return recieved;
       }
     }
   };
