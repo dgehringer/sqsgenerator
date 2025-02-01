@@ -104,7 +104,6 @@ namespace sqsgen::testing {
                 bool result {next_permutation(output)};
                 ASSERT_EQ(result, true);
                 ASSERT_EQ(rank_permutation(output), rank_t{i + 1});
-
             }
             ASSERT_EQ(rank_permutation(output), num_permutations(output));
         }
