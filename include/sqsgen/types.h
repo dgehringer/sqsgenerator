@@ -8,7 +8,6 @@
 #include <Eigen/Core>
 #include <map>
 #include <mp++/integer.hpp>
-#include <set>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <vector>
 
@@ -54,7 +53,7 @@ namespace sqsgen {
   using shell_weights_t = std::map<usize_t, T>;
 
   struct _compare_usize {
-    bool operator()(usize_t const& lhs, usize_t const& rhs) const { return lhs < rhs; }
+    bool operator()(usize_t const &lhs, usize_t const &rhs) const { return lhs < rhs; }
   };
 
   enum Prec : std::uint8_t {
@@ -89,6 +88,67 @@ namespace sqsgen {
   struct sublattice {
     vset<usize_t> sites;
     composition_t composition;
+  };
+
+  template <class, SublatticeMode> struct sqs_result {};
+
+  template <class T> struct sqs_result<T, SUBLATTICE_MODE_INTERACT> {
+    std::optional<rank_t> rank;
+    T objective;
+    configuration_t species;
+    cube_t<T> sro;
+
+    sqs_result(T objective, configuration_t species, cube_t<T> sro)
+        : rank(std::nullopt),
+          objective(objective),
+          species(std::move(species)),
+          sro(std::move(sro)) {}
+    // compatibility constructor to
+    sqs_result(T, T objective, configuration_t species, cube_t<T> sro)
+        : sqs_result(objective, species, std::move(sro)) {}
+
+    static sqs_result empty(auto num_atoms, auto num_shells, auto num_species) {
+      return {std::numeric_limits<T>::infinity(), configuration_t(num_atoms),
+              cube_t<T>(num_shells, num_species, num_species)};
+    }
+  };
+
+  template <class T> struct sqs_result<T, SUBLATTICE_MODE_SPLIT> {
+    T objective;
+    std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>> sublattices;
+
+    sqs_result(T objective, std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>> const &sublattices)
+        : objective(objective), sublattices(sublattices) {}
+
+    sqs_result(T objective, std::vector<T> const &objectives,
+               const std::vector<configuration_t> &species, std::vector<cube_t<T>> const &sro)
+        : objective(objective) {
+      if (objectives.size() != species.size() || objectives.size() != sro.size())
+        throw std::invalid_argument("invalid number entries");
+      sublattices.reserve(objectives.size());
+      core::helpers::for_each(
+          [&](auto &&index) {
+            sublattices.push_back({objectives[index], species[index], sro[index]});
+          },
+          species.size());
+    }
+
+    template <std::ranges::range RNumAtoms, std::ranges::range RNumShells,
+              std::ranges::range RNumSpecies>
+    static sqs_result empty(RNumAtoms &&range_num_atoms, RNumShells &&range_num_shells,
+                            RNumSpecies &&range_num_species) {
+      using namespace sqsgen::core::helpers;
+      auto num_atoms = as<std::vector>{}(range_num_atoms);
+      auto num_shells = as<std::vector>{}(range_num_shells);
+      auto num_species = as<std::vector>{}(range_num_species);
+      if (num_species.size() != num_shells.size() || num_species.size() != num_atoms.size())
+        throw std::invalid_argument("invalid sizes");
+      return {std::numeric_limits<T>::infinity(),
+              as<std::vector>{}(range(num_atoms.size()) | views::transform([&](auto &&index) {
+                                  return sqs_result<T, SUBLATTICE_MODE_INTERACT>::empty(
+                                      num_atoms[index], num_shells[index], num_species[index]);
+                                }))};
+    }
   };
 
 }  // namespace sqsgen

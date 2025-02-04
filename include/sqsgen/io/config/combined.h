@@ -71,16 +71,20 @@ namespace sqsgen::io::config {
 
   template <class T, class Document>
   parse_result<configuration<T>> parse_config(Document const& doc) {
-    return config::parse_structure_config<"structure", T>(doc)
-        .combine(parse_iteration_mode<"mode">(doc))
+    return parse_iteration_mode<"mode">(doc)
         .combine(parse_sublattice_mode<"sublattice_mode">(doc))
-        .and_then([&](auto&& sc_and_m) {
-          auto [sc, iteration_mode, sublattice_mode] = sc_and_m;
-          auto structure = sc.structure();
-          /*if (iteration_mode == ITERATION_MODE_SYSTEMATIC
+        .and_then([](auto&& modes) -> parse_result<std::tuple<IterationMode, SublatticeMode>> {
+          auto [iteration_mode, sublattice_mode] = modes;
+          if (iteration_mode == ITERATION_MODE_SYSTEMATIC
               && sublattice_mode == SUBLATTICE_MODE_SPLIT)
-            return parse_error::from_msg<"mode", CODE_BAD_VALUE>(
-                "It is not possible to do an exhaustive search on multiple sublattices");*/
+            return {parse_error::from_msg<"mode", CODE_BAD_VALUE>(
+                "It is not possible to do an exhaustive search on multiple sublattices")};
+          return modes;
+        })
+        .combine(parse_structure_config<"structure", T>(doc))
+        .and_then([&](auto&& sc_and_modes) {
+          auto [iteration_mode, sublattice_mode, sc] = sc_and_modes;
+          auto structure = sc.structure();
           return config::parse_composition<"composition", "sites">(doc, structure.species)
               .combine(parse_iterations<"iterations">(doc, iteration_mode))
               .and_then([&](auto&& comp_and_iter) {

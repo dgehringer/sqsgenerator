@@ -179,6 +179,8 @@ namespace sqsgen::optimization {
 
     bool stop_requested() const { return _stop_token.stop_requested(); }
 
+    bool is_head() { return _comm.is_head(); }
+
     void start() { _pool.start(); }
 
     void join() { _pool.join(); }
@@ -219,12 +221,14 @@ namespace sqsgen::optimization {
       const auto make_empty = [&config = opt_configs] {
         using namespace sqsgen::core::helpers;
         if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
-          return sqs_result<T, Mode>::empty(config.front().shell_weights, config.front().structure);
+          auto c = config.front();
+          return sqs_result<T, Mode>::empty(c.species_packed.size(), c.shell_weights.size(),
+                                            c.sorted.num_species);
         } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
           return sqs_result<T, Mode>::empty(
-              as<std::vector>{}(config
-                                | views::transform([](auto&& c) { return c.shell_weights; })),
-              as<std::vector>{}(config | views::transform([](auto&& c) { return c.structure; })));
+              config | views::transform([](auto&& c) { return c.species_packed.size(); }),
+              config | views::transform([](auto&& c) { return c.shell_weights.size(); }),
+              config | views::transform([](auto&& c) { return c.sorted.num_species; }));
         }
       };
       return [&, head, make_empty] {
@@ -268,16 +272,20 @@ namespace sqsgen::optimization {
       : public optimizer_base<T, SMode> {
   public:
     explicit optimizer(configuration<T>&& config)
-        : optimizer_base<T, SMode>(std::forward<configuration<T>>(config)) {}
+        : optimizer_base<T, SMode>(std::forward<configuration<T>>(config)) {
+      if constexpr (IMode == ITERATION_MODE_SYSTEMATIC && SMode == SUBLATTICE_MODE_INTERACT) {
+        this->config.iterations = std::make_optional(core::num_permutations(
+            config.structure.structure().apply_composition(config.composition).species));
+      }
+    }
     void run() {
       using namespace sqsgen::core::helpers;
 
-      auto head = this->_comm.is_head();
+      auto head = this->is_head();
       iterations_t chunk_size = this->config.chunk_size;
       auto [start, end] = this->iteration_range();
       std::cout << std::format("RANK {} GOT RANGE: {} TO {} (CHUNK_SIZE={}, NUM_PAIRS=)\n",
                                this->rank(), start.to_string(), end.to_string(), chunk_size);
-      iterations_t total{end - start};
       const auto pull_results = this->make_result_puller(head);
       const auto schedule_chunk = this->make_scheduler(start, end, chunk_size);
 
@@ -291,7 +299,7 @@ namespace sqsgen::optimization {
       auto num_shells{this->transpose_setting([](auto&& c) { return c.shell_weights.size(); })};
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
-      std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend)  {
+      std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend) {
         iterations_t iterations{rend - rstart};
         this->_working.fetch_add(iterations);
 
@@ -303,13 +311,13 @@ namespace sqsgen::optimization {
           return cube_t<T>(c.shell_weights.size(), c.sorted.num_species, c.sorted.num_species);
         })};
         auto objective = this->transpose_setting([](auto&& c) { return T(0); });
-        auto species {species_packed};
+        auto species{species_packed};
         auto m = this->template measure<"total">();
         this->_working.fetch_add(iterations);
         helpers::scoped_execution([&] { this->pull_objective(); });
         helpers::scoped_execution([&] { pull_results(); });
         if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC) {
-            species = core::unrank_permutation(species, rstart);
+          species = core::unrank_permutation(species, rstart);
         }
         for (auto i = rstart; i < rend; ++i) {
           if (this->stop_requested()) return;
@@ -368,7 +376,6 @@ namespace sqsgen::optimization {
        * would finish first we would enter have race condition leading to MPI failure
        */
       this->barrier();
-
       this->pull_objective();
       pull_results();
       for (const auto& [what, time] : this->_timings) {
