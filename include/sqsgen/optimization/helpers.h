@@ -84,10 +84,10 @@ namespace sqsgen::optimization::helpers {
 
     usize_t lower_index{0};
     for (usize_t i = 0; i < num_atoms; ++i) {
-      if (sublattice_indices[i] != sublattice_indices[lower_index]
-          || sublattice_indices[i] == composition.size()) {
+      if (sublattice_indices[i] != sublattice_indices[lower_index]) {
         bounds.emplace_back(lower_index, i);
         lower_index = i;
+        if (sublattice_indices[i] == composition.size()) break;
       } else if (i == num_atoms - 1)
         bounds.emplace_back(lower_index, i + 1);
     }
