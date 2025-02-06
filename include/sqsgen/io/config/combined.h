@@ -23,11 +23,23 @@ namespace sqsgen::io::config {
         parse_result<IterationMode>{ITERATION_MODE_RANDOM});
   }
 
-  template <string_literal key, class Document>
-  parse_result<std::optional<iterations_t>> parse_iterations(Document const& doc,
-                                                             IterationMode mode) {
+  template <string_literal key, class Document, class T>
+  parse_result<std::optional<iterations_t>> parse_iterations(
+      Document const& doc, core::structure<T>&& structure,
+      std::vector<sublattice> const& composition, IterationMode mode) {
     using result_t = parse_result<std::optional<iterations_t>>;
-    if (mode == ITERATION_MODE_SYSTEMATIC) return result_t{std::nullopt};
+    if (mode == ITERATION_MODE_SYSTEMATIC) {
+      if (composition.size() != 1)
+        return parse_error::from_msg<key, CODE_BAD_VALUE>(
+            "In \"systematic\" iteration mode only one sublattice is allowed");
+      auto iterations = core::num_permutations(
+          structure.apply_composition_and_decompose(composition).front().species);
+      if (iterations > std::numeric_limits<iterations_t>::max())
+        return parse_error::from_msg<key, CODE_BAD_VALUE>(
+            std::format("The number of permutations to test is {}. I'm a pretty fast programm, but "
+                        "this is too much even for me ;=)", iterations.to_string()));
+      return std::make_optional(iterations_t{iterations});
+    }
     return get_optional<key, iterations_t>(doc)
         .value_or(parse_result<iterations_t>{iterations_default})
         .and_then([](auto&& iterations) -> result_t { return result_t{iterations}; });
@@ -78,21 +90,26 @@ namespace sqsgen::io::config {
           if (iteration_mode == ITERATION_MODE_SYSTEMATIC
               && sublattice_mode == SUBLATTICE_MODE_SPLIT)
             return {parse_error::from_msg<"mode", CODE_BAD_VALUE>(
-                "It is not possible to do an exhaustive search on multiple sublattices")};
+                "It is not possible to do an exhaustive search on multiple sublattices in mode "
+                "\"split\"")};
           return modes;
         })
         .combine(parse_structure_config<"structure", T>(doc))
         .and_then([&](auto&& sc_and_modes) {
           auto [iteration_mode, sublattice_mode, sc] = sc_and_modes;
           auto structure = sc.structure();
-          return config::parse_composition<"composition", "sites">(doc, structure.species)
-              .combine(parse_iterations<"iterations">(doc, iteration_mode))
-              .and_then([&](auto&& comp_and_iter) {
-                auto [composition, iterations] = comp_and_iter;
+          return config::parse_composition<"composition", "sites">(doc, structure.species,
+                                                                   sublattice_mode)
+
+              .and_then([&](auto&& composition) {
                 return config::parse_shell_radii<"shell_radii">(
                            doc, sublattice_mode, std::forward<decltype(structure)>(structure),
                            composition)
-                    .and_then([&](auto&& radii) {
+                    .combine(parse_iterations<"iterations">(
+                        doc, std::forward<decltype(structure)>(structure), composition,
+                        iteration_mode))
+                    .and_then([&](auto&& radii_and_iterations) {
+                      auto [radii, iterations] = radii_and_iterations;
                       return config::parse_shell_weights<"shell_weights", T>(doc, sublattice_mode,
                                                                              radii)
                           .and_then([&](auto&& weights) {
