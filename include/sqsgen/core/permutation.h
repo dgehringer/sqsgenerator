@@ -49,22 +49,26 @@ namespace sqsgen::core {
     return rank;
   }
 
-  inline configuration_t unrank_permutation(configuration_t const& configuration,
-                                            counter<specie_t> const& freqs, rank_t rank) {
-    rank_t total_permutations = num_permutations(freqs);
+  inline void unrank_permutation(configuration_t& configuration, rank_t const& to_rank,
+                                 std::optional<bounds_t<usize_t>> bounds = std::nullopt) {
+    using namespace core::helpers;
+    auto b = bounds.value_or(bounds_t<usize_t>{0, configuration.size()});
+    auto freqs = count(range(std::forward<decltype(b)>(b))
+                       | views::transform([&](auto&& i) { return configuration[i]; }));
+    rank_t total_permutations{num_permutations(freqs)}, rank{to_rank};
     if (rank > total_permutations) {
       throw std::out_of_range("The rank is larger than the total number of permutations");
     }
     auto k{0};
-    auto num_atoms{configuration.size()}, num_species{freqs.size()};
-    auto hist = helpers::as<std::vector>{}(ranges::views::values(freqs));
-    configuration_t result(configuration);
+    auto num_atoms{std::get<1>(b) - std::get<0>(b)};
+    auto num_species{freqs.size()};
+    auto hist = helpers::as<std::vector>{}(views::values(freqs));
 
     for (auto i = 0; i < num_atoms; i++) {
       for (auto j = 0; j < num_species; j++) {
         rank_t suffix_count = total_permutations * hist[j] / (num_atoms - i);
         if (rank <= suffix_count) {
-          result[k] = j;
+          configuration[k] = j;
           total_permutations = suffix_count;
           hist[j]--;
           k++;
@@ -74,11 +78,6 @@ namespace sqsgen::core {
         rank -= suffix_count;
       }
     }
-    return result;
-  }
-
-  inline configuration_t unrank_permutation(configuration_t const& configuration, rank_t rank) {
-    return unrank_permutation(configuration, count_species(configuration), std::move(rank));
   }
 
   inline bool next_permutation(configuration_t& configuration) {
