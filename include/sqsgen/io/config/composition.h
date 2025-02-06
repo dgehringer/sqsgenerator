@@ -163,13 +163,11 @@ namespace sqsgen::io::config {
 
   template <string_literal key, string_literal sitesKey = "sites", class Document>
   parse_result<std::vector<sublattice>> parse_composition(Document const& document,
-                                                          configuration_t const& conf) {
+                                                          configuration_t const& conf,
+                                                          SublatticeMode sl_mode) {
     using namespace core::helpers;
     if (!accessor<Document>::contains(document, key.data))
       return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a composition");
-    auto mode = get_either_optional<"sublattice_mode", SublatticeMode>(document).value_or(
-        SUBLATTICE_MODE_INTERACT);
-    if (mode.failed()) return mode.error();
     const auto doc = accessor<Document>::get(document, key.data);
     auto split_error = parse_error::from_msg<key, CODE_BAD_VALUE>(
         "You have specified \"split\" mode but only specified one sublattice");
@@ -183,10 +181,10 @@ namespace sqsgen::io::config {
       }
       if (sublattices.empty())
         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("Could not parse a valid sublattice");
-      if (sublattices.size() < 2 && mode.result() == SUBLATTICE_MODE_SPLIT) return split_error;
+      if (sublattices.size() < 2 && sl_mode == SUBLATTICE_MODE_SPLIT) return split_error;
       return {sublattices};
     }
-    if (mode.result() == SUBLATTICE_MODE_SPLIT) return split_error;
+    if (sl_mode == SUBLATTICE_MODE_SPLIT) return split_error;
     return detail::parse_sublattice<key, sitesKey>(doc, conf, {})
         .and_then(
             [&](auto&& sl) -> parse_result<std::vector<sublattice>> { return std::vector{sl}; });
