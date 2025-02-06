@@ -97,6 +97,7 @@ namespace sqsgen::optimization::comm {
       if constexpr (have_mpi) {
         return result_comm<RECV>(_comm, _head_rank, std::move(buffer));
       }
+      else return {};
     }
 
     [[nodiscard]] usize_t num_threads() const {
