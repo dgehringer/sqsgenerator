@@ -100,7 +100,6 @@ namespace sqsgen::io::config {
           auto structure = sc.structure();
           return config::parse_composition<"composition", "sites">(doc, structure.species,
                                                                    sublattice_mode)
-
               .and_then([&](auto&& composition) {
                 return config::parse_shell_radii<"shell_radii">(
                            doc, sublattice_mode, std::forward<decltype(structure)>(structure),
