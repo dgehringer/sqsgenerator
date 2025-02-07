@@ -222,7 +222,7 @@ namespace sqsgen::optimization {
         using namespace sqsgen::core::helpers;
         if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
           auto c = config.front();
-          return sqs_result<T, Mode>::empty(c.species_packed.size(), c.shell_weights.size(),
+          return sqs_result<T, Mode>::empty(c.structure.size(), c.shell_weights.size(),
                                             c.sorted.num_species);
         } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
           return sqs_result<T, Mode>::empty(
@@ -272,12 +272,7 @@ namespace sqsgen::optimization {
       : public optimizer_base<T, SMode> {
   public:
     explicit optimizer(configuration<T>&& config)
-        : optimizer_base<T, SMode>(std::forward<configuration<T>>(config)) {
-      if constexpr (IMode == ITERATION_MODE_SYSTEMATIC && SMode == SUBLATTICE_MODE_INTERACT) {
-        this->config.iterations = std::make_optional(core::num_permutations(
-            config.structure.structure().apply_composition(config.composition).species));
-      }
-    }
+        : optimizer_base<T, SMode>(std::forward<configuration<T>>(config)) {}
     void run() {
       using namespace sqsgen::core::helpers;
 
@@ -317,16 +312,21 @@ namespace sqsgen::optimization {
         helpers::scoped_execution([&] { this->pull_objective(); });
         helpers::scoped_execution([&] { pull_results(); });
         if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC) {
-          species = core::unrank_permutation(species, rstart);
+          shuffler.unrank_permutation(species, rstart + 1);
         }
+
         for (auto i = rstart; i < rend; ++i) {
           if (this->stop_requested()) return;
 
           if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
-            shuffler.template shuffle<IMode>(species);
+            if constexpr (IMode == ITERATION_MODE_SYSTEMATIC)
+              assert(i + 1 == shuffler.rank_permutation(species));
+
             helpers::count_bonds(bonds, pairs, species);
             objective = helpers::compute_objective(sro, bonds, prefactors, pair_weights,
                                                    target_objective, num_shells, num_species);
+            shuffler.template shuffle<IMode>(species);
+
           } else if constexpr (SMode == SUBLATTICE_MODE_SPLIT) {
             std::vector<T> objectives(num_sublattices);
             for (auto sigma = 0; sigma < num_sublattices; ++sigma) {
@@ -383,6 +383,7 @@ namespace sqsgen::optimization {
                                  time.load(),
                                  time.load() / static_cast<T>(iterations_t(end - start)));
       }
+      std::cout << std::format("NUM_RESULTS_FOUND={}", this->_results.num_results());
     }
 
   private:
