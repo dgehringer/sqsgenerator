@@ -8,8 +8,8 @@
 #include <random>
 
 #include "rapidhash.h"
-#include "sqsgen/types.h"
 #include "sqsgen/core/permutation.h"
+#include "sqsgen/types.h"
 
 namespace sqsgen::core {
 
@@ -36,8 +36,7 @@ namespace sqsgen::core {
     explicit shuffler(std::vector<bounds_t<usize_t>> bounds,
                       std::optional<std::uint64_t> seed = std::nullopt)
         : _seed(seed.value_or(make_random_seed())), _bounds(std::move(bounds)) {}
-    template<IterationMode Mode>
-    void shuffle(configuration_t &configuration) {
+    template <IterationMode Mode> void shuffle(configuration_t &configuration) {
       if constexpr (Mode == ITERATION_MODE_RANDOM) {
         for (auto &bound : _bounds) {
           auto [lower_bound, upper_bound] = bound;
@@ -49,10 +48,26 @@ namespace sqsgen::core {
                       configuration[p + lower_bound]);  // swap the values at i-1 and p
           }
         }
+      } else if constexpr (Mode == ITERATION_MODE_SYSTEMATIC) {
+        assert(_bounds.size() == 1);
+        auto [lower_bound, upper_bound] = _bounds.front();
+        auto result = next_permutation(configuration.begin() + lower_bound, configuration.begin() + upper_bound);
+        /*std::next_permutation(configuration.begin() + lower_bound,
+                              configuration.begin() + upper_bound);*/
       }
-      else if constexpr (Mode == ITERATION_MODE_SYSTEMATIC) {
-        core::next_permutation(configuration);
-      }
+    }
+
+    rank_t rank_permutation(configuration_t &configuration) {
+      using namespace core::helpers;
+
+      return core::rank_permutation(
+          as<std::vector>{}(range(std::forward<bounds_t<usize_t>>(_bounds.front()))
+                            | views::transform([&](auto &&i) { return configuration[i]; })));
+    }
+
+    void unrank_permutation(configuration_t &configuration, rank_t rank) {
+      assert(_bounds.size() == 1);
+      core::unrank_permutation(configuration, rank, _bounds.front());
     }
 
   private:

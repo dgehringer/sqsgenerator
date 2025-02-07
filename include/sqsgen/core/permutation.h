@@ -80,29 +80,26 @@ namespace sqsgen::core {
     }
   }
 
-  inline bool next_permutation(configuration_t& configuration) {
-    auto num_atoms{configuration.size()};
+  inline bool next_permutation(configuration_t::iterator start, configuration_t::iterator end) {
+    auto num_atoms{std::distance(start, end)};
+    if (num_atoms < 2) return false;
     auto l{num_atoms - 1}, k{num_atoms - 2};
 
-    while (configuration[k] >= configuration[k + 1]) {
+    while (start[k] >= start[k + 1]) {
       k -= 1;
       if (k < 0) {
         return false;
       }
     }
-    while (configuration[k] >= configuration[l]) l -= 1;
+    while (start[k] >= start[l]) l -= 1;
 
-    auto temporary = configuration[k];
-    configuration[k] = configuration[l];
-    configuration[l] = temporary;
+    std::swap(start[k], start[l]);
 
     auto length = num_atoms - (k + 1);
     for (auto i = 0; i < length / 2; i++) {
       auto m = k + i + 1;
       auto n = num_atoms - i - 1;
-      temporary = configuration[m];
-      configuration[m] = configuration[n];
-      configuration[n] = temporary;
+      std::swap(start[m], start[n]);
     }
     return true;
   }
