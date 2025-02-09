@@ -5,7 +5,7 @@
 #ifndef SQSGEN_OPTIMIZATION_SQS_H
 #define SQSGEN_OPTIMIZATION_SQS_H
 
-#include "sqs.h"
+#include "spdlog/spdlog.h"
 #include "sqsgen/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/shuffle.h"
@@ -152,28 +152,6 @@ namespace sqsgen::optimization {
       }
     }
 
-    template <class T, SublatticeMode Mode>
-    void rank_result(sqs_result<T, Mode>& r, lift_t<core::shuffler, Mode> shufflers) {
-      if constexpr (Mode == SUBLATTICE_MODE_INTERACT)
-        r.rank = std::make_optional(shufflers.rank_permutation(r.species));
-      if constexpr (Mode == SUBLATTICE_MODE_SPLIT)
-        for_each(
-            [&](auto&& i) {
-              assert(shufflers.size() == r.sublattices.size());
-              rank_result<T, SUBLATTICE_MODE_INTERACT>(r.sublattices[i], shufflers[i]);
-            },
-            range(shufflers.size()));
-    }
-
-    template <class T, SublatticeMode Mode>
-    configuration_t restore_site_order(sqs_result<T, SUBLATTICE_MODE_INTERACT> const& r,
-                                       optimization_config<T, Mode> const& config) {
-      auto species_rmap = std::get<1>(config.species_map);
-      return as<std::vector>{}(config.sort_order | views::transform([&](auto&& index) {
-                                 return species_rmap[r.species[index]];
-                               }));
-    }
-
   }  // namespace detail
 
   template <class T, SublatticeMode Mode> struct optimizer_base {
@@ -189,22 +167,6 @@ namespace sqsgen::optimization {
     std::optional<int> _rank;
     std::map<std::string, std::atomic<T>> _timings;
     std::vector<detail::optimization_config<T, Mode>> opt_configs;
-
-    template <core::helpers::string_literal Name> struct timer {
-      std::chrono::time_point<std::chrono::high_resolution_clock> _start;
-      std::map<std::string, std::atomic<T>>& timings;
-
-      explicit timer(std::map<std::string, std::atomic<T>>& t) : timings(t) {
-        if (!timings.contains(Name.data)) timings.emplace(Name.data, T(0));
-        _start = std::chrono::high_resolution_clock::now();
-      }
-      ~timer() {
-        timings.at(Name.data).fetch_add(
-            static_cast<T>(std::chrono::duration_cast<std::chrono::nanoseconds>(
-                               std::chrono::high_resolution_clock::now() - _start)
-                               .count()));
-      }
-    };
 
     void update_objective(T objective) {
       if (objective < _best_objective.load()) {
@@ -284,10 +246,6 @@ namespace sqsgen::optimization {
       };
     }
 
-    template <core::helpers::string_literal Name> timer<Name> measure() {
-      return timer<Name>{_timings};
-    }
-
     template <class Fn>
     detail::lift_t<std::decay_t<std::invoke_result_t<Fn, detail::optimization_config<T, Mode>>>,
                    Mode>
@@ -340,7 +298,6 @@ namespace sqsgen::optimization {
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
       std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend) {
-        auto ttotal = this->template measure<"total">();
         iterations_t iterations{rend - rstart};
         this->_working.fetch_add(iterations);
 
@@ -357,10 +314,9 @@ namespace sqsgen::optimization {
         this->_working.fetch_add(iterations);
         helpers::scoped_execution([&] { this->pull_objective(); });
         helpers::scoped_execution([&] { pull_results(); });
-        if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC) {
+        if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC)
           shuffler.unrank_permutation(species, rstart + 1);
-        }
-        auto tloop = this->template measure<"loop">();
+
         for (auto i = rstart; i < rend; ++i) {
           if (this->stop_requested()) return;
 
@@ -392,7 +348,6 @@ namespace sqsgen::optimization {
           // symmetrize bonds for each shell and compute objective function
           if (objective_value <= this->_best_objective.load()) {
             // pull in changes from other ranks. Has another rank found a better
-            auto tsync = this->template measure<"sync">();
             this->pull_objective();
             this->update_objective(objective_value);
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
@@ -431,11 +386,6 @@ namespace sqsgen::optimization {
       for (auto& [_, results] : this->_results)
         for (auto& result : results)  // use reference here, otherwise the reference gets moved
           detail::postprocess_results(result, this->opt_configs);
-
-      for (auto& [_, results] : this->_results)
-        for (auto& result : results)
-          if constexpr (SMode == SUBLATTICE_MODE_INTERACT)
-            std::cout << _ << ", " << nlohmann::json{result.species} << std::endl;
     }
   };
 }  // namespace sqsgen::optimization
