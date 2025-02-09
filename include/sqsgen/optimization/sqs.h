@@ -130,6 +130,29 @@ namespace sqsgen::optimization {
         = std::conditional_t<Mode == SUBLATTICE_MODE_INTERACT, T, std::vector<T>>;
 
     template <class T, SublatticeMode Mode>
+    sqs_result<T, Mode> postprocess_results(sqs_result<T, Mode>& r,
+                                            std::vector<optimization_config<T, Mode>>& configs) {
+      const auto restore_order
+          = [&](configuration_t& species,
+                optimization_config<T, Mode> const& config) -> configuration_t {
+        auto species_rmap = std::get<1>(config.species_map);
+        return as<std::vector>{}(config.sort_order | views::transform([&](auto&& index) {
+                                   return species_rmap[species[index]];
+                                 }));
+      };
+      if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
+        r.species = restore_order(r.species, configs.front());
+        return r;
+      }
+      if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
+        assert(configs.size() == r.sublattices.size());
+        for_each([&](auto&& i) { restore_order(r.sublattices[i].species, configs[i]); },
+                 range(configs.size()));
+        return r;
+      }
+    }
+
+    template <class T, SublatticeMode Mode>
     void rank_result(sqs_result<T, Mode>& r, lift_t<core::shuffler, Mode> shufflers) {
       if constexpr (Mode == SUBLATTICE_MODE_INTERACT)
         r.rank = std::make_optional(shufflers.rank_permutation(r.species));
@@ -143,25 +166,12 @@ namespace sqsgen::optimization {
     }
 
     template <class T, SublatticeMode Mode>
-    void restore_site_order(sqs_result<T, Mode>& r,
-                            std::vector<optimization_config<T, Mode>> const& configs) {
-      const auto restore_order
-          = [&](configuration_t& species,
-                optimization_config<T, Mode> const& config) -> configuration_t {
-        auto species_rmap = std::get<1>(config.species_map);
-        return as<std::vector>{}(config.sort_order | views::transform([&](auto&& index) {
-                                   return species_rmap[species[index]];
-                                 }));
-      };
-      if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
-        assert(configs.size() == 1);
-        r.species = restore_order(r.species, configs.front());
-      }
-      if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
-        assert(configs.size() == r.sublattices.size());
-        for_each([&](auto&& i) { restore_order(r.sublattices[i].species, configs[i]); },
-                 range(configs.size()));
-      }
+    configuration_t restore_site_order(sqs_result<T, SUBLATTICE_MODE_INTERACT> const& r,
+                                       optimization_config<T, Mode> const& config) {
+      auto species_rmap = std::get<1>(config.species_map);
+      return as<std::vector>{}(config.sort_order | views::transform([&](auto&& index) {
+                                 return species_rmap[r.species[index]];
+                               }));
     }
 
   }  // namespace detail
@@ -414,30 +424,19 @@ namespace sqsgen::optimization {
       this->barrier();
       this->pull_objective();
       pull_results();
-      for (const auto& [what, time] : this->_timings) {
-        std::cout << std::format("RANK {}: Time for {}: {} per iteration {}\n", this->rank(), what,
-                                 time.load(),
-                                 time.load() / static_cast<T>(iterations_t(end - start)));
-      }
-      std::cout << std::format("NUM_RESULTS_FOUND={}", this->_results.num_results());
-      // compute the rank of each permutation
-      for (auto&& [_, results] : this->_results)
-        // use reference here, otherwise the reference gets moved
-        for (auto& result : results) {
-          detail::rank_result(result, shuffler);
+      this->barrier();
 
-          if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
-            std::cout << result.objective << " " << nlohmann::json{result.species} << std::endl;
-            assert(result.rank.has_value());
-          }
-          detail::restore_site_order(result, this->opt_configs);
+      std::cout << std::format("NUM_RESULTS_FOUND={}\n", this->_results.num_results());
+      // compute the rank of each permutation, and reorder in case of interact mode
+      for (auto& [_, results] : this->_results)
+        for (auto& result : results)  // use reference here, otherwise the reference gets moved
+          detail::postprocess_results(result, this->opt_configs);
+
+      for (auto& [_, results] : this->_results)
+        for (auto& result : results)
           if constexpr (SMode == SUBLATTICE_MODE_INTERACT)
-            std::cout << "\t" << result.objective << " " << nlohmann::json{result.species}
-                      << std::endl;
-        }
+            std::cout << _ << ", " << nlohmann::json{result.species} << std::endl;
     }
-
-  private:
   };
 }  // namespace sqsgen::optimization
 

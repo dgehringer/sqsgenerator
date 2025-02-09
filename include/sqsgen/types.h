@@ -93,16 +93,12 @@ namespace sqsgen {
   template <class, SublatticeMode> struct sqs_result {};
 
   template <class T> struct sqs_result<T, SUBLATTICE_MODE_INTERACT> {
-    std::optional<rank_t> rank;
     T objective;
     configuration_t species;
     cube_t<T> sro;
 
     sqs_result(T objective, configuration_t species, cube_t<T> sro)
-        : rank(std::nullopt),
-          objective(objective),
-          species(std::move(species)),
-          sro(std::move(sro)) {}
+        : objective(objective), species(std::move(species)), sro(std::move(sro)) {}
     // compatibility constructor to
     sqs_result(T, T objective, configuration_t species, cube_t<T> sro)
         : sqs_result(objective, species, std::move(sro)) {}
