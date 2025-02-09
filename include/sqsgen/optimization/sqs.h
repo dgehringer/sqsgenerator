@@ -282,8 +282,7 @@ namespace sqsgen::optimization {
       auto head = this->is_head();
       iterations_t chunk_size = this->config.chunk_size;
       auto [start, end] = this->iteration_range();
-      std::cout << std::format("RANK {} GOT RANGE: {} TO {} (CHUNK_SIZE={}, NUM_PAIRS=)\n",
-                               this->rank(), start.to_string(), end.to_string(), chunk_size);
+      spdlog::info("[Rank {}] start={},end={}", this->rank(), start.to_string(), end.to_string());
       const auto pull_results = this->make_result_puller(head);
       const auto schedule_chunk = this->make_scheduler(start, end, chunk_size);
 
@@ -318,7 +317,10 @@ namespace sqsgen::optimization {
           shuffler.unrank_permutation(species, rstart + 1);
 
         for (auto i = rstart; i < rend; ++i) {
-          if (this->stop_requested()) return;
+          if (this->stop_requested()) {
+            spdlog::info("[Rank {}] received stop signal ...", this->rank());
+            return;
+          }
 
           if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
             if constexpr (IMode == ITERATION_MODE_SYSTEMATIC)
@@ -351,9 +353,9 @@ namespace sqsgen::optimization {
             this->pull_objective();
             this->update_objective(objective_value);
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
-            if (!head) {
+            if (!head)
               this->send_result(std::move(current));
-            } else {
+            else {
               // this sqs_result_collection::insert is thread safe
               this->_results.insert_result(std::move(current));
               pull_results();
@@ -381,7 +383,9 @@ namespace sqsgen::optimization {
       pull_results();
       this->barrier();
 
-      std::cout << std::format("NUM_RESULTS_FOUND={}\n", this->_results.num_results());
+      spdlog::info("best_objective={}", std::get<0>(this->_results.front()));
+      spdlog::info("num_best_solutions={}", std::get<1>(this->_results.front()).size());
+      spdlog::debug("num_solutions={}", this->_results.num_results());
       // compute the rank of each permutation, and reorder in case of interact mode
       for (auto& [_, results] : this->_results)
         for (auto& result : results)  // use reference here, otherwise the reference gets moved
