@@ -83,6 +83,8 @@ namespace sqsgen {
 
   using iterations_t = unsigned long long;
 
+  using nanoseconds_t = iterations_t;
+
   using thread_config_t = std::variant<usize_t, std::vector<usize_t>>;
 
   struct sublattice {
@@ -145,6 +147,15 @@ namespace sqsgen {
                                       num_atoms[index], num_shells[index], num_species[index]);
                                 }))};
     }
+  };
+
+  template <class T> struct sqs_statistics_data {
+    iterations_t iterations{};
+    std::map<std::string, nanoseconds_t> timings{{"total", 0},
+                                                 {"chunk_setup", 0},
+                                                 {"loop", 0},
+                                                 {"sync", 0}};
+    std::map<iterations_t, T> history;
   };
 
 }  // namespace sqsgen
