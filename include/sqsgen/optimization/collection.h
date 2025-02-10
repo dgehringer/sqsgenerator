@@ -58,6 +58,14 @@ namespace sqsgen::optimization {
       return this->insert(entry);
     }
 
+    auto front() const {
+      return this->_values.front();
+    }
+
+    base results() {
+      return *this;
+    }
+
     [[nodiscard]] std::size_t num_results() const {
       std::size_t size{0};
       for (auto &&[_, collection] : this->_values) size += collection.size();

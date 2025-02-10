@@ -276,7 +276,7 @@ namespace sqsgen::optimization {
   public:
     explicit optimizer(configuration<T>&& config)
         : optimizer_base<T, SMode>(std::forward<configuration<T>>(config)) {}
-    void run() {
+    auto run() {
       using namespace sqsgen::core::helpers;
 
       auto head = this->is_head();
@@ -390,6 +390,8 @@ namespace sqsgen::optimization {
       for (auto& [_, results] : this->_results)
         for (auto& result : results)  // use reference here, otherwise the reference gets moved
           detail::postprocess_results(result, this->opt_configs);
+
+      return this->_results.results();
     }
   };
 }  // namespace sqsgen::optimization
