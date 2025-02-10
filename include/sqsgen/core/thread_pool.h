@@ -76,8 +76,8 @@ namespace sqsgen::core {
     moodycamel::ConcurrentQueue<task_t> _tasks;
     std::vector<std::jthread> _threads;
 
-    std::jthread make_thread_handle(int id_) {
-      return std::jthread([&, id_] {
+    std::jthread make_thread_handle() {
+      return std::jthread([&] {
         std::stop_token st = _stop.get_token();
         std::mutex m;
         while (true) {
@@ -96,7 +96,7 @@ namespace sqsgen::core {
     auto make_thread_handles(auto num_threads) {
       return helpers::as<std::vector>{}(
           helpers::range(num_threads)
-          | views::transform([this](auto id) { return make_thread_handle(id); }));
+          | views::transform([this](auto) { return make_thread_handle(); }));
     }
   };
 
