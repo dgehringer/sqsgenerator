@@ -14,6 +14,7 @@
 #include "sqsgen/optimization/comm.h"
 #include "sqsgen/optimization/helpers.h"
 #include "sqsgen/types.h"
+#include "statistics.h"
 
 namespace sqsgen::optimization {
 
@@ -156,9 +157,7 @@ namespace sqsgen::optimization {
 
   template <class T, SublatticeMode Mode> struct optimizer_base {
     configuration<T> config;
-    std::atomic<iterations_t> _finished;
     std::atomic<iterations_t> _offset;
-    std::atomic<iterations_t> _working;
     std::atomic<T> _best_objective;
     sqs_result_collection<T, Mode> _results;
     comm::MPICommunicator<T> _comm;
@@ -167,6 +166,7 @@ namespace sqsgen::optimization {
     std::optional<int> _rank;
     std::map<std::string, std::atomic<T>> _timings;
     std::vector<detail::optimization_config<T, Mode>> opt_configs;
+    sqs_result<T, Mode> _buffer;
 
     void update_objective(T objective) {
       if (objective < _best_objective.load()) {
@@ -225,23 +225,9 @@ namespace sqsgen::optimization {
     }
 
     auto make_result_puller(bool head) {
-      const auto make_empty = [&config = opt_configs] {
-        using namespace sqsgen::core::helpers;
-        if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
-          auto c = config.front();
-          return sqs_result<T, Mode>::empty(c.structure.size(), c.shell_weights.size(),
-                                            c.sorted.num_species);
-        } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
-          return sqs_result<T, Mode>::empty(
-              config | views::transform([](auto&& c) { return c.species_packed.size(); }),
-              config | views::transform([](auto&& c) { return c.shell_weights.size(); }),
-              config | views::transform([](auto&& c) { return c.sorted.num_species; }));
-        }
-      };
-      return [&, head, make_empty] {
-        auto buffer = make_empty();
+      return [&, head] {
         if (head)
-          for (auto&& r : this->_comm.pull_results(buffer))
+          for (auto&& r : this->_comm.pull_results(_buffer))
             this->_results.insert_result(std::move(r));
       };
     }
@@ -262,13 +248,31 @@ namespace sqsgen::optimization {
     explicit optimizer_base(configuration<T>&& config)
         : config(config),
           _best_objective(std::numeric_limits<T>::max()),
-          _finished(0),
           _offset(0),
           _results(),
           _comm(config.thread_config),
           _pool(_comm.num_threads()),
           _stop_token(_pool.get_stop_token()),
-          opt_configs(detail::optimization_config<T, Mode>::from_config(config)) {}
+          opt_configs(detail::optimization_config<T, Mode>::from_config(config)),
+          _buffer(make_empty_result()) {
+      ;
+    }
+
+  private:
+    sqs_result<T, Mode> make_empty_result() {
+      using namespace sqsgen::core::helpers;
+      if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
+        auto c = opt_configs.front();
+        return sqs_result<T, Mode>::empty(c.structure.size(), c.shell_weights.size(),
+                                          c.sorted.num_species);
+      } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
+        return sqs_result<T, Mode>::empty(
+            opt_configs | views::transform([](auto&& c) { return c.species_packed.size(); }),
+            opt_configs | views::transform([](auto&& c) { return c.shell_weights.size(); }),
+            opt_configs | views::transform([](auto&& c) { return c.sorted.num_species; }));
+      }
+      throw std::invalid_argument("invalid lattice mode");
+    }
   };
 
   template <class T, IterationMode IMode, SublatticeMode SMode> class optimizer
@@ -296,9 +300,11 @@ namespace sqsgen::optimization {
       auto num_shells{this->transpose_setting([](auto&& c) { return c.shell_weights.size(); })};
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
+      sqs_statistics<T> statistics{};
+
       std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend) {
         iterations_t iterations{rend - rstart};
-        this->_working.fetch_add(iterations);
+        statistics.add_working(iterations);
 
         auto bonds{this->transpose_setting([](auto&& c) {
           return cube_t<usize_t>(c.shell_weights.size(), c.sorted.num_species,
@@ -310,7 +316,7 @@ namespace sqsgen::optimization {
         auto objective = this->transpose_setting([](auto&& c) { return T(0); });
         auto species{species_packed};
 
-        this->_working.fetch_add(iterations);
+        statistics.add_working(iterations);
         helpers::scoped_execution([&] { this->pull_objective(); });
         helpers::scoped_execution([&] { pull_results(); });
         if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC)
@@ -360,12 +366,13 @@ namespace sqsgen::optimization {
               this->_results.insert_result(std::move(current));
               pull_results();
             }
+            statistics.log_result(iterations_t{rstart + i - start}, objective_value);
           }
         }
-        this->_working.fetch_add(-iterations);
+        statistics.add_working(-iterations);
 
-        iterations_t finished = this->_finished.fetch_add(iterations);
-        if (finished + iterations >= (end - start))
+        iterations_t finished = statistics.add_finished(iterations);
+        if (finished + iterations >= end - start)
           this->stop();
         else
           schedule_chunk(worker);
