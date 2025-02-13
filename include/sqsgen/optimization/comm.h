@@ -8,7 +8,6 @@
 #ifdef WITH_MPI
 #  include <mpl/mpl.hpp>
 #endif
-#include "sqsgen/optimization/collection.h"
 
 namespace sqsgen::optimization::comm {
 #ifdef WITH_MPI
@@ -19,6 +18,7 @@ namespace sqsgen::optimization::comm {
 
   static constexpr int TAG_BETTER_OBJECTIVE = 1;
   static constexpr int TAG_RESULT = 2;
+  static constexpr int TAG_STATISTICS = 3;
 
   namespace detail {
     namespace ranges = std::ranges;
@@ -87,6 +87,19 @@ namespace sqsgen::optimization::comm {
       }
     }
 
+    void send_statistics(sqs_statistics_data<T>&& data) {
+      if constexpr (have_mpi) {
+        statistics_comm<SEND>(std::forward<sqs_statistics_data>(data));
+      }
+    }
+
+    auto pull_statistics(sqs_statistics_data<T>&& data) {
+      if constexpr (have_mpi) {
+        return statistics_comm<RECV>(std::forward<sqs_statistics_data>(data));
+      } else
+        return {};
+    }
+
     template <SublatticeMode Mode> void send_result(sqs_result<T, Mode>&& result) {
       if constexpr (have_mpi) {
         result_comm<SEND>(_comm, _head_rank, std::move(result));
@@ -96,8 +109,8 @@ namespace sqsgen::optimization::comm {
     template <SublatticeMode Mode> auto pull_results(sqs_result<T, Mode>& buffer) {
       if constexpr (have_mpi) {
         return result_comm<RECV>(_comm, _head_rank, std::move(buffer));
-      }
-      else return {};
+      } else
+        return {};
     }
 
     [[nodiscard]] usize_t num_threads() const {
@@ -146,6 +159,30 @@ namespace sqsgen::optimization::comm {
           fn(std::forward<mpl::status_t>(status.value()));
           status = _comm.iprobe(source, tag);
         }
+      }
+    }
+    template <bool Mode> auto statistics_comm(sqs_statistics_data<T>&& data) {
+      std::vector<std::pair<std::string, nanoseconds_t>> timings;
+      if constexpr (Mode == SEND) timings = std::vector{data.timings};
+
+      mpl::vector_layout<std::pair<std::string, nanoseconds_t>> timings_layout(timings.size());
+      mpl::heterogeneous_layout l(data.finished, data.working, data.best_rank, data.best_objective,
+                                  mpl::make_absolute(timings.data(), timings_layout));
+      if constexpr (Mode == SEND) {
+        auto req = _comm.isend(mpl::absolute, l, _head_rank, mpl::tag_t(TAG_STATISTICS));
+        req.wait();
+        return std::vector<sqs_statistics_data<T>>{};
+      } else {
+        std::vector<sqs_statistics_data<T>> results;
+        receive_messages(
+            [&, l](auto&& status) {
+              auto req = _comm.irecv(mpl::absolute, l, status.source(), mpl::tag_t(TAG_STATISTICS));
+              req.wait();
+              results.push_back(
+                  {data.finished, data.working, data.best_rank, data.best_objective, timings});
+            },
+            mpl::tag_t(TAG_STATISTICS), mpl::any_source);
+        return results;
       }
     }
 
