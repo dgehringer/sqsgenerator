@@ -150,12 +150,16 @@ namespace sqsgen {
   };
 
   template <class T> struct sqs_statistics_data {
-    iterations_t iterations{};
+    iterations_t finished{};
+    iterations_t working{};
+    iterations_t best_rank{};
+    T best_objective {std::numeric_limits<T>::infinity()};
     std::map<std::string, nanoseconds_t> timings{{"total", 0},
                                                  {"chunk_setup", 0},
                                                  {"loop", 0},
                                                  {"sync", 0}};
-    std::map<iterations_t, T> history;
+
+
   };
 
 }  // namespace sqsgen

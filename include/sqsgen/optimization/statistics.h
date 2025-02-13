@@ -6,47 +6,76 @@
 #define SQSGEN_OPTIMIZATION_STATISTICS_H
 
 #include <chrono>
-#include "sqsgen/types.h"
+
 #include "sqsgen/core/helpers.h"
+#include "sqsgen/types.h"
 
 namespace sqsgen::optimization {
+  using namespace std::chrono;
   using namespace core::helpers;
 
   template <string_literal> struct tick {
-    std::chrono::high_resolution_clock::time_point now{std::chrono::steady_clock::now()};
+    high_resolution_clock::time_point now{steady_clock::now()};
   };
 
   template <class T> class sqs_statistics {
     /**
-     * Thin wrapper class around sqsgen::sqs_statistics_data to make insertions threadsafe
+     * Thin wrapper threadsafe wrapper class around sqsgen::sqs_statistics_data to make insertions
+     * safe
      */
     std::mutex _mutex_timing;
-    std::mutex _mutex_history;
-    sqs_statistics_data<T> _data;
+    std::atomic<iterations_t> _finished{0};
+    std::atomic<iterations_t> _working{0};
+    std::atomic<iterations_t> _best_rank{0};
+    std::atomic<T> _best_objective{std::numeric_limits<T>::infinity()};
+    sqs_statistics_data<T> _data{};
 
   public:
-    void merge(sqs_statistics&& other) {
-      {
-        std::scoped_lock l{_mutex_history};
-        _data.history.insert(other._data.history.begin(), other._data.history.end());
-      }
+    sqs_statistics() = default;
+    explicit sqs_statistics(sqs_statistics_data<T> data)
+        : _data(data),
+          _finished(data.finished),
+          _working(data.working),
+          _best_rank(data.best_rank),
+          _best_objective(data.best_objective) {}
+
+    void merge(sqs_statistics_data<T>&& other) {
       {
         std::scoped_lock l{_mutex_timing};
-        for (auto const& [what, nanoseconds] : other._data.timings)
-          _data.timings[what] += nanoseconds;
+        _data.finished += other.finished;
+        for (auto const& [what, nanoseconds] : other.timings) _data.timings[what] += nanoseconds;
+      }
+      _finished.fetch_add(other.finished);
+      _working.fetch_add(other.working);
+      if (other.best_objective < _best_objective.load()) {
+        _best_objective.exchange(other.best_objective);
+        _best_rank.exchange(other.best_rank);
       }
     }
 
     void log_result(iterations_t iteration, T objective) {
-      std::scoped_lock l{_mutex_history};
-      _data.timings.emplace(iteration, objective);
+      if (objective < _best_objective.load()) {
+        _best_objective.exchange(objective);
+        _best_rank.exchange(iteration);
+      }
     }
 
     template <string_literal Name> void tock(tick<Name>&& t) {
       std::scoped_lock l{_mutex_timing};
-      _data[Name.data] += std::chrono::duration_cast<std::chrono::nanoseconds>(
-                              std::chrono::steady_clock::now() - t.now)
-                              .count();
+      _data[Name.data]
+          += std::chrono::duration_cast<nanoseconds>(steady_clock::now() - t.now).count();
+    }
+
+    iterations_t add_working(long long finished) { return _working.fetch_add(finished); }
+
+    iterations_t add_finished(iterations_t finished) { return _finished.fetch_add(finished); }
+
+    sqs_statistics_data<T> data() {
+      _data.finished = _finished.load();
+      _data.working = _working.load();
+      _data.best_objective = _best_objective.load();
+      _data.best_rank = _best_rank.load();
+      return _data;
     }
   };
 
