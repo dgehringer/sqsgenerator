@@ -167,6 +167,7 @@ namespace sqsgen::optimization {
     std::map<std::string, std::atomic<T>> _timings;
     std::vector<detail::optimization_config<T, Mode>> opt_configs;
     sqs_result<T, Mode> _buffer;
+    sqs_statistics<T> _statistics;
 
     void update_objective(T objective) {
       if (objective < _best_objective.load()) {
@@ -194,6 +195,17 @@ namespace sqsgen::optimization {
 
     void barrier() { _comm.barrier(); }
 
+    iterations_t add_finished(iterations_t finished) { return _statistics.add_finished(finished); }
+
+    iterations_t add_working(iterations_t finished) { return _statistics.add_working(finished); }
+
+    void log_result(iterations_t finished, T objective) {
+      _statistics.log_result(finished, objective);
+    }
+
+    template <string_literal Name> void tock(tick<Name>&& t) {
+      _statistics.tock(std::forward<tick<Name>>(t));
+    }
     auto make_scheduler(rank_t start, rank_t end, iterations_t chunk_size) {
       return [this, start, end, chunk_size]<class Fn>(Fn&& fn) {
         auto offset = _offset.load(std::memory_order_relaxed);
@@ -224,12 +236,15 @@ namespace sqsgen::optimization {
       }
     }
 
-    auto make_result_puller(bool head) {
-      return [&, head] {
-        if (head)
-          for (auto&& r : this->_comm.pull_results(_buffer))
-            this->_results.insert_result(std::move(r));
-      };
+    void pull_results() {
+      if (_comm.is_head())
+        for (auto&& r : this->_comm.pull_results(_buffer))
+          this->_results.insert_result(std::move(r));
+    }
+
+    void pull_statistics() {
+      if (_comm.is_head()) {
+      }
     }
 
     template <class Fn>
@@ -287,7 +302,6 @@ namespace sqsgen::optimization {
       iterations_t chunk_size = this->config.chunk_size;
       auto [start, end] = this->iteration_range();
       spdlog::info("[Rank {}] start={},end={}", this->rank(), start.to_string(), end.to_string());
-      const auto pull_results = this->make_result_puller(head);
       const auto schedule_chunk = this->make_scheduler(start, end, chunk_size);
 
       auto num_sublattices = this->opt_configs.size();
@@ -300,11 +314,10 @@ namespace sqsgen::optimization {
       auto num_shells{this->transpose_setting([](auto&& c) { return c.shell_weights.size(); })};
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
-      sqs_statistics<T> statistics{};
-
       std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend) {
+        tick<"total"> total;
+        tick<"chunk_setup"> setup;
         iterations_t iterations{rend - rstart};
-        statistics.add_working(iterations);
 
         auto bonds{this->transpose_setting([](auto&& c) {
           return cube_t<usize_t>(c.shell_weights.size(), c.sorted.num_species,
@@ -315,13 +328,20 @@ namespace sqsgen::optimization {
         })};
         auto objective = this->transpose_setting([](auto&& c) { return T(0); });
         auto species{species_packed};
-
-        statistics.add_working(iterations);
-        helpers::scoped_execution([&] { this->pull_objective(); });
-        helpers::scoped_execution([&] { pull_results(); });
+        this->add_working(iterations);
+        helpers::scoped_execution([&] {});
+        helpers::scoped_execution([&] {});
+        helpers::scoped_execution([this] {
+          tick<"sync"> sync;
+          this->pull_objective();
+          this->pull_results();
+          this->pull_statistics();
+          this->tock(std::move(sync));
+        });
         if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC)
           shuffler.unrank_permutation(species, rstart + 1);
-
+        this->tock(std::move(setup));
+        tick<"loop"> loop;
         for (auto i = rstart; i < rend; ++i) {
           if (this->stop_requested()) {
             spdlog::info("[Rank {}] received stop signal ...", this->rank());
@@ -355,6 +375,7 @@ namespace sqsgen::optimization {
           }
           // symmetrize bonds for each shell and compute objective function
           if (objective_value <= this->_best_objective.load()) {
+            tick<"sync"> sync;
             // pull in changes from other ranks. Has another rank found a better
             this->pull_objective();
             this->update_objective(objective_value);
@@ -364,18 +385,21 @@ namespace sqsgen::optimization {
             else {
               // this sqs_result_collection::insert is thread safe
               this->_results.insert_result(std::move(current));
-              pull_results();
+              this->pull_results();
             }
-            statistics.log_result(iterations_t{rstart + i - start}, objective_value);
+            this->log_result(iterations_t{rstart + i - start}, objective_value);
+            this->tock(std::move(sync));
           }
         }
-        statistics.add_working(-iterations);
+        this->tock(std::move(loop));
+        this->add_working(-iterations);
 
-        iterations_t finished = statistics.add_finished(iterations);
+        iterations_t finished = this->add_finished(iterations);
         if (finished + iterations >= end - start)
           this->stop();
         else
           schedule_chunk(worker);
+        this->tock(std::move(total));
       };
       this->barrier();
       this->start();
@@ -387,7 +411,7 @@ namespace sqsgen::optimization {
        */
       this->barrier();
       this->pull_objective();
-      pull_results();
+      this->pull_results();
       this->barrier();
 
       spdlog::info("best_objective={}", std::get<0>(this->_results.front()));
