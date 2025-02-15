@@ -8,6 +8,7 @@
 #include <blockingconcurrentqueue.h>
 #include <concurrentqueue.h>
 
+#include <barrier>
 #include <thread>
 
 namespace sqsgen::core {
@@ -40,10 +41,8 @@ namespace sqsgen::core {
   public:
     using task_t = std::variant<Tasks...>;
 
-    template <std::integral T>
-
-    explicit thread_pool(T size)
-        : _size(static_cast<std::size_t>(size)), _threads(), _tasks(){};
+    template <std::integral T> explicit thread_pool(T size)
+        : _size(static_cast<std::size_t>(size)), _tasks() {};
 
     template <class OtherTask> void enqueue(OtherTask &&task) {
       _tasks.enqueue(task);
@@ -62,12 +61,20 @@ namespace sqsgen::core {
       if (!_stop.stop_requested()) _stop.request_stop();
     }
     void join() {
-      if (!_threads.empty()) for (auto &t : _threads) t.join();
+      if (!_threads.empty()) {
+        for (auto &t : _threads) t.join();
+        _thread_ids.clear();
+      }
     }
 
-    std::stop_token get_stop_token() {
-      return _stop.get_token();
+    [[nodiscard]] int thread_id() const {
+      if (_thread_ids.empty() || _threads.empty())
+        throw std::runtime_error(
+            "thread_pool::thread_id() can only be called if the thread pool is running");
+      return _thread_ids.at(std::this_thread::get_id());
     }
+
+    std::stop_token get_stop_token() { return _stop.get_token(); }
 
   private:
     std::size_t _size;
@@ -75,11 +82,18 @@ namespace sqsgen::core {
     std::stop_source _stop;
     moodycamel::ConcurrentQueue<task_t> _tasks;
     std::vector<std::jthread> _threads;
+    std::map<std::thread::id, int> _thread_ids;
+    std::mutex _thread_id_mutex;
 
-    std::jthread make_thread_handle() {
-      return std::jthread([&] {
+    std::jthread make_thread_handle(auto thread_id, auto &&barrier_id_map_init) {
+      return std::jthread([&, thread_id] {
         std::stop_token st = _stop.get_token();
         std::mutex m;
+        {
+          std::scoped_lock lock(_thread_id_mutex);
+          _thread_ids.emplace(std::this_thread::get_id(), thread_id);
+        }
+        barrier_id_map_init.arrive_and_wait();
         while (true) {
           if (st.stop_requested()) break;
           std::optional<task_t> current_task;
@@ -94,9 +108,16 @@ namespace sqsgen::core {
     }
 
     auto make_thread_handles(auto num_threads) {
-      return helpers::as<std::vector>{}(
-          helpers::range(num_threads)
-          | views::transform([this](auto) { return make_thread_handle(); }));
+      // we add one to the number of threads (for this thread from which the workers are forked)
+      std::barrier barrier_id_init(num_threads + 1);
+      _thread_ids.emplace(std::this_thread::get_id(), num_threads);
+      auto handles = helpers::as<std::vector>{}(
+          helpers::range(num_threads) | views::transform([this, &barrier_id_init](auto id) {
+            return make_thread_handle(id, std::forward<decltype(barrier_id_init)>(barrier_id_init));
+          }));
+      // need to wait otherwise the barrier would go out of scope
+      barrier_id_init.arrive_and_wait();
+      return handles;
     }
   };
 
