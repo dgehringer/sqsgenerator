@@ -52,10 +52,6 @@ namespace sqsgen {
     requires std::is_arithmetic_v<T>
   using shell_weights_t = std::map<usize_t, T>;
 
-  struct _compare_usize {
-    bool operator()(usize_t const &lhs, usize_t const &rhs) const { return lhs < rhs; }
-  };
-
   enum Prec : std::uint8_t {
     PREC_SINGLE = 0,
     PREC_DOUBLE = 1,
@@ -149,17 +145,17 @@ namespace sqsgen {
     }
   };
 
+  enum Timing { TIMING_TOTAL = 0, TIMING_CHUNK_SETUP = 1, TIMING_LOOP = 2, TIMING_SYNC = 3 };
+
   template <class T> struct sqs_statistics_data {
     iterations_t finished{};
     iterations_t working{};
     iterations_t best_rank{};
-    T best_objective {std::numeric_limits<T>::infinity()};
-    std::map<std::string, nanoseconds_t> timings{{"total", 0},
-                                                 {"chunk_setup", 0},
-                                                 {"loop", 0},
-                                                 {"sync", 0}};
-
-
+    T best_objective{std::numeric_limits<T>::infinity()};
+    std::map<Timing, nanoseconds_t> timings{{TIMING_TOTAL, 0},
+                                            {TIMING_CHUNK_SETUP, 0},
+                                            {TIMING_LOOP, 0},
+                                            {TIMING_SYNC, 0}};
   };
 
 }  // namespace sqsgen
