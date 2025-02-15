@@ -164,7 +164,6 @@ namespace sqsgen::optimization {
     core::thread_pool<core::Task<rank_t, rank_t>> _pool;
     std::stop_token _stop_token;
     std::optional<int> _rank;
-    std::map<std::string, std::atomic<T>> _timings;
     std::vector<detail::optimization_config<T, Mode>> opt_configs;
     sqs_result<T, Mode> _buffer;
     sqs_statistics<T> _statistics;
@@ -203,8 +202,8 @@ namespace sqsgen::optimization {
       _statistics.log_result(finished, objective);
     }
 
-    template <string_literal Name> void tock(tick<Name>&& t) {
-      _statistics.tock(std::forward<tick<Name>>(t));
+    template <Timing Timing> void tock(tick<Timing>&& t) {
+      _statistics.tock(std::forward<tick<Timing>>(t));
     }
     auto make_scheduler(rank_t start, rank_t end, iterations_t chunk_size) {
       return [this, start, end, chunk_size]<class Fn>(Fn&& fn) {
@@ -221,6 +220,8 @@ namespace sqsgen::optimization {
       if (!_rank.has_value()) _rank = _comm.rank();
       return _rank.value();
     }
+
+    int thread_id() const { return _pool.thread_id(); }
 
     bounds_t<rank_t> iteration_range() {
       rank_t iterations{config.iterations.value()};
@@ -244,8 +245,18 @@ namespace sqsgen::optimization {
 
     void pull_statistics() {
       if (_comm.is_head()) {
+        auto other_stats = _comm.pull_statistics(_statistics.data());
+        for (auto&& stats : other_stats) _statistics.merge(std::move(stats));
       }
     }
+
+    void send_statistics() {
+      if (!_comm.is_head()) {
+        _comm.send_statistics(_statistics.data());
+      }
+    }
+
+    auto timings() { return _statistics.data().timings; }
 
     template <class Fn>
     detail::lift_t<std::decay_t<std::invoke_result_t<Fn, detail::optimization_config<T, Mode>>>,
@@ -269,9 +280,7 @@ namespace sqsgen::optimization {
           _pool(_comm.num_threads()),
           _stop_token(_pool.get_stop_token()),
           opt_configs(detail::optimization_config<T, Mode>::from_config(config)),
-          _buffer(make_empty_result()) {
-      ;
-    }
+          _buffer(make_empty_result()) {}
 
   private:
     sqs_result<T, Mode> make_empty_result() {
@@ -301,7 +310,7 @@ namespace sqsgen::optimization {
       auto head = this->is_head();
       iterations_t chunk_size = this->config.chunk_size;
       auto [start, end] = this->iteration_range();
-      spdlog::info("[Rank {}] start={},end={}", this->rank(), start.to_string(), end.to_string());
+      spdlog::info("[Rank {}] start={}, end={}", this->rank(), start.to_string(), end.to_string());
       const auto schedule_chunk = this->make_scheduler(start, end, chunk_size);
 
       auto num_sublattices = this->opt_configs.size();
@@ -315,8 +324,9 @@ namespace sqsgen::optimization {
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
       std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend) {
-        tick<"total"> total;
-        tick<"chunk_setup"> setup;
+        spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(), this->thread_id(), rstart.to_string(), rend.to_string());
+        tick<TIMING_TOTAL> total;
+        tick<TIMING_CHUNK_SETUP> setup;
         iterations_t iterations{rend - rstart};
 
         auto bonds{this->transpose_setting([](auto&& c) {
@@ -332,7 +342,7 @@ namespace sqsgen::optimization {
         helpers::scoped_execution([&] {});
         helpers::scoped_execution([&] {});
         helpers::scoped_execution([this] {
-          tick<"sync"> sync;
+          tick<TIMING_SYNC> sync;
           this->pull_objective();
           this->pull_results();
           this->pull_statistics();
@@ -341,10 +351,10 @@ namespace sqsgen::optimization {
         if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC)
           shuffler.unrank_permutation(species, rstart + 1);
         this->tock(std::move(setup));
-        tick<"loop"> loop;
+        tick<TIMING_LOOP> loop;
         for (auto i = rstart; i < rend; ++i) {
           if (this->stop_requested()) {
-            spdlog::info("[Rank {}] received stop signal ...", this->rank());
+            spdlog::info("[Rank {}, Thread {}] received stop signal ...", this->rank(), this->thread_id());
             return;
           }
 
@@ -375,7 +385,7 @@ namespace sqsgen::optimization {
           }
           // symmetrize bonds for each shell and compute objective function
           if (objective_value <= this->_best_objective.load()) {
-            tick<"sync"> sync;
+            tick<TIMING_SYNC> sync;
             // pull in changes from other ranks. Has another rank found a better
             this->pull_objective();
             this->update_objective(objective_value);
@@ -399,6 +409,7 @@ namespace sqsgen::optimization {
           this->stop();
         else
           schedule_chunk(worker);
+        this->send_statistics();
         this->tock(std::move(total));
       };
       this->barrier();
@@ -412,15 +423,21 @@ namespace sqsgen::optimization {
       this->barrier();
       this->pull_objective();
       this->pull_results();
+      this->pull_statistics();
       this->barrier();
+      if (this->is_head()) {
+        spdlog::info("[Rank {}] best_objective={}", this->rank(),
+                     std::get<0>(this->_results.front()));
+        spdlog::info("[Rank {}] num_best_solutions={}", this->rank(),
+                     std::get<1>(this->_results.front()).size());
+        spdlog::info("[Rank {}] num_solutions={}", this->rank(), this->_results.num_results());
+      }
 
-      spdlog::info("best_objective={}", std::get<0>(this->_results.front()));
-      spdlog::info("num_best_solutions={}", std::get<1>(this->_results.front()).size());
-      spdlog::debug("num_solutions={}", this->_results.num_results());
       // compute the rank of each permutation, and reorder in case of interact mode
-      for (auto& [_, results] : this->_results)
-        for (auto& result : results)  // use reference here, otherwise the reference gets moved
-          detail::postprocess_results(result, this->opt_configs);
+      if (this->is_head())
+        for (auto& [_, results] : this->_results)
+          for (auto& result : results)  // use reference here, otherwise the reference gets moved
+            detail::postprocess_results(result, this->opt_configs);
 
       return this->_results.results();
     }

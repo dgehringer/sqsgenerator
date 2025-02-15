@@ -14,7 +14,7 @@ namespace sqsgen::optimization {
   using namespace std::chrono;
   using namespace core::helpers;
 
-  template <string_literal> struct tick {
+  template <Timing> struct tick {
     high_resolution_clock::time_point now{steady_clock::now()};
   };
 
@@ -60,9 +60,9 @@ namespace sqsgen::optimization {
       }
     }
 
-    template <string_literal Name> void tock(tick<Name>&& t) {
+    template <Timing Time> void tock(tick<Time>&& t) {
       std::scoped_lock l{_mutex_timing};
-      _data[Name.data]
+      _data.timings[Time]
           += std::chrono::duration_cast<nanoseconds>(steady_clock::now() - t.now).count();
     }
 
