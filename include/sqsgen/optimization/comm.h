@@ -89,13 +89,13 @@ namespace sqsgen::optimization::comm {
 
     void send_statistics(sqs_statistics_data<T>&& data) {
       if constexpr (have_mpi) {
-        statistics_comm<SEND>(std::forward<sqs_statistics_data>(data));
+        statistics_comm<SEND>(std::forward<sqs_statistics_data<T>>(data));
       }
     }
 
     auto pull_statistics(sqs_statistics_data<T>&& data) {
       if constexpr (have_mpi) {
-        return statistics_comm<RECV>(std::forward<sqs_statistics_data>(data));
+        return statistics_comm<RECV>(std::forward<sqs_statistics_data<T>>(data));
       } else
         return {};
     }
@@ -162,10 +162,14 @@ namespace sqsgen::optimization::comm {
       }
     }
     template <bool Mode> auto statistics_comm(sqs_statistics_data<T>&& data) {
-      std::vector<std::pair<std::string, nanoseconds_t>> timings;
-      if constexpr (Mode == SEND) timings = std::vector{data.timings};
+      using namespace core::helpers;
+      constexpr auto order = std::array{TIMING_TOTAL, TIMING_SYNC, TIMING_CHUNK_SETUP, TIMING_LOOP};
+      std::vector<nanoseconds_t> timings(order.size());
+      if constexpr (Mode == SEND)
+        timings = as<std::vector>{}(
+            order | views::transform([&](auto&& t) { return data.timings.at(t); }));
 
-      mpl::vector_layout<std::pair<std::string, nanoseconds_t>> timings_layout(timings.size());
+      mpl::vector_layout<nanoseconds_t> timings_layout(timings.size());
       mpl::heterogeneous_layout l(data.finished, data.working, data.best_rank, data.best_objective,
                                   mpl::make_absolute(timings.data(), timings_layout));
       if constexpr (Mode == SEND) {
@@ -178,8 +182,11 @@ namespace sqsgen::optimization::comm {
             [&, l](auto&& status) {
               auto req = _comm.irecv(mpl::absolute, l, status.source(), mpl::tag_t(TAG_STATISTICS));
               req.wait();
-              results.push_back(
-                  {data.finished, data.working, data.best_rank, data.best_objective, timings});
+              results.push_back(sqs_statistics_data<T>{
+                  data.finished, data.working, data.best_rank, data.best_objective,
+                  as<std::map>{}(range(std::size(order)) | views::transform([&](auto&& i) {
+                                   return std::make_pair(order[i], timings[i]);
+                                 }))});
             },
             mpl::tag_t(TAG_STATISTICS), mpl::any_source);
         return results;
