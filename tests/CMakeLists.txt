@@ -27,6 +27,11 @@ list(APPEND SQSGEN_TEST_LIBS "${Python3_LIBRARIES}")
 
 message(STATUS "SQSGEN_TEST_LIBS=${SQSGEN_TEST_LIBS}")
 
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    add_compile_options(-fexperimental-library)
+endif ()
+
+
 enable_testing()
 
 add_executable(test_permutation
@@ -84,6 +89,10 @@ add_executable(test_parser
         ../include/sqsgen/io/config/arrays.h
         ../include/sqsgen/io/config/shared.h
         ../include/sqsgen/io/config/combined.h
+        ../include/sqsgen/optimization/sqs.h
+        ../include/sqsgen/optimization/helpers.h
+        ../include/sqsgen/core/thread_pool.h
+        ../include/sqsgen/optimization/comm.h
 )
 target_link_libraries(test_parser ${SQSGEN_TEST_LIBS})
 add_test(NAME test_parser COMMAND test_parser)
