@@ -5,11 +5,12 @@
 #ifndef SQSGEN_OPTIMIZATION_SQS_H
 #define SQSGEN_OPTIMIZATION_SQS_H
 
+#include <BS_thread_pool.hpp>
+
 #include "spdlog/spdlog.h"
 #include "sqsgen/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/shuffle.h"
-#include "sqsgen/core/thread_pool.h"
 #include "sqsgen/optimization/collection.h"
 #include "sqsgen/optimization/comm.h"
 #include "sqsgen/optimization/helpers.h"
@@ -161,7 +162,6 @@ namespace sqsgen::optimization {
     std::atomic<T> _best_objective;
     sqs_result_collection<T, Mode> _results;
     comm::MPICommunicator<T> _comm;
-    core::thread_pool<core::Task<rank_t, rank_t>> _pool;
     std::stop_token _stop_token;
     std::optional<int> _rank;
     std::vector<detail::optimization_config<T, Mode>> opt_configs;
@@ -182,46 +182,18 @@ namespace sqsgen::optimization {
       _comm.send_result(std::forward<sqs_result<T, Mode>>(result));
     }
 
-    void stop() { _pool.stop(); }
-
     bool stop_requested() const { return _stop_token.stop_requested(); }
 
     bool is_head() { return _comm.is_head(); }
 
-    void start() { _pool.start(); }
-
-    void join() { _pool.join(); }
-
     void barrier() { _comm.barrier(); }
 
-    iterations_t add_finished(iterations_t finished) { return _statistics.add_finished(finished); }
-
-    iterations_t add_working(iterations_t finished) { return _statistics.add_working(finished); }
-
-    void log_result(iterations_t finished, T objective) {
-      _statistics.log_result(finished, objective);
-    }
-
-    template <Timing Timing> void tock(tick<Timing>&& t) {
-      _statistics.tock(std::forward<tick<Timing>>(t));
-    }
-    auto make_scheduler(rank_t start, rank_t end, iterations_t chunk_size) {
-      return [this, start, end, chunk_size]<class Fn>(Fn&& fn) {
-        auto offset = _offset.load(std::memory_order_relaxed);
-        rank_t last{std::min(rank_t{start + offset + chunk_size}, end)};
-        iterations_t num_iterations{last - (start + offset)};
-        if (num_iterations == 0) return;
-        _offset.fetch_add(num_iterations);
-        _pool.enqueue_fn<rank_t, rank_t>(fn, rank_t{start + offset}, rank_t{last});
-      };
-    };
+    int num_threads() { return _comm.num_threads(); }
 
     int rank() {
       if (!_rank.has_value()) _rank = _comm.rank();
       return _rank.value();
     }
-
-    int thread_id() const { return _pool.thread_id(); }
 
     bounds_t<rank_t> iteration_range() {
       rank_t iterations{config.iterations.value()};
@@ -277,8 +249,6 @@ namespace sqsgen::optimization {
           _offset(0),
           _results(),
           _comm(config.thread_config),
-          _pool(_comm.num_threads()),
-          _stop_token(_pool.get_stop_token()),
           opt_configs(detail::optimization_config<T, Mode>::from_config(config)),
           _buffer(make_empty_result()) {}
 
@@ -306,12 +276,11 @@ namespace sqsgen::optimization {
         : optimizer_base<T, SMode>(std::forward<configuration<T>>(config)) {}
     auto run() {
       using namespace sqsgen::core::helpers;
+      spdlog::set_level(spdlog::level::debug);
 
       auto head = this->is_head();
-      iterations_t chunk_size = this->config.chunk_size;
       auto [start, end] = this->iteration_range();
       spdlog::info("[Rank {}] start={}, end={}", this->rank(), start.to_string(), end.to_string());
-      const auto schedule_chunk = this->make_scheduler(start, end, chunk_size);
 
       auto num_sublattices = this->opt_configs.size();
       auto pairs{this->transpose_setting([](auto&& c) { return c.pairs; })};
@@ -323,10 +292,13 @@ namespace sqsgen::optimization {
       auto num_shells{this->transpose_setting([](auto&& c) { return c.shell_weights.size(); })};
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
-      std::function<void(rank_t, rank_t)> worker = [&](rank_t&& rstart, rank_t&& rend) {
-        spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(), this->thread_id(), rstart.to_string(), rend.to_string());
-        tick<TIMING_TOTAL> total;
-        tick<TIMING_CHUNK_SETUP> setup;
+      sqs_statistics<T> statistics;
+      std::stop_source stop_source;
+
+      const auto worker = [&, stop = stop_source.get_token()](rank_t rstart, rank_t rend) {
+        spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(), 0,
+                      rstart.to_string(), rend.to_string());
+        if (stop.stop_requested()) return;
         iterations_t iterations{rend - rstart};
 
         auto bonds{this->transpose_setting([](auto&& c) {
@@ -338,23 +310,14 @@ namespace sqsgen::optimization {
         })};
         auto objective = this->transpose_setting([](auto&& c) { return T(0); });
         auto species{species_packed};
-        this->add_working(iterations);
-        helpers::scoped_execution([&] {});
-        helpers::scoped_execution([&] {});
-        helpers::scoped_execution([this] {
-          tick<TIMING_SYNC> sync;
-          this->pull_objective();
-          this->pull_results();
-          this->pull_statistics();
-          this->tock(std::move(sync));
-        });
+        statistics.add_working(iterations);
+
         if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC)
           shuffler.unrank_permutation(species, rstart + 1);
-        this->tock(std::move(setup));
-        tick<TIMING_LOOP> loop;
+
         for (auto i = rstart; i < rend; ++i) {
-          if (this->stop_requested()) {
-            spdlog::info("[Rank {}, Thread {}] received stop signal ...", this->rank(), this->thread_id());
+          if (stop.stop_requested()) {
+            spdlog::info("[Rank {}, Thread {}] received stop signal ...", this->rank(), 0);
             return;
           }
 
@@ -385,46 +348,28 @@ namespace sqsgen::optimization {
           }
           // symmetrize bonds for each shell and compute objective function
           if (objective_value <= this->_best_objective.load()) {
-            tick<TIMING_SYNC> sync;
             // pull in changes from other ranks. Has another rank found a better
-            this->pull_objective();
-            this->update_objective(objective_value);
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
-            if (!head)
-              this->send_result(std::move(current));
-            else {
-              // this sqs_result_collection::insert is thread safe
-              this->_results.insert_result(std::move(current));
-              this->pull_results();
-            }
-            this->log_result(iterations_t{rstart + i - start}, objective_value);
-            this->tock(std::move(sync));
+            this->_results.insert_result(std::move(current));
+            statistics.log_result(iterations_t{rstart + i - start}, objective_value);
           }
         }
-        this->tock(std::move(loop));
-        this->add_working(-iterations);
-
-        iterations_t finished = this->add_finished(iterations);
-        if (finished + iterations >= end - start)
-          this->stop();
-        else
-          schedule_chunk(worker);
-        this->send_statistics();
-        this->tock(std::move(total));
+        statistics.add_working(-iterations);
+        statistics.add_working(iterations);
+        spdlog::debug("[Rank {}, Thread {}] finished chunk start={}, end={}", this->rank(), 0,
+                      rstart.to_string(), rend.to_string());
       };
-      this->barrier();
-      this->start();
-      for_each([&](auto) { schedule_chunk(worker); }, this->_comm.num_threads());
-      this->join();
+
+      iterations_t chunk_size = this->config.chunk_size;
+      BS::thread_pool pool(this->num_threads());
+      pool.detach_blocks(start, end, worker, static_cast<std::size_t>((end - start) / chunk_size));
+      pool.wait();
+
       /*
-       * A barrier is needed before the head rank pulls in the latest result. In case the head rank
-       * would finish first we would enter have race condition leading to MPI failure
+       * A barrier is needed before the head rank pulls in the latest result. In case the head
+       * rank would finish first we would enter have race condition leading to MPI failure
        */
-      this->barrier();
-      this->pull_objective();
-      this->pull_results();
-      this->pull_statistics();
-      this->barrier();
+
       if (this->is_head()) {
         spdlog::info("[Rank {}] best_objective={}", this->rank(),
                      std::get<0>(this->_results.front()));
