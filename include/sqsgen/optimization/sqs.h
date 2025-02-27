@@ -11,6 +11,7 @@
 #include "sqsgen/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/shuffle.h"
+#include "sqsgen/io/mpi/request_pool.h"
 #include "sqsgen/optimization/collection.h"
 #include "sqsgen/optimization/comm.h"
 #include "sqsgen/optimization/helpers.h"
@@ -158,46 +159,23 @@ namespace sqsgen::optimization {
 
   template <class T, SublatticeMode Mode> struct optimizer_base {
     configuration<T> config;
-    std::atomic<iterations_t> _offset;
     std::atomic<T> _best_objective;
     sqs_result_collection<T, Mode> _results;
     comm::MPICommunicator<T> _comm;
-    std::stop_token _stop_token;
-    std::optional<int> _rank;
     std::vector<detail::optimization_config<T, Mode>> opt_configs;
-    sqs_result<T, Mode> _buffer;
-    sqs_statistics<T> _statistics;
 
-    void update_objective(T objective) {
-      if (objective < _best_objective.load()) {
-        _best_objective.exchange(objective);
-        // we broadcast it to the other ranks, if our configuration is truly the best
-        _comm.broadcast_objective(T(objective));
-      }
-    }
+    auto rank() { return _comm.rank(); }
 
-    void pull_objective() { _comm.pull_objective(_best_objective); }
+    auto num_ranks() { return _comm.num_ranks(); }
 
-    void send_result(sqs_result<T, Mode>&& result) {
-      _comm.send_result(std::forward<sqs_result<T, Mode>>(result));
-    }
-
-    bool stop_requested() const { return _stop_token.stop_requested(); }
-
-    bool is_head() { return _comm.is_head(); }
+    auto is_head() { return _comm.is_head(); }
 
     void barrier() { _comm.barrier(); }
-
-    int num_threads() { return _comm.num_threads(); }
-
-    int rank() {
-      if (!_rank.has_value()) _rank = _comm.rank();
-      return _rank.value();
-    }
+    auto num_threads() { return _comm.num_threads(); }
 
     bounds_t<rank_t> iteration_range() {
       rank_t iterations{config.iterations.value()};
-      auto r = this->rank();
+      auto r = this->_comm.rank();
       auto num_ranks = _comm.num_ranks();
       auto offerr = iterations % num_ranks;
       auto rank_range = iterations / num_ranks;
@@ -208,27 +186,6 @@ namespace sqsgen::optimization {
         return {offset + (r - offerr) * rank_range, offset + (r - offerr + 1) * rank_range};
       }
     }
-
-    void pull_results() {
-      if (_comm.is_head())
-        for (auto&& r : this->_comm.pull_results(_buffer))
-          this->_results.insert_result(std::move(r));
-    }
-
-    void pull_statistics() {
-      if (_comm.is_head()) {
-        auto other_stats = _comm.pull_statistics(_statistics.data());
-        for (auto&& stats : other_stats) _statistics.merge(std::move(stats));
-      }
-    }
-
-    void send_statistics() {
-      if (!_comm.is_head()) {
-        _comm.send_statistics(_statistics.data());
-      }
-    }
-
-    auto timings() { return _statistics.data().timings; }
 
     template <class Fn>
     detail::lift_t<std::decay_t<std::invoke_result_t<Fn, detail::optimization_config<T, Mode>>>,
@@ -246,13 +203,10 @@ namespace sqsgen::optimization {
     explicit optimizer_base(configuration<T>&& config)
         : config(config),
           _best_objective(std::numeric_limits<T>::max()),
-          _offset(0),
           _results(),
           _comm(config.thread_config),
-          opt_configs(detail::optimization_config<T, Mode>::from_config(config)),
-          _buffer(make_empty_result()) {}
+          opt_configs(detail::optimization_config<T, Mode>::from_config(config)) {}
 
-  private:
     sqs_result<T, Mode> make_empty_result() {
       using namespace sqsgen::core::helpers;
       if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
@@ -279,6 +233,8 @@ namespace sqsgen::optimization {
       spdlog::set_level(spdlog::level::debug);
 
       auto head = this->is_head();
+      auto mpi_mode = this->num_ranks() > 1;
+      if (mpi_mode && head) spdlog::info("[Rank {}] Running optimizer in MPI mode", this->rank());
       auto [start, end] = this->iteration_range();
       spdlog::info("[Rank {}] start={}, end={}", this->rank(), start.to_string(), end.to_string());
 
@@ -295,9 +251,11 @@ namespace sqsgen::optimization {
       sqs_statistics<T> statistics;
       std::stop_source stop_source;
 
+
       const auto worker = [&, stop = stop_source.get_token()](rank_t rstart, rank_t rend) {
         spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(), 0,
                       rstart.to_string(), rend.to_string());
+        io::mpi::outbound_request_pool<sqs_result<T, SMode>> pool_results;
         if (stop.stop_requested()) return;
         iterations_t iterations{rend - rstart};
 
@@ -308,7 +266,7 @@ namespace sqsgen::optimization {
         auto sro{this->transpose_setting([](auto&& c) {
           return cube_t<T>(c.shell_weights.size(), c.sorted.num_species, c.sorted.num_species);
         })};
-        auto objective = this->transpose_setting([](auto&& c) { return T(0); });
+        auto objective = this->transpose_setting([](auto&&) { return T(0); });
         auto species{species_packed};
         statistics.add_working(iterations);
 
@@ -320,11 +278,9 @@ namespace sqsgen::optimization {
             spdlog::info("[Rank {}, Thread {}] received stop signal ...", this->rank(), 0);
             return;
           }
-
           if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
             if constexpr (IMode == ITERATION_MODE_SYSTEMATIC)
               assert(i + 1 == shuffler.rank_permutation(species));
-
             helpers::count_bonds(bonds, pairs, species);
             objective = helpers::compute_objective(sro, bonds, prefactors, pair_weights,
                                                    target_objective, num_shells, num_species);
@@ -350,6 +306,7 @@ namespace sqsgen::optimization {
           if (objective_value <= this->_best_objective.load()) {
             // pull in changes from other ranks. Has another rank found a better
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
+            if (!head) pool_results.send(std::forward<decltype(current)>(current), io::mpi::RANK_HEAD);
             this->_results.insert_result(std::move(current));
             statistics.log_result(iterations_t{rstart + i - start}, objective_value);
           }
@@ -361,9 +318,11 @@ namespace sqsgen::optimization {
       };
 
       iterations_t chunk_size = this->config.chunk_size;
+      this->barrier();
       BS::thread_pool pool(this->num_threads());
       pool.detach_blocks(start, end, worker, static_cast<std::size_t>((end - start) / chunk_size));
       pool.wait();
+      this->barrier();
 
       /*
        * A barrier is needed before the head rank pulls in the latest result. In case the head
