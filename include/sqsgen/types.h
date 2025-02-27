@@ -158,5 +158,9 @@ namespace sqsgen {
                                             {TIMING_SYNC, 0}};
   };
 
+  template <class T> struct objective {
+    T value;
+  };
+
 }  // namespace sqsgen
 #endif  // SQSGEN_TYPES_HPP
