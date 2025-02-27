@@ -255,8 +255,8 @@ namespace sqsgen::optimization {
       const auto worker = [&, stop = stop_source.get_token()](rank_t rstart, rank_t rend) {
         spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(), 0,
                       rstart.to_string(), rend.to_string());
-        io::mpi::outbound_request_pool<sqs_result<T, SMode>> pool_results;
         if (stop.stop_requested()) return;
+        io::mpi::outbound_request_pool<sqs_result<T, SMode>> pool_results;
         iterations_t iterations{rend - rstart};
 
         auto bonds{this->transpose_setting([](auto&& c) {

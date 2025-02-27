@@ -19,6 +19,7 @@ namespace sqsgen::optimization::comm {
   static constexpr int TAG_BETTER_OBJECTIVE = 1;
   static constexpr int TAG_RESULT = 2;
   static constexpr int TAG_STATISTICS = 3;
+  static constexpr int TAG_REGISTER = 4;
 
   namespace detail {
     namespace ranges = std::ranges;
@@ -60,32 +61,12 @@ namespace sqsgen::optimization::comm {
       return 0;
     }
 
-    void pull_objective(std::atomic<T>& best_objective) {
-      mpl::tag_t tag(TAG_BETTER_OBJECTIVE);
-      receive_messages(
-          [&best_objective, this, tag](auto&& status) {
-            T other;
-            auto req = _comm.irecv(other, status.source(), tag);
-            req.wait();
-            if (other < best_objective.load()) best_objective.exchange(other);
-          },
-          tag);
-    }
-
-    void broadcast_objective(T&& objective) const {
+    auto register_ranks() {
       if constexpr (have_mpi) {
-        {
-          mpl::irequest_pool pool;
-          core::helpers::for_each(
-              [this, &pool, objective](auto&& r) {
-                if (r != rank())
-                  pool.push(_comm.isend(objective, r, mpl::tag_t(TAG_BETTER_OBJECTIVE)));
-              },
-              num_ranks());
-          pool.waitall();
-        }
+
       }
     }
+
 
     void send_statistics(sqs_statistics_data<T>&& data) {
       if constexpr (have_mpi) {
@@ -161,7 +142,7 @@ namespace sqsgen::optimization::comm {
         }
       }
     }
-    template <bool Mode> auto statistics_comm(sqs_statistics_data<T>&& data) {
+    template <bool Mode> mpl::irequest statistics_comm(sqs_statistics_data<T>&& data) {
       using namespace core::helpers;
       constexpr auto order = std::array{TIMING_TOTAL, TIMING_SYNC, TIMING_CHUNK_SETUP, TIMING_LOOP};
       std::vector<nanoseconds_t> timings(order.size());
@@ -173,9 +154,7 @@ namespace sqsgen::optimization::comm {
       mpl::heterogeneous_layout l(data.finished, data.working, data.best_rank, data.best_objective,
                                   mpl::make_absolute(timings.data(), timings_layout));
       if constexpr (Mode == SEND) {
-        auto req = _comm.isend(mpl::absolute, l, _head_rank, mpl::tag_t(TAG_STATISTICS));
-        req.wait();
-        return std::vector<sqs_statistics_data<T>>{};
+        return _comm.isend(mpl::absolute, l, _head_rank, mpl::tag_t(TAG_STATISTICS));
       } else {
         std::vector<sqs_statistics_data<T>> results;
         receive_messages(
