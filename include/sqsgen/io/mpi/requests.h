@@ -5,10 +5,7 @@
 #ifndef SQSGEN_IO_MPI_REQUESTS_H
 #define SQSGEN_IO_MPI_REQUESTS_H
 
-#include <sqsgen/core/helpers/as.h>
-
-#include <mpl/mpl.hpp>
-
+#include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::io::mpi {
@@ -28,16 +25,22 @@ namespace sqsgen::io::mpi {
       auto d = r.dimensions();
       return d[Dim];
     }
+
+    template <int Tag, class Fn>
+    void receive_messages(mpl::communicator& comm, Fn&& fn, int source) {
+      std::optional<mpl::status_t> status = comm.iprobe(source, mpl::tag_t{Tag});
+      while (status.has_value()) {
+        fn(std::forward<mpl::status_t>(status.value()));
+        status = comm.iprobe(source, mpl::tag_t{Tag});
+      }
+    }
   }  // namespace detail
 
-  template <int, class T, class> class request_base {
-  protected:
-    mpl::communicator _comm;
-
-  public:
-    request_base(mpl::communicator const& comm) : _comm(comm) {}
+  struct rank_state {
+    bool running;
   };
 
+  static constexpr int TAG_STATE = 0;
   static constexpr int TAG_OBJECTIVE = 1;
   static constexpr int TAG_RESULT = 2;
   static constexpr int TAG_STATISTICS = 3;
@@ -45,214 +48,231 @@ namespace sqsgen::io::mpi {
   template <class, class> class request;
 
   template <class T, class RequestType>
-  class request<sqs_result<T, SUBLATTICE_MODE_SPLIT>, RequestType>
-      : public request_base<TAG_RESULT, sqs_result<T, SUBLATTICE_MODE_SPLIT>, RequestType> {
+  class request<sqs_result<T, SUBLATTICE_MODE_SPLIT>, RequestType> {
     using value_t = sqs_result<T, SUBLATTICE_MODE_SPLIT>;
-    using request_base<TAG_RESULT, value_t, RequestType>::request_base;
-
-    std::vector<T> _sro_buff;
-    configuration_t _species_buff;
-    std::vector<T> _objective_buff;
-    T _total_objective;
-    std::size_t _num_sublattices;
-    std::vector<long> _num_shells, _num_atoms, _num_species;
-    mpl::heterogeneous_layout _layout;
 
   public:
     static constexpr auto tag = TAG_RESULT;
 
-    request(mpl::communicator const& comm, value_t&& buffer)
-        : request_base<tag, value_t, RequestType>(comm) {
-      _num_sublattices = buffer.sublattices.size();
-      if constexpr (std::is_same_v<RequestType, detail::outbound_request>) {
-        using namespace core::helpers;
-        for (auto sl : buffer.sublattices) {
-          _sro_buff.insert(_sro_buff.end(), sl.sro.data(), sl.sro.data() + sl.sro.size());
-          _species_buff.insert(_species_buff.end(), sl.species.begin(), sl.species.end());
-          _objective_buff.push_back(sl.objective);
-          _num_shells.push_back(detail::dimension<0>(sl.sro));
-          _num_species.push_back(detail::dimension<1>(sl.sro));
-          _num_atoms = as<std::vector>{}(buffer.sublattices | views::transform([&](auto&& s) {
-                                           return static_cast<long>(s.species.size());
-                                         }));
-        }
-        _total_objective = buffer.objective;
-        assert(_num_atoms.size() == _num_sublattices);
-        assert(_num_species.size() == _num_sublattices);
-        assert(_num_shells.size() == _num_sublattices);
-      } else if constexpr (std::is_same_v<RequestType, detail::inbound_request>) {
-        _sro_buff.resize(
-            sum(buffer.sublattices | views::transform([&](auto r) { return r.sro.size(); })));
-        _species_buff.resize(
-            sum(buffer.sublattices | views::transform([&](auto r) { return r.species.size(); })));
-        _objective_buff.resize(_num_sublattices);
-        _num_atoms.resize(_num_sublattices);
-        _num_species.resize(_num_sublattices);
-        _num_shells.resize(_num_sublattices);
-      }
-      mpl::vector_layout<T> sro_layout(_sro_buff.size());
-      mpl::vector_layout<T> objective_layout(_objective_buff.size());
-      mpl::vector_layout<specie_t> species_layout(_species_buff.size());
-      mpl::vector_layout<long> num_atoms_layout(_num_atoms.size());
-      mpl::vector_layout<long> num_species_layout(_num_species.size());
-      mpl::vector_layout<long> num_shells_layout(_num_shells.size());
-      _layout
-          = mpl::heterogeneous_layout(_total_objective, _num_sublattices,
-                                      mpl::make_absolute(_num_atoms.data(), num_atoms_layout),
-                                      mpl::make_absolute(_objective_buff.data(), objective_layout),
-                                      mpl::make_absolute(_species_buff.data(), species_layout),
-                                      mpl::make_absolute(_num_shells.data(), num_shells_layout),
-                                      mpl::make_absolute(_num_species.data(), num_species_layout),
-                                      mpl::make_absolute(_sro_buff.data(), sro_layout));
-    }
-
-    mpl::irequest send(int to) {
+    void send(mpl::communicator& comm, value_t&& result, int to) {
       static_assert(std::is_same_v<RequestType, detail::outbound_request>);
-      return this->_comm.isend(mpl::absolute, _layout, to, mpl::tag_t(tag));
+      result_comm(comm, std::forward<value_t>(result), to);
     }
-    mpl::irequest recv(mpl::status_t status) {
+    auto recv(mpl::communicator& comm, value_t&& result, int to) {
       static_assert(std::is_same_v<RequestType, detail::inbound_request>);
-      return this->_comm.irecv(mpl::absolute, _layout, status.source(), mpl::tag_t(tag));
+      return result_comm(comm, std::forward<value_t>(result), to);
     }
 
-    value_t result() {
-      static_assert(std::is_same_v<RequestType, detail::inbound_request>);
-      std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>> sublattices;
-      long offset_sro{0}, offset_species{0};
-      for (auto sigma = 0; sigma < _num_sublattices; ++sigma) {
-        sublattices.push_back(sqs_result<T, SUBLATTICE_MODE_INTERACT>{
-            _objective_buff[sigma],
-            configuration_t(_species_buff.begin() + offset_species,
-                            _species_buff.begin() + offset_sro + _num_species[sigma]),
-            cube_t<T>(Eigen::TensorMap<cube_t<T>>(_sro_buff.data() + offset_sro, _num_shells[sigma],
-                                                  _num_species[sigma], _num_species[sigma]))});
-        offset_species += _num_species[sigma];
-        offset_sro += _num_shells[sigma] * _num_species[sigma] * _num_species[sigma];
+  private:
+    std::vector<std::pair<value_t, int>> result_comm(mpl::communicator& comm, value_t&& result,
+                                                     int to) {
+      using namespace core::helpers;
+      std::vector<T> sro_buff;
+      configuration_t species_buff;
+      std::vector<T> objective_buff;
+      T total_objective;
+      std::size_t num_sublattices{result.sublattices.size()};
+      std::vector<long> num_shells, num_atoms, num_species;
+      if constexpr (std::is_same_v<RequestType, detail::outbound_request>) {
+        for (auto sl : result.sublattices) {
+          sro_buff.insert(sro_buff.end(), sl.sro.data(), sl.sro.data() + sl.sro.size());
+          species_buff.insert(species_buff.end(), sl.species.begin(), sl.species.end());
+          objective_buff.push_back(sl.objective);
+          num_shells.push_back(detail::dimension<0>(sl.sro));
+          num_species.push_back(detail::dimension<1>(sl.sro));
+          num_atoms = as<std::vector>{}(result.sublattices | views::transform([&](auto&& s) {
+                                          return static_cast<long>(s.species.size());
+                                        }));
+        }
+        total_objective = result.objective;
+        assert(num_atoms.size() == num_sublattices);
+        assert(num_species.size() == num_sublattices);
+        assert(num_shells.size() == num_sublattices);
+      } else {
+        sro_buff.resize(
+            sum(result.sublattices | views::transform([&](auto r) { return r.sro.size(); })));
+        species_buff.resize(
+            sum(result.sublattices | views::transform([&](auto r) { return r.species.size(); })));
+        objective_buff.resize(num_sublattices);
+        num_atoms.resize(num_sublattices);
+        num_species.resize(num_sublattices);
+        num_shells.resize(num_sublattices);
       }
-      return sqs_result<T, SUBLATTICE_MODE_SPLIT>{_total_objective, sublattices};
+      mpl::vector_layout<T> sro_layout(sro_buff.size());
+      mpl::vector_layout<T> objective_layout(objective_buff.size());
+      mpl::vector_layout<specie_t> species_layout(species_buff.size());
+      mpl::vector_layout<long> num_atoms_layout(num_atoms.size());
+      mpl::vector_layout<long> num_species_layout(num_species.size());
+      mpl::vector_layout<long> num_shells_layout(num_shells.size());
+      mpl::heterogeneous_layout l(total_objective, num_sublattices,
+                                  mpl::make_absolute(num_atoms.data(), num_atoms_layout),
+                                  mpl::make_absolute(objective_buff.data(), objective_layout),
+                                  mpl::make_absolute(species_buff.data(), species_layout),
+                                  mpl::make_absolute(num_shells.data(), num_shells_layout),
+                                  mpl::make_absolute(num_species.data(), num_species_layout),
+                                  mpl::make_absolute(sro_buff.data(), sro_layout));
+      if constexpr (std::is_same_v<RequestType, detail::outbound_request>) {
+        auto req = comm.isend(mpl::absolute, l, to, mpl::tag_t(tag));
+        req.wait();
+        return {};
+      } else {
+        std::vector<std::pair<value_t, int>> recieved{};
+        detail::receive_messages<tag>(
+            comm,
+            [&, l](auto&& status) {
+              auto req = comm.irecv(mpl::absolute, l, status.source(), mpl::tag_t(tag));
+              req.wait();
+              std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>> sublattices;
+              long offset_sro{0}, offset_species{0};
+              for (auto sigma = 0; sigma < num_sublattices; ++sigma) {
+                sublattices.push_back(sqs_result<T, SUBLATTICE_MODE_INTERACT>{
+                    objective_buff[sigma],
+                    configuration_t(species_buff.begin() + offset_species,
+                                    species_buff.begin() + offset_sro + num_species[sigma]),
+                    cube_t<T>(Eigen::TensorMap<cube_t<T>>(sro_buff.data() + offset_sro,
+                                                          num_shells[sigma], num_species[sigma],
+                                                          num_species[sigma]))});
+                offset_species += num_species[sigma];
+                offset_sro += num_shells[sigma] * num_species[sigma] * num_species[sigma];
+              }
+              recieved.push_back(
+                  std::make_pair(sqs_result<T, SUBLATTICE_MODE_SPLIT>{total_objective, sublattices},
+                                 status.source()));
+            },
+            to);
+        return recieved;
+      }
     }
   };
 
   template <class T, class RequestType>
-  class request<sqs_result<T, SUBLATTICE_MODE_INTERACT>, RequestType>
-      : public request_base<TAG_RESULT, sqs_result<T, SUBLATTICE_MODE_INTERACT>, RequestType> {
+  class request<sqs_result<T, SUBLATTICE_MODE_INTERACT>, RequestType> {
     using value_t = sqs_result<T, SUBLATTICE_MODE_INTERACT>;
-    using request_base<TAG_RESULT, value_t, RequestType>::request_base;
-    T _objective;
-    std::vector<T> _sro_buff;
-    configuration_t _species;
-    std::size_t _num_atoms, _num_species, _num_shells;
-    mpl::heterogeneous_layout _layout;
 
   public:
     static constexpr auto tag = TAG_RESULT;
 
-    request(mpl::communicator const& comm, value_t&& buffer)
-        : request_base<tag, value_t, RequestType>(comm) {
-      if constexpr (std::is_same_v<RequestType, detail::outbound_request>) {
-        _sro_buff = std::vector(buffer.sro.data(), buffer.sro.data() + buffer.sro.size());
-        _species = buffer.species;
-      } else if constexpr (std::is_same_v<RequestType, detail::inbound_request>) {
-        _sro_buff.resize(buffer.sro.size());
-        _species.resize(buffer.species.size());
-      }
-
-      mpl::vector_layout<T> sro_layout(buffer.sro.size());
-      mpl::vector_layout<specie_t> species_layout(buffer.species.size());
-      _num_atoms = buffer.species.size();
-      _num_shells = detail::dimension<0>(buffer.sro);
-      _num_species = detail::dimension<1>(buffer.sro);
-      assert(buffer.sro.size() == _num_shells * _num_species * _num_species);
-      _layout = mpl::heterogeneous_layout(
-          _objective, _num_atoms, mpl::make_absolute(_species.data(), species_layout), _num_shells,
-          _num_species, mpl::make_absolute(_sro_buff.data(), sro_layout));
-    }
-
-    mpl::irequest send(int to) {
+    void send(mpl::communicator& comm, value_t&& result, int to) {
       static_assert(std::is_same_v<RequestType, detail::outbound_request>);
-      return this->_comm.isend(mpl::absolute, _layout, to, mpl::tag_t(tag));
+      result_comm(comm, std::forward<value_t>(result), to);
     }
-    mpl::irequest recv(mpl::status_t status) {
+    auto recv(mpl::communicator& comm, value_t&& result, int to) {
       static_assert(std::is_same_v<RequestType, detail::inbound_request>);
-      return this->_comm.irecv(mpl::absolute, _layout, status.source(), mpl::tag_t(tag));
+      return result_comm(comm, std::forward<value_t>(result), to);
     }
 
-    value_t result() {
-      static_assert(std::is_same_v<RequestType, detail::inbound_request>);
-      return sqs_result<T, SUBLATTICE_MODE_INTERACT>{
-          _objective, _species,
-          Eigen::TensorMap<cube_t<T>>(_sro_buff.data(), _num_shells, _num_species, _num_species)};
-    };
+  private:
+    std::vector<std::pair<value_t, int>> result_comm(mpl::communicator& comm, value_t&& result,
+                                                     int to) {
+      std::vector<T> sro_buff;
+      if constexpr (std::is_same_v<RequestType, detail::outbound_request>)
+        sro_buff = std::vector(result.sro.data(), result.sro.data() + result.sro.size());
+      else
+        sro_buff.resize(result.sro.size());
+      mpl::vector_layout<T> sro_layout(result.sro.size());
+      mpl::vector_layout<specie_t> species_layout(result.species.size());
+      std::size_t num_atoms{result.species.size()};
+      auto num_shells{detail::dimension<0>(result.sro)},
+          num_species{detail::dimension<1>(result.sro)};
+      assert(result.sro.size() == num_shells * num_species * num_species);
+      mpl::heterogeneous_layout l(
+          result.objective, num_atoms, mpl::make_absolute(result.species.data(), species_layout),
+          num_shells, num_species, mpl::make_absolute(sro_buff.data(), sro_layout));
+      if constexpr (std::is_same_v<RequestType, detail::outbound_request>) {
+        auto req = comm.isend(mpl::absolute, l, to, mpl::tag_t(tag));
+        req.wait();
+        return {};
+      } else {
+        std::vector<std::pair<value_t, int>> results{};
+        detail::receive_messages<tag>(
+            comm,
+            [&, l](auto&& status) {
+              auto req = comm.irecv(mpl::absolute, l, status.source(), mpl::tag_t(tag));
+              req.wait();
+              result.sro = Eigen::TensorMap<cube_t<T>>(sro_buff.data(), num_shells, num_species,
+                                                       num_species);
+              results.push_back(std::make_pair(result, status.source()));
+            },
+            to);
+        return results;
+      }
+    }
   };
 
-  template <class T, class RequestType> class request<objective<T>, RequestType>
-      : public request_base<TAG_OBJECTIVE, objective<T>, RequestType> {
+  template <class T, class RequestType> class request<objective<T>, RequestType> {
     using value_t = objective<T>;
-    using request_base<TAG_OBJECTIVE, value_t, RequestType>::request_base;
-    T value_;
 
   public:
     static constexpr auto tag = TAG_OBJECTIVE;
 
-    request(mpl::communicator const& comm, value_t&& buffer)
-        : value_(buffer.value), request_base<tag, value_t, RequestType>(comm) {}
-
-    request(mpl::communicator const& comm, T&& buffer)
-        : value_(buffer.value), request_base<tag, value_t, RequestType>(comm) {}
-
-    mpl::irequest send(int to) {
+    void send(mpl::communicator& comm, value_t&& result, int to) {
       static_assert(std::is_same_v<RequestType, detail::outbound_request>);
-      return this->_comm.isend(value_, to, mpl::tag_t(tag));
+      result_comm(comm, std::forward<value_t>(result), to);
     }
-    mpl::irequest recv(mpl::status_t status) {
+    auto recv(mpl::communicator& comm, value_t&& result, int to) {
       static_assert(std::is_same_v<RequestType, detail::inbound_request>);
-      return this->_comm.irecv(value_, status.source(), mpl::tag_t(tag));
+      return result_comm(comm, std::forward<value_t>(result), to);
+    }
+
+  private:
+    std::vector<std::pair<value_t, int>> result_comm(mpl::communicator& comm, value_t&& result,
+                                                     int to) {
+      if constexpr (std::is_same_v<RequestType, detail::outbound_request>) {
+        auto req = comm.isend(result.value, to, mpl::tag_t(tag));
+        req.wait();
+        return {};
+      } else {
+        std::vector<std::pair<value_t, int>> results{};
+        detail::receive_messages<tag>(
+            comm,
+            [&](auto&& status) {
+              auto req = comm.irecv(result.value, status.source(), mpl::tag_t(tag));
+              req.wait();
+              results.push_back(std::make_pair(value_t{result.value}, status.source()));
+            },
+            to);
+        return results;
+      }
     }
   };
 
-  template <class T, class RequestType> class request<sqs_statistics_data<T>, RequestType>
-      : public request_base<TAG_STATISTICS, objective<T>, RequestType> {
-    using value_t = objective<T>;
-    using request_base<TAG_STATISTICS, value_t, RequestType>::request_base;
-    value_t buffer_;
-    std::vector<nanoseconds_t> timings_;
-    mpl::heterogeneous_layout layout_;
-    static constexpr auto order
-        = std::array{TIMING_TOTAL, TIMING_SYNC, TIMING_CHUNK_SETUP, TIMING_LOOP};
+  template <class RequestType> class request<rank_state, RequestType> {
+    using value_t = rank_state;
 
   public:
-    static constexpr auto tag = TAG_STATISTICS;
+    static constexpr auto tag = TAG_STATE;
 
-    request(mpl::communicator const& comm, value_t&& buffer)
-        : buffer_(buffer.value), request_base<tag, value_t, RequestType>(comm) {
-      using namespace core::helpers;
-      if constexpr (std::is_same_v<RequestType, detail::outbound_request>)
-        timings_ = as<std::vector>{}(
-            order | views::transform([&](auto&& t) { return buffer.timings.at(t); }));
-      else
-        timings_.resize(order.size());
-      mpl::vector_layout<nanoseconds_t> timings_layout(timings_.size());
-      layout_ = mpl::heterogeneous_layout(buffer_.finished, buffer_.working, buffer_.best_rank,
-                                          buffer_.best_objective,
-                                          mpl::make_absolute(timings_.data(), timings_layout));
-    }
-
-    mpl::irequest send(int to) {
+    void send(mpl::communicator& comm, value_t&& result, int to) {
       static_assert(std::is_same_v<RequestType, detail::outbound_request>);
-      return this->_comm.isend(mpl::absolute, layout_, to, mpl::tag_t(tag));
+      result_comm(comm, std::forward<value_t>(result), to);
     }
-    mpl::irequest recv(mpl::status_t status) {
+    auto recv(mpl::communicator& comm, value_t&& result, int to) {
       static_assert(std::is_same_v<RequestType, detail::inbound_request>);
-      return this->_comm.irecv(mpl::absolute, layout_, status.source(), mpl::tag_t(tag));
+      return result_comm(comm, std::forward<value_t>(result), to);
+    }
+
+  private:
+    std::vector<std::pair<value_t, int>> result_comm(mpl::communicator& comm, value_t&& result,
+                                                     int to) {
+      if constexpr (std::is_same_v<RequestType, detail::outbound_request>) {
+        auto req = comm.isend(result.running, to, mpl::tag_t(tag));
+        req.wait();
+        return {};
+      } else {
+        std::vector<std::pair<value_t, int>> results{};
+        detail::receive_messages<tag>(
+            comm,
+            [&](auto&& status) {
+              auto req = comm.irecv(result.running, status.source(), mpl::tag_t(tag));
+              req.wait();
+              results.push_back(std::make_pair(value_t{result.running}, status.source()));
+            },
+            to);
+        return results;
+      }
     }
   };
 
-  template <class Message>
-  mpl::irequest send(Message&& message, int to,
-                     mpl::communicator const& comm = mpl::environment::comm_world()) {
-    return request<Message, detail::outbound_request>{comm, std::forward<Message>(message)}.send(
-        to);
-  }
 }  // namespace sqsgen::io::mpi
 
 #endif  // SQSGEN_IO_MPI_REQUESTS_H
