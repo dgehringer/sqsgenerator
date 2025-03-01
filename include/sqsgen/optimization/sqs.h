@@ -160,10 +160,8 @@ namespace sqsgen::optimization {
 #ifdef WITH_MPI
     mpl::communicator comm;
 #endif
-    configuration<T> config;
     std::atomic<T> _best_objective;
     thread_config_t _thread_config;
-    sqs_result_collection<T, Mode> _results;
     std::map<std::thread::id, int> _thread_map;
     std::vector<detail::optimization_config<T, Mode>> opt_configs;
 
@@ -171,7 +169,6 @@ namespace sqsgen::optimization {
       auto this_thread_id = std::this_thread::get_id();
       if (!_thread_map.contains(this_thread_id))
         _thread_map.emplace(this_thread_id, _thread_map.size());
-
       return _thread_map[this_thread_id];
     }
 
@@ -289,16 +286,6 @@ namespace sqsgen::optimization {
       auto [start, end] = this->iteration_range();
       spdlog::info("[Rank {}] start={}, end={}", this->rank(), start.to_string(), end.to_string());
 
-      const auto pull_best_objective = [&] {
-        // pull in the latest objective
-        if constexpr (io::mpi::HAVE_MPI)
-          if (mpi_mode && !head) {
-            io::mpi::recv_all<sqsgen::objective<T>>(
-                this->comm, sqsgen::objective<T>{},
-                [&](auto&& o, auto) { this->update_best_objective(o.value); }, io::mpi::RANK_HEAD);
-          }
-      };
-
       auto num_sublattices = this->opt_configs.size();
       auto pairs{this->transpose_setting([](auto&& c) { return c.pairs; })};
       auto prefactors{this->transpose_setting([](auto&& c) { return c.prefactors; })};
@@ -312,15 +299,31 @@ namespace sqsgen::optimization {
       sqs_statistics<T> statistics;
       std::stop_source stop_source;
 
+      const auto pull_best_objective = [&] {
+        // pull in the latest objective
+        if constexpr (io::mpi::HAVE_MPI)
+          if (mpi_mode && !head) {
+            tick<TIMING_COMM> tick_comm;
+            io::mpi::recv_all<sqsgen::objective<T>>(
+                this->comm, sqsgen::objective<T>{},
+                [&](auto&& o, auto) { this->update_best_objective(o.value); }, io::mpi::RANK_HEAD);
+            statistics.tock(tick_comm);
+          }
+      };
+
       const auto worker = [&, stop = stop_source.get_token()](rank_t rstart, rank_t rend) {
+        tick<TIMING_TOTAL> tick_total;
         spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(),
                       this->thread_id(), rstart.to_string(), rend.to_string());
         if constexpr (io::mpi::HAVE_MPI)
           if (mpi_mode && rstart == start) {
+            tick<TIMING_COMM> tick_comm;
             io::mpi::send(this->comm, io::mpi::rank_state{true}, io::mpi::RANK_HEAD);
+            statistics.tock(tick_comm);
             this->barrier();
           }
 
+        tick<TIMING_CHUNK_SETUP> tick_setup;
         iterations_t iterations{rend - rstart};
 
         auto bonds{this->transpose_setting([](auto&& c) {
@@ -334,11 +337,14 @@ namespace sqsgen::optimization {
         auto species{species_packed};
         statistics.add_working(iterations);
 
-        pull_best_objective();
-
         if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC)
           shuffler.unrank_permutation(species, rstart + 1);
 
+        statistics.tock(tick_setup);
+
+        pull_best_objective();
+
+        tick<TIMING_LOOP> tick_loop;
         for (auto i = rstart; i < rend; ++i) {
           if (stop.stop_requested()) {
             spdlog::info("[Rank {}, Thread {}] received stop signal ...", this->rank(),
@@ -374,28 +380,38 @@ namespace sqsgen::optimization {
             // pull in changes from other ranks. Has another rank found a better
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
             if constexpr (io::mpi::HAVE_MPI) {
-              if (!head && mpi_mode)
+              if (!head && mpi_mode) {
+                tick<TIMING_COMM> tick_comm;
                 io::mpi::send(this->comm, std::forward<decltype(current)>(current),
                               io::mpi::RANK_HEAD);
               else
                 this->_results.insert_result(std::move(current));
+                statistics.tock(tick_comm);
+              } else
             } else
               this->_results.insert_result(std::move(current));
 
             statistics.log_result(iterations_t{rstart + i - start}, objective_value);
           }
         }
+        statistics.tock(tick_loop);
+
         pull_best_objective();
+
         statistics.add_working(-iterations);
-        statistics.add_working(iterations);
+        statistics.add_finished(iterations);
+
         if constexpr (io::mpi::HAVE_MPI)
           if (mpi_mode && (rend == end || stop.stop_requested())) {
+            tick<TIMING_COMM> tick_comm;
             io::mpi::send(this->comm, io::mpi::rank_state{false}, io::mpi::RANK_HEAD);
+            statistics.tock(tick_comm);
             this->barrier();
           }
 
         spdlog::debug("[Rank {}, Thread {}] finished chunk start={}, end={}", this->rank(),
                       this->thread_id(), rstart.to_string(), rend.to_string());
+        statistics.tock(tick_total);
       };
 
       BS::thread_pool pool(this->num_threads());
@@ -458,7 +474,7 @@ namespace sqsgen::optimization {
                     io::mpi::RANK_HEAD, index, state.running);
                 rank_states[index] = std::make_optional(state);
               });
-              if (pool_objectives.size()) pool_objectives.waitall();
+              if (!pool_objectives.empty()) pool_objectives.waitall();
             }
             spdlog::info("[Rank {}, COMM] comm thread finished ...", io::mpi::RANK_HEAD);
           });
@@ -483,6 +499,21 @@ namespace sqsgen::optimization {
         spdlog::info("[Rank {}] num_best_solutions={}", this->rank(),
                      std::get<1>(this->_results.front()).size());
         spdlog::info("[Rank {}] num_solutions={}", this->rank(), this->_results.num_results());
+      }
+
+      auto d = statistics.data();
+      spdlog::info("[Rank {}] best_objective={}", this->rank(), d.best_objective);
+      spdlog::info("[Rank {}] best_rank={}", this->rank(), d.best_rank);
+      for (auto&& [timing, label] :
+           std::map<Timing, std::string>{{TIMING_TOTAL, "total"},
+                                         {TIMING_CHUNK_SETUP, "chunk_setup"},
+                                         {TIMING_LOOP, "loop"},
+                                         {TIMING_COMM, "comm"}}) {
+        auto time_in_ns = static_cast<double>(d.timings.at(timing));
+        auto total_time_in_ns = static_cast<double>(d.timings.at(TIMING_TOTAL));
+        spdlog::info("[Rank {}] {} time ns={}, ns_per_iteration={:.1f}, relative={:.1f}%", this->rank(),
+                     label, time_in_ns, time_in_ns / static_cast<double>(d.finished),
+                     time_in_ns / total_time_in_ns * 100);
       }
 
       // compute the rank of each permutation, and reorder in case of interact mode
