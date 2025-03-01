@@ -273,6 +273,50 @@ namespace sqsgen::io::mpi {
     }
   };
 
+  template <class T, class RequestType> class request<sqs_statistics_data<T>, RequestType> {
+    using value_t = sqs_statistics_data<T>;
+
+  public:
+    static constexpr auto tag = TAG_STATISTICS;
+
+  private:
+    std::vector<std::pair<value_t, int>> statistics_comm(mpl::communicator& comm, value_t&& data,
+                                                         int to) {
+      using namespace core::helpers;
+      constexpr auto order = std::array{TIMING_TOTAL, TIMING_SYNC, TIMING_CHUNK_SETUP, TIMING_LOOP};
+      std::vector<nanoseconds_t> timings(order.size());
+      if constexpr (std::is_same_v<RequestType, detail::outbound_request>)
+        timings = as<std::vector>{}(
+            order | views::transform([&](auto&& t) { return data.timings.at(t); }));
+
+      mpl::vector_layout<nanoseconds_t> timings_layout(timings.size());
+      mpl::heterogeneous_layout l(data.finished, data.working, data.best_rank, data.best_objective,
+                                  mpl::make_absolute(timings.data(), timings_layout));
+      if constexpr (std::is_same_v<RequestType, detail::outbound_request>) {
+        auto req = comm.isend(mpl::absolute, l, to, mpl::tag_t(tag));
+        req.wait();
+        return {};
+      } else {
+        std::vector<std::pair<value_t, int>> results;
+        detail::receive_messages<tag>(
+            comm,
+            [&, l](auto&& status) {
+              auto req = comm.irecv(mpl::absolute, l, status.source(), mpl::tag_t(tag));
+              req.wait();
+              results.push_back(std::make_pair(
+                  sqs_statistics_data<T>{
+                      data.finished, data.working, data.best_rank, data.best_objective,
+                      as<std::map>{}(range(std::size(order)) | views::transform([&](auto&& i) {
+                                       return std::make_pair(order[i], timings[i]);
+                                     }))},
+                  status.source()));
+            },
+            to);
+        return results;
+      }
+    }
+  };
+
 }  // namespace sqsgen::io::mpi
 
 #endif  // SQSGEN_IO_MPI_REQUESTS_H
