@@ -60,7 +60,7 @@ namespace sqsgen::optimization {
       }
     }
 
-    template <Timing Time> void tock(tick<Time>&& t) {
+    template <Timing Time> void tock(tick<Time> t) {
       std::scoped_lock l{_mutex_timing};
       _data.timings[Time]
           += std::chrono::duration_cast<nanoseconds>(steady_clock::now() - t.now).count();
