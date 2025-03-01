@@ -163,6 +163,10 @@ namespace sqsgen::optimization {
     std::atomic<T> _best_objective;
     thread_config_t _thread_config;
     std::map<std::thread::id, int> _thread_map;
+
+  protected:
+    configuration<T> config;
+    sqs_result_collection<T, Mode> results;
     std::vector<detail::optimization_config<T, Mode>> opt_configs;
 
     int thread_id() {
@@ -247,12 +251,16 @@ namespace sqsgen::optimization {
                                 )
         : config(config),
           _best_objective(std::numeric_limits<T>::max()),
-          _results(),
+          results(),
 #ifdef WITH_MPI
           comm(comm),
 #endif
           _thread_config(config.thread_config),
           opt_configs(detail::optimization_config<T, Mode>::from_config(config)) {
+    }
+
+    void insert_result(sqs_result<T, Mode>&& result) {
+      results.insert_result(std::forward<sqs_result<T, Mode>>(result));
     }
 
     sqs_result<T, Mode> make_empty_result() {
@@ -385,12 +393,11 @@ namespace sqsgen::optimization {
                 tick<TIMING_COMM> tick_comm;
                 io::mpi::send(this->comm, std::forward<decltype(current)>(current),
                               io::mpi::RANK_HEAD);
-              else
-                this->_results.insert_result(std::move(current));
                 statistics.tock(tick_comm);
               } else
+                this->insert_result(std::move(current));
             } else
-              this->_results.insert_result(std::move(current));
+              this->insert_result(std::move(current));
 
             statistics.log_result(iterations_t{rstart + i - start}, objective_value);
           }
@@ -454,7 +461,7 @@ namespace sqsgen::optimization {
                     if (o <= this->best_objective()) {
                       spdlog::debug("[Rank {}, COMM] recieved result from rank {} (objective={}) ",
                                     io::mpi::RANK_HEAD, rank, o);
-                      this->_results.insert_result(std::forward<decltype(result)>(result));
+                      this->insert_result(std::forward<decltype(result)>(result));
                       if (o < this->best_objective()) {
                         this->update_best_objective(o);
                         objective_to_distribute = o;
@@ -494,12 +501,12 @@ namespace sqsgen::optimization {
        * rank would finish first we would enter have race condition leading to MPI failure
        */
 
-      if (this->_results.size()) {
+      if (this->results.size()) {
         spdlog::info("[Rank {}] best_objective={}", this->rank(),
-                     std::get<0>(this->_results.front()));
+                     std::get<0>(this->results.front()));
         spdlog::info("[Rank {}] num_best_solutions={}", this->rank(),
-                     std::get<1>(this->_results.front()).size());
-        spdlog::info("[Rank {}] num_solutions={}", this->rank(), this->_results.num_results());
+                     std::get<1>(this->results.front()).size());
+        spdlog::info("[Rank {}] num_solutions={}", this->rank(), this->results.num_results());
       }
 
       auto d = statistics.data();
@@ -519,11 +526,11 @@ namespace sqsgen::optimization {
 
       // compute the rank of each permutation, and reorder in case of interact mode
       if (this->is_head())
-        for (auto& [_, results] : this->_results)
+        for (auto& [_, results] : this->results)
           for (auto& result : results)  // use reference here, otherwise the reference gets moved
             detail::postprocess_results(result, this->opt_configs);
 
-      return this->_results.results();
+      return this->results.results();
     }
   };
 }  // namespace sqsgen::optimization
