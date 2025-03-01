@@ -91,8 +91,6 @@ add_executable(test_parser
         ../include/sqsgen/io/config/combined.h
         ../include/sqsgen/optimization/sqs.h
         ../include/sqsgen/optimization/helpers.h
-        ../include/sqsgen/core/thread_pool.h
-        ../include/sqsgen/optimization/comm.h
 )
 target_link_libraries(test_parser ${SQSGEN_TEST_LIBS})
 add_test(NAME test_parser COMMAND test_parser)

@@ -34,7 +34,28 @@ CPMAddPackage("gh:gabime/spdlog@1.15.0")
 CPMAddPackage("gh:Nicoshev/rapidhash#rapidhash_v1.0")
 CPMAddPackage("gh:pybind/pybind11@2.13.6")
 
+CPMAddPackage(
+        NAME BS_thread_pool
+        GITHUB_REPOSITORY bshoshany/thread-pool
+        VERSION 5.0.0
+        EXCLUDE_FROM_ALL
+        SYSTEM
+)
+add_library(BS_thread_pool INTERFACE)
+target_include_directories(BS_thread_pool INTERFACE ${BS_thread_pool_SOURCE_DIR}/include)
+
+if (WITH_MPI)
+    find_package(MPI REQUIRED)
+    CPMAddPackage("gh:rabauke/mpl@0.3.0")
+    include_directories("${mpl_SOURCE_DIR}" "${MPI_INCLUDE_PATH}")
+    add_compile_options(-DWITH_MPI)
+endif ()
+
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include" "${rapidhash_SOURCE_DIR}")
+
+if(MSVC)
+    add_compile_options(/permissive- /Zc:__cplusplus)
+endif()
 
 
 if (BUILD_TESTS)
@@ -51,9 +72,18 @@ list(APPEND SQSGEN_LIBS "mp++")
 list(APPEND SQSGEN_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_LIBS "nlohmann_json")
 list(APPEND SQSGEN_LIBS "spdlog::spdlog_header_only")
+list(APPEND SQSGEN_LIBS "BS_thread_pool")
 
+if (WITH_MPI)
+    message(STATUS "WITH_MPI=${WITH_MPI}")
+    list(APPEND SQSGEN_LIBS "${MPI_LIBRARIES}")
+endif ()
 
 message(STATUS "SQSGEN_LIBS=${SQSGEN_LIBS}")
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    add_compile_options(-fexperimental-library)
+endif ()
 
 add_executable(sqsgenerator main.cpp
         include/sqsgen/core/atom.h
@@ -74,7 +104,14 @@ add_executable(sqsgenerator main.cpp
         include/sqsgen/io/config/shell_weights.h
         include/sqsgen/io/config/arrays.h
         include/sqsgen/io/config/shared.h
-        include/sqsgen/io/config/combined.h)
+        include/sqsgen/io/config/combined.h
+        include/sqsgen/optimization/sqs.h
+        include/sqsgen/optimization/helpers.h
+        include/sqsgen/optimization/collection.h
+        include/sqsgen/optimization/statistics.h
+        include/sqsgen/io/mpi/requests.h
+        include/sqsgen/io/mpi.h
+        include/sqsgen/io/mpi/config.h)
 
 target_link_libraries(sqsgenerator PRIVATE ${SQSGEN_LIBS})
 target_link_libraries(sqsgenerator PRIVATE ${Python3_LIBRARIES})
