@@ -283,7 +283,7 @@ namespace sqsgen::io::mpi {
     std::vector<std::pair<value_t, int>> statistics_comm(mpl::communicator& comm, value_t&& data,
                                                          int to) {
       using namespace core::helpers;
-      constexpr auto order = std::array{TIMING_TOTAL, TIMING_SYNC, TIMING_CHUNK_SETUP, TIMING_LOOP};
+      constexpr auto order = std::array{TIMING_TOTAL, TIMING_COMM, TIMING_CHUNK_SETUP, TIMING_LOOP};
       std::vector<nanoseconds_t> timings(order.size());
       if constexpr (std::is_same_v<RequestType, detail::outbound_request>)
         timings = as<std::vector>{}(
