@@ -373,12 +373,15 @@ namespace sqsgen::optimization {
           if (objective_value <= this->best_objective()) {
             // pull in changes from other ranks. Has another rank found a better
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
-            if constexpr (io::mpi::HAVE_MPI)
+            if constexpr (io::mpi::HAVE_MPI) {
               if (!head && mpi_mode)
                 io::mpi::send(this->comm, std::forward<decltype(current)>(current),
                               io::mpi::RANK_HEAD);
+              else
+                this->_results.insert_result(std::move(current));
+            } else
+              this->_results.insert_result(std::move(current));
 
-            this->_results.insert_result(std::move(current));
             statistics.log_result(iterations_t{rstart + i - start}, objective_value);
           }
         }
@@ -474,7 +477,7 @@ namespace sqsgen::optimization {
        * rank would finish first we would enter have race condition leading to MPI failure
        */
 
-      if (this->is_head()) {
+      if (this->_results.size()) {
         spdlog::info("[Rank {}] best_objective={}", this->rank(),
                      std::get<0>(this->_results.front()));
         spdlog::info("[Rank {}] num_best_solutions={}", this->rank(),
