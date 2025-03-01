@@ -145,7 +145,7 @@ namespace sqsgen {
     }
   };
 
-  enum Timing { TIMING_TOTAL = 0, TIMING_CHUNK_SETUP = 1, TIMING_LOOP = 2, TIMING_SYNC = 3 };
+  enum Timing { TIMING_TOTAL = 0, TIMING_CHUNK_SETUP = 1, TIMING_LOOP = 2, TIMING_COMM = 3 };
 
   template <class T> struct sqs_statistics_data {
     iterations_t finished{};
@@ -155,7 +155,7 @@ namespace sqsgen {
     std::map<Timing, nanoseconds_t> timings{{TIMING_TOTAL, 0},
                                             {TIMING_CHUNK_SETUP, 0},
                                             {TIMING_LOOP, 0},
-                                            {TIMING_SYNC, 0}};
+                                            {TIMING_COMM, 0}};
   };
 
   template <class T> struct objective {
