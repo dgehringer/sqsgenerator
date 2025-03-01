@@ -378,6 +378,7 @@ namespace sqsgen::optimization {
           // symmetrize bonds for each shell and compute objective function
           if (objective_value <= this->best_objective()) {
             // pull in changes from other ranks. Has another rank found a better
+            this->update_best_objective(objective_value);
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
             if constexpr (io::mpi::HAVE_MPI) {
               if (!head && mpi_mode) {
