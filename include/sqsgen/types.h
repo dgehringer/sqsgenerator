@@ -100,11 +100,6 @@ namespace sqsgen {
     // compatibility constructor to
     sqs_result(T, T objective, configuration_t species, cube_t<T> sro)
         : sqs_result(objective, species, std::move(sro)) {}
-
-    static sqs_result empty(auto num_atoms, auto num_shells, auto num_species) {
-      return {std::numeric_limits<T>::infinity(), configuration_t(num_atoms),
-              cube_t<T>(num_shells, num_species, num_species)};
-    }
   };
 
   template <class T> struct sqs_result<T, SUBLATTICE_MODE_SPLIT> {
@@ -125,23 +120,6 @@ namespace sqsgen {
             sublattices.push_back({objectives[index], species[index], sro[index]});
           },
           species.size());
-    }
-
-    template <std::ranges::range RNumAtoms, std::ranges::range RNumShells,
-              std::ranges::range RNumSpecies>
-    static sqs_result empty(RNumAtoms &&range_num_atoms, RNumShells &&range_num_shells,
-                            RNumSpecies &&range_num_species) {
-      using namespace sqsgen::core::helpers;
-      auto num_atoms = as<std::vector>{}(range_num_atoms);
-      auto num_shells = as<std::vector>{}(range_num_shells);
-      auto num_species = as<std::vector>{}(range_num_species);
-      if (num_species.size() != num_shells.size() || num_species.size() != num_atoms.size())
-        throw std::invalid_argument("invalid sizes");
-      return {std::numeric_limits<T>::infinity(),
-              as<std::vector>{}(range(num_atoms.size()) | views::transform([&](auto &&index) {
-                                  return sqs_result<T, SUBLATTICE_MODE_INTERACT>::empty(
-                                      num_atoms[index], num_shells[index], num_species[index]);
-                                }))};
     }
   };
 
