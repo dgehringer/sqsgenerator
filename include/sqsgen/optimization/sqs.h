@@ -12,7 +12,7 @@
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/shuffle.h"
 #include "sqsgen/io/mpi.h"
-#include "sqsgen/optimization/collection.h"
+#include "sqsgen/core/results.h"
 #include "sqsgen/optimization/helpers.h"
 #include "sqsgen/types.h"
 #include "statistics.h"
@@ -154,6 +154,23 @@ namespace sqsgen::optimization {
       }
     }
 
+    template <class T>
+    void log_statistics(sqs_statistics_data<T>&& d, int rank, std::string const& info = "") {
+      spdlog::info("[Rank {}] {} best_objective={}", rank, info, d.best_objective);
+      spdlog::info("[Rank {}] {} best_rank={}", rank, info, d.best_rank);
+      for (auto&& [timing, label] :
+           std::map<Timing, std::string>{{TIMING_TOTAL, "total"},
+                                         {TIMING_CHUNK_SETUP, "chunk_setup"},
+                                         {TIMING_LOOP, "loop"},
+                                         {TIMING_COMM, "comm"}}) {
+        auto time_in_ns = static_cast<double>(d.timings.at(timing));
+        auto total_time_in_ns = static_cast<double>(d.timings.at(TIMING_TOTAL));
+        spdlog::info("[Rank {}] {} {} time ns={}, ns_per_iteration={:.1f}, relative={:.1f}%", rank,
+                     info, label, time_in_ns, time_in_ns / static_cast<double>(d.finished),
+                     time_in_ns / total_time_in_ns * 100);
+      }
+    }
+
   }  // namespace detail
 
   template <class T, SublatticeMode Mode> struct optimizer_base {
@@ -166,7 +183,7 @@ namespace sqsgen::optimization {
 
   protected:
     configuration<T> config;
-    sqs_result_collection<T, Mode> results;
+    core::sqs_result_collection<T, Mode> results;
     std::vector<detail::optimization_config<T, Mode>> opt_configs;
 
     int thread_id() {
@@ -267,10 +284,10 @@ namespace sqsgen::optimization {
       using namespace sqsgen::core::helpers;
       if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
         auto c = opt_configs.front();
-        return sqs_result<T, Mode>::empty(c.structure.size(), c.shell_weights.size(),
+        return core::sqs_result_factory<T, Mode>::empty(c.structure.size(), c.shell_weights.size(),
                                           c.sorted.num_species);
       } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
-        return sqs_result<T, Mode>::empty(
+        return core::sqs_result_factory<T, Mode>::empty(
             opt_configs | views::transform([](auto&& c) { return c.species_packed.size(); }),
             opt_configs | views::transform([](auto&& c) { return c.shell_weights.size(); }),
             opt_configs | views::transform([](auto&& c) { return c.sorted.num_species; }));
@@ -286,7 +303,7 @@ namespace sqsgen::optimization {
         : optimizer_base<T, SMode>(std::forward<configuration<T>>(config)) {}
     auto run() {
       using namespace sqsgen::core::helpers;
-      spdlog::set_level(spdlog::level::info);
+      spdlog::set_level(spdlog::level::debug);
 
       auto head = this->is_head();
       auto mpi_mode = this->num_ranks() > 1;
@@ -308,7 +325,6 @@ namespace sqsgen::optimization {
       std::stop_source stop_source;
 
       const auto pull_best_objective = [&] {
-        // pull in the latest objective
         if constexpr (io::mpi::HAVE_MPI)
           if (mpi_mode && !head) {
             tick<TIMING_COMM> tick_comm;
@@ -412,6 +428,7 @@ namespace sqsgen::optimization {
         if constexpr (io::mpi::HAVE_MPI)
           if (mpi_mode && (rend == end || stop.stop_requested())) {
             tick<TIMING_COMM> tick_comm;
+            io::mpi::send(this->comm, statistics.data(), io::mpi::RANK_HEAD);
             io::mpi::send(this->comm, io::mpi::rank_state{false}, io::mpi::RANK_HEAD);
             statistics.tock(tick_comm);
             this->barrier();
@@ -434,6 +451,7 @@ namespace sqsgen::optimization {
         if (head && mpi_mode) {
           std::size_t num_ranks{static_cast<std::size_t>(this->num_ranks())};
           std::vector<std::optional<io::mpi::rank_state>> rank_states{num_ranks};
+          std::vector<sqs_statistics_data<T>> rank_statistics{num_ranks};
           // there can be at most 2 * num_ranks requests in this pool, we handle that without any
           // additional complexity
 
@@ -466,7 +484,7 @@ namespace sqsgen::optimization {
                         this->update_best_objective(o);
                         objective_to_distribute = o;
                         spdlog::debug(
-                            "[Rank {}, COMM] recieved lower objective from rank {} (objective={}) ",
+                            "[Rank {}, COMM] received lower objective from rank {} (objective={}) ",
                             io::mpi::RANK_HEAD, rank, o);
                         for (auto other : range(this->num_ranks()))
                           if (other != io::mpi::RANK_HEAD && other != rank)
@@ -476,11 +494,13 @@ namespace sqsgen::optimization {
                       }
                     }
                   });
-              io::mpi::recv_all(this->comm, io::mpi::rank_state{}, [&](auto&& state, auto&& index) {
+              io::mpi::recv_all(this->comm, sqs_statistics_data<T>{},
+                                [&](auto&& data, auto&& rank) { rank_statistics[rank] = data; });
+              io::mpi::recv_all(this->comm, io::mpi::rank_state{}, [&](auto&& state, auto&& rank) {
                 spdlog::debug(
                     "[Rank {}, COMM] sucessfully unregistered rank {} (rank_state[running={}])",
-                    io::mpi::RANK_HEAD, index, state.running);
-                rank_states[index] = std::make_optional(state);
+                    io::mpi::RANK_HEAD, rank, state.running);
+                rank_states[rank] = std::make_optional(state);
               });
               if (!pool_objectives.empty()) pool_objectives.waitall();
             }
@@ -489,12 +509,25 @@ namespace sqsgen::optimization {
 
           schedule_main_loop();
           comm_thread.join();
+
+          // print average statistics over all ranks
+          sqs_statistics_data<T> average = core::helpers::fold_left(
+              rank_statistics, sqs_statistics_data<T>{}, [](auto&& avg, auto&& rank_stats) {
+                auto stats = sqs_statistics<T>{avg};
+                stats.merge(std::forward<sqs_statistics_data<T>>(rank_stats));
+                return stats.data();
+              });
+
+          detail::log_statistics(std::forward<sqs_statistics_data<T>>(average), io::mpi::RANK_HEAD,
+                                 "(averaged)");
         } else
           schedule_main_loop();
       } else
         schedule_main_loop();
 
       this->barrier();
+
+      // collect statistics data
 
       /*
        * A barrier is needed before the head rank pulls in the latest result. In case the head
@@ -509,25 +542,13 @@ namespace sqsgen::optimization {
         spdlog::info("[Rank {}] num_solutions={}", this->rank(), this->results.num_results());
       }
 
-      auto d = statistics.data();
-      spdlog::info("[Rank {}] best_objective={}", this->rank(), d.best_objective);
-      spdlog::info("[Rank {}] best_rank={}", this->rank(), d.best_rank);
-      for (auto&& [timing, label] :
-           std::map<Timing, std::string>{{TIMING_TOTAL, "total"},
-                                         {TIMING_CHUNK_SETUP, "chunk_setup"},
-                                         {TIMING_LOOP, "loop"},
-                                         {TIMING_COMM, "comm"}}) {
-        auto time_in_ns = static_cast<double>(d.timings.at(timing));
-        auto total_time_in_ns = static_cast<double>(d.timings.at(TIMING_TOTAL));
-        spdlog::info("[Rank {}] {} time ns={}, ns_per_iteration={:.1f}, relative={:.1f}%", this->rank(),
-                     label, time_in_ns, time_in_ns / static_cast<double>(d.finished),
-                     time_in_ns / total_time_in_ns * 100);
-      }
+      detail::log_statistics(statistics.data(), this->rank());
 
       // compute the rank of each permutation, and reorder in case of interact mode
       if (this->is_head())
         for (auto& [_, results] : this->results)
-          for (auto& result : results)  // use reference here, otherwise the reference gets moved
+          for (auto& result : results)  // use reference here, otherwise
+                                        // the reference gets moved
             detail::postprocess_results(result, this->opt_configs);
 
       return this->results.results();

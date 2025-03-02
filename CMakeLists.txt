@@ -107,11 +107,11 @@ add_executable(sqsgenerator main.cpp
         include/sqsgen/io/config/combined.h
         include/sqsgen/optimization/sqs.h
         include/sqsgen/optimization/helpers.h
-        include/sqsgen/optimization/collection.h
         include/sqsgen/optimization/statistics.h
         include/sqsgen/io/mpi/requests.h
         include/sqsgen/io/mpi.h
-        include/sqsgen/io/mpi/config.h)
+        include/sqsgen/io/mpi/config.h
+        include/sqsgen/core/results.h)
 
 target_link_libraries(sqsgenerator PRIVATE ${SQSGEN_LIBS})
 target_link_libraries(sqsgenerator PRIVATE ${Python3_LIBRARIES})

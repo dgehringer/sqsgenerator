@@ -279,8 +279,17 @@ namespace sqsgen::io::mpi {
   public:
     static constexpr auto tag = TAG_STATISTICS;
 
+    void send(mpl::communicator& comm, value_t&& result, int to) {
+      static_assert(std::is_same_v<RequestType, detail::outbound_request>);
+      result_comm(comm, std::forward<value_t>(result), to);
+    }
+    auto recv(mpl::communicator& comm, value_t&& result, int to) {
+      static_assert(std::is_same_v<RequestType, detail::inbound_request>);
+      return result_comm(comm, std::forward<value_t>(result), to);
+    }
+
   private:
-    std::vector<std::pair<value_t, int>> statistics_comm(mpl::communicator& comm, value_t&& data,
+    std::vector<std::pair<value_t, int>> result_comm(mpl::communicator& comm, value_t&& data,
                                                          int to) {
       using namespace core::helpers;
       constexpr auto order = std::array{TIMING_TOTAL, TIMING_COMM, TIMING_CHUNK_SETUP, TIMING_LOOP};
