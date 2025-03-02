@@ -14,29 +14,6 @@ namespace sqsgen::optimization::helpers {
 
   namespace detail {}
 
-  enum class ScopedExecutionMode : uint8_t {
-    SCOPED_EXECUTION_MODE_INIT,
-    SCOPED_EXECUTION_MODE_DESTRUCT,
-    SCOPED_EXECUTION_MODE_BOTH,
-  };
-
-  template <class Fn> struct scoped_execution {
-    ScopedExecutionMode mode;
-    Fn fn;
-
-    explicit scoped_execution(Fn&& fn, ScopedExecutionMode mode
-                                       = ScopedExecutionMode::SCOPED_EXECUTION_MODE_BOTH)
-        : mode(mode), fn(fn) {
-      if (mode == ScopedExecutionMode::SCOPED_EXECUTION_MODE_BOTH
-          || mode == ScopedExecutionMode::SCOPED_EXECUTION_MODE_INIT)
-        fn();
-    }
-    ~scoped_execution() {
-      if (mode == ScopedExecutionMode::SCOPED_EXECUTION_MODE_BOTH
-          || mode == ScopedExecutionMode::SCOPED_EXECUTION_MODE_DESTRUCT)
-        fn();
-    }
-  };
 
   template <class T> cube_t<T> scaled_pair_weights(cube_t<T> const& pair_weights,
                                                    shell_weights_t<T> const& weights,
