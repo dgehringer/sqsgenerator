@@ -7,12 +7,13 @@
 
 #include <BS_thread_pool.hpp>
 
+#include "../core/config.h"
 #include "spdlog/spdlog.h"
-#include "sqsgen/config.h"
 #include "sqsgen/core/helpers.h"
+#include "sqsgen/core/optimization_config.h"
+#include "sqsgen/core/results.h"
 #include "sqsgen/core/shuffle.h"
 #include "sqsgen/io/mpi.h"
-#include "sqsgen/core/results.h"
 #include "sqsgen/optimization/helpers.h"
 #include "sqsgen/types.h"
 #include "statistics.h"
@@ -76,7 +77,7 @@ namespace sqsgen::optimization {
       }
 
     private:
-      static auto decompose_sort_and_bounds(configuration<T> const& config) {
+      static auto decompose_sort_and_bounds(core::configuration<T> const& config) {
         if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
           auto s = config.structure.structure().apply_composition(config.composition);
 
@@ -181,24 +182,34 @@ namespace sqsgen::optimization {
       return _thread_map[this_thread_id];
     }
 
-    auto rank() { return comm.rank(); }
+    auto rank() {
+#ifdef WITH_MPI
+      return comm.rank();
+#else
+      return 0;
+#endif
+    }
 
     int num_ranks() {
-      if constexpr (io::mpi::HAVE_MPI)
-        return comm.size();
-      else
-        return 1;
+#ifdef WITH_MPI
+      return comm.size();
+#else
+      return 1;
+#endif
     }
 
     auto is_head() {
-      if constexpr (io::mpi::HAVE_MPI)
-        return comm.rank() == io::mpi::RANK_HEAD;
-      else
-        return true;
+#ifdef WITH_MPI
+      return comm.rank() == io::mpi::RANK_HEAD;
+#else
+      return true;
+#endif
     }
 
     void barrier() {
-      if constexpr (io::mpi::HAVE_MPI) comm.barrier();
+#ifdef WITH_MPI
+      comm.barrier();
+#endif
     }
 
     T best_objective() { return _best_objective.load(); }
@@ -251,6 +262,7 @@ namespace sqsgen::optimization {
 
     explicit optimizer_base(core::configuration<T>&& config
 #ifdef WITH_MPI
+                            ,
                             mpl::communicator comm = mpl::environment::comm_world()
 #endif
                                 )
@@ -273,7 +285,7 @@ namespace sqsgen::optimization {
       if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
         auto c = opt_configs.front();
         return core::sqs_result_factory<T, Mode>::empty(c.structure.size(), c.shell_weights.size(),
-                                          c.sorted.num_species);
+                                                        c.sorted.num_species);
       } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
         return core::sqs_result_factory<T, Mode>::empty(
             opt_configs | views::transform([](auto&& c) { return c.species_packed.size(); }),
@@ -313,27 +325,29 @@ namespace sqsgen::optimization {
       std::stop_source stop_source;
 
       const auto pull_best_objective = [&] {
-        if constexpr (io::mpi::HAVE_MPI)
-          if (mpi_mode && !head) {
-            tick<TIMING_COMM> tick_comm;
-            io::mpi::recv_all<sqsgen::objective<T>>(
-                this->comm, sqsgen::objective<T>{},
-                [&](auto&& o, auto) { this->update_best_objective(o.value); }, io::mpi::RANK_HEAD);
-            statistics.tock(tick_comm);
-          }
+#ifdef WITH_MPI
+        if (mpi_mode && !head) {
+          tick<TIMING_COMM> tick_comm;
+          io::mpi::recv_all<sqsgen::objective<T>>(
+              this->comm, sqsgen::objective<T>{},
+              [&](auto&& o, auto) { this->update_best_objective(o.value); }, io::mpi::RANK_HEAD);
+          statistics.tock(tick_comm);
+        }
+#endif
       };
 
       const auto worker = [&, stop = stop_source.get_token()](rank_t rstart, rank_t rend) {
         tick<TIMING_TOTAL> tick_total;
         spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(),
                       this->thread_id(), rstart.to_string(), rend.to_string());
-        if constexpr (io::mpi::HAVE_MPI)
-          if (mpi_mode && rstart == start) {
-            tick<TIMING_COMM> tick_comm;
-            io::mpi::send(this->comm, io::mpi::rank_state{true}, io::mpi::RANK_HEAD);
-            statistics.tock(tick_comm);
-            this->barrier();
-          }
+#ifdef WITH_MPI
+        if (mpi_mode && rstart == start) {
+          tick<TIMING_COMM> tick_comm;
+          io::mpi::send(this->comm, io::mpi::rank_state{true}, io::mpi::RANK_HEAD);
+          statistics.tock(tick_comm);
+          this->barrier();
+        }
+#endif
 
         tick<TIMING_CHUNK_SETUP> tick_setup;
         iterations_t iterations{rend - rstart};
@@ -392,16 +406,17 @@ namespace sqsgen::optimization {
             // pull in changes from other ranks. Has another rank found a better
             this->update_best_objective(objective_value);
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
-            if constexpr (io::mpi::HAVE_MPI) {
-              if (!head && mpi_mode) {
-                tick<TIMING_COMM> tick_comm;
-                io::mpi::send(this->comm, std::forward<decltype(current)>(current),
-                              io::mpi::RANK_HEAD);
-                statistics.tock(tick_comm);
-              } else
-                this->insert_result(std::move(current));
+#ifdef WITH_MPI
+            if (!head && mpi_mode) {
+              tick<TIMING_COMM> tick_comm;
+              io::mpi::send(this->comm, std::forward<decltype(current)>(current),
+                            io::mpi::RANK_HEAD);
+              statistics.tock(tick_comm);
             } else
               this->insert_result(std::move(current));
+#else
+            this->insert_result(std::move(current));
+#endif
 
             statistics.log_result(iterations_t{rstart + i - start}, objective_value);
           }
@@ -413,14 +428,15 @@ namespace sqsgen::optimization {
         statistics.add_working(-iterations);
         statistics.add_finished(iterations);
 
-        if constexpr (io::mpi::HAVE_MPI)
-          if (mpi_mode && (rend == end || stop.stop_requested())) {
-            tick<TIMING_COMM> tick_comm;
-            io::mpi::send(this->comm, statistics.data(), io::mpi::RANK_HEAD);
-            io::mpi::send(this->comm, io::mpi::rank_state{false}, io::mpi::RANK_HEAD);
-            statistics.tock(tick_comm);
-            this->barrier();
-          }
+#ifdef WITH_MPI
+        if (mpi_mode && (rend == end || stop.stop_requested())) {
+          tick<TIMING_COMM> tick_comm;
+          io::mpi::send(this->comm, statistics.data(), io::mpi::RANK_HEAD);
+          io::mpi::send(this->comm, io::mpi::rank_state{false}, io::mpi::RANK_HEAD);
+          statistics.tock(tick_comm);
+          this->barrier();
+        }
+#endif
 
         spdlog::debug("[Rank {}, Thread {}] finished chunk start={}, end={}", this->rank(),
                       this->thread_id(), rstart.to_string(), rend.to_string());
@@ -435,84 +451,85 @@ namespace sqsgen::optimization {
                            static_cast<std::size_t>((end - start) / chunk_size));
         pool.wait();
       };
-      if constexpr (io::mpi::HAVE_MPI) {
-        if (head && mpi_mode) {
-          std::size_t num_ranks{static_cast<std::size_t>(this->num_ranks())};
-          std::vector<std::optional<io::mpi::rank_state>> rank_states{num_ranks};
-          std::vector<sqs_statistics_data<T>> rank_statistics{num_ranks};
-          // there can be at most 2 * num_ranks requests in this pool, we handle that without any
-          // additional complexity
+#ifdef WITH_MPI
+      if (head && mpi_mode) {
+        std::size_t num_ranks{static_cast<std::size_t>(this->num_ranks())};
+        std::vector<std::optional<io::mpi::rank_state>> rank_states{num_ranks};
+        std::vector<sqs_statistics_data<T>> rank_statistics{num_ranks};
+        // there can be at most 2 * num_ranks requests in this pool, we handle that without any
+        // additional complexity
 
-          auto comm_thread = std::jthread([&] {
-            spdlog::info("[Rank {}, COMM] started comm thread ...", io::mpi::RANK_HEAD);
-            auto result_buffer = this->make_empty_result();
-            while (!ranges::all_of(rank_states, [&](auto&& s) { return s.has_value(); })) {
-              io::mpi::recv_all(this->comm, io::mpi::rank_state{}, [&](auto&& state, auto&& rank) {
-                spdlog::debug(
-                    "[Rank {}, COMM] sucessfully registered rank {} (rank_state[running={}])",
-                    io::mpi::RANK_HEAD, rank, state.running);
-                rank_states[rank] = std::make_optional(state);
-              });
-            }
-            spdlog::info("[Rank {}, COMM] all ranks up and running ...", io::mpi::RANK_HEAD);
-            while (ranges::any_of(rank_states, [&](auto&& s) { return s.value().running; })) {
-              auto buffer = this->make_empty_result();
-              T objective_to_distribute{std::numeric_limits<T>::max()};
-              mpl::irequest_pool pool_objectives;
+        auto comm_thread = std::jthread([&] {
+          spdlog::info("[Rank {}, COMM] started comm thread ...", io::mpi::RANK_HEAD);
+          auto result_buffer = this->make_empty_result();
+          while (!ranges::all_of(rank_states, [&](auto&& s) { return s.has_value(); })) {
+            io::mpi::recv_all(this->comm, io::mpi::rank_state{}, [&](auto&& state, auto&& rank) {
+              spdlog::debug(
+                  "[Rank {}, COMM] sucessfully registered rank {} (rank_state[running={}])",
+                  io::mpi::RANK_HEAD, rank, state.running);
+              rank_states[rank] = std::make_optional(state);
+            });
+          }
+          spdlog::info("[Rank {}, COMM] all ranks up and running ...", io::mpi::RANK_HEAD);
+          while (ranges::any_of(rank_states, [&](auto&& s) { return s.value().running; })) {
+            auto buffer = this->make_empty_result();
+            T objective_to_distribute{std::numeric_limits<T>::max()};
+            mpl::irequest_pool pool_objectives;
 
-              io::mpi::recv_all<sqs_result<T, SMode>>(
-                  this->comm, std::forward<decltype(buffer)>(buffer),
-                  [&](auto&& result, auto&& rank) {
-                    auto o = result.objective;
-                    if (o <= this->best_objective()) {
-                      spdlog::debug("[Rank {}, COMM] recieved result from rank {} (objective={}) ",
-                                    io::mpi::RANK_HEAD, rank, o);
-                      this->insert_result(std::forward<decltype(result)>(result));
-                      if (o < this->best_objective()) {
-                        this->update_best_objective(o);
-                        objective_to_distribute = o;
-                        spdlog::debug(
-                            "[Rank {}, COMM] received lower objective from rank {} (objective={}) ",
-                            io::mpi::RANK_HEAD, rank, o);
-                        for (auto other : range(this->num_ranks()))
-                          if (other != io::mpi::RANK_HEAD && other != rank)
-                            pool_objectives.push(
-                                this->comm.isend(objective_to_distribute, other,
-                                                 mpl::tag_t(io::mpi::TAG_OBJECTIVE)));
-                      }
+            io::mpi::recv_all<sqs_result<T, SMode>>(
+                this->comm, std::forward<decltype(buffer)>(buffer),
+                [&](auto&& result, auto&& rank) {
+                  auto o = result.objective;
+                  if (o <= this->best_objective()) {
+                    spdlog::debug("[Rank {}, COMM] recieved result from rank {} (objective={}) ",
+                                  io::mpi::RANK_HEAD, rank, o);
+                    this->insert_result(std::forward<decltype(result)>(result));
+                    if (o < this->best_objective()) {
+                      this->update_best_objective(o);
+                      objective_to_distribute = o;
+                      spdlog::debug(
+                          "[Rank {}, COMM] received lower objective from rank {} "
+                          "(objective={}) ",
+                          io::mpi::RANK_HEAD, rank, o);
+                      for (auto other : range(this->num_ranks()))
+                        if (other != io::mpi::RANK_HEAD && other != rank)
+                          pool_objectives.push(this->comm.isend(
+                              objective_to_distribute, other, mpl::tag_t(io::mpi::TAG_OBJECTIVE)));
                     }
-                  });
-              io::mpi::recv_all(this->comm, sqs_statistics_data<T>{},
-                                [&](auto&& data, auto&& rank) { rank_statistics[rank] = data; });
-              io::mpi::recv_all(this->comm, io::mpi::rank_state{}, [&](auto&& state, auto&& rank) {
-                spdlog::debug(
-                    "[Rank {}, COMM] sucessfully unregistered rank {} (rank_state[running={}])",
-                    io::mpi::RANK_HEAD, rank, state.running);
-                rank_states[rank] = std::make_optional(state);
-              });
-              if (!pool_objectives.empty()) pool_objectives.waitall();
-            }
-            spdlog::info("[Rank {}, COMM] comm thread finished ...", io::mpi::RANK_HEAD);
-          });
+                  }
+                });
+            io::mpi::recv_all(this->comm, sqs_statistics_data<T>{},
+                              [&](auto&& data, auto&& rank) { rank_statistics[rank] = data; });
+            io::mpi::recv_all(this->comm, io::mpi::rank_state{}, [&](auto&& state, auto&& rank) {
+              spdlog::debug(
+                  "[Rank {}, COMM] sucessfully unregistered rank {} "
+                  "(rank_state[running={}])",
+                  io::mpi::RANK_HEAD, rank, state.running);
+              rank_states[rank] = std::make_optional(state);
+            });
+            if (!pool_objectives.empty()) pool_objectives.waitall();
+          }
+          spdlog::info("[Rank {}, COMM] comm thread finished ...", io::mpi::RANK_HEAD);
+        });
 
-          schedule_main_loop();
-          comm_thread.join();
+        schedule_main_loop();
+        comm_thread.join();
 
-          // print average statistics over all ranks
-          sqs_statistics_data<T> average = core::helpers::fold_left(
-              rank_statistics, sqs_statistics_data<T>{}, [](auto&& avg, auto&& rank_stats) {
-                auto stats = sqs_statistics<T>{avg};
-                stats.merge(std::forward<sqs_statistics_data<T>>(rank_stats));
-                return stats.data();
-              });
+        // print average statistics over all ranks
+        sqs_statistics_data<T> average = core::helpers::fold_left(
+            rank_statistics, sqs_statistics_data<T>{}, [](auto&& avg, auto&& rank_stats) {
+              auto stats = sqs_statistics<T>{avg};
+              stats.merge(std::forward<sqs_statistics_data<T>>(rank_stats));
+              return stats.data();
+            });
 
-          detail::log_statistics(std::forward<sqs_statistics_data<T>>(average), io::mpi::RANK_HEAD,
-                                 "(averaged)");
-        } else
-          schedule_main_loop();
+        detail::log_statistics(std::forward<sqs_statistics_data<T>>(average), io::mpi::RANK_HEAD,
+                               "(averaged)");
       } else
         schedule_main_loop();
-
+#else
+      schedule_main_loop();
+#endif
       this->barrier();
 
       // collect statistics data
@@ -522,24 +539,25 @@ namespace sqsgen::optimization {
        * rank would finish first we would enter have race condition leading to MPI failure
        */
 
-      if (this->results.size()) {
+      auto filtered_results = this->results.remove_duplicates();
+
+      if (!filtered_results.empty()) {
         spdlog::info("[Rank {}] best_objective={}", this->rank(),
-                     std::get<0>(this->results.front()));
+                     std::get<0>(filtered_results.front()));
         spdlog::info("[Rank {}] num_best_solutions={}", this->rank(),
-                     std::get<1>(this->results.front()).size());
-        spdlog::info("[Rank {}] num_solutions={}", this->rank(), this->results.num_results());
+                     std::get<1>(filtered_results.front()).size());
       }
 
       detail::log_statistics(statistics.data(), this->rank());
 
       // compute the rank of each permutation, and reorder in case of interact mode
       if (this->is_head())
-        for (auto& [_, results] : this->results)
+        for (auto& [_, results] : filtered_results)
           for (auto& result : results)  // use reference here, otherwise
                                         // the reference gets moved
             detail::postprocess_results(result, this->opt_configs);
 
-      return this->results.results();
+      return std::make_pair(filtered_results, statistics.data());
     }
   };
 }  // namespace sqsgen::optimization

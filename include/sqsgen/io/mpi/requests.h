@@ -26,6 +26,7 @@ namespace sqsgen::io::mpi {
       return d[Dim];
     }
 
+#ifdef WITH_MPI
     template <int Tag, class Fn>
     void receive_messages(mpl::communicator& comm, Fn&& fn, int source) {
       std::optional<mpl::status_t> status = comm.iprobe(source, mpl::tag_t{Tag});
@@ -34,6 +35,8 @@ namespace sqsgen::io::mpi {
         status = comm.iprobe(source, mpl::tag_t{Tag});
       }
     }
+#endif
+
   }  // namespace detail
 
   struct rank_state {
@@ -49,6 +52,7 @@ namespace sqsgen::io::mpi {
 
   template <class T, class RequestType>
   class request<sqs_result<T, SUBLATTICE_MODE_SPLIT>, RequestType> {
+#ifdef WITH_MPI
     using value_t = sqs_result<T, SUBLATTICE_MODE_SPLIT>;
 
   public:
@@ -143,10 +147,12 @@ namespace sqsgen::io::mpi {
         return recieved;
       }
     }
+#endif
   };
 
   template <class T, class RequestType>
   class request<sqs_result<T, SUBLATTICE_MODE_INTERACT>, RequestType> {
+#ifdef WITH_MPI
     using value_t = sqs_result<T, SUBLATTICE_MODE_INTERACT>;
 
   public:
@@ -197,9 +203,11 @@ namespace sqsgen::io::mpi {
         return results;
       }
     }
+#endif
   };
 
   template <class T, class RequestType> class request<objective<T>, RequestType> {
+#ifdef WITH_MPI
     using value_t = objective<T>;
 
   public:
@@ -234,9 +242,11 @@ namespace sqsgen::io::mpi {
         return results;
       }
     }
+#endif
   };
 
   template <class RequestType> class request<rank_state, RequestType> {
+#ifdef WITH_MPI
     using value_t = rank_state;
 
   public:
@@ -271,9 +281,11 @@ namespace sqsgen::io::mpi {
         return results;
       }
     }
+#endif
   };
 
   template <class T, class RequestType> class request<sqs_statistics_data<T>, RequestType> {
+#ifdef WITH_MPI
     using value_t = sqs_statistics_data<T>;
 
   public:
@@ -290,7 +302,7 @@ namespace sqsgen::io::mpi {
 
   private:
     std::vector<std::pair<value_t, int>> result_comm(mpl::communicator& comm, value_t&& data,
-                                                         int to) {
+                                                     int to) {
       using namespace core::helpers;
       constexpr auto order = std::array{TIMING_TOTAL, TIMING_COMM, TIMING_CHUNK_SETUP, TIMING_LOOP};
       std::vector<nanoseconds_t> timings(order.size());
@@ -324,6 +336,7 @@ namespace sqsgen::io::mpi {
         return results;
       }
     }
+#endif
   };
 
 }  // namespace sqsgen::io::mpi
