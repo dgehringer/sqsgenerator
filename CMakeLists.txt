@@ -18,7 +18,12 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 
 find_package(GMP REQUIRED)
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+
+if (BUILD_TESTS OR BUILD_PYTHON)
+    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+    CPMAddPackage("gh:pybind/pybind11@2.13.6")
+endif ()
+
 CPMAddPackage("gh:bluescarni/mppp@1.0.4")
 CPMAddPackage("gh:nlohmann/json@3.11.3")
 CPMAddPackage(
@@ -32,7 +37,7 @@ CPMAddPackage(
 )
 CPMAddPackage("gh:gabime/spdlog@1.15.0")
 CPMAddPackage("gh:Nicoshev/rapidhash#rapidhash_v1.0")
-CPMAddPackage("gh:pybind/pybind11@2.13.6")
+
 
 CPMAddPackage(
         NAME BS_thread_pool
@@ -95,7 +100,7 @@ add_executable(sqsgenerator main.cpp
         include/sqsgen/core/helpers/numeric.h
         include/sqsgen/core/helpers/for_each.h
         include/sqsgen/core/helpers/hash.h
-        include/sqsgen/config.h
+        include/sqsgen/core/config.h
         include/sqsgen/io/config/structure.h
         include/sqsgen/io/config/composition.h
         include/sqsgen/core/helpers/sorted_vector.h
@@ -111,8 +116,9 @@ add_executable(sqsgenerator main.cpp
         include/sqsgen/io/mpi/requests.h
         include/sqsgen/io/mpi.h
         include/sqsgen/io/mpi/config.h
-        include/sqsgen/core/results.h)
+        include/sqsgen/core/results.h
+        include/sqsgen/core/optimization_config.h)
 
 target_link_libraries(sqsgenerator PRIVATE ${SQSGEN_LIBS})
-target_link_libraries(sqsgenerator PRIVATE ${Python3_LIBRARIES})
+#target_link_libraries(sqsgenerator PRIVATE ${Python3_LIBRARIES})
 target_link_libraries(sqsgenerator PRIVATE pybind11::pybind11)
