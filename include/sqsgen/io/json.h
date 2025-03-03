@@ -10,6 +10,7 @@
 
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
+#include "sqsgen/core/results.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/parsing.h"
 #include "sqsgen/types.h"
@@ -37,7 +38,9 @@ template <class T> struct adl_serializer<lattice_t<T>> {
 };
 
 template <class T> struct adl_serializer<coords_t<T>> {
-  static void to_json(json& j, const coords_t<T>& m) { j = core::helpers::eigen_to_stl<coords_t<T>>(m); }
+  static void to_json(json& j, const coords_t<T>& m) {
+    j = core::helpers::eigen_to_stl<coords_t<T>>(m);
+  }
 
   static void from_json(const json& j, coords_t<T>& m) {
     m = std::move(core::helpers::stl_to_eigen<coords_t<T>>(j.get<stl_matrix_t<T>>()));
@@ -64,6 +67,54 @@ template <class T> struct adl_serializer<core::helpers::sorted_vector<T>> {
   }
 };
 
+template <class T> struct adl_serializer<sqs_statistics_data<T>> {
+  static void to_json(json& j, const sqs_statistics_data<T>& m) {
+    j = json{{"best_objective", m.best_objective},
+             {"best_rank", m.best_rank},
+             {"finished", m.finished},
+             {"working", m.working},
+             {"timings", m.timings}};
+  }
+
+  static void from_json(const json& j, sqs_statistics_data<T>& m) {
+    j.at("best_objective").get_to(m.best_objective);
+    j.at("best_rank").get_to(m.best_rank);
+    j.at("finished").get_to(m.finished);
+    j.at("working").get_to(m.working);
+    j.at("timings").get_to(m.timings);
+  }
+};
+
+template <class T> struct adl_serializer<sqs_result<T, SUBLATTICE_MODE_INTERACT>> {
+  static void to_json(json& j, const sqs_result<T, SUBLATTICE_MODE_INTERACT>& m) {
+    j = json{
+        {"objective", m.objective},
+        {"species", m.species},
+        {"sro", m.sro},
+    };
+  }
+
+  static void from_json(const json& j, sqs_result<T, SUBLATTICE_MODE_INTERACT>& m) {
+    j.at("objective").get_to(m.objective);
+    j.at("species").get_to(m.species);
+    j.at("sro").get_to(m.sro);
+  }
+};
+
+template <class T> struct adl_serializer<sqs_result<T, SUBLATTICE_MODE_SPLIT>> {
+  static void to_json(json& j, const sqs_result<T, SUBLATTICE_MODE_SPLIT>& m) {
+    j = json{
+        {"objective", m.objective},
+        {"sublattices", m.sublattices},
+    };
+  }
+
+  static void from_json(const json& j, sqs_result<T, SUBLATTICE_MODE_SPLIT>& m) {
+    j.at("objective").get_to(m.objective);
+    j.at("sublattices").get_to(m.sublattices);
+  }
+};
+
 template <class T> struct adl_serializer<core::structure<T>> {
   static void to_json(json& j, core::structure<T> const& s) {
     j = json{
@@ -71,6 +122,7 @@ template <class T> struct adl_serializer<core::structure<T>> {
         {"species", s.species},
         {"frac_coords", s.frac_coords},
         {"pbc", s.pbc},
+
     };
   }
 
@@ -79,6 +131,7 @@ template <class T> struct adl_serializer<core::structure<T>> {
     j.at("lattice").get_to(s.lattice);
     j.at("frac_coords").get_to(s.frac_coords);
     j.at("pbc").get_to(s.pbc);
+    s.num_species = core::detail::compute_num_species(s.species);
   }
 };
 NLOHMANN_JSON_NAMESPACE_END
@@ -104,6 +157,14 @@ namespace sqsgen {
                                    {SublatticeMode::SUBLATTICE_MODE_INTERACT, "interact"},
                                    {SublatticeMode::SUBLATTICE_MODE_SPLIT, "split"},
                                })
+
+  NLOHMANN_JSON_SERIALIZE_ENUM(Timing, {
+                                           {Timing::TIMING_UNDEFINED, nullptr},
+                                           {Timing::TIMING_COMM, "comm"},
+                                           {Timing::TIMING_LOOP, "loop"},
+                                           {Timing::TIMING_TOTAL, "total"},
+                                           {Timing::TIMING_CHUNK_SETUP, "chunk_setup"},
+                                       })
   namespace io {
     template <> struct accessor<nlohmann::json> {
       static bool contains(nlohmann::json const& json, std::string&& key) {

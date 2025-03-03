@@ -123,7 +123,13 @@ namespace sqsgen {
     }
   };
 
-  enum Timing { TIMING_TOTAL = 0, TIMING_CHUNK_SETUP = 1, TIMING_LOOP = 2, TIMING_COMM = 3 };
+  enum Timing {
+    TIMING_UNDEFINED = -1,
+    TIMING_TOTAL = 0,
+    TIMING_CHUNK_SETUP = 1,
+    TIMING_LOOP = 2,
+    TIMING_COMM = 3
+  };
 
   template <class T> struct sqs_statistics_data {
     iterations_t finished{};
