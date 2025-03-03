@@ -5,8 +5,6 @@
 #ifndef SQSGEN_OPTIMIZATION_STATISTICS_H
 #define SQSGEN_OPTIMIZATION_STATISTICS_H
 
-#include <chrono>
-
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
 

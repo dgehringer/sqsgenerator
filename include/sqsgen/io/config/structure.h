@@ -7,6 +7,7 @@
 
 #include "sqsgen/types.h"
 #include "sqsgen/core/atom.h"
+#include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/parsing.h"
@@ -14,6 +15,8 @@
 
 namespace sqsgen::io {
   namespace config {
+
+    using namespace sqsgen::core;
 
     template <string_literal key>
     parse_result<configuration_t> validate_ordinals(std::vector<int>&& ordinals, auto num_sites) {

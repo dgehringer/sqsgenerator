@@ -7,14 +7,14 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "sqsgen/core/config.h"
 #include "helpers.h"
 #include "nlohmann/json.hpp"
-#include "sqsgen/optimization/sqs.h"
-#include "sqsgen/config.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/dict.h"
 #include "sqsgen/io/json.h"
+#include "sqsgen/optimization/sqs.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::testing {
