@@ -36,23 +36,11 @@ namespace sqsgen::optimization {
       }
     }
 
-    template <class T, SublatticeMode Mode> struct optimization_config {
-      core::structure<T> structure;
-      core::structure<T> sorted;
-      std::vector<bounds_t<usize_t>> bounds;
-      std::vector<usize_t> sort_order;
-      configuration_t species_packed;
-      index_mapping_t<specie_t, specie_t> species_map;
-      index_mapping_t<usize_t, usize_t> shell_map;
-      std::vector<core::atom_pair<usize_t>> pairs;
-      cube_t<T> pair_weights;
-      cube_t<T> prefactors;
-      cube_t<T> target_objective;
-      std::vector<T> shell_radii;
-      shell_weights_t<T> shell_weights;
+    template <class T, SublatticeMode Mode> struct optimization_config
+        : core::optimization_config_data<T> {
       core::shuffler shuffler;
 
-      static std::vector<optimization_config> from_config(configuration<T> config) {
+      static std::vector<optimization_config> from_config(core::configuration<T> config) {
         auto [structures, sorted, bounds, sort_order] = decompose_sort_and_bounds(config);
         if (!detail::same_length(structures, sorted, bounds, sort_order, config.shell_radii,
                                  config.shell_weights, config.prefactors, config.target_objective,
@@ -182,7 +170,7 @@ namespace sqsgen::optimization {
     std::map<std::thread::id, int> _thread_map;
 
   protected:
-    configuration<T> config;
+    core::configuration<T> config;
     core::sqs_result_collection<T, Mode> results;
     std::vector<detail::optimization_config<T, Mode>> opt_configs;
 
@@ -261,7 +249,7 @@ namespace sqsgen::optimization {
       throw std::invalid_argument("unrecognized operation");
     }
 
-    explicit optimizer_base(configuration<T>&& config,
+    explicit optimizer_base(core::configuration<T>&& config
 #ifdef WITH_MPI
                             mpl::communicator comm = mpl::environment::comm_world()
 #endif
@@ -299,8 +287,8 @@ namespace sqsgen::optimization {
   template <class T, IterationMode IMode, SublatticeMode SMode> class optimizer
       : public optimizer_base<T, SMode> {
   public:
-    explicit optimizer(configuration<T>&& config)
-        : optimizer_base<T, SMode>(std::forward<configuration<T>>(config)) {}
+    explicit optimizer(core::configuration<T>&& config)
+        : optimizer_base<T, SMode>(std::forward<core::configuration<T>>(config)) {}
     auto run() {
       using namespace sqsgen::core::helpers;
       spdlog::set_level(spdlog::level::debug);
