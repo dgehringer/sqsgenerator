@@ -8,7 +8,7 @@
 #include <nlohmann/json.hpp>
 #include <utility>
 
-#include "sqsgen/config.h"
+#include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/parsing.h"

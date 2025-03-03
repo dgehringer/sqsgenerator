@@ -4,13 +4,13 @@
 
 #ifndef SQSGEN_CORE_RESULTS_H
 #define SQSGEN_CORE_RESULTS_H
-#include "sqsgen/types.h"
 #include "sqsgen/core/helpers.h"
+#include "sqsgen/types.h"
 
 namespace sqsgen::core {
 
   namespace ranges = std::ranges;
-  namespace vies = std::views;
+  namespace views = std::views;
 
   template <class T, SublatticeMode Mode> using sqs_result_entry_t
       = std::tuple<T, std::vector<sqs_result<T, Mode>>>;
@@ -27,7 +27,7 @@ namespace sqsgen::core {
     };
 
     template <class T, SublatticeMode Mode> using sqs_result_collection_base_t
-        = core::helpers::sorted_vector<sqs_result_entry_t<T, Mode>, decltype(by_objective)>;
+        = helpers::sorted_vector<sqs_result_entry_t<T, Mode>, decltype(by_objective)>;
   }  // namespace detail
 
   template <class T, SublatticeMode Mode> class sqs_result_collection
@@ -63,6 +63,26 @@ namespace sqsgen::core {
 
     base results() { return *this; }
 
+    base remove_duplicates() {
+      sqs_result_collection filtered;
+      for (auto &&[_, collection] : this->_values) {
+        helpers::sorted_vector<configuration_t> unique_species;
+        for (auto &result : collection) {
+          configuration_t conf;
+          if constexpr (Mode == SUBLATTICE_MODE_INTERACT)
+            conf = result.species;
+          else
+            for (auto &&sublattice : result.sublattices)
+              conf.insert(conf.end(), sublattice.species.begin(), sublattice.species.end());
+          if (!unique_species.contains(conf)) {
+            unique_species.insert(conf);
+            filtered.insert_result(std::forward<sqs_result<T, Mode>>(result));
+          }
+        }
+      }
+      return filtered.results();
+    }
+
     [[nodiscard]] std::size_t num_results() const {
       std::size_t size{0};
       for (auto &&[_, collection] : this->_values) size += collection.size();
@@ -81,11 +101,11 @@ namespace sqsgen::core {
   };
 
   template <class T> struct sqs_result_factory<T, SUBLATTICE_MODE_SPLIT> {
-
-    template <std::ranges::range RNumAtoms, std::ranges::range RNumShells,
-              std::ranges::range RNumSpecies>
-    static sqs_result<T, SUBLATTICE_MODE_SPLIT> empty(RNumAtoms && range_num_atoms, RNumShells && range_num_shells,
-                            RNumSpecies && range_num_species) {
+    template <ranges::range RNumAtoms, ranges::range RNumShells,
+              ranges::range RNumSpecies>
+    static sqs_result<T, SUBLATTICE_MODE_SPLIT> empty(RNumAtoms &&range_num_atoms,
+                                                      RNumShells &&range_num_shells,
+                                                      RNumSpecies &&range_num_species) {
       using namespace helpers;
       auto num_atoms = as<std::vector>{}(range_num_atoms);
       auto num_shells = as<std::vector>{}(range_num_shells);
@@ -98,6 +118,15 @@ namespace sqsgen::core {
                                       num_atoms[index], num_shells[index], num_species[index]);
                                 }))};
     }
+  };
+  template<class T, SublatticeMode Mode> class sqs_result_pack_base {
+    typename sqs_result_collection<T, Mode>::base results;
+    sqs_statistics_data<T> data;
+  };
+  template <class, SublatticeMode> class sqs_result_pack;
+  template<class T> class sqs_result_pack<T, SUBLATTICE_MODE_INTERACT> : public sqs_result_pack_base<T, SUBLATTICE_MODE_INTERACT>{
+
+
   };
 }  // namespace sqsgen::core
 

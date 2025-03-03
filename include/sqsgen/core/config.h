@@ -5,16 +5,16 @@
 #ifndef SQSGEN_CONFIGURATION_H
 #define SQSGEN_CONFIGURATION_H
 
-#include "sqsgen/core/structure.h"
+#include "structure.h"
 
-namespace sqsgen {
+namespace sqsgen::core {
 
   template <class T> class structure_config {
   public:
     lattice_t<T> lattice;
     coords_t<T> coords;
     configuration_t species;
-    std::array<int, 3> supercell;
+    std::array<int, 3> supercell{};
 
     core::structure<T> structure(bool supercell = true) const {
       core::structure<T> structure(lattice, coords, species);
@@ -37,7 +37,7 @@ namespace sqsgen {
     std::vector<cube_t<T>> pair_weights;
     std::vector<cube_t<T>> target_objective;
     std::optional<iterations_t> iterations;
-    iterations_t chunk_size;
+    iterations_t chunk_size{};
     thread_config_t thread_config;
   };
 

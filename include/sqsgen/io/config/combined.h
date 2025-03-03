@@ -4,7 +4,7 @@
 
 #ifndef SQSGEN_IO_CONFIG_COMBINED_H
 #define SQSGEN_IO_CONFIG_COMBINED_H
-#include "sqsgen/config.h"
+#include "sqsgen/core/config.h"
 #include "sqsgen/io/config/arrays.h"
 #include "sqsgen/io/config/composition.h"
 #include "sqsgen/io/config/shell_radii.h"
