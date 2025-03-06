@@ -36,12 +36,12 @@ namespace sqsgen::core::helpers {
     for_each(
         [&](auto&& i) {
           result[i].resize(d[1]);
-          for_each([&](auto&& j) {
-            result[i][j].resize(d[2]);
-            for_each([&](auto&& k) {
-              result[i][j][k] = c(i, j, k);
-            }, d[2]);
-          }, d[1]);
+          for_each(
+              [&](auto&& j) {
+                result[i][j].resize(d[2]);
+                for_each([&](auto&& k) { result[i][j][k] = c(i, j, k); }, d[2]);
+              },
+              d[1]);
         },
         d[0]);
     return result;
