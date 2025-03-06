@@ -282,7 +282,7 @@ namespace sqsgen::core {
     }
 
     structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
-              const std::vector<specie_t> &species,
+               configuration_t const&species,
               const std::array<bool, 3> &pbc = {true, true, true})
         : lattice(lattice),
           frac_coords(frac_coords),
@@ -294,7 +294,7 @@ namespace sqsgen::core {
             "frac coords must have the same size as the species input and must not be empty");
     };
 
-    structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords, std::vector<specie_t> &&species,
+    structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords, configuration_t &&species,
               std::array<bool, 3> &&pbc = {true, true, true})
         : lattice(lattice),
           frac_coords(frac_coords),
