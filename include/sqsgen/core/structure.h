@@ -426,12 +426,45 @@ namespace sqsgen::core {
       return std::make_tuple(pairs, shell_map, reverse_map);
     }
 
-    [[nodiscard]] std::vector<specie_t> packed_species() const {
+    [[nodiscard]] configuration_t packed_species() const {
       auto [map, _] = helpers::make_index_mapping<specie_t>(species);
-      auto result = std::vector<specie_t>(species.size());
-      std::transform(species.begin(), species.end(), result.begin(),
-                     [&](auto z) { return map[z]; });
-      return result;
+      return helpers::as<std::vector>{}(species | views::transform([&](auto z) { return map[z]; }));
+    }
+
+    [[nodiscard]] rank_t rank() const { return rank_permutation(packed_species()); }
+
+    [[nodiscard]] std::string uuid() const {
+      std::vector<char> data(16);
+      ranges::fill(data, 0);
+      rank().binary_save(data);
+      std::string uuid;
+      uuid.reserve(32);
+      constexpr const char *hex_digits = "0123456789abcdef";
+      const auto write_hexencoded = [&](char c) {
+        uuid.push_back(hex_digits[c >> 4 & 0xF]);
+        uuid.push_back(hex_digits[c & 0xF]);
+      };
+
+      auto ptr = data.begin();
+      const auto write_next_char = [&] { write_hexencoded(*ptr++); };
+
+      for (auto i = 0; i < 6; i++) write_next_char();
+      char split = *ptr++;
+      // the two nibbles must contain the version and the variant
+      // we have to split one byte across version and variant nibble
+
+      // version nibble
+      uuid.push_back('8');
+      uuid.push_back(hex_digits[split >> 4 & 0xF]);
+      write_next_char();
+
+      // variant nibble
+      uuid.push_back('b');
+      uuid.push_back(hex_digits[split & 0xF]);
+      write_next_char();
+      for (auto i = 0; i < 6; i++) write_next_char();
+      assert(uuid.size() == 32);
+      return uuid;
     }
   };
 
