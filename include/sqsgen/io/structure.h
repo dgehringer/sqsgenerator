@@ -78,9 +78,9 @@ namespace sqsgen::io {
     STRUCTURE_FORMAT_POSCAR = 3,
   };
 
-  template <class, StructureFormat> struct structure_formatter {};
+  template <class, StructureFormat> struct structure_adapter {};
 
-  template <class T> struct structure_formatter<T, STRUCTURE_FORMAT_JSON_ASE> {
+  template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_JSON_ASE> {
     static nlohmann::json _format_array(std::string const& dtype, auto const& shape,
                                         auto const& array) {
       return nlohmann::json{
@@ -134,8 +134,8 @@ namespace sqsgen::io {
     }
   };
 
-  template <class T> struct structure_formatter<T, STRUCTURE_FORMAT_POSCAR> {
-    static std::string format(core::structure<T> const& structure, bool sort = true) {
+  template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_POSCAR> {
+    static std::string format(core::structure<T> const& structure) {
       // one coordinate line holds about 72 characters, to be safe we multiply by two
       constexpr std::string_view row_format = "{:22.16f} {:22.16f} {:22.16f}";
       auto sorted = structure.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
@@ -177,7 +177,7 @@ namespace sqsgen::io {
     }
   };
 
-  template <class T> struct structure_formatter<T, STRUCTURE_FORMAT_JSON_PYMATGEN> {
+  template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_JSON_PYMATGEN> {
     static nlohmann::json format_json(core::structure<T> const& structure) {
       const auto [a, b, c] = detail::lengths<T>(structure.lattice);
       const auto [alpha, beta, gamma] = detail::angles<T>(structure.lattice);
@@ -205,7 +205,58 @@ namespace sqsgen::io {
       return format_json(structure).dump();
     }
 
+    static parse_result<core::structure<T>> from_json(std::string const& json) {
+      using result_t = parse_result<core::structure<T>>;
+      nlohmann::json document = nlohmann::json::parse(json);
+      if (!document.contains("lattice"))
+        return parse_error::from_msg<"lattice", CODE_NOT_FOUND>("missing key \"lattice\"");
+      if (!document.contains("lattice"))
+        return parse_error::from_msg<"sites", CODE_NOT_FOUND>("missing key \"sites\"");
+      auto sites = document.at("sites");
+      if (!sites.is_array())
+        return parse_error::from_msg<"sites", CODE_TYPE_ERROR>("\"sites\" must be an array");
+      return get_as<"matrix", lattice_t<T>>(document.at("lattice"))
+          .and_then([&](auto&& lattice) -> result_t {
+            auto num_atoms = sites.size();
+            configuration_t species;
+            species.reserve(num_atoms);
+            coords_t<T> frac_coords(num_atoms, 3);
+            auto index{0};
+            for (auto site_json : sites) {
+              auto site_result = parse_site(site_json);
+              if (site_result.failed()) return site_result.error();
+              auto [specie, fc] = site_result.result();
+              species.push_back(specie);
+              auto [a, b, c] = fc;
+              frac_coords.row(index++) = Eigen::Vector3<T>{a, b, c};
+            }
+            return core::structure<T>(lattice, frac_coords, species);
+          });
+    }
+
   private:
+    static parse_result<std::tuple<specie_t, std::array<T, 3>>> parse_site(
+        nlohmann::json const& site_json) {
+      using result_t = parse_result<std::tuple<specie_t, std::array<T, 3>>>;
+      if (!site_json.contains("species"))
+        return parse_error::from_msg<"species", CODE_NOT_FOUND>(
+            "site is missing the key \"species\"");
+      auto species = site_json.at("species");
+      if (!species.is_array())
+        return parse_error::from_msg<"species", CODE_TYPE_ERROR>("site is not an array");
+      if (species.size() != 1)
+        return parse_error::from_msg<"species", CODE_OUT_OF_RANGE>(
+            "site must have exactly one species. I cannot handle multiple site occupancies.");
+      return get_as<"element", std::string>(species.at(0))
+          .combine(get_as<"abc", std::array<T, 3>>(site_json))
+          .and_then([](auto&& s_and_frac) -> result_t {
+            auto [symbol, frac_coords] = s_and_frac;
+            if (!core::SYMBOL_MAP.contains(symbol))
+              return parse_error::from_msg<"element", CODE_BAD_VALUE>(
+                  std::format("I am not aware of the element {}", symbol));
+            return std::make_tuple(core::SYMBOL_MAP.at(symbol), frac_coords);
+          });
+    }
     static nlohmann::json format_site(core::detail::site<T> const& site,
                                       lattice_t<T> const& lattice) {
       return nlohmann::json{
@@ -217,7 +268,7 @@ namespace sqsgen::io {
     }
   };
 
-  template <class T> struct structure_formatter<T, STRUCTURE_FORMAT_CIF> {
+  template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_CIF> {
     static std::string format(core::structure<T> const& structure) {
       auto sorted = structure.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
       auto unique_species = core::helpers::sorted_vector<specie_t>{sorted.species};
@@ -231,9 +282,9 @@ namespace sqsgen::io {
 
       const auto make_formula = [&](std::string const& delimiter) {
         return detail::join(unique_species | views::transform([&](auto&& s) {
-                      return std::format("{}{}", z_to_symbol(s), num_species[s]);
-                    }),
-                    delimiter);
+                              return std::format("{}{}", z_to_symbol(s), num_species[s]);
+                            }),
+                            delimiter);
       };
 
       println("# generated using sqsgen");
