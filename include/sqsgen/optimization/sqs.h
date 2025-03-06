@@ -7,13 +7,15 @@
 
 #include <BS_thread_pool.hpp>
 
-#include "../core/config.h"
 #include "spdlog/spdlog.h"
+#include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/optimization_config.h"
 #include "sqsgen/core/results.h"
 #include "sqsgen/core/shuffle.h"
+#include "sqsgen/io/json.h"
 #include "sqsgen/io/mpi.h"
+#include "sqsgen/io/structure.h"
 #include "sqsgen/optimization/helpers.h"
 #include "sqsgen/types.h"
 #include "statistics.h"
@@ -303,7 +305,7 @@ namespace sqsgen::optimization {
         : optimizer_base<T, SMode>(std::forward<core::configuration<T>>(config)) {}
     auto run() {
       using namespace sqsgen::core::helpers;
-      spdlog::set_level(spdlog::level::debug);
+      spdlog::set_level(spdlog::level::info);
 
       auto head = this->is_head();
       auto mpi_mode = this->num_ranks() > 1;
@@ -434,7 +436,6 @@ namespace sqsgen::optimization {
           io::mpi::send(this->comm, statistics.data(), io::mpi::RANK_HEAD);
           io::mpi::send(this->comm, io::mpi::rank_state{false}, io::mpi::RANK_HEAD);
           statistics.tock(tick_comm);
-          this->barrier();
         }
 #endif
 
@@ -533,12 +534,6 @@ namespace sqsgen::optimization {
       this->barrier();
 
       // collect statistics data
-
-      /*
-       * A barrier is needed before the head rank pulls in the latest result. In case the head
-       * rank would finish first we would enter have race condition leading to MPI failure
-       */
-
       auto filtered_results = this->results.remove_duplicates();
 
       if (!filtered_results.empty()) {
@@ -556,6 +551,13 @@ namespace sqsgen::optimization {
           for (auto& result : results)  // use reference here, otherwise
                                         // the reference gets moved
             detail::postprocess_results(result, this->opt_configs);
+
+      auto structure = this->config.structure.structure();
+
+      auto sjson = io::structure_adapter<T, io::STRUCTURE_FORMAT_JSON_PYMATGEN>::format(structure);
+      auto parsed = io::structure_adapter<T, io::STRUCTURE_FORMAT_JSON_PYMATGEN>::from_json(sjson);
+
+      assert(parsed.ok());
 
       return std::make_pair(filtered_results, statistics.data());
     }
