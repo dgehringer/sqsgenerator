@@ -37,7 +37,8 @@ namespace sqsgen::io::config {
       if (iterations > std::numeric_limits<iterations_t>::max())
         return parse_error::from_msg<key, CODE_BAD_VALUE>(
             std::format("The number of permutations to test is {}. I'm a pretty fast programm, but "
-                        "this is too much even for me ;=)", iterations.to_string()));
+                        "this is too much even for me ;=)",
+                        iterations.to_string()));
       return std::make_optional(iterations_t{iterations});
     }
     return get_optional<key, iterations_t>(doc)
@@ -81,8 +82,22 @@ namespace sqsgen::io::config {
         });
   }
 
+  template <string_literal key, class Document>
+  parse_result<Prec> parse_precision(Document const& doc) {
+    return get_optional<"prec", Prec>(doc)
+        .value_or(parse_result<Prec>{Prec::PREC_DOUBLE})
+        .and_then([&](auto&& prec) -> parse_result<Prec> {
+          if (prec == Prec::PREC_INVALID)
+            return parse_error::from_msg<key, CODE_BAD_VALUE>(
+                "Invalid precision mode. Must be either \"double\" (double) or \"single\" "
+                "(float)");
+          return prec;
+        });
+    ;
+  }
+
   template <class T, class Document>
-  parse_result<configuration<T>> parse_config(Document const& doc) {
+  parse_result<configuration<T>> parse_config_for_prec(Document const& doc) {
     return parse_iteration_mode<"mode">(doc)
         .combine(parse_sublattice_mode<"sublattice_mode">(doc))
         .and_then([](auto&& modes) -> parse_result<std::tuple<IterationMode, SublatticeMode>> {
@@ -148,6 +163,20 @@ namespace sqsgen::io::config {
                     });
               });
         });
+  }
+
+  template <class Document>
+  parse_result<configuration<double>, configuration<float>> parse_config(Document const& doc) {
+    using result_t = parse_result<configuration<double>, configuration<float>>;
+    return parse_precision<"prec">(doc).and_then([&](auto&& prec) -> result_t {
+      if (prec == PREC_DOUBLE)
+        return parse_config_for_prec<double, Document>(doc).and_then(
+            [](auto&& config) -> result_t { return {config}; });
+      if (prec == PREC_SINGLE)
+        return parse_config_for_prec<float>(doc).and_then(
+            [](auto&& config) -> result_t { return {config}; });
+      throw std::runtime_error("Unsupported precision");
+    });
   }
 }  // namespace sqsgen::io::config
 #endif  // SQSGEN_IO_CONFIG_COMBINED_H

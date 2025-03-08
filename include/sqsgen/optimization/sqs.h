@@ -303,9 +303,9 @@ namespace sqsgen::optimization {
   public:
     explicit optimizer(core::configuration<T>&& config)
         : optimizer_base<T, SMode>(std::forward<core::configuration<T>>(config)) {}
-    auto run() {
+    auto run(spdlog::level::level_enum level = spdlog::level::info) {
       using namespace sqsgen::core::helpers;
-      spdlog::set_level(spdlog::level::info);
+      spdlog::set_level(level);
 
       auto head = this->is_head();
       auto mpi_mode = this->num_ranks() > 1;
@@ -365,7 +365,8 @@ namespace sqsgen::optimization {
         auto species{species_packed};
         statistics.add_working(iterations);
 
-        if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC)
+        if constexpr (SMode == SUBLATTICE_MODE_INTERACT
+                      && IMode == ITERATION_MODE_SYSTEMATIC)
           shuffler.unrank_permutation(species, rstart + 1);
 
         statistics.tock(tick_setup);
@@ -554,14 +555,63 @@ namespace sqsgen::optimization {
 
       auto structure = this->config.structure.structure();
 
-      auto sjson = io::structure_adapter<T, io::STRUCTURE_FORMAT_JSON_PYMATGEN>::format(structure);
-      auto parsed = io::structure_adapter<T, io::STRUCTURE_FORMAT_JSON_PYMATGEN>::from_json(sjson);
-
-      assert(parsed.ok());
-
       return std::make_pair(filtered_results, statistics.data());
     }
   };
+
+  namespace detail {
+
+    template <class, class> struct cat_variants {};
+    template <class... Args, class... OtherArgs>
+    struct cat_variants<std::variant<Args...>, std::variant<OtherArgs...>> {
+      using type = std::variant<Args..., OtherArgs...>;
+    };
+
+    template <class T, SublatticeMode SMode> using output_t
+        = std::pair<core::detail::sqs_result_collection_base_t<T, SMode>, sqs_statistics_data<T>>;
+
+    template <class T> using output_for_prec_t
+        = std::variant<output_t<T, SUBLATTICE_MODE_INTERACT>,
+                       output_t<T, SUBLATTICE_MODE_SPLIT>>;
+
+    using optimizer_output_t
+        = cat_variants<output_for_prec_t<float>, output_for_prec_t<double>>::type;
+
+    template <class T> optimizer_output_t run_optimization(core::configuration<T>&& conf) {
+      if (conf.iteration_mode == ITERATION_MODE_RANDOM
+          && conf.sublattice_mode == SUBLATTICE_MODE_INTERACT)
+        return optimizer<T, ITERATION_MODE_RANDOM,
+                         SUBLATTICE_MODE_INTERACT>(
+                   std::forward<core::configuration<T>>(conf))
+            .run();
+
+      else if (conf.iteration_mode == ITERATION_MODE_RANDOM
+               && conf.sublattice_mode == SUBLATTICE_MODE_SPLIT)
+        return optimizer<T, ITERATION_MODE_RANDOM,
+                         SUBLATTICE_MODE_SPLIT>(
+                   std::forward<core::configuration<T>>(conf))
+            .run();
+      else if (conf.iteration_mode == ITERATION_MODE_SYSTEMATIC
+               && conf.sublattice_mode == SUBLATTICE_MODE_INTERACT)
+        return optimizer<T, ITERATION_MODE_SYSTEMATIC,
+                         SUBLATTICE_MODE_INTERACT>(
+                   std::forward<core::configuration<T>>(conf))
+            .run();
+      else
+        throw std::runtime_error("Invalid configuration of iteration and sublattice mode");
+    }
+
+  }  // namespace detail
+
+  inline detail::optimizer_output_t run_optimization(
+      std::variant<core::configuration<float>, core::configuration<double>>&& conf) {
+    return std::visit(
+        []<class T>(core::configuration<T>&& c) {
+          return detail::optimizer_output_t{
+              detail::run_optimization<T>(std::forward<core::configuration<T>>(c))};
+        },
+        std::forward<decltype(conf)>(conf));
+  }
 }  // namespace sqsgen::optimization
 
 #endif  // SQSGEN_OPTIMIZATION_SQS_H

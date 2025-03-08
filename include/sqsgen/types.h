@@ -52,7 +52,8 @@ namespace sqsgen {
     requires std::is_arithmetic_v<T>
   using shell_weights_t = std::map<usize_t, T>;
 
-  enum Prec : std::uint8_t {
+  enum Prec {
+    PREC_INVALID = -1,
     PREC_SINGLE = 0,
     PREC_DOUBLE = 1,
   };

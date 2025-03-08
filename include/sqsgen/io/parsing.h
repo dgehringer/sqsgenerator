@@ -117,10 +117,12 @@ namespace sqsgen::io {
       if constexpr (sizeof...(Args) == 1) {
         return std::get<Args...>(_value);
       } else {
-        std::optional<std::variant<Args...>> v = std::nullopt;
-        ((v = v.has_value()
-                  ? v
-                  : (std::holds_alternative<Args>(_value) ? std::get<Args>(_value) : std::nullopt)),
+        using variant_t = std::variant<Args...>;
+        std::optional<variant_t> v = std::nullopt;
+        ((v = v.has_value() ? v
+                            : (std::holds_alternative<Args>(_value)
+                                   ? std::make_optional(variant_t{std::get<Args>(_value)})
+                                   : std::nullopt)),
          ...);
         if (v.has_value()) return v.value();
         throw std::bad_variant_access{};
@@ -177,7 +179,6 @@ namespace sqsgen::io {
     if (opt.has_value()) return fn(std::forward<A>(opt.value()));
     return std::nullopt;
   };
-
 
   template <string_literal key, class... Options, class Document,
             class Doc = std::decay_t<Document>>

@@ -139,31 +139,33 @@ NLOHMANN_JSON_NAMESPACE_END
 namespace sqsgen {
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(sublattice, sites, composition);
 
-  NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_SINGLE, "single"}, {PREC_DOUBLE, "double"}})
+  NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_INVALID, nullptr},
+                                      {PREC_SINGLE, "single"},
+                                      {PREC_DOUBLE, "double"}})
   NLOHMANN_JSON_SERIALIZE_ENUM(ShellRadiiDetection,
-                               {{ShellRadiiDetection::SHELL_RADII_DETECTION_INVALID, nullptr},
-                                {ShellRadiiDetection::SHELL_RADII_DETECTION_NAIVE, "naive"},
-                                {ShellRadiiDetection::SHELL_RADII_DETECTION_PEAK, "peak"}})
+                               {{SHELL_RADII_DETECTION_INVALID, nullptr},
+                                {SHELL_RADII_DETECTION_NAIVE, "naive"},
+                                {SHELL_RADII_DETECTION_PEAK, "peak"}})
   NLOHMANN_JSON_SERIALIZE_ENUM(IterationMode,
                                {
-                                   {IterationMode::ITERATION_MODE_INVALID, nullptr},
-                                   {IterationMode::ITERATION_MODE_RANDOM, "random"},
-                                   {IterationMode::ITERATION_MODE_SYSTEMATIC, "systematic"},
+                                   {ITERATION_MODE_INVALID, nullptr},
+                                   {ITERATION_MODE_RANDOM, "random"},
+                                   {ITERATION_MODE_SYSTEMATIC, "systematic"},
                                })
 
   NLOHMANN_JSON_SERIALIZE_ENUM(SublatticeMode,
                                {
-                                   {SublatticeMode::SUBLATTICE_MODE_INVALID, nullptr},
-                                   {SublatticeMode::SUBLATTICE_MODE_INTERACT, "interact"},
-                                   {SublatticeMode::SUBLATTICE_MODE_SPLIT, "split"},
+                                   {SUBLATTICE_MODE_INVALID, nullptr},
+                                   {SUBLATTICE_MODE_INTERACT, "interact"},
+                                   {SUBLATTICE_MODE_SPLIT, "split"},
                                })
 
   NLOHMANN_JSON_SERIALIZE_ENUM(Timing, {
-                                           {Timing::TIMING_UNDEFINED, nullptr},
-                                           {Timing::TIMING_COMM, "comm"},
-                                           {Timing::TIMING_LOOP, "loop"},
-                                           {Timing::TIMING_TOTAL, "total"},
-                                           {Timing::TIMING_CHUNK_SETUP, "chunk_setup"},
+                                           {TIMING_UNDEFINED, nullptr},
+                                           {TIMING_COMM, "comm"},
+                                           {TIMING_LOOP, "loop"},
+                                           {TIMING_TOTAL, "total"},
+                                           {TIMING_CHUNK_SETUP, "chunk_setup"},
                                        })
   namespace io {
     template <> struct accessor<nlohmann::json> {
