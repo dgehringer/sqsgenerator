@@ -62,7 +62,8 @@ namespace sqsgen::io {
                                             const std::regex& sep_regex = std::regex{"\\s+"}) {
       std::sregex_token_iterator iter(s.begin(), s.end(), sep_regex, -1);
       std::sregex_token_iterator end;
-      return {iter, end};
+      return as<std::vector>{}(std::vector<std::string>{iter, end}
+                               | views::filter([](auto&& match) { return !match.empty(); }));
     }
 
     template <class T> parse_result<T> parse_number(std::string const& input) {
@@ -218,40 +219,48 @@ namespace sqsgen::io {
       std::map<int, tokens_t> lines;
       while (std::getline(ss, line)) lines.emplace(lineno++, detail::resplit(line));
 
+      // find the line which start with "Direct" or "Cartesian"
+      const auto get_coords_line = [&]() -> parse_result<int> {
+        for (const auto& [lineno, tokens] : lines)
+          if (!tokens.empty())
+            if (to_uppercase(tokens.front()) == "DIRECT"
+                || to_uppercase(tokens.front()) == "CARTESIAN")
+              return {lineno + 1};
+        return parse_error::from_msg<KEY_NONE, CODE_NOT_FOUND>(
+            "Could not find the line with the coordinates");
+      };
       const auto get_line = [&](int l) -> parse_result<tokens_t> {
         if (lines.contains(l)) return {lines[l]};
         return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
             std::format("Line {} not found", l));
       };
 
-      auto lattice = get_line(2)
-                         .and_then(parse_row)
-                         .combine(get_line(3).and_then(parse_row))
-                         .combine(get_line(4).and_then(parse_row))
-                         .and_then([&](auto&& m) {
-                           auto [a, b, c] = m;
-                           lattice_t<T> l;
-                           l.row(0) = a;
-                           l.row(1) = b;
-                           l.row(2) = c;
-                           return get_line(1)
-                               .and_then(parse_scaling)
-                               .template collapse<lattice_t<T>>(
-                                   [&](T&& scaling) -> parse_result<lattice_t<T>> {
-                                     if (scaling < 0)
-                                       return lattice_t<T>{
-                                           l * std::pow(-scaling / l.determinant(), 1.0 / 3.0)};
-                                     else
-                                       return lattice_t<T>{l * scaling};
-                                   },
-                                   [&](row_t&& s) -> parse_result<lattice_t<T>> {
-                                     lattice_t<T> ll(std::move(l));
-                                     ll.row(0) *= s(0);
-                                     ll.row(1) *= s(1);
-                                     ll.row(2) *= s(2);
-                                     return ll;
-                                   });
-                         });
+      const auto get_row
+          = [&](int l) -> parse_result<row_t> { return get_line(l).and_then(parse_row); };
+
+      auto lattice = get_row(2).combine(get_row(3)).combine(get_row(4)).and_then([&](auto&& m) {
+        auto [a, b, c] = m;
+        lattice_t<T> l;
+        l.row(0) = a;
+        l.row(1) = b;
+        l.row(2) = c;
+        return get_line(1)
+            .and_then(parse_scaling)
+            .template collapse<lattice_t<T>>(
+                [&](T&& scaling) -> parse_result<lattice_t<T>> {
+                  if (scaling < 0)
+                    return lattice_t<T>{l * std::pow(-scaling / l.determinant(), 1.0 / 3.0)};
+                  else
+                    return lattice_t<T>{l * scaling};
+                },
+                [&](row_t&& s) -> parse_result<lattice_t<T>> {
+                  lattice_t<T> ll(std::move(l));
+                  ll.row(0) *= s(0);
+                  ll.row(1) *= s(1);
+                  ll.row(2) *= s(2);
+                  return ll;
+                });
+      });
 
       auto species
           = get_line(5)
@@ -268,6 +277,21 @@ namespace sqsgen::io {
                     for (auto _ : range(amounts[i])) conf.push_back(species[i]);
                   return conf;
                 });
+
+      return lattice.combine(std::move(species))
+          .combine(get_coords_line())
+          .and_then([&](auto&& data) -> result_t {
+            auto&& [lattice, configuration, start_line_number] = data;
+            coords_t<T> coords(configuration.size(), 3);
+            for (auto i : range(configuration.size())) {
+              auto fc = get_row(start_line_number + i);
+              if (fc.ok())
+                coords.row(i) = fc.result();
+              else
+                return fc.error();
+            }
+            return core::structure<T>{lattice, coords, configuration};
+          });
     }
 
   private:
@@ -316,7 +340,7 @@ namespace sqsgen::io {
     }
 
     static parse_result<row_t> parse_row(tokens_t const& tokens) {
-      if (tokens.size() == 3)
+      if (tokens.size() >= 3)
         return detail::parse_number<T>(tokens[0])
             .combine(detail::parse_number<T>(tokens[1]))
             .combine(detail::parse_number<T>(tokens[2]))
