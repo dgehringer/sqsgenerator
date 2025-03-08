@@ -7,6 +7,7 @@
 
 #include <map>
 #include <ranges>
+#include <regex>
 
 #include "sqsgen/core/structure.h"
 
@@ -57,6 +58,37 @@ namespace sqsgen::io {
       return {angle(0), angle(1), angle(2)};
     }
 
+    inline std::vector<std::string> resplit(const std::string& s,
+                                            const std::regex& sep_regex = std::regex{"\\s+"}) {
+      std::sregex_token_iterator iter(s.begin(), s.end(), sep_regex, -1);
+      std::sregex_token_iterator end;
+      return {iter, end};
+    }
+
+    template <class T> parse_result<T> parse_number(std::string const& input) {
+      try {
+        if constexpr (std::is_same_v<T, float>) {
+          return std::stof(input);
+        }
+        if constexpr (std::is_same_v<T, double>) {
+          return std::stod(input);
+        }
+        if constexpr (std::is_same_v<T, int>) {
+          return std::stoi(input);
+        }
+        if constexpr (std::is_same_v<T, long>) {
+          return std::stol(input);
+        }
+        if constexpr (std::is_same_v<T, unsigned long>) {
+          return std::stoul(input);
+        }
+      } catch (const std::invalid_argument& e) {
+        return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(e.what());
+      } catch (const std::out_of_range& e) {
+        return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(e.what());
+      }
+      return parse_error::from_msg<KEY_NONE, CODE_UNKNOWN>("Unknown error");
+    }
   }  // namespace detail
 
   template <ranges::range Range, class GroupKeyFn>
@@ -135,6 +167,8 @@ namespace sqsgen::io {
   };
 
   template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_POSCAR> {
+    using row_t = Eigen::Vector3<T>;
+    using tokens_t = std::vector<std::string>;
     static std::string format(core::structure<T> const& structure) {
       // one coordinate line holds about 72 characters, to be safe we multiply by two
       constexpr std::string_view row_format = "{:22.16f} {:22.16f} {:22.16f}";
@@ -153,27 +187,158 @@ namespace sqsgen::io {
       const auto z_to_symbol = [](auto&& z) { return core::atom::from_z(z).symbol; };
       // generate first line
       std::string composition_string
-          = join(unique_species | views::transform([&](auto&& s) {
-                   return std::format("{}{}", z_to_symbol(s), num_species[s]);
-                 }),
-                 "");
+          = detail::join(unique_species | views::transform([&](auto&& s) {
+                           return std::format("{}{}", z_to_symbol(s), num_species[s]);
+                         }),
+                         "");
       println(composition_string);
       println("1.0");
       for (auto&& row : sorted.lattice.rowwise()) println(format_row(row));
 
-      std::string species_list = join(unique_species | views::transform(z_to_symbol), " ");
+      std::string species_list = detail::join(unique_species | views::transform(z_to_symbol), " ");
       println(species_list);
 
-      std::string species_amount
-          = join(views::values(num_species)
-                     | views::transform([](auto&& amount) { return std::format("{}", amount); }),
-                 " ");
+      std::string species_amount = detail::join(
+          views::values(num_species)
+              | views::transform([](auto&& amount) { return std::format("{}", amount); }),
+          " ");
       println(species_amount);
-      println("direct");
+      println("Direct");
       for (auto const& site : sorted.sites())
         println(std::format("{} {}", format_row(site.frac_coords), z_to_symbol(site.specie)));
       result.shrink_to_fit();
       return result;
+    }
+
+    static parse_result<core::structure<T>> from_string(std::string const& input) {
+      using result_t = parse_result<core::structure<T>>;
+      std::istringstream ss(input);
+      std::string line;
+      int lineno{0};
+      std::map<int, tokens_t> lines;
+      while (std::getline(ss, line)) lines.emplace(lineno++, detail::resplit(line));
+
+      const auto get_line = [&](int l) -> parse_result<tokens_t> {
+        if (lines.contains(l)) return {lines[l]};
+        return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
+            std::format("Line {} not found", l));
+      };
+
+      auto lattice = get_line(2)
+                         .and_then(parse_row)
+                         .combine(get_line(3).and_then(parse_row))
+                         .combine(get_line(4).and_then(parse_row))
+                         .and_then([&](auto&& m) {
+                           auto [a, b, c] = m;
+                           lattice_t<T> l;
+                           l.row(0) = a;
+                           l.row(1) = b;
+                           l.row(2) = c;
+                           return get_line(1)
+                               .and_then(parse_scaling)
+                               .template collapse<lattice_t<T>>(
+                                   [&](T&& scaling) -> parse_result<lattice_t<T>> {
+                                     if (scaling < 0)
+                                       return lattice_t<T>{
+                                           l * std::pow(-scaling / l.determinant(), 1.0 / 3.0)};
+                                     else
+                                       return lattice_t<T>{l * scaling};
+                                   },
+                                   [&](row_t&& s) -> parse_result<lattice_t<T>> {
+                                     lattice_t<T> ll(std::move(l));
+                                     ll.row(0) *= s(0);
+                                     ll.row(1) *= s(1);
+                                     ll.row(2) *= s(2);
+                                     return ll;
+                                   });
+                         });
+
+      auto species
+          = get_line(5)
+                .and_then(parse_species_decl)
+                .combine(get_line(6).and_then(parse_species_amount))
+                .and_then([&](auto&& specs_and_decls) -> parse_result<configuration_t> {
+                  auto&& [species, amounts] = specs_and_decls;
+                  if (species.size() != amounts.size())
+                    return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
+                        "Species and number of ions per species must have the same length");
+                  configuration_t conf;
+                  conf.reserve(sum(amounts));
+                  for (auto i : range(species.size()))
+                    for (auto _ : range(amounts[i])) conf.push_back(species[i]);
+                  return conf;
+                });
+    }
+
+  private:
+    static parse_result<configuration_t> parse_species_decl(tokens_t const& tokens) {
+      using result_t = parse_result<configuration_t>;
+      auto result = core::helpers::fold_left(
+          tokens, result_t{configuration_t{}}, [](auto&& conf_result, auto&& symbol) -> result_t {
+            if (conf_result.failed()) return conf_result;
+            if (!core::SYMBOL_MAP.contains(symbol))
+              return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
+                  std::format("Unknown element {}", symbol));
+            else {
+              auto species = conf_result.result();
+              species.push_back(core::atom::from_symbol(symbol).Z);
+              return {species};
+            }
+          });
+      if (result.ok() && result.result().size() == 0)
+        return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
+            "Could not find and species. sqsgen has no mechanism to detect the species from "
+            "POTCAR. For me the 'optional' species declaration line is mandatory. Please read "
+            "\"https://www.vasp.at/wiki/index.php/POSCAR\" for further information.");
+      else
+        return result;
+    }
+
+    static parse_result<std::vector<int>> parse_species_amount(tokens_t const& tokens) {
+      using result_t = parse_result<std::vector<int>>;
+      auto result = core::helpers::fold_left(tokens, result_t{std::vector<int>{}},
+                                             [](auto&& result, auto&& token) -> result_t {
+                                               if (result.ok()) {
+                                                 auto amount = detail::parse_number<int>(token);
+                                                 if (amount.ok()) {
+                                                   auto amounts = result.result();
+                                                   amounts.push_back(amount.result());
+                                                   return result_t{amounts};
+                                                 } else
+                                                   return amount.error();
+                                               } else
+                                                 return result;
+                                             });
+      if (result.ok() && result.result().size() == 0)
+        return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
+            "No number of ions per species found");
+      return result;
+    }
+
+    static parse_result<row_t> parse_row(tokens_t const& tokens) {
+      if (tokens.size() == 3)
+        return detail::parse_number<T>(tokens[0])
+            .combine(detail::parse_number<T>(tokens[1]))
+            .combine(detail::parse_number<T>(tokens[2]))
+            .and_then([](auto&& scale) -> parse_result<row_t> {
+              const auto [sa, sb, sc] = scale;
+              return row_t{sa, sb, sc};
+            });
+      else
+        return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(
+            std::format("A vector row must contain three entries, but got {}", tokens.size()));
+    }
+
+    static parse_result<T, row_t> parse_scaling(tokens_t const& tokens) {
+      using result_t = parse_result<T, row_t>;
+      if (tokens.size() == 1)
+        return detail::parse_number<T>(tokens.front()).and_then([](auto&& scale) -> result_t {
+          return scale;
+        });
+      if (tokens.size() == 3)
+        return parse_row(tokens).and_then([](auto&& scale) -> result_t { return scale; });
+      return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(std::format(
+          "Scaling must be a single float or a triplet of floats, but got {}", tokens.size()));
     }
   };
 
