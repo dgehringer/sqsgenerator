@@ -84,6 +84,17 @@ if (WITH_MPI)
     list(APPEND SQSGEN_LIBS "${MPI_LIBRARIES}")
 endif ()
 
+if (WITH_MPI AND BUILD_PYTHON)
+    message(FATAL_ERROR "MPI and Python bindings are not supported together")
+endif ()
+
+if (BUILD_PYTHON)
+    message(STATUS "BUILD_PYTHON=${BUILD_PYTHON}")
+    list(APPEND SQSGEN_LIBS "pybind11::module")
+    list(APPEND SQSGEN_LIBS "${Python3_LIBRARIES}")
+    add_subdirectory("python/extension")
+endif ()
+
 message(STATUS "SQSGEN_LIBS=${SQSGEN_LIBS}")
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -117,8 +128,8 @@ add_executable(sqsgenerator main.cpp
         include/sqsgen/io/mpi.h
         include/sqsgen/io/mpi/config.h
         include/sqsgen/core/results.h
-        include/sqsgen/core/optimization_config.h)
+        include/sqsgen/core/optimization_config.h
+        include/sqsgen/io/structure.h)
 
 target_link_libraries(sqsgenerator PRIVATE ${SQSGEN_LIBS})
 #target_link_libraries(sqsgenerator PRIVATE ${Python3_LIBRARIES})
-target_link_libraries(sqsgenerator PRIVATE pybind11::pybind11)
