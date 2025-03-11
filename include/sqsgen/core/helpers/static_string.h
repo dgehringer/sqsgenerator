@@ -5,7 +5,6 @@
 #ifndef SQSGEN_CORE_HELPER_STATIC_STRING_H
 #define SQSGEN_CORE_HELPER_STATIC_STRING_H
 
-#include <array>
 namespace sqsgen::core::helpers {
 
   template <size_t N> struct string_literal {
@@ -22,8 +21,21 @@ namespace sqsgen::core::helpers {
       }
     }
 
+    constexpr std::basic_string_view<char> operator()() const { return {data, N}; }
+
+    template <std::size_t M>
+    constexpr string_literal<N + M - 1> operator+(const string_literal<M>& rhs) const {
+      char new_data[N + M - 1];
+      std::copy_n(data, N - 1, new_data);
+      std::copy_n(rhs.data, M, new_data + N - 1);
+      return string_literal<N + M - 1>{new_data};
+    }
+
+    [[nodiscard]] constexpr const char* c_str() const { return data; }
+
     char data[N];
   };
+
 }  // namespace sqsgen::core::helpers
 
 #endif  // SQSGEN_CORE_HELPER_STATIC_STRING_H
