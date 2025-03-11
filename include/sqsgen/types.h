@@ -116,11 +116,8 @@ namespace sqsgen {
       if (objectives.size() != species.size() || objectives.size() != sro.size())
         throw std::invalid_argument("invalid number entries");
       sublattices.reserve(objectives.size());
-      core::helpers::for_each(
-          [&](auto &&index) {
-            sublattices.push_back({objectives[index], species[index], sro[index]});
-          },
-          species.size());
+      for (auto i = 0; i < objectives.size(); ++i)
+        sublattices.push_back({objectives[i], species[i], sro[i]});
     }
   };
 
@@ -145,6 +142,14 @@ namespace sqsgen {
 
   template <class T> struct objective {
     T value;
+  };
+
+  enum StructureFormat {
+    STRUCTURE_FORMAT_JSON_SQSGEN = 0,
+    STRUCTURE_FORMAT_JSON_PYMATGEN = 1,
+    STRUCTURE_FORMAT_JSON_ASE = 2,
+    STRUCTURE_FORMAT_CIF = 3,
+    STRUCTURE_FORMAT_POSCAR = 4,
   };
 
 }  // namespace sqsgen

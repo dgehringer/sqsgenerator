@@ -259,7 +259,7 @@ namespace sqsgen::core {
   public:
     lattice_t<T> lattice;
     coords_t<T> frac_coords;
-    std::vector<specie_t> species;
+    configuration_t species;
     std::array<bool, 3> pbc = {true, true, true};
     usize_t num_species;
 

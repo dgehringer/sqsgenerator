@@ -104,13 +104,6 @@ namespace sqsgen::io {
     return groups;
   }
 
-  enum StructureFormat {
-    STRUCTURE_FORMAT_JSON_PYMATGEN = 0,
-    STRUCTURE_FORMAT_JSON_ASE = 1,
-    STRUCTURE_FORMAT_CIF = 2,
-    STRUCTURE_FORMAT_POSCAR = 3,
-  };
-
   template <class, StructureFormat> struct structure_adapter {};
 
   template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_JSON_ASE> {
@@ -363,6 +356,16 @@ namespace sqsgen::io {
         return parse_row(tokens).and_then([](auto&& scale) -> result_t { return scale; });
       return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(std::format(
           "Scaling must be a single float or a triplet of floats, but got {}", tokens.size()));
+    }
+  };
+
+  template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_JSON_SQSGEN> {
+    static nlohmann::json format_json(core::structure<T> const& structure) {
+      return nlohmann::json{structure};
+    }
+
+    static std::string format(core::structure<T> const& structure) {
+      return format_json(structure).dump();
     }
   };
 
