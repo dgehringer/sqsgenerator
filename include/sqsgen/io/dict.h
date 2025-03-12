@@ -105,8 +105,8 @@ namespace sqsgen::io {
 
   template <class T> py::dict to_dict(T const& val) { return py_dict_converter<T>::to_dict(val); }
 
-  template <class T> struct py_dict_converter<structure_config<T>> {
-    static py::dict to_dict(structure_config<T> const& config) {
+  template <class T> struct py_dict_converter<core::structure_config<T>> {
+    static py::dict to_dict(core::structure_config<T> const& config) {
       using namespace py::literals;
       return py::dict("lattice"_a = config.lattice, "coords"_a = config.coords,
                       "species"_a = config.species, "supercell"_a = config.supercell);

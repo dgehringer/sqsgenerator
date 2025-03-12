@@ -10,6 +10,7 @@
 #include <regex>
 
 #include "sqsgen/core/structure.h"
+#include "sqsgen/io/json.h"
 
 namespace sqsgen::io {
   namespace ranges = std::ranges;
@@ -107,8 +108,7 @@ namespace sqsgen::io {
   template <class, StructureFormat> struct structure_adapter {};
 
   template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_JSON_ASE> {
-    static nlohmann::json _format_array(std::string const& dtype, auto const& shape,
-                                        auto const& array) {
+    static auto _format_array(std::string const& dtype, auto const& shape, auto const& array) {
       return nlohmann::json{
           {"array",
            {{"__ndarray__",
@@ -116,7 +116,7 @@ namespace sqsgen::io {
       };
     }
 
-    static nlohmann::json format_json(core::structure<T> const& structure) {
+    static auto format_json(core::structure<T> const& structure) {
       constexpr std::string dtype = "float64";
       auto cell = _format_array("float64", std::array{3, 3}, structure.lattice);
       cell["__ase_objtype__"] = "cell";
@@ -361,11 +361,26 @@ namespace sqsgen::io {
 
   template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_JSON_SQSGEN> {
     static nlohmann::json format_json(core::structure<T> const& structure) {
-      return nlohmann::json{structure};
+      return structure;
     }
 
     static std::string format(core::structure<T> const& structure) {
       return format_json(structure).dump();
+    }
+
+    static parse_result<core::structure<T>> from_json(std::string const& json) {
+      auto document = nlohmann::json::parse(json);
+      try {
+        return document.get<core::structure<T>>();
+      } catch (nlohmann::json::out_of_range const& e) {
+        return parse_error::from_msg<KEY_NONE, CODE_TYPE_ERROR>("out of range - found - {}",
+                                                                e.what());
+      } catch (nlohmann::json::type_error const& e) {
+        return parse_error::from_msg<KEY_NONE, CODE_TYPE_ERROR>(
+            std::format("type error - cannot parse {}", e.what()));
+      } catch (std::out_of_range const& e) {
+        return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(e.what());
+      }
     }
   };
 
@@ -433,7 +448,7 @@ namespace sqsgen::io {
       if (!site_json.contains("species"))
         return parse_error::from_msg<"species", CODE_NOT_FOUND>(
             "site is missing the key \"species\"");
-      auto species = site_json.at("species");
+      const auto& species = site_json.at("species");
       if (!species.is_array())
         return parse_error::from_msg<"species", CODE_TYPE_ERROR>("site is not an array");
       if (species.size() != 1)
