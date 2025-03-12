@@ -94,7 +94,7 @@ namespace sqsgen::testing {
     for (auto i = 1; i < num_permutations(conf_first_16); i++) {
       unrank_permutation(helper, rank_t{i});
       ASSERT_EQ(output, helper);
-      bool result{next_permutation(output)};
+      bool result{next_permutation(output.begin(), output.end())};
       ASSERT_EQ(result, true);
       ASSERT_EQ(rank_permutation(output), rank_t{i + 1});
     }

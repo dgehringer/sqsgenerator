@@ -226,7 +226,7 @@ namespace sqsgen::testing {
       return static_cast<usize_t>((1.0 / prefactor) / static_cast<double>(fcc_one_species.size()));
     };
 
-    auto f = core::compute_prefactors(fcc_one_species.shell_matrix(dists), w, fcc_one_species.species);
+    auto f = core::detail::compute_prefactors(fcc_one_species.shell_matrix(dists), w, fcc_one_species.species);
     std::vector prefactors(f.data(), f.data() + f.size());
     // compute the coordination number of a fcc lattice by inverting the prefactors
     helpers::assert_vector_equal(core::helpers::as<std::vector>{}(prefactors | views::transform(coordination_number)), {12, 6, 24, 12, 12, 8});

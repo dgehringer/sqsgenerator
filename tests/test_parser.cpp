@@ -7,14 +7,13 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "sqsgen/core/config.h"
 #include "helpers.h"
 #include "nlohmann/json.hpp"
+#include "sqsgen/core/config.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/dict.h"
 #include "sqsgen/io/json.h"
-#include "sqsgen/optimization/sqs.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::testing {
@@ -189,8 +188,8 @@ namespace sqsgen::testing {
     auto parse_composition
         = []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
       auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-      return config::parse_composition<"composition", "sites", Doc>(doc,
-                                                                    structure.result().species);
+      return config::parse_composition<"composition", "sites", Doc>(doc, structure.result().species,
+                                                                    SUBLATTICE_MODE_INTERACT);
     };
 
     auto assert_holds_error = make_assert_holds_error(json, dict, parse_composition);
@@ -244,8 +243,8 @@ namespace sqsgen::testing {
     auto assert_holds_error = make_assert_holds_error(
         json, dict, []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
           auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-          return config::parse_composition<"composition", "sites", Doc>(doc,
-                                                                        structure.result().species);
+          return config::parse_composition<"composition", "sites", Doc>(
+              doc, structure.result().species, SUBLATTICE_MODE_INTERACT);
         });
     auto key = "composition";
 
@@ -287,8 +286,8 @@ namespace sqsgen::testing {
     auto assert_holds_error = make_assert_holds_error(
         json, dict, []<class Doc>(Doc const& doc) -> parse_result<std::vector<sublattice>> {
           auto structure = config::parse_structure_config<"structure", double, Doc>(doc);
-          return config::parse_composition<"composition", "sites", Doc>(doc,
-                                                                        structure.result().species);
+          return config::parse_composition<"composition", "sites", Doc>(
+              doc, structure.result().species, SUBLATTICE_MODE_SPLIT);
         });
     auto key = "composition";
     assert_holds_error(key, CODE_NOT_FOUND);
@@ -332,15 +331,17 @@ namespace sqsgen::testing {
         .export_values();
   }
 
-  template <class Doc> parse_result<stl_matrix_t<double>> parse_radii(Doc const& doc) {
+  template <class Doc>
+  parse_result<stl_matrix_t<double>> parse_radii(Doc const& doc, SublatticeMode mode) {
     using result_t = parse_result<stl_matrix_t<double>>;
     return config::parse_structure_config<"structure", double, Doc>(doc).and_then(
         [&](auto&& sc) -> result_t {
           auto structure = sc.structure();
-          return config::parse_composition<"composition", "sites", Doc>(doc, structure.species)
+          return config::parse_composition<"composition", "sites", Doc>(doc, structure.species,
+                                                                        mode)
               .and_then([&](auto&& composition) -> result_t {
                 return config::parse_shell_radii<"shell_radii">(
-                    doc, std::forward<decltype(structure)>(structure), composition);
+                    doc, mode, std::forward<decltype(structure)>(structure), composition);
               });
         });
   }
@@ -352,15 +353,15 @@ namespace sqsgen::testing {
 
     auto [json, dict] = make_test_structure_and_composition<double>(std::array{2, 2, 2});
 
-    auto rdefault_dict = parse_radii(py::handle(dict));
-    auto rdefault_json = parse_radii(json);
+    auto rdefault_dict = parse_radii(py::handle(dict), SUBLATTICE_MODE_INTERACT);
+    auto rdefault_json = parse_radii(json, SUBLATTICE_MODE_INTERACT);
     ASSERT_TRUE(rdefault_dict.ok());
     ASSERT_TRUE(rdefault_json.ok());
 
     json["shell_radii"] = "peak";
     dict["shell_radii"] = module.attr("ShellRadiiDetection").attr("peak");
-    auto rpeak_dict = parse_radii(py::handle(dict));
-    auto rpeak_json = parse_radii(json);
+    auto rpeak_dict = parse_radii(py::handle(dict), SUBLATTICE_MODE_INTERACT);
+    auto rpeak_json = parse_radii(json, SUBLATTICE_MODE_INTERACT);
 
     ASSERT_TRUE(rpeak_dict.ok());
     ASSERT_TRUE(rpeak_json.ok());
@@ -377,13 +378,13 @@ namespace sqsgen::testing {
     auto [json, dict] = make_test_structure_and_composition<double>(std::array{2, 2, 2});
     json["bin_width"] = 0.001;
     dict["bin_width"] = 0.001;
-    auto rdefault_dict = parse_radii(py::handle(dict));
-    auto rdefault_json = parse_radii(json);
+    auto rdefault_dict = parse_radii(py::handle(dict), SUBLATTICE_MODE_INTERACT);
+    auto rdefault_json = parse_radii(json, SUBLATTICE_MODE_INTERACT);
 
     json["shell_radii"] = "naive";
     dict["shell_radii"] = module.attr("ShellRadiiDetection").attr("naive");
-    auto rnaive_dict = parse_radii(py::handle(dict));
-    auto rnaive_json = parse_radii(json);
+    auto rnaive_dict = parse_radii(py::handle(dict), SUBLATTICE_MODE_INTERACT);
+    auto rnaive_json = parse_radii(json, SUBLATTICE_MODE_INTERACT);
 
     // For a perfect lattice it does not matter whether we use naive or histogram method
     // assuming the bin_width is small enough
@@ -402,14 +403,14 @@ namespace sqsgen::testing {
     json["bin_width"] = 0.001;
     dict["bin_width"] = 0.001;
 
-    auto rdefault_dict = parse_radii(py::handle(dict));
-    auto rdefault_json = parse_radii(json);
+    auto rdefault_dict = parse_radii(py::handle(dict), SUBLATTICE_MODE_SPLIT);
+    auto rdefault_json = parse_radii(json, SUBLATTICE_MODE_SPLIT);
     auto naive_mode = module.attr("ShellRadiiDetection").attr("naive");
 
     json["shell_radii"] = {"naive", "naive"};
     dict["shell_radii"] = as_pylist(naive_mode, naive_mode);
-    auto rnaive_dict = parse_radii(py::handle(dict));
-    auto rnaive_json = parse_radii(json);
+    auto rnaive_dict = parse_radii(py::handle(dict), SUBLATTICE_MODE_SPLIT);
+    auto rnaive_json = parse_radii(json, SUBLATTICE_MODE_SPLIT);
 
     // For a perfect lattice it does not matter whether we use naive or histogram method
     // assuming the bin_width is small enough
@@ -428,8 +429,9 @@ namespace sqsgen::testing {
     dict[key][py::int_(0)] = 0;
 
     auto assert_holds_error = make_assert_holds_error(json, dict, []<class Doc>(Doc const& doc) {
-      auto radii = parse_radii(doc);
-      return config::parse_shell_weights<"shell_weights", double>(doc, radii.result());
+      auto radii = parse_radii(doc, SUBLATTICE_MODE_INTERACT);
+      return config::parse_shell_weights<"shell_weights", double>(doc, SUBLATTICE_MODE_INTERACT,
+                                                                  radii.result());
     });
 
     assert_holds_error("shell_weights", CODE_BAD_VALUE);
@@ -458,13 +460,14 @@ namespace sqsgen::testing {
 
     auto [json, dict] = make_test_structure_and_composition<double>(std::array{2, 2, 2});
 
-    auto parse_weights = []<class Doc>(Doc const& doc) -> weights_t<double> {
-      auto radii = parse_radii(doc);
-      return config::parse_shell_weights<"shell_weights", double>(doc, radii.result());
+    auto parse_weights = []<class Doc>(Doc const& doc, SublatticeMode mode) -> weights_t<double> {
+      auto radii = parse_radii(doc, mode);
+      return config::parse_shell_weights<"shell_weights", double>(doc, mode,
+                                                                  radii.result());
     };
 
-    auto rjson = parse_weights(json);
-    auto rdict = parse_weights(json);
+    auto rjson = parse_weights(json, SUBLATTICE_MODE_INTERACT);
+    auto rdict = parse_weights(json, SUBLATTICE_MODE_INTERACT);
     ASSERT_TRUE(rjson.ok());
     ASSERT_TRUE(rdict.ok());
     ASSERT_EQ(rjson.result().size(), rdict.result().size());
@@ -475,8 +478,8 @@ namespace sqsgen::testing {
         = make_test_structure_and_composition_multiple<double>(std::array{2, 2, 2});
     json["sublattice_mode"] = "split";
     dict["sublattice_mode"] = module.attr("SublatticeMode").attr("split");
-    rjson = parse_weights(json);
-    rdict = parse_weights(json);
+    rjson = parse_weights(json, SUBLATTICE_MODE_SPLIT);
+    rdict = parse_weights(json, SUBLATTICE_MODE_SPLIT);
     ASSERT_TRUE(rjson.ok());
     ASSERT_TRUE(rdict.ok());
     ASSERT_EQ(rjson.result().size(), rdict.result().size());
@@ -493,13 +496,12 @@ namespace sqsgen::testing {
     auto [json, dict] = make_test_structure_and_composition_multiple<float>(std::array{3, 3, 3});
 
     const auto parse_both = [&] {
-      return std::make_tuple(config::parse_config<double>(json),
-                             config::parse_config<double>(py::handle(dict)));
+      return std::make_tuple(config::parse_config_for_prec<double>(json),
+                             config::parse_config_for_prec<double>(py::handle(dict)));
     };
 
     auto [rjson, rdict] = parse_both();
     ASSERT_TRUE(rjson.ok() && rdict.ok());
-
 
     ASSERT_EQ(rjson.result().pair_weights.size(), 1);
     ASSERT_EQ(rdict.result().pair_weights.size(), 1);
