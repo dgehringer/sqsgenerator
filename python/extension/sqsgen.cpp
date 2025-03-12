@@ -2,9 +2,9 @@
 // Created by Dominik Gehringer on 08.03.25.
 //
 
+#include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/eigen.h>
 
 #include <nlohmann/detail/exceptions.hpp>
 
@@ -98,12 +98,25 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
                  throw py::value_error("Unknown Structure format");
              };
            })
-      .def_static("from_poscar", [](std::string const &string) {
-        return unwrap(io::structure_adapter<T, STRUCTURE_FORMAT_POSCAR>::from_string(string));
+      .def_static(
+          "from_poscar",
+          [](std::string const &string) {
+            return unwrap(io::structure_adapter<T, STRUCTURE_FORMAT_POSCAR>::from_string(string));
+          },
+          py::arg("string"))
+      .def_static("from_json", [](std::string const &string, StructureFormat format) {
+        switch (format) {
+          case STRUCTURE_FORMAT_JSON_SQSGEN:
+            return unwrap(
+                io::structure_adapter<T, STRUCTURE_FORMAT_JSON_SQSGEN>::from_json(string));
+          case STRUCTURE_FORMAT_JSON_PYMATGEN:
+            return unwrap(
+                io::structure_adapter<T, STRUCTURE_FORMAT_JSON_PYMATGEN>::from_json(string));
+          default:
+            throw py::value_error("Unknown Structure format");
+        }
       });
 }
-
-
 
 PYBIND11_MODULE(_sqsgen, m) {
   using namespace sqsgen;
