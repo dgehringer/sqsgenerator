@@ -118,6 +118,22 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
       });
 }
 
+template <string_literal Name, class T> void bind_configuration(py::module &m) {
+  py::class_<sqsgen::core::configuration<T>>(m, full_name<Name, T>().c_str())
+      .def_readwrite("sublattice_mode", &sqsgen::core::configuration<T>::sublattice_mode)
+      .def_readwrite("iteration_mode", &sqsgen::core::configuration<T>::iteration_mode)
+      .def("structure",
+           [](sqsgen::core::configuration<T> &conf) { return conf.structure.structure(); })
+      .def_readwrite("shell_radii", &sqsgen::core::configuration<T>::shell_radii)
+      .def_readwrite("shell_weights", &sqsgen::core::configuration<T>::shell_weights)
+      .def_readwrite("prefactors", &sqsgen::core::configuration<T>::prefactors)
+      .def_readwrite("pair_weights", &sqsgen::core::configuration<T>::pair_weights)
+      .def_readwrite("target_objective", &sqsgen::core::configuration<T>::target_objective)
+      .def_readwrite("iterations", &sqsgen::core::configuration<T>::iterations)
+      .def_readwrite("chunk_size", &sqsgen::core::configuration<T>::chunk_size)
+      .def_readwrite("thread_config", &sqsgen::core::configuration<T>::thread_config);
+}
+
 PYBIND11_MODULE(_sqsgen, m) {
   using namespace sqsgen;
   m.doc() = "pybind11 example plugin";  // Optional module docstring
@@ -184,9 +200,50 @@ PYBIND11_MODULE(_sqsgen, m) {
       .def_static("from_z", &core::atom::from_z<int>, py::arg("ordinal"))
       .def_static("from_symbol", &core::atom::from_symbol, py::arg("symbol"));
 
+  py::class_<vset<usize_t>>(m, "Indices")
+      .def(py::init<>())
+      .def(
+          "__or__",
+          [](vset<usize_t> &v, std::vector<usize_t> other) {
+            v.merge(other);
+            return v;
+          },
+          py::arg("other"), py::is_operator())
+      .def(
+          "__or__",
+          [](vset<usize_t> &v, vset<usize_t> const &other) {
+            v.merge(other);
+            return v;
+          },
+          py::arg("other"), py::is_operator())
+      .def(
+          "__or__",
+          [](vset<usize_t> &v, py::iterable const &other) {
+            for (auto item : other) v.insert(item.cast<usize_t>());
+            return v;
+          },
+          py::arg("other"), py::is_operator())
+      .def("empty", &vset<usize_t>::empty)
+      .def("size", &vset<usize_t>::size)
+      .def(
+          "add", [](vset<usize_t> &v, usize_t value) { v.insert(value); }, py::arg("value"))
+      .def("contains", &vset<usize_t>::contains)
+      .def("__len__", [](const vset<usize_t> &v) { return v.size(); })
+      .def(
+          "__iter__", [](vset<usize_t> &v) { return py::make_iterator(v.begin(), v.end()); },
+          py::keep_alive<0, 1>());
+
+  py::class_<sublattice>(m, "Sublattice")
+      .def(py::init<vset<usize_t>, composition_t>())
+      .def_readwrite("sites", &sublattice::sites)
+      .def_readwrite("composition", &sublattice::composition);
+
   bind_sqs_statistics_data<"SqsStatisticsData", float>(m);
   bind_sqs_statistics_data<"SqsStatisticsData", double>(m);
 
   bind_structure<"Structure", float>(m);
   bind_structure<"Structure", double>(m);
+
+  bind_configuration<"Configuration", float>(m);
+  bind_configuration<"Configuration", double>(m);
 }
