@@ -15,8 +15,6 @@ list(REMOVE_ITEM tests "${SQSGEN_TEST_SOURCE_DIR}/main.cpp")
 
 include_directories(${SQSGEN_INCLUDE_DIR})
 
-
-
 list(APPEND SQSGEN_TEST_LIBS "mp++")
 list(APPEND SQSGEN_TEST_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_TEST_LIBS "nlohmann_json")
@@ -40,8 +38,8 @@ add_executable(test_permutation
         "${SQSGEN_INCLUDE_DIR}/core/helpers.h"
         "${SQSGEN_INCLUDE_DIR}/types.h"
         "${SQSGEN_INCLUDE_DIR}/core/permutation.h"
-        ../include/sqsgen/core/helpers/hash.h
-        ../include/sqsgen/core/helpers/sorted_vector.h
+        "${SQSGEN_INCLUDE_DIR}/core/helpers/hash.h"
+        "${SQSGEN_INCLUDE_DIR}/core/helpers/sorted_vector.h"
 )
 target_link_libraries(test_permutation ${SQSGEN_TEST_LIBS})
 add_test(NAME test_permutation COMMAND test_permutation)
@@ -49,12 +47,7 @@ add_test(NAME test_permutation COMMAND test_permutation)
 add_executable(test_structure
         "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
         "${SQSGEN_TEST_SOURCE_DIR}/test_structure.cpp"
-        "${SQSGEN_INCLUDE_DIR}/core/helpers.h"
-        "${SQSGEN_INCLUDE_DIR}/types.h"
-        "${SQSGEN_INCLUDE_DIR}/io/json.h"
         helpers.h
-        ../include/sqsgen/core/helpers/hash.h
-        ../include/sqsgen/core/helpers/sorted_vector.h
 )
 target_link_libraries(test_structure ${SQSGEN_TEST_LIBS})
 add_test(NAME test_structure COMMAND test_structure)
@@ -66,8 +59,6 @@ add_custom_command(TARGET test_structure POST_BUILD
 add_executable(test_shuffle
         "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
         "${SQSGEN_TEST_SOURCE_DIR}/test_shuffle.cpp"
-        "${SQSGEN_INCLUDE_DIR}/core/helpers.h"
-        "${SQSGEN_INCLUDE_DIR}/types.h"
         helpers.h
 )
 target_link_libraries(test_shuffle ${SQSGEN_TEST_LIBS})
@@ -77,20 +68,6 @@ add_test(NAME test_shuffle COMMAND test_shuffle)
 add_executable(test_parser
         "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
         "${SQSGEN_TEST_SOURCE_DIR}/test_parser.cpp"
-        "${SQSGEN_INCLUDE_DIR}/core/helpers.h"
-        "${SQSGEN_INCLUDE_DIR}/types.h"
-        "${SQSGEN_INCLUDE_DIR}/io/json.h"
-        helpers.h
-        ../include/sqsgen/io/config/composition.h
-        ../include/sqsgen/core/helpers/sorted_vector.h
-        ../include/sqsgen/io/dict.h
-        ../include/sqsgen/io/config/shell_radii.h
-        ../include/sqsgen/io/config/shell_weights.h
-        ../include/sqsgen/io/config/arrays.h
-        ../include/sqsgen/io/config/shared.h
-        ../include/sqsgen/io/config/combined.h
-        ../include/sqsgen/optimization/sqs.h
-        ../include/sqsgen/optimization/helpers.h
 )
 target_link_libraries(test_parser ${SQSGEN_TEST_LIBS})
 add_test(NAME test_parser COMMAND test_parser)
