@@ -4,6 +4,7 @@
 
 #ifndef SQSGEN_CORE_RESULTS_H
 #define SQSGEN_CORE_RESULTS_H
+#include "optimization_config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
 
@@ -119,15 +120,14 @@ namespace sqsgen::core {
                                 }))};
     }
   };
-  template<class T, SublatticeMode Mode> class sqs_result_pack_base {
-    typename sqs_result_collection<T, Mode>::base results;
-    sqs_statistics_data<T> data;
-  };
-  template <class, SublatticeMode> class sqs_result_pack;
-  template<class T> class sqs_result_pack<T, SUBLATTICE_MODE_INTERACT> : public sqs_result_pack_base<T, SUBLATTICE_MODE_INTERACT>{
 
-
+  template<class T, SublatticeMode SMode> struct sqs_result_pack {
+    configuration<T> config;
+    std::conditional_t<SMode == SUBLATTICE_MODE_INTERACT, optimization_config_data<T>, std::vector<optimization_config_data<T>>> optimization_config;
+    detail::sqs_result_collection_base_t<T, SMode> results;
+    sqs_statistics_data<T> statistics;
   };
+
 }  // namespace sqsgen::core
 
 #endif  // SQSGEN_CORE_RESULTS_H

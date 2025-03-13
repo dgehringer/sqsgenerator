@@ -78,6 +78,8 @@ namespace sqsgen::optimization {
         return configs;
       }
 
+      core::optimization_config_data<T> data() const { return *this; }
+
     private:
       static auto decompose_sort_and_bounds(core::configuration<T> const& config) {
         if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
@@ -365,8 +367,7 @@ namespace sqsgen::optimization {
         auto species{species_packed};
         statistics.add_working(iterations);
 
-        if constexpr (SMode == SUBLATTICE_MODE_INTERACT
-                      && IMode == ITERATION_MODE_SYSTEMATIC)
+        if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC)
           shuffler.unrank_permutation(species, rstart + 1);
 
         statistics.tock(tick_setup);
@@ -553,9 +554,21 @@ namespace sqsgen::optimization {
                                         // the reference gets moved
             detail::postprocess_results(result, this->opt_configs);
 
-      auto structure = this->config.structure.structure();
+      std::conditional_t<SMode == SUBLATTICE_MODE_INTERACT, core::optimization_config_data<T>,
+                         std::vector<core::optimization_config_data<T>>>
+          optimization_configs;
+      if constexpr (SMode == SUBLATTICE_MODE_INTERACT)
+        optimization_configs = this->opt_configs.front().data();
+      else if constexpr (SMode == SUBLATTICE_MODE_SPLIT)
+        optimization_configs = as<std::vector>{}(
+            this->opt_configs | views::transform([](auto&& c) { return c.data(); }));
 
-      return std::make_pair(filtered_results, statistics.data());
+      return core::sqs_result_pack<T, SMode>{
+          std::move(this->config),
+          std::move(optimization_configs),
+          std::move(filtered_results),
+          statistics.data(),
+      };
     }
   };
 
@@ -567,12 +580,10 @@ namespace sqsgen::optimization {
       using type = std::variant<Args..., OtherArgs...>;
     };
 
-    template <class T, SublatticeMode SMode> using output_t
-        = std::pair<core::detail::sqs_result_collection_base_t<T, SMode>, sqs_statistics_data<T>>;
+    template <class T, SublatticeMode SMode> using output_t = core::sqs_result_pack<T, SMode>;
 
     template <class T> using output_for_prec_t
-        = std::variant<output_t<T, SUBLATTICE_MODE_INTERACT>,
-                       output_t<T, SUBLATTICE_MODE_SPLIT>>;
+        = std::variant<output_t<T, SUBLATTICE_MODE_INTERACT>, output_t<T, SUBLATTICE_MODE_SPLIT>>;
 
     using optimizer_output_t
         = cat_variants<output_for_prec_t<float>, output_for_prec_t<double>>::type;
@@ -580,21 +591,18 @@ namespace sqsgen::optimization {
     template <class T> optimizer_output_t run_optimization(core::configuration<T>&& conf) {
       if (conf.iteration_mode == ITERATION_MODE_RANDOM
           && conf.sublattice_mode == SUBLATTICE_MODE_INTERACT)
-        return optimizer<T, ITERATION_MODE_RANDOM,
-                         SUBLATTICE_MODE_INTERACT>(
+        return optimizer<T, ITERATION_MODE_RANDOM, SUBLATTICE_MODE_INTERACT>(
                    std::forward<core::configuration<T>>(conf))
             .run();
 
       else if (conf.iteration_mode == ITERATION_MODE_RANDOM
                && conf.sublattice_mode == SUBLATTICE_MODE_SPLIT)
-        return optimizer<T, ITERATION_MODE_RANDOM,
-                         SUBLATTICE_MODE_SPLIT>(
+        return optimizer<T, ITERATION_MODE_RANDOM, SUBLATTICE_MODE_SPLIT>(
                    std::forward<core::configuration<T>>(conf))
             .run();
       else if (conf.iteration_mode == ITERATION_MODE_SYSTEMATIC
                && conf.sublattice_mode == SUBLATTICE_MODE_INTERACT)
-        return optimizer<T, ITERATION_MODE_SYSTEMATIC,
-                         SUBLATTICE_MODE_INTERACT>(
+        return optimizer<T, ITERATION_MODE_SYSTEMATIC, SUBLATTICE_MODE_INTERACT>(
                    std::forward<core::configuration<T>>(conf))
             .run();
       else
