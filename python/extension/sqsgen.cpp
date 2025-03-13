@@ -3,6 +3,7 @@
 //
 
 #include <pybind11/eigen.h>
+#include <pybind11/eigen/tensor.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -10,7 +11,9 @@
 
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
+#include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/parsing.h"
+#include "sqsgen/io/dict.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/types.h"
 #include "utils.h"
@@ -131,7 +134,13 @@ template <string_literal Name, class T> void bind_configuration(py::module &m) {
       .def_readwrite("target_objective", &sqsgen::core::configuration<T>::target_objective)
       .def_readwrite("iterations", &sqsgen::core::configuration<T>::iterations)
       .def_readwrite("chunk_size", &sqsgen::core::configuration<T>::chunk_size)
-      .def_readwrite("thread_config", &sqsgen::core::configuration<T>::thread_config);
+      .def_readwrite("thread_config", &sqsgen::core::configuration<T>::thread_config)
+      .def_readwrite("composition", &sqsgen::core::configuration<T>::composition);
+}
+
+template <string_literal Name, class T> void bind_result(py::module &m) {
+  using namespace sqsgen;
+  using namespace sqsgen::core;
 }
 
 PYBIND11_MODULE(_sqsgen, m) {
@@ -238,6 +247,11 @@ PYBIND11_MODULE(_sqsgen, m) {
       .def_readwrite("sites", &sublattice::sites)
       .def_readwrite("composition", &sublattice::composition);
 
+  py::class_<core::atom_pair<usize_t>>(m, "AtomPair")
+      .def_readonly("i", &core::atom_pair<usize_t>::i)
+      .def_readonly("j", &core::atom_pair<usize_t>::j)
+      .def_readonly("shell", &core::atom_pair<usize_t>::shell);
+
   bind_sqs_statistics_data<"SqsStatisticsData", float>(m);
   bind_sqs_statistics_data<"SqsStatisticsData", double>(m);
 
@@ -246,4 +260,13 @@ PYBIND11_MODULE(_sqsgen, m) {
 
   bind_configuration<"Configuration", float>(m);
   bind_configuration<"Configuration", double>(m);
+
+  m.def("parse_config",
+        [](py::dict const &config) { return unwrap(io::config::parse_config(py::handle(config))); }, py::arg("config"));
+
+  m.def("parse_config",
+        [](std::string const &json) {
+          nlohmann::json document = nlohmann::json::parse(json);
+          return unwrap(io::config::parse_config(document));
+        }, py::arg("config_json"));
 }
