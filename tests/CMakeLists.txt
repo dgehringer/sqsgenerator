@@ -35,11 +35,6 @@ enable_testing()
 add_executable(test_permutation
         "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
         "${SQSGEN_TEST_SOURCE_DIR}/test_permutation.cpp"
-        "${SQSGEN_INCLUDE_DIR}/core/helpers.h"
-        "${SQSGEN_INCLUDE_DIR}/types.h"
-        "${SQSGEN_INCLUDE_DIR}/core/permutation.h"
-        "${SQSGEN_INCLUDE_DIR}/core/helpers/hash.h"
-        "${SQSGEN_INCLUDE_DIR}/core/helpers/sorted_vector.h"
 )
 target_link_libraries(test_permutation ${SQSGEN_TEST_LIBS})
 add_test(NAME test_permutation COMMAND test_permutation)
@@ -69,5 +64,5 @@ add_executable(test_parser
         "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
         "${SQSGEN_TEST_SOURCE_DIR}/test_parser.cpp"
 )
-target_link_libraries(test_parser ${SQSGEN_TEST_LIBS})
+target_link_libraries(test_parser ${SQSGEN_TEST_LIBS} "${Python3_LIBRARIES}")
 add_test(NAME test_parser COMMAND test_parser)
