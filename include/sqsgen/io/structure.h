@@ -59,15 +59,35 @@ namespace sqsgen::io {
       return {angle(0), angle(1), angle(2)};
     }
 
-    inline std::vector<std::string> resplit(const std::string& s,
-                                            const std::regex& sep_regex = std::regex{"\\s+"}) {
-      std::sregex_token_iterator iter(s.begin(), s.end(), sep_regex, -1);
-      std::sregex_token_iterator end;
-      return as<std::vector>{}(std::vector<std::string>{iter, end}
-                               | views::filter([](auto&& match) { return !match.empty(); }));
+    std::vector<std::string_view> split(std::string_view str, std::string_view delimeters) {
+      std::vector<std::string_view> res;
+      res.reserve(str.length() / 2);
+      const char* ptr = str.data();
+
+      size_t size = 0;
+
+      for (const char c : str) {
+        for (const char d : delimeters) {
+          if (c == d) {
+            res.emplace_back(ptr, size);
+            ptr += size + 1;
+            size = 0;
+            goto next;
+          }
+        }
+        ++size;
+      next:
+        continue;
+      }
+
+      if (size) res.emplace_back(ptr, size);
+      std::erase_if(res, [](auto&& s) { return s.empty(); });
+      return res;
     }
 
-    template <class T> parse_result<T> parse_number(std::string const& input) {
+
+    template <class T> parse_result<T> parse_number(std::string_view view) {
+      std::string input{view};
       try {
         if constexpr (std::is_same_v<T, float>) {
           return std::stof(input);
@@ -162,7 +182,7 @@ namespace sqsgen::io {
 
   template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_POSCAR> {
     using row_t = Eigen::Vector3<T>;
-    using tokens_t = std::vector<std::string>;
+    using tokens_t = std::vector<std::string_view>;
     static std::string format(core::structure<T> const& structure) {
       // one coordinate line holds about 72 characters, to be safe we multiply by two
       constexpr std::string_view row_format = "{:22.16f} {:22.16f} {:22.16f}";
@@ -207,10 +227,12 @@ namespace sqsgen::io {
     static parse_result<core::structure<T>> from_string(std::string const& input) {
       using result_t = parse_result<core::structure<T>>;
       std::istringstream ss(input);
-      std::string line;
-      int lineno{0};
-      std::map<int, tokens_t> lines;
-      while (std::getline(ss, line)) lines.emplace(lineno++, detail::resplit(line));
+      std::string_view contents{ss.view()};
+
+      std::map<int, tokens_t> lines = as<std::map>{}(
+          detail::split(contents, "\n") | views::transform([lineno = 0](auto&& s) mutable {
+            return std::make_pair(lineno++, detail::split(s, " \t"));
+          }));
 
       // find the line which start with "Direct" or "Cartesian"
       const auto get_coords_line = [&]() -> parse_result<int> {
@@ -293,12 +315,13 @@ namespace sqsgen::io {
       auto result = core::helpers::fold_left(
           tokens, result_t{configuration_t{}}, [](auto&& conf_result, auto&& symbol) -> result_t {
             if (conf_result.failed()) return conf_result;
-            if (!core::SYMBOL_MAP.contains(symbol))
+            auto sym = std::string{symbol};
+            if (!core::SYMBOL_MAP.contains(sym))
               return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
                   std::format("Unknown element {}", symbol));
             else {
               auto species = conf_result.result();
-              species.push_back(core::atom::from_symbol(symbol).Z);
+              species.push_back(core::atom::from_symbol(sym).Z);
               return {species};
             }
           });
@@ -360,9 +383,7 @@ namespace sqsgen::io {
   };
 
   template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_JSON_SQSGEN> {
-    static nlohmann::json format_json(core::structure<T> const& structure) {
-      return structure;
-    }
+    static nlohmann::json format_json(core::structure<T> const& structure) { return structure; }
 
     static std::string format(core::structure<T> const& structure) {
       return format_json(structure).dump();
