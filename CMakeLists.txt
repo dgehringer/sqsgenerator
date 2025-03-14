@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 project(sqsgenerator)
+
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 include(FetchContent)
 
 set(CPM_DOWNLOAD_VERSION 0.40.2)
@@ -62,6 +65,10 @@ if(MSVC)
     add_compile_options(/permissive- /Zc:__cplusplus)
 endif()
 
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    message(STATUS "Detected clang: adding -fexperimental-library")
+    add_compile_options(-fexperimental-library)
+endif ()
 
 if (BUILD_TESTS)
     message(STATUS "BUILD_TESTS=${BUILD_TESTS}")
@@ -97,9 +104,7 @@ endif ()
 
 message(STATUS "SQSGEN_LIBS=${SQSGEN_LIBS}")
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    add_compile_options(-fexperimental-library)
-endif ()
+
 
 add_executable(sqsgenerator main.cpp
         include/sqsgen/core/atom.h
