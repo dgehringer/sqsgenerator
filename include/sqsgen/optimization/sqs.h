@@ -5,6 +5,7 @@
 #ifndef SQSGEN_OPTIMIZATION_SQS_H
 #define SQSGEN_OPTIMIZATION_SQS_H
 
+#include <thread>
 #include <BS_thread_pool.hpp>
 
 #include "spdlog/spdlog.h"
@@ -13,9 +14,7 @@
 #include "sqsgen/core/optimization_config.h"
 #include "sqsgen/core/results.h"
 #include "sqsgen/core/shuffle.h"
-#include "sqsgen/io/json.h"
 #include "sqsgen/io/mpi.h"
-#include "sqsgen/io/structure.h"
 #include "sqsgen/optimization/helpers.h"
 #include "sqsgen/types.h"
 #include "statistics.h"

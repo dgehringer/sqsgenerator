@@ -7,14 +7,11 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include <nlohmann/detail/exceptions.hpp>
-
-#include "sqsgen/core/helpers.h"
-#include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/combined.h"
-#include "sqsgen/io/parsing.h"
 #include "sqsgen/io/dict.h"
+#include "sqsgen/io/parsing.h"
 #include "sqsgen/io/structure.h"
+#include "sqsgen/optimization/sqs.h"
 #include "sqsgen/types.h"
 #include "utils.h"
 
@@ -143,7 +140,7 @@ template <string_literal Name, class T> void bind_result(py::module &m) {
   using namespace sqsgen::core;
 }
 
-PYBIND11_MODULE(_sqsgen, m) {
+PYBIND11_MODULE(_core, m) {
   using namespace sqsgen;
   m.doc() = "pybind11 example plugin";  // Optional module docstring
 
@@ -261,12 +258,18 @@ PYBIND11_MODULE(_sqsgen, m) {
   bind_configuration<"Configuration", float>(m);
   bind_configuration<"Configuration", double>(m);
 
-  m.def("parse_config",
-        [](py::dict const &config) { return unwrap(io::config::parse_config(py::handle(config))); }, py::arg("config"));
+  m.def(
+      "parse_config",
+      [](py::dict const &config) { return unwrap(io::config::parse_config(py::handle(config))); },
+      py::arg("config"));
 
-  m.def("parse_config",
-        [](std::string const &json) {
-          nlohmann::json document = nlohmann::json::parse(json);
-          return unwrap(io::config::parse_config(document));
-        }, py::arg("config_json"));
+  m.def(
+      "parse_config",
+      [](std::string const &json) {
+        nlohmann::json document = nlohmann::json::parse(json);
+        return unwrap(io::config::parse_config(document));
+      },
+      py::arg("config_json"));
+
+  m.def("run", &optimization::run_optimization, py::arg("config"));
 }
