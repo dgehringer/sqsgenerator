@@ -27,7 +27,14 @@ if (BUILD_TESTS OR BUILD_PYTHON)
     CPMAddPackage("gh:pybind/pybind11@2.13.6")
 endif ()
 
-CPMAddPackage("gh:bluescarni/mppp@1.0.4")
+CPMAddPackage(
+        NAME mppp
+        GITHUB_REPOSITORY bluescarni/mppp
+        GIT_TAG v2.0.0
+        OPTIONS
+        "MPPP_BUILD_STATIC_LIBRARY ON"
+)
+
 CPMAddPackage("gh:nlohmann/json@3.11.3")
 CPMAddPackage(
         NAME Eigen
@@ -40,6 +47,7 @@ CPMAddPackage(
 )
 CPMAddPackage("gh:gabime/spdlog@1.15.0")
 CPMAddPackage("gh:Nicoshev/rapidhash#rapidhash_v1.0")
+
 
 
 CPMAddPackage(
@@ -104,37 +112,7 @@ endif ()
 
 message(STATUS "SQSGEN_LIBS=${SQSGEN_LIBS}")
 
-
-
-add_executable(sqsgenerator main.cpp
-        include/sqsgen/core/atom.h
-        include/sqsgen/types.h
-        include/sqsgen/core/helpers/fold.h
-        include/sqsgen/core/structure.h
-        include/sqsgen/core/helpers/templates.h
-        include/sqsgen/io/json.h
-        include/sqsgen/core/helpers/numeric.h
-        include/sqsgen/core/helpers/for_each.h
-        include/sqsgen/core/helpers/hash.h
-        include/sqsgen/core/config.h
-        include/sqsgen/io/config/structure.h
-        include/sqsgen/io/config/composition.h
-        include/sqsgen/core/helpers/sorted_vector.h
-        include/sqsgen/io/parsing.h
-        include/sqsgen/io/config/shell_radii.h
-        include/sqsgen/io/config/shell_weights.h
-        include/sqsgen/io/config/arrays.h
-        include/sqsgen/io/config/shared.h
-        include/sqsgen/io/config/combined.h
-        include/sqsgen/optimization/sqs.h
-        include/sqsgen/optimization/helpers.h
-        include/sqsgen/optimization/statistics.h
-        include/sqsgen/io/mpi/requests.h
-        include/sqsgen/io/mpi.h
-        include/sqsgen/io/mpi/config.h
-        include/sqsgen/core/results.h
-        include/sqsgen/core/optimization_config.h
-        include/sqsgen/io/structure.h)
-
-target_link_libraries(sqsgenerator PRIVATE ${SQSGEN_LIBS})
-#target_link_libraries(sqsgenerator PRIVATE ${Python3_LIBRARIES})
+if (BUILD_CLI)
+    add_executable(sqsgen "main.cpp")
+    target_link_libraries(sqsgen ${SQSGEN_LIBS})
+endif ()
