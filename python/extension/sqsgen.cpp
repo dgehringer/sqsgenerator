@@ -4,6 +4,7 @@
 
 #include <pybind11/eigen.h>
 #include <pybind11/eigen/tensor.h>
+#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -135,6 +136,12 @@ template <string_literal Name, class T> void bind_configuration(py::module &m) {
       .def_readwrite("composition", &sqsgen::core::configuration<T>::composition);
 }
 
+template <string_literal Name, class T> void bind_callback_context(py::module &m) {
+  py::class_<sqsgen::sqs_callback_context<T>>(m, full_name<Name, T>().c_str())
+      .def("stop", &sqsgen::sqs_callback_context<T>::stop)
+      .def_readonly("statistics", &sqsgen::sqs_callback_context<T>::statistics);
+}
+
 template <string_literal Name, class T> void bind_result(py::module &m) {
   using namespace sqsgen;
   using namespace sqsgen::core;
@@ -187,6 +194,14 @@ PYBIND11_MODULE(_core, m) {
       .value("out_of_range", io::CODE_OUT_OF_RANGE)
       .value("type_error", io::CODE_TYPE_ERROR)
       .value("not_found", io::CODE_NOT_FOUND)
+      .export_values();
+
+  py::enum_<spdlog::level::level_enum>(m, "LogLevel")
+      .value("debug", spdlog::level::debug)
+      .value("info", spdlog::level::info)
+      .value("warn", spdlog::level::warn)
+      .value("trace", spdlog::level::trace)
+      .value("critical", spdlog::level::critical)
       .export_values();
 
   py::class_<io::parse_error>(m, "ParseError")
@@ -255,8 +270,11 @@ PYBIND11_MODULE(_core, m) {
   bind_structure<"Structure", float>(m);
   bind_structure<"Structure", double>(m);
 
-  bind_configuration<"Configuration", float>(m);
-  bind_configuration<"Configuration", double>(m);
+  bind_configuration<"SqsConfiguration", float>(m);
+  bind_configuration<"SqsConfiguration", double>(m);
+
+  bind_callback_context<"SqsCallbackContext", float>(m);
+  bind_callback_context<"SqsCallbackContext", double>(m);
 
   m.def(
       "parse_config",
@@ -266,10 +284,25 @@ PYBIND11_MODULE(_core, m) {
   m.def(
       "parse_config",
       [](std::string const &json) {
+        py::gil_scoped_release nogil{};
         nlohmann::json document = nlohmann::json::parse(json);
         return unwrap(io::config::parse_config(document));
       },
       py::arg("config_json"));
 
-  m.def("run", &optimization::run_optimization, py::arg("config"));
+  m.def(
+      "optimize",
+      [](std::variant<core::configuration<float>, core::configuration<double>> &&config,
+         spdlog::level::level_enum log_level, std::optional<sqs_callback_t> callback) {
+        if (callback.has_value()) {
+          py::gil_scoped_release nogil{};
+          optimization::run_optimization(std::forward<decltype(config)>(config), log_level,
+                                         callback);
+        } else {
+          optimization::run_optimization(std::forward<decltype(config)>(config), log_level,
+                                         std::nullopt);
+        }
+      },
+      py::arg("config"), py::arg("log_level") = spdlog::level::level_enum::info,
+      py::arg("callback") = std::nullopt);
 }
