@@ -152,5 +152,19 @@ namespace sqsgen {
     STRUCTURE_FORMAT_POSCAR = 4,
   };
 
+  template <class T> class sqs_callback_context {
+    std::stop_source _stop;
+
+  public:
+    sqs_callback_context(std::stop_source stop, sqs_statistics_data<T> stats)
+        : _stop(stop), statistics(stats) {}
+    sqs_statistics_data<T> statistics;
+
+    void stop() { _stop.request_stop(); }
+  };
+
+
+  using sqs_callback_t = std::function<void(std::variant<sqs_callback_context<float>, sqs_callback_context<double>>)>;
+
 }  // namespace sqsgen
 #endif  // SQSGEN_TYPES_HPP

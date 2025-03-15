@@ -5,8 +5,8 @@
 #ifndef SQSGEN_OPTIMIZATION_SQS_H
 #define SQSGEN_OPTIMIZATION_SQS_H
 
-#include <thread>
 #include <BS_thread_pool.hpp>
+#include <thread>
 
 #include "spdlog/spdlog.h"
 #include "sqsgen/core/config.h"
@@ -304,7 +304,8 @@ namespace sqsgen::optimization {
   public:
     explicit optimizer(core::configuration<T>&& config)
         : optimizer_base<T, SMode>(std::forward<core::configuration<T>>(config)) {}
-    auto run(spdlog::level::level_enum level = spdlog::level::info) {
+    auto run(spdlog::level::level_enum level = spdlog::level::info,
+             std::optional<sqs_callback_t> callback = std::nullopt) {
       using namespace sqsgen::core::helpers;
       spdlog::set_level(level);
 
@@ -439,7 +440,10 @@ namespace sqsgen::optimization {
           statistics.tock(tick_comm);
         }
 #endif
-
+        if (callback.has_value()) {
+          spdlog::info("[Rank {}, Thread {}] firing callback", this->rank(), this->thread_id());
+          callback.value()(sqs_callback_context<T>{stop_source, statistics.data()});
+        }
         spdlog::debug("[Rank {}, Thread {}] finished chunk start={}, end={}", this->rank(),
                       this->thread_id(), rstart.to_string(), rend.to_string());
         statistics.tock(tick_total);
@@ -587,23 +591,26 @@ namespace sqsgen::optimization {
     using optimizer_output_t
         = cat_variants<output_for_prec_t<float>, output_for_prec_t<double>>::type;
 
-    template <class T> optimizer_output_t run_optimization(core::configuration<T>&& conf) {
+    template <class T>
+    optimizer_output_t run_optimization(core::configuration<T>&& conf,
+                                        spdlog::level::level_enum log_level = spdlog::level::info,
+                                        std::optional<sqs_callback_t> callback = std::nullopt) {
       if (conf.iteration_mode == ITERATION_MODE_RANDOM
           && conf.sublattice_mode == SUBLATTICE_MODE_INTERACT)
         return optimizer<T, ITERATION_MODE_RANDOM, SUBLATTICE_MODE_INTERACT>(
                    std::forward<core::configuration<T>>(conf))
-            .run();
+            .run(log_level, callback);
 
       else if (conf.iteration_mode == ITERATION_MODE_RANDOM
                && conf.sublattice_mode == SUBLATTICE_MODE_SPLIT)
         return optimizer<T, ITERATION_MODE_RANDOM, SUBLATTICE_MODE_SPLIT>(
                    std::forward<core::configuration<T>>(conf))
-            .run();
+            .run(log_level, callback);
       else if (conf.iteration_mode == ITERATION_MODE_SYSTEMATIC
                && conf.sublattice_mode == SUBLATTICE_MODE_INTERACT)
         return optimizer<T, ITERATION_MODE_SYSTEMATIC, SUBLATTICE_MODE_INTERACT>(
                    std::forward<core::configuration<T>>(conf))
-            .run();
+            .run(log_level, callback);
       else
         throw std::runtime_error("Invalid configuration of iteration and sublattice mode");
     }
@@ -611,11 +618,13 @@ namespace sqsgen::optimization {
   }  // namespace detail
 
   inline detail::optimizer_output_t run_optimization(
-      std::variant<core::configuration<float>, core::configuration<double>>&& conf) {
+      std::variant<core::configuration<float>, core::configuration<double>>&& conf,
+      spdlog::level::level_enum level = spdlog::level::info,
+      std::optional<sqs_callback_t> callback = std::nullopt) {
     return std::visit(
-        []<class T>(core::configuration<T>&& c) {
-          return detail::optimizer_output_t{
-              detail::run_optimization<T>(std::forward<core::configuration<T>>(c))};
+        [&]<class T>(core::configuration<T>&& c) {
+          return detail::optimizer_output_t{detail::run_optimization<T>(
+              std::forward<core::configuration<T>>(c), level, callback)};
         },
         std::forward<decltype(conf)>(conf));
   }
