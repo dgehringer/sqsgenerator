@@ -3,8 +3,9 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import List
 
-from setuptools import Extension, setup
+from setuptools import Extension, setup, find_packages
 from setuptools.command.build_ext import build_ext
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
@@ -20,9 +21,14 @@ PLAT_TO_CMAKE = {
 # The name must be the _single_ output extension from the CMake build.
 # If you need multiple extensions, see scikit-build.
 class CMakeExtension(Extension):
-    def __init__(self, name: str, sourcedir: str = "") -> None:
+    def __init__(self, name: str, sourcedir: str = "", output_dir: List[str] = None, build_benchmarks: bool = False,
+                 build_tests: bool = False, build_type: str = "release") -> None:
         super().__init__(name, sources=[])
         self.sourcedir = os.fspath(Path(sourcedir).resolve())
+        self.build_type = build_type
+        self.build_benchmarks = build_benchmarks
+        self.build_tests = build_tests
+        self.output_dir = output_dir
 
 
 class CMakeBuild(build_ext):
@@ -31,11 +37,16 @@ class CMakeBuild(build_ext):
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)
         extdir = ext_fullpath.parent.resolve()
 
+        if ext.output_dir:
+            extdir = os.path.join(extdir, *ext.output_dir)
+
         # Using this requires trailing slash for auto-detection & inclusion of
         # auxiliary "native" libs
 
-        debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
-        cfg = "Debug" if debug else "Release"
+        if ext.build_type not in {"release", "debug"}:
+            raise ValueError(f"Invalid build type {ext.build_type}")
+
+        cfg = ext.build_type
 
         # CMake lets you override the generator - we need to check this.
         # Can be set with Conda-Build, for example.
@@ -46,8 +57,12 @@ class CMakeBuild(build_ext):
         # from Python.
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
-            f"-DPYTHON_EXECUTABLE={sys.executable}",
+            f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
+            f"-DBUILD_TESTS={'ON' if ext.build_tests else 'OFF'}",
+            f"-DBUILD_BENCHMARKS={'ON' if ext.build_benchmarks else 'OFF'}",
+            f"-DWITH_MPI=OFF",
+            f"-DBUILD_PYTHON=ON",
         ]
         build_args = []
         # Adding CMake arguments set as environment variable
@@ -132,9 +147,11 @@ setup(
     author_email="dgehringer@protonmail.com",
     description="Create atomic structures for molecular simulations",
     long_description="",
-    ext_modules=[CMakeExtension("cmake_example")],
+    ext_modules=[CMakeExtension("_core", sourcedir="..", output_dir=["sqsgenerator", "core"])],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
+    install_requires=['pybind11', 'numpy', 'click', 'rich', 'pyyaml'],
     extras_require={"test": ["pytest>=6.0"]},
     python_requires=">=3.9",
+    packages=find_packages('.', exclude=['tests']),
 )
