@@ -153,18 +153,19 @@ namespace sqsgen {
   };
 
   template <class T> class sqs_callback_context {
-    std::stop_source _stop;
+    std::shared_ptr<std::stop_source> _stop;
 
   public:
-    sqs_callback_context(std::stop_source stop, sqs_statistics_data<T> stats)
-        : _stop(stop), statistics(stats) {}
+    explicit sqs_callback_context(std::shared_ptr<std::stop_source> stop_source,
+                                  sqs_statistics_data<T> stats)
+        : _stop(stop_source), statistics(stats) {}
     sqs_statistics_data<T> statistics;
 
-    void stop() { _stop.request_stop(); }
+    void stop() { _stop->request_stop(); }
   };
 
-
-  using sqs_callback_t = std::function<void(std::variant<sqs_callback_context<float>, sqs_callback_context<double>>)>;
+  using sqs_callback_t = std::function<void(
+      std::variant<sqs_callback_context<float>, sqs_callback_context<double>>)>;
 
 }  // namespace sqsgen
 #endif  // SQSGEN_TYPES_HPP

@@ -326,7 +326,7 @@ namespace sqsgen::optimization {
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
       sqs_statistics<T> statistics;
-      std::stop_source stop_source;
+      auto stop_source = std::make_shared<std::stop_source>();
 
       const auto pull_best_objective = [&] {
 #ifdef WITH_MPI
@@ -340,7 +340,8 @@ namespace sqsgen::optimization {
 #endif
       };
 
-      const auto worker = [&, stop = stop_source.get_token()](rank_t rstart, rank_t rend) {
+      const auto worker = [&, stop = stop_source->get_token()](rank_t rstart, rank_t rend) {
+        if (stop.stop_requested()) return;
         tick<TIMING_TOTAL> tick_total;
         spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(),
                       this->thread_id(), rstart.to_string(), rend.to_string());
@@ -441,7 +442,7 @@ namespace sqsgen::optimization {
         }
 #endif
         if (callback.has_value()) {
-          spdlog::info("[Rank {}, Thread {}] firing callback", this->rank(), this->thread_id());
+          spdlog::trace("[Rank {}, Thread {}] firing callback", this->rank(), this->thread_id());
           callback.value()(sqs_callback_context<T>{stop_source, statistics.data()});
         }
         spdlog::debug("[Rank {}, Thread {}] finished chunk start={}, end={}", this->rank(),
