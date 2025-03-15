@@ -38,7 +38,6 @@ test-skip = ["*universal2:arm64"]
 before-build = "rm -rf {project}/build"
 
 
-
 [tool.ruff.lint]
 extend-select = [
     "B",    # flake8-bugbear

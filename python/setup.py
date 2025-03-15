@@ -1,9 +1,12 @@
+import json
+import logging
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 from setuptools import Extension, setup, find_packages
 from setuptools.command.build_ext import build_ext
@@ -16,19 +19,37 @@ PLAT_TO_CMAKE = {
     "win-arm64": "ARM64",
 }
 
+def git_sha1() -> str:
+    try:
+        return os.popen("git rev-parse HEAD").read().strip()
+    except:
+        return "unknown"
+
+def git_branch() -> str:
+    try:
+        return os.popen("git rev-parse --abbrev-ref HEAD").read().strip()
+    except:
+        return "unknown"
+
 
 # A CMakeExtension needs a sourcedir instead of a file list.
 # The name must be the _single_ output extension from the CMake build.
 # If you need multiple extensions, see scikit-build.
 class CMakeExtension(Extension):
     def __init__(self, name: str, sourcedir: str = "", output_dir: List[str] = None, build_benchmarks: bool = False,
-                 build_tests: bool = False, build_type: str = "release") -> None:
+                 build_tests: bool = False, build_type: str = "release", version_file: str = "version.json") -> None:
         super().__init__(name, sources=[])
         self.sourcedir = os.fspath(Path(sourcedir).resolve())
         self.build_type = build_type
         self.build_benchmarks = build_benchmarks
         self.build_tests = build_tests
         self.output_dir = output_dir
+        version_path = os.path.join(self.sourcedir, version_file)
+        if not os.path.exists(version_path):
+            raise FileNotFoundError(version_path)
+        else:
+            with open(version_path, 'rb') as f:
+                self.version_info = json.load(f)
 
 
 class CMakeBuild(build_ext):
@@ -63,15 +84,17 @@ class CMakeBuild(build_ext):
             f"-DBUILD_BENCHMARKS={'ON' if ext.build_benchmarks else 'OFF'}",
             f"-DWITH_MPI=OFF",
             f"-DBUILD_PYTHON=ON",
+            f"-DSQSGEN_MAJOR_VERSION={ext.version_info['major']}",
+            f"-DSQSGEN_MINOR_VERSION={ext.version_info['minor']}",
+            f"-DSQSGEN_BUILD_NUMBER={ext.version_info['build']}",
+            f"-DSQSGEN_BUILD_BRANCH={git_branch()}",
+            f"-DSQSGEN_BUILD_COMMIT={git_sha1()}",
         ]
         build_args = []
         # Adding CMake arguments set as environment variable
         # (needed e.g. to build for ARM OSx on conda-forge)
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
-
-        # In this example, we pass in the version to C++. You might not need to.
-        cmake_args += [f"-DEXAMPLE_VERSION_INFO={self.distribution.get_version()}"]
 
         if self.compiler.compiler_type != "msvc":
             # Using Ninja-build since it a) is available as a wheel and b)
@@ -129,7 +152,7 @@ class CMakeBuild(build_ext):
         build_temp = Path(self.build_temp) / ext.name
         if not build_temp.exists():
             build_temp.mkdir(parents=True)
-
+        print(shlex.join(["cmake", ext.sourcedir, *cmake_args]))
         subprocess.run(
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
         )
@@ -150,7 +173,7 @@ setup(
     ext_modules=[CMakeExtension("_core", sourcedir="..", output_dir=["sqsgenerator", "core"])],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
-    install_requires=['pybind11', 'numpy', 'click', 'rich', 'pyyaml'],
+    install_requires=['numpy', 'click', 'rich'],
     extras_require={"test": ["pytest>=6.0"]},
     python_requires=">=3.9",
     packages=find_packages('.', exclude=['tests']),

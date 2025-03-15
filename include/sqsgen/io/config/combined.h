@@ -52,7 +52,7 @@ namespace sqsgen::io::config {
     return get_either_optional<key, usize_t, std::vector<usize_t>>(doc)
         .value_or(parse_result<usize_t, std::vector<usize_t>>{usize_t(0)})
         .template collapse<thread_config_t>(
-            [&](usize_t&& num_threads) -> result_t { return {num_threads}; },
+            [&](usize_t&& num_threads) -> result_t { return {std::vector{num_threads}}; },
             [&](std::vector<usize_t>&& num_threads) -> result_t { return {num_threads}; });
   }
 

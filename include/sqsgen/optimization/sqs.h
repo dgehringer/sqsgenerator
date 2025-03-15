@@ -222,18 +222,12 @@ namespace sqsgen::optimization {
     }
 
     [[nodiscard]] usize_t num_threads() {
-      if (std::holds_alternative<usize_t>(_thread_config)) {
-        auto num_threads = std::get<usize_t>(_thread_config);
-        return num_threads > 0 ? num_threads : std::thread::hardware_concurrency();
-      } else {
-        auto threads_per_rank = std::get<std::vector<usize_t>>(_thread_config);
-        if (threads_per_rank.size() != num_ranks())
-          throw std::invalid_argument(std::format(
-              "The communicator has {} ranks, but the thread configuration contains {} entries",
-              num_ranks(), threads_per_rank.size()));
-        return threads_per_rank[rank()] > 0 ? threads_per_rank[rank()]
-                                            : std::thread::hardware_concurrency();
-      }
+      if (_thread_config.size() != num_ranks())
+        throw std::invalid_argument(std::format(
+            "The communicator has {} ranks, but the thread configuration contains {} entries",
+            num_ranks(), _thread_config.size()));
+      return _thread_config[rank()] > 0 ? _thread_config[rank()]
+                                        : std::thread::hardware_concurrency();
     }
 
     bounds_t<rank_t> iteration_range() {

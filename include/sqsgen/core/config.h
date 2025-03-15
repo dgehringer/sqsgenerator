@@ -14,7 +14,7 @@ namespace sqsgen::core {
     lattice_t<T> lattice;
     coords_t<T> coords;
     configuration_t species;
-    std::array<int, 3> supercell{};
+    std::array<int, 3> supercell{1, 1, 1};
 
     core::structure<T> structure(bool supercell = true) const {
       core::structure<T> structure(lattice, coords, species);

@@ -102,8 +102,7 @@ namespace sqsgen::core {
   };
 
   template <class T> struct sqs_result_factory<T, SUBLATTICE_MODE_SPLIT> {
-    template <ranges::range RNumAtoms, ranges::range RNumShells,
-              ranges::range RNumSpecies>
+    template <ranges::range RNumAtoms, ranges::range RNumShells, ranges::range RNumSpecies>
     static sqs_result<T, SUBLATTICE_MODE_SPLIT> empty(RNumAtoms &&range_num_atoms,
                                                       RNumShells &&range_num_shells,
                                                       RNumSpecies &&range_num_species) {
@@ -121,11 +120,50 @@ namespace sqsgen::core {
     }
   };
 
-  template<class T, SublatticeMode SMode> struct sqs_result_pack {
-    configuration<T> config;
-    std::conditional_t<SMode == SUBLATTICE_MODE_INTERACT, optimization_config_data<T>, std::vector<optimization_config_data<T>>> optimization_config;
-    detail::sqs_result_collection_base_t<T, SMode> results;
-    sqs_statistics_data<T> statistics;
+  namespace detail {
+    template <class, SublatticeMode> class sqs_result_wrapper {};
+
+    template <class T> class sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT> {
+      std::shared_ptr<structure<T>> _structure;
+
+    public:
+      sqs_result<T, SUBLATTICE_MODE_INTERACT> raw;
+
+      explicit sqs_result_wrapper(sqs_result<T, SUBLATTICE_MODE_INTERACT> &&result,
+                                  std::shared_ptr<structure<T>> structure)
+          : raw(std::move(result)), _structure(structure) {}
+    };
+
+  }  // namespace detail
+
+  template <class T, SublatticeMode SMode> class sqs_result_pack {
+    using opt_config_t
+        = std::conditional_t<SMode == SUBLATTICE_MODE_INTERACT, optimization_config_data<T>,
+                             std::vector<optimization_config_data<T>>>;
+    using collection_t = detail::sqs_result_collection_base_t<T, SMode>;
+    std::shared_ptr<configuration<T>> _config;
+    std::shared_ptr<opt_config_t> _optimization_config;
+    std::shared_ptr<collection_t> _results;
+    sqs_statistics_data<T> _statistics;
+
+  public:
+    sqs_result_pack(configuration<T> const &configuration, opt_config_t const &opt_config,
+                    collection_t const &results, sqs_statistics_data<T> const &statistics)
+        : _config(std::make_shared<core::configuration<T>>(configuration)),
+          _optimization_config(std::make_shared<opt_config_t>(opt_config)),
+          _results(std::make_shared<collection_t>(results)),
+          _statistics(statistics) {}
+
+    sqs_result_pack(configuration<T> &&configuration, opt_config_t &&opt_config,
+                    collection_t &&results, sqs_statistics_data<T> &&statistics)
+        : _config(std::make_shared<core::configuration<T>>(std::move(configuration))),
+          _optimization_config(std::make_shared<opt_config_t>(std::move(opt_config))),
+          _results(std::make_shared<collection_t>(std::move(results))),
+          _statistics(std::move(statistics)) {}
+
+    [[nodiscard]] configuration<T> const &config() const { return *_config; }
+    [[nodiscard]] opt_config_t const &optimization_config() const { return *_optimization_config; }
+    [[nodiscard]] sqs_statistics_data<T> const &statistics() const { return _statistics; }
   };
 
 }  // namespace sqsgen::core

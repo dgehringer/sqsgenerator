@@ -16,6 +16,9 @@
 #include "sqsgen/types.h"
 #include "utils.h"
 
+#define stringify_helper(x) #x
+#define stringify(x) stringify_helper(x)
+
 namespace py = pybind11;
 
 using namespace sqsgen::core::helpers;
@@ -150,6 +153,10 @@ template <string_literal Name, class T> void bind_result(py::module &m) {
 PYBIND11_MODULE(_core, m) {
   using namespace sqsgen;
   m.doc() = "pybind11 example plugin";  // Optional module docstring
+
+#if defined(SQSGEN_MAJOR_VERSION) && defined(SQSGEN_MINOR_VERSION) && defined(SQSGEN_BUILD_NUMBER) &&  defined(SQSGEN_BUILD_BRANCH) && defined(SQSGEN_BUILD_COMMIT)
+  m.attr("__version__") = py::make_tuple(SQSGEN_MAJOR_VERSION, SQSGEN_MINOR_VERSION, SQSGEN_BUILD_NUMBER, stringify(SQSGEN_BUILD_BRANCH), stringify(SQSGEN_BUILD_COMMIT));
+#endif
 
   py::enum_<Timing>(m, "Timing")
       .value("undefined", TIMING_UNDEFINED)

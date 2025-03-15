@@ -85,36 +85,6 @@ template <class T> struct adl_serializer<sqs_statistics_data<T>> {
   }
 };
 
-template <class T> struct adl_serializer<sqs_result<T, SUBLATTICE_MODE_INTERACT>> {
-  static void to_json(json& j, const sqs_result<T, SUBLATTICE_MODE_INTERACT>& m) {
-    j = json{
-        {"objective", m.objective},
-        {"species", m.species},
-        {"sro", m.sro},
-    };
-  }
-
-  static void from_json(const json& j, sqs_result<T, SUBLATTICE_MODE_INTERACT>& m) {
-    j.at("objective").get_to(m.objective);
-    j.at("species").get_to(m.species);
-    j.at("sro").get_to(m.sro);
-  }
-};
-
-template <class T> struct adl_serializer<sqs_result<T, SUBLATTICE_MODE_SPLIT>> {
-  static void to_json(json& j, const sqs_result<T, SUBLATTICE_MODE_SPLIT>& m) {
-    j = json{
-        {"objective", m.objective},
-        {"sublattices", m.sublattices},
-    };
-  }
-
-  static void from_json(const json& j, sqs_result<T, SUBLATTICE_MODE_SPLIT>& m) {
-    j.at("objective").get_to(m.objective);
-    j.at("sublattices").get_to(m.sublattices);
-  }
-};
-
 template <class T> struct adl_serializer<core::structure<T>> {
   static void to_json(json& j, core::structure<T> const& s) {
     j = json{
@@ -134,6 +104,25 @@ template <class T> struct adl_serializer<core::structure<T>> {
     s.num_species = core::detail::compute_num_species(s.species);
   }
 };
+
+template <class T> struct adl_serializer<std::optional<T>> {
+  static void to_json(json& j, const std::optional<T>& opt) {
+    if (opt.has_value()) {
+      j = *opt;
+    } else {
+      j = nullptr;
+    }
+  }
+
+ static void from_json(const json& j, std::optional<T>& opt) {
+    if (j.is_null()) {
+      opt = std::nullopt;
+    } else {
+      opt = j.get<T>();
+    }
+  }
+};
+
 NLOHMANN_JSON_NAMESPACE_END
 
 namespace sqsgen {
@@ -142,23 +131,20 @@ namespace sqsgen {
   NLOHMANN_JSON_SERIALIZE_ENUM(Prec, {{PREC_INVALID, nullptr},
                                       {PREC_SINGLE, "single"},
                                       {PREC_DOUBLE, "double"}})
-  NLOHMANN_JSON_SERIALIZE_ENUM(ShellRadiiDetection,
-                               {{SHELL_RADII_DETECTION_INVALID, nullptr},
-                                {SHELL_RADII_DETECTION_NAIVE, "naive"},
-                                {SHELL_RADII_DETECTION_PEAK, "peak"}})
-  NLOHMANN_JSON_SERIALIZE_ENUM(IterationMode,
-                               {
-                                   {ITERATION_MODE_INVALID, nullptr},
-                                   {ITERATION_MODE_RANDOM, "random"},
-                                   {ITERATION_MODE_SYSTEMATIC, "systematic"},
-                               })
+  NLOHMANN_JSON_SERIALIZE_ENUM(ShellRadiiDetection, {{SHELL_RADII_DETECTION_INVALID, nullptr},
+                                                     {SHELL_RADII_DETECTION_NAIVE, "naive"},
+                                                     {SHELL_RADII_DETECTION_PEAK, "peak"}})
+  NLOHMANN_JSON_SERIALIZE_ENUM(IterationMode, {
+                                                  {ITERATION_MODE_INVALID, nullptr},
+                                                  {ITERATION_MODE_RANDOM, "random"},
+                                                  {ITERATION_MODE_SYSTEMATIC, "systematic"},
+                                              })
 
-  NLOHMANN_JSON_SERIALIZE_ENUM(SublatticeMode,
-                               {
-                                   {SUBLATTICE_MODE_INVALID, nullptr},
-                                   {SUBLATTICE_MODE_INTERACT, "interact"},
-                                   {SUBLATTICE_MODE_SPLIT, "split"},
-                               })
+  NLOHMANN_JSON_SERIALIZE_ENUM(SublatticeMode, {
+                                                   {SUBLATTICE_MODE_INVALID, nullptr},
+                                                   {SUBLATTICE_MODE_INTERACT, "interact"},
+                                                   {SUBLATTICE_MODE_SPLIT, "split"},
+                                               })
 
   NLOHMANN_JSON_SERIALIZE_ENUM(Timing, {
                                            {TIMING_UNDEFINED, nullptr},

@@ -113,6 +113,7 @@ endif ()
 message(STATUS "SQSGEN_LIBS=${SQSGEN_LIBS}")
 
 if (BUILD_CLI)
-    add_executable(sqsgen "main.cpp")
+    add_executable(sqsgen "main.cpp"
+            include/sqsgen/io/binary.h)
     target_link_libraries(sqsgen ${SQSGEN_LIBS})
 endif ()

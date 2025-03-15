@@ -82,7 +82,7 @@ namespace sqsgen {
 
   using nanoseconds_t = iterations_t;
 
-  using thread_config_t = std::variant<usize_t, std::vector<usize_t>>;
+  using thread_config_t = std::vector<usize_t>;
 
   struct sublattice {
     vset<usize_t> sites;
