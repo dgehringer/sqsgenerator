@@ -2,13 +2,13 @@
 // Created by Dominik Gehringer on 19.01.25.
 //
 
-#ifndef SQSGEN_OPTIMIZATION_STATISTICS_H
-#define SQSGEN_OPTIMIZATION_STATISTICS_H
+#ifndef SQSGEN_CORE_STATISTICS_H
+#define SQSGEN_CORE_STATISTICS_H
 
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
 
-namespace sqsgen::optimization {
+namespace sqsgen::core {
   using namespace std::chrono;
   using namespace core::helpers;
 
@@ -79,4 +79,4 @@ namespace sqsgen::optimization {
 
 }  // namespace sqsgen::optimization
 
-#endif  // SQSGEN_OPTIMIZATION_STATISTICS_H
+#endif  // SQSGEN_CORE_STATISTICS_H
