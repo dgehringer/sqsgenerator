@@ -141,29 +141,65 @@ namespace sqsgen::core {
       explicit sqs_result_wrapper(sqs_result<T, SUBLATTICE_MODE_INTERACT> &&result,
                                   std::shared_ptr<structure<T>> structure,
                                   opt_config_t<T, SUBLATTICE_MODE_INTERACT> opt_config)
-          : sqs_result<T, SUBLATTICE_MODE_INTERACT>(std::move(result)), _structure(structure), _opt_config(opt_config) {
+          : sqs_result<T, SUBLATTICE_MODE_INTERACT>(std::move(result)),
+            _structure(structure),
+            _opt_config(opt_config) {}
 
-      }
+      structure<T> structure() { return _opt_config->structure.apply_species(this->species); }
 
-      structure<T> structure() {
-        return _opt_config->structure.apply_species(this->species);
-      }
+      auto sites() { return _opt_config->sites; }
 
       std::string rank(int base = 10) {
         return core::rank_permutation(this->_opt_config->species_packed).to_string(base);
       }
     };
 
-    template <class T> class sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT>         : public sqs_result<T, SUBLATTICE_MODE_SPLIT> {
+    template <class T> class sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT>
+        : public sqs_result<T, SUBLATTICE_MODE_SPLIT> {
       std::shared_ptr<structure<T>> _structure;
       opt_config_t<T, SUBLATTICE_MODE_SPLIT> _opt_config;
+
+      std::vector<sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT>> _sublattice_results;
 
     public:
       explicit sqs_result_wrapper(sqs_result<T, SUBLATTICE_MODE_SPLIT> &&result,
                                   std::shared_ptr<structure<T>> structure,
                                   opt_config_t<T, SUBLATTICE_MODE_SPLIT> opt_config)
-          : sqs_result<T, SUBLATTICE_MODE_SPLIT>(std::move(result)), _structure(structure), _opt_config(opt_config) {
+          : sqs_result<T, SUBLATTICE_MODE_SPLIT>(std::move(result)),
+            _structure(structure),
+            _opt_config(opt_config),
+            _sublattice_results(
+                make_sublattice_results(std::move(result.sublattices), structure, opt_config)) {}
 
+      auto sublattices() { return _sublattice_results; }
+
+      auto structure() {
+        configuration_t new_species(_structure->species);
+        for (auto &&sublattice : _sublattice_results) {
+          if (sublattice.species.size() != sublattice.sites().size())
+            throw std::out_of_range(
+                "number of sites of the sublattice does not match the number of sites");
+          auto index{0};
+          for (auto site_index : sublattice.sites())
+            new_species[site_index] = sublattice.species[index++];
+        }
+        return core::structure<T>{_structure->lattice, _structure->frac_coords, new_species,
+                                  _structure->pbc};
+      }
+
+    private:
+      static auto make_sublattice_results(
+          std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>> &&results,
+          std::shared_ptr<core::structure<T>> structure,
+          opt_config_t<T, SUBLATTICE_MODE_SPLIT> opt_config) {
+        if (results.size() != opt_config.size())
+          throw std::invalid_argument("invalid number of sublattices and optimization configs");
+
+        return core::helpers::as<std::vector>{}(
+            helpers::range(results.size()) | views::transform([&](auto &&index) {
+              return sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT>(std::move(results[index]),
+                                                                     structure, opt_config[index]);
+            }));
       }
     };
 
@@ -194,6 +230,15 @@ namespace sqsgen::core {
     }
 
     template <class T, SublatticeMode Mode>
+    opt_config_arg_t<T, Mode> opt_config_from_config(configuration<T> &&config) {
+      auto result = optimization_config_data<T>::from_config(std::move(config));
+      if constexpr (Mode == SUBLATTICE_MODE_SPLIT)
+        return result;
+      else
+        return result.front();
+    }
+
+    template <class T, SublatticeMode Mode>
     opt_config_t<T, Mode> from_opt_config(opt_config_arg_t<T, Mode> &&opt_config) {
       if constexpr (Mode == SUBLATTICE_MODE_SPLIT)
         return core::helpers::as<std::vector>{}(
@@ -203,7 +248,6 @@ namespace sqsgen::core {
       else
         return std::make_shared<optimization_config_data<T>>(opt_config);
     }
-
 
   }  // namespace detail
 
@@ -235,8 +279,16 @@ namespace sqsgen::core {
         : statistics(stats),
           config(std::move(configuration)),
           _optimization_config(detail::from_opt_config<T, SMode>(std::move(opt_config))),
-          _structure(std::make_shared<structure<T>>(
-             config.structure.structure())),
+          _structure(std::make_shared<structure<T>>(config.structure.structure())),
+          _results(detail::from_result_collection(std::move(results), _structure,
+                                                  _optimization_config)) {}
+
+    sqs_result_pack(configuration<T> &&configuration, sqs_result_collection_t &&results,
+                    sqs_statistics_data<T> &&stats)
+        : statistics(stats),
+          config(std::move(configuration)),
+          _optimization_config(detail::from_opt_config<T, SMode>()),
+          _structure(std::make_shared<structure<T>>(config.structure.structure())),
           _results(detail::from_result_collection(std::move(results), _structure,
                                                   _optimization_config)) {}
   };
