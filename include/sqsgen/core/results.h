@@ -168,10 +168,12 @@ namespace sqsgen::core {
           : sqs_result<T, SUBLATTICE_MODE_SPLIT>(std::move(result)),
             _structure(structure),
             _opt_config(opt_config),
-            _sublattice_results(
-                make_sublattice_results(std::move(result.sublattices), structure, opt_config)) {}
+            _sublattice_results{} {
+        _sublattice_results = make_sublattice_results(
+            std::forward<decltype(this->sublattices)>(this->sublattices), structure, opt_config);
+      }
 
-      auto sublattices() { return _sublattice_results; }
+      auto sublattice_results() { return _sublattice_results; }
 
       auto structure() {
         configuration_t new_species(_structure->species);
@@ -207,8 +209,7 @@ namespace sqsgen::core {
         = std::tuple<T, std::vector<sqs_result_wrapper<T, Mode>>>;
 
     template <class T, SublatticeMode Mode> using sqs_result_pack_collection_t
-        = helpers::sorted_vector<sqs_result_pack_entry_t<T, Mode>,
-                                 decltype(sqsgen::core::detail::by_objective)>;
+        = sorted_vector<sqs_result_pack_entry_t<T, Mode>, decltype(by_objective)>;
 
     template <class T, SublatticeMode Mode>
     sqs_result_pack_collection_t<T, Mode> from_result_collection(

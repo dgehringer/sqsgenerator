@@ -166,8 +166,8 @@ namespace sqsgen::io::config {
   }
 
   template <class Document>
-  parse_result<configuration<double>, configuration<float>> parse_config(Document const& doc) {
-    using result_t = parse_result<configuration<double>, configuration<float>>;
+  parse_result<configuration<float>, configuration<double>> parse_config(Document const& doc) {
+    using result_t = parse_result<configuration<float>, configuration<double>>;
     return parse_precision<"prec">(doc).and_then([&](auto&& prec) -> result_t {
       if (prec == PREC_DOUBLE)
         return parse_config_for_prec<double, Document>(doc).and_then(

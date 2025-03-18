@@ -5,11 +5,15 @@
 #ifndef SQSGEN_IO_BINARY_H
 #define SQSGEN_IO_BINARY_H
 
-#include <nlohmann/json.hpp>
-
+#include "sqsgen/core/config.h"
+#include "sqsgen/io/json.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::io::binary {
+
+  namespace ranges = std::ranges;
+  namespace views = ranges::views;
+
   template <class> struct binary_adapter;
 
   namespace detail {
