@@ -1,12 +1,12 @@
-import json
-import logging
 import os
 import re
-import shlex
-import subprocess
 import sys
+import json
+import shlex
+import logging
+import subprocess
+from typing import List
 from pathlib import Path
-from typing import List, Union
 
 from setuptools import Extension, setup, find_packages
 from setuptools.command.build_ext import build_ext
@@ -19,11 +19,13 @@ PLAT_TO_CMAKE = {
     "win-arm64": "ARM64",
 }
 
+
 def git_sha1() -> str:
     try:
         return os.popen("git rev-parse HEAD").read().strip()
     except:
         return "unknown"
+
 
 def git_branch() -> str:
     try:
@@ -36,8 +38,16 @@ def git_branch() -> str:
 # The name must be the _single_ output extension from the CMake build.
 # If you need multiple extensions, see scikit-build.
 class CMakeExtension(Extension):
-    def __init__(self, name: str, sourcedir: str = "", output_dir: List[str] = None, build_benchmarks: bool = False,
-                 build_tests: bool = False, build_type: str = "release", version_file: str = "version.json") -> None:
+    def __init__(
+        self,
+        name: str,
+        sourcedir: str = "",
+        output_dir: List[str] = None,
+        build_benchmarks: bool = False,
+        build_tests: bool = False,
+        build_type: str = "release",
+        version_file: str = "version.json",
+    ) -> None:
         super().__init__(name, sources=[])
         self.sourcedir = os.fspath(Path(sourcedir).resolve())
         self.build_type = build_type
@@ -48,7 +58,7 @@ class CMakeExtension(Extension):
         if not os.path.exists(version_path):
             raise FileNotFoundError(version_path)
         else:
-            with open(version_path, 'rb') as f:
+            with open(version_path, "rb") as f:
                 self.version_info = json.load(f)
 
 
@@ -170,11 +180,13 @@ setup(
     author_email="dgehringer@protonmail.com",
     description="Create atomic structures for molecular simulations",
     long_description="",
-    ext_modules=[CMakeExtension("_core", sourcedir="..", output_dir=["sqsgenerator", "core"])],
+    ext_modules=[
+        CMakeExtension("_core", sourcedir="..", output_dir=["sqsgenerator", "core"])
+    ],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
-    install_requires=['numpy', 'click', 'rich'],
+    install_requires=["numpy", "click", "rich"],
     extras_require={"test": ["pytest>=6.0"]},
     python_requires=">=3.9",
-    packages=find_packages('.', exclude=['tests']),
+    packages=find_packages(".", exclude=["tests"]),
 )
