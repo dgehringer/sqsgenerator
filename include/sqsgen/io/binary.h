@@ -109,38 +109,44 @@ namespace sqsgen::io::binary {
                             {"supercell", data.supercell}};
     }
 
-    static core::structure<T> load(const nlohmann::json& j) {
-      return core::structure_config<T>(binary::load<lattice_t<T>>(j.at("lattice")),
-                                       binary::load<coords_t<T>>(j.at("coords")),
-                                       j.at("species").get<configuration_t>(),
-                                       j.at("supercell").get<std::array<int, 3>>());
+    static core::structure_config<T> load(const nlohmann::json& j) {
+      return core::structure_config<T>(
+          binary::load<lattice_t<T>>(j.at("lattice")), binary::load<coords_t<T>>(j.at("coords")),
+          j.at("species").get<configuration_t>(), j.at("supercell").get<std::array<int, 3>>());
     }
   };
 
   template <class T> struct binary_adapter<core::configuration<T>> {
     static nlohmann::json save(core::configuration<T> const& data) {
-      return nlohmann::json{
-          {"iteration_mode", data.iteration_mode},
-          {"sublattice_mode", data.sublattice_mode},
-          {"structure", binary::save(data.structure)},
-          {"composition", data.composition},
-          {"shell_radii", data.shell_radii},
-          {"shell_weights", data.shell_weights},
-          {"prefactors", binary::save(data.prefactors)},
-          {"target_objective", binary::save(data.target_objective)},
-          {"pair_weights", binary::save(data.pair_weights)},
-          {"chunk_size", data.chunk_size},
-          {"iterations", data.iterations},
-            {"thread_config", data.thread_config}
-      };
+      return nlohmann::json{{"sublattice_mode", data.sublattice_mode},
+                            {"iteration_mode", data.iteration_mode},
+                            {"structure", binary::save(data.structure)},
+                            {"composition", data.composition},
+                            {"shell_radii", data.shell_radii},
+                            {"shell_weights", data.shell_weights},
+                            {"prefactors", binary::save(data.prefactors)},
+                            {"pair_weights", binary::save(data.pair_weights)},
+                            {"target_objective", binary::save(data.target_objective)},
+                            {"iterations", data.iterations},
+                            {"chunk_size", data.chunk_size},
+                            {"thread_config", data.thread_config}};
     }
 
     static core::configuration<T> load(const nlohmann::json& j) {
-      return core::configuration<T>(j.at("species").get<configuration_t>(),
-                                    j.at("concentration").get<configuration_t>());
+      return core::configuration<T>(j.at("sublattice_mode").get<SublatticeMode>(),
+                                    j.at("iteration_mode").get<IterationMode>(),
+                                    binary::load<core::structure_config<T>>(j.at("structure")),
+                                    j.at("composition").get<std::vector<sublattice>>(),
+                                    j.at("shell_radii").get<stl_matrix_t<T>>(),
+                                    j.at("shell_weights").get<std::vector<shell_weights_t<T>>>(),
+                                    binary::load<std::vector<cube_t<T>>>(j.at("prefactors")),
+                                    binary::load<std::vector<cube_t<T>>>(j.at("pair_weights")),
+                                    binary::load<std::vector<cube_t<T>>>(j.at("target_objective")),
+                                    j.at("iterations").get<std::optional<iterations_t>>(),
+                                    j.at("chunk_size").get<iterations_t>(),
+                                    j.at("thread_config").get<thread_config_t>());
     }
   };
-
 };  // namespace sqsgen::io::binary
 
 #endif  // SQSGEN_IO_BINARY_H

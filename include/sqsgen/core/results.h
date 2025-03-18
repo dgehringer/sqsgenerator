@@ -121,49 +121,124 @@ namespace sqsgen::core {
   };
 
   namespace detail {
+    template <class T, SublatticeMode Mode> using opt_config_t
+        = std::conditional_t<Mode == SUBLATTICE_MODE_SPLIT,
+                             std::vector<std::shared_ptr<optimization_config_data<T>>>,
+                             std::shared_ptr<optimization_config_data<T>>>;
+
+    template <class T, SublatticeMode Mode> using opt_config_arg_t
+        = std::conditional_t<Mode == SUBLATTICE_MODE_SPLIT,
+                             std::vector<optimization_config_data<T>>, optimization_config_data<T>>;
+
     template <class, SublatticeMode> class sqs_result_wrapper {};
 
-    template <class T> class sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT> {
+    template <class T> class sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT>
+        : public sqs_result<T, SUBLATTICE_MODE_INTERACT> {
       std::shared_ptr<structure<T>> _structure;
+      opt_config_t<T, SUBLATTICE_MODE_INTERACT> _opt_config;
 
     public:
-      sqs_result<T, SUBLATTICE_MODE_INTERACT> raw;
-
       explicit sqs_result_wrapper(sqs_result<T, SUBLATTICE_MODE_INTERACT> &&result,
-                                  std::shared_ptr<structure<T>> structure)
-          : raw(std::move(result)), _structure(structure) {}
+                                  std::shared_ptr<structure<T>> structure,
+                                  opt_config_t<T, SUBLATTICE_MODE_INTERACT> opt_config)
+          : sqs_result<T, SUBLATTICE_MODE_INTERACT>(std::move(result)), _structure(structure), _opt_config(opt_config) {
+
+      }
+
+      structure<T> structure() {
+        return _opt_config->structure.apply_species(this->species);
+      }
+
+      std::string rank(int base = 10) {
+        return core::rank_permutation(this->_opt_config->species_packed).to_string(base);
+      }
     };
+
+    template <class T> class sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT>         : public sqs_result<T, SUBLATTICE_MODE_SPLIT> {
+      std::shared_ptr<structure<T>> _structure;
+      opt_config_t<T, SUBLATTICE_MODE_SPLIT> _opt_config;
+
+    public:
+      explicit sqs_result_wrapper(sqs_result<T, SUBLATTICE_MODE_SPLIT> &&result,
+                                  std::shared_ptr<structure<T>> structure,
+                                  opt_config_t<T, SUBLATTICE_MODE_SPLIT> opt_config)
+          : sqs_result<T, SUBLATTICE_MODE_SPLIT>(std::move(result)), _structure(structure), _opt_config(opt_config) {
+
+      }
+    };
+
+    template <class T, SublatticeMode Mode> using sqs_result_pack_entry_t
+        = std::tuple<T, std::vector<sqs_result_wrapper<T, Mode>>>;
+
+    template <class T, SublatticeMode Mode> using sqs_result_pack_collection_t
+        = helpers::sorted_vector<sqs_result_pack_entry_t<T, Mode>,
+                                 decltype(sqsgen::core::detail::by_objective)>;
+
+    template <class T, SublatticeMode Mode>
+    sqs_result_pack_collection_t<T, Mode> from_result_collection(
+        sqs_result_collection_base_t<T, Mode> &&results, std::shared_ptr<structure<T>> structure,
+        opt_config_t<T, Mode> const &opt_config) {
+      sqs_result_pack_collection_t<T, Mode> converted;
+      converted.reserve(results.size());
+      for (auto &&[objective, collection] : results) {
+        std::vector<sqs_result_wrapper<T, Mode>> converted_collection;
+        converted_collection.reserve(collection.size());
+        while (collection.size() > 0) {
+          converted_collection.push_back(
+              sqs_result_wrapper<T, Mode>{std::move(collection.back()), structure, opt_config});
+          collection.pop_back();
+        }
+        converted.insert(sqs_result_pack_entry_t<T, Mode>{objective, converted_collection});
+      }
+      return converted;
+    }
+
+    template <class T, SublatticeMode Mode>
+    opt_config_t<T, Mode> from_opt_config(opt_config_arg_t<T, Mode> &&opt_config) {
+      if constexpr (Mode == SUBLATTICE_MODE_SPLIT)
+        return core::helpers::as<std::vector>{}(
+            opt_config | views::transform([](auto &&config) {
+              return std::make_shared<optimization_config_data<T>>(config);
+            }));
+      else
+        return std::make_shared<optimization_config_data<T>>(opt_config);
+    }
+
 
   }  // namespace detail
 
   template <class T, SublatticeMode SMode> class sqs_result_pack {
-    using opt_config_t
-        = std::conditional_t<SMode == SUBLATTICE_MODE_INTERACT, optimization_config_data<T>,
-                             std::vector<optimization_config_data<T>>>;
-    using collection_t = detail::sqs_result_collection_base_t<T, SMode>;
-    std::shared_ptr<configuration<T>> _config;
-    std::shared_ptr<opt_config_t> _optimization_config;
-    std::shared_ptr<collection_t> _results;
-    sqs_statistics_data<T> _statistics;
+    using sqs_result_collection_t = detail::sqs_result_collection_base_t<T, SMode>;
 
   public:
-    sqs_result_pack(configuration<T> const &configuration, opt_config_t const &opt_config,
-                    collection_t const &results, sqs_statistics_data<T> const &statistics)
-        : _config(std::make_shared<core::configuration<T>>(configuration)),
-          _optimization_config(std::make_shared<opt_config_t>(opt_config)),
-          _results(std::make_shared<collection_t>(results)),
-          _statistics(statistics) {}
+    sqs_statistics_data<T> statistics;
+    configuration<T> config;
 
-    sqs_result_pack(configuration<T> &&configuration, opt_config_t &&opt_config,
-                    collection_t &&results, sqs_statistics_data<T> &&statistics)
-        : _config(std::make_shared<core::configuration<T>>(std::move(configuration))),
-          _optimization_config(std::make_shared<opt_config_t>(std::move(opt_config))),
-          _results(std::make_shared<collection_t>(std::move(results))),
-          _statistics(std::move(statistics)) {}
+  private:
+    detail::opt_config_t<T, SMode> _optimization_config;
+    std::shared_ptr<structure<T>> _structure;
+    detail::sqs_result_pack_collection_t<T, SMode> _results;
 
-    [[nodiscard]] configuration<T> const &config() const { return *_config; }
-    [[nodiscard]] opt_config_t const &optimization_config() const { return *_optimization_config; }
-    [[nodiscard]] sqs_statistics_data<T> const &statistics() const { return _statistics; }
+  public:
+    sqs_result_pack(configuration<T> const &configuration,
+                    detail::opt_config_arg_t<T, SMode> const &opt_config,
+                    sqs_result_collection_t const &results, sqs_statistics_data<T> const &stats)
+        : statistics(stats),
+          config(configuration),
+          _optimization_config(detail::from_opt_config<T, SMode>(opt_config)),
+          _structure(std::make_shared<structure<T>>(config.structure.structure())),
+          _results(detail::from_result_collection(results, _structure, _optimization_config)) {}
+
+    sqs_result_pack(configuration<T> &&configuration,
+                    detail::opt_config_arg_t<T, SMode> &&opt_config,
+                    sqs_result_collection_t &&results, sqs_statistics_data<T> &&stats)
+        : statistics(stats),
+          config(std::move(configuration)),
+          _optimization_config(detail::from_opt_config<T, SMode>(std::move(opt_config))),
+          _structure(std::make_shared<structure<T>>(
+             config.structure.structure())),
+          _results(detail::from_result_collection(std::move(results), _structure,
+                                                  _optimization_config)) {}
   };
 
 }  // namespace sqsgen::core

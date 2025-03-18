@@ -5,7 +5,7 @@
 #ifndef SQSGEN_CONFIGURATION_H
 #define SQSGEN_CONFIGURATION_H
 
-#include "structure.h"
+#include "sqsgen/core/structure.h"
 
 namespace sqsgen::core {
 

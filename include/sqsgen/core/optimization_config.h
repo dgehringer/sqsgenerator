@@ -10,6 +10,7 @@
 
 namespace sqsgen::core {
   template<class T> struct optimization_config_data {
+    vset<usize_t> sites;
     core::structure<T> structure;
     core::structure<T> sorted;
     std::vector<bounds_t<usize_t>> bounds;

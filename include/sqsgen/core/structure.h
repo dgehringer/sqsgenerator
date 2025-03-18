@@ -282,8 +282,7 @@ namespace sqsgen::core {
     }
 
     structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
-               configuration_t const&species,
-              const std::array<bool, 3> &pbc = {true, true, true})
+              configuration_t const &species, const std::array<bool, 3> &pbc = {true, true, true})
         : lattice(lattice),
           frac_coords(frac_coords),
           species(species),
@@ -381,6 +380,11 @@ namespace sqsgen::core {
       }
       copy.num_species = detail::compute_num_species(copy.species);
       return copy;
+    }
+
+    structure with_species(configuration_t const &conf) {
+      if (conf.size() != size()) throw std::invalid_argument("Species size mismatch");
+      return structure{lattice, frac_coords, conf, pbc};
     }
 
     std::vector<structure> apply_composition_and_decompose(

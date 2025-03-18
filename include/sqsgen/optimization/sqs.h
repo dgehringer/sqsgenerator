@@ -46,7 +46,7 @@ namespace sqsgen::optimization {
         auto [structures, sorted, bounds, sort_order] = decompose_sort_and_bounds(config);
         if (!detail::same_length(structures, sorted, bounds, sort_order, config.shell_radii,
                                  config.shell_weights, config.prefactors, config.target_objective,
-                                 config.pair_weights))
+                                 config.pair_weights, config.composition))
           throw std::invalid_argument("Incompatible configuration");
         auto num_sublattices = sorted.size();
 
@@ -59,7 +59,8 @@ namespace sqsgen::optimization {
                        config.pair_weights[i]);
           // core::shuffler shuffler(bounds[i]);
           configs.emplace_back(
-              optimization_config{std::move(structures[i]),
+              optimization_config{config.composition[i].sites,
+                                  std::move(structures[i]),
                                   std::move(sorted[i]),
                                   {bounds[i]},
                                   std::move(sort_order[i]),

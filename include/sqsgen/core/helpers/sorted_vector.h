@@ -24,6 +24,8 @@ namespace sqsgen::core::helpers {
     const_iterator begin() const { return _values.begin(); }
     const_iterator end() const { return _values.end(); }
 
+    void reserve(std::size_t size) { _values.reserve(size); }
+
     sorted_vector(const Compare& c = Compare()) : _values(), cmp(c) {}
 
     template <ranges::range R> explicit sorted_vector(R&& r, Compare const& c = Compare())
@@ -35,7 +37,6 @@ namespace sqsgen::core::helpers {
         : _values(first, last), cmp(c) {
       std::sort(begin(), end(), cmp);
     }
-
 
     [[nodiscard]] bool empty() const { return _values.empty(); }
 
