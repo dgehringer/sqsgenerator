@@ -129,6 +129,13 @@ namespace sqsgen {
     TIMING_COMM = 3
   };
 
+  template <class T> struct sro_parameter {
+    usize_t shell;
+    specie_t i;
+    specie_t j;
+    T value;
+  };
+
   template <class T> struct sqs_statistics_data {
     iterations_t finished{};
     iterations_t working{};

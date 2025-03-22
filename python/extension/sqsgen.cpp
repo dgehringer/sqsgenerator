@@ -147,6 +147,19 @@ template <string_literal Name, class T> void bind_configuration(py::module &m) {
       .def_readwrite("composition", &sqsgen::core::configuration<T>::composition);
 }
 
+template <string_literal Name, class T> void bind_sro_parameter(py::module &m) {
+  using namespace sqsgen::python::helpers;
+  py::class_<sqsgen::sro_parameter<T>>(m, format_prec<Name, T>().c_str())
+      .def_readonly("shell", &sqsgen::sro_parameter<T>::shell)
+      .def_readonly("i", &sqsgen::sro_parameter<T>::i)
+      .def_readonly("j", &sqsgen::sro_parameter<T>::j)
+      .def_readonly("value", &sqsgen::sro_parameter<T>::value)
+      .def("__float__", [](sqsgen::sro_parameter<T> &p) { return p.value; })
+      .def("__repr__", [](sqsgen::sro_parameter<T> &p) -> std::wstring {
+        return std::format(L"α{}₋{}({})", format_ordinal(p.i), format_ordinal(p.j), p.value);
+      });
+}
+
 template <string_literal Name, class T> void bind_callback_context(py::module &m) {
   py::class_<sqsgen::sqs_callback_context<T>>(m, format_prec<Name, T>().c_str())
       .def("stop", &sqsgen::sqs_callback_context<T>::stop)
@@ -163,6 +176,32 @@ void bind_result(py::module &m) {
     py::class_<sqs_result_wrapper<T, Mode>>(
         m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
         .def("structure", &sqs_result_wrapper<T, Mode>::structure)
+        .def(
+            "sro",
+            [](sqs_result_wrapper<T, Mode> &r, usize_t shell, std::string const &i,
+               std::string const &j) { return r.parameter(shell, i, j); },
+            py::arg("shell"), py::arg("i"), py::arg("j"))
+        .def(
+            "sro",
+            [](sqs_result_wrapper<T, Mode> &r, usize_t shell, specie_t i, specie_t j) {
+              return r.parameter(shell, i, j);
+            },
+            py::arg("shell"), py::arg("i"), py::arg("j"))
+        .def(
+            "sro", [](sqs_result_wrapper<T, Mode> &r, usize_t shell) { return r.parameter(shell); },
+            py::arg("shell"))
+        .def(
+            "sro",
+            [](sqs_result_wrapper<T, Mode> &r, specie_t i, specie_t j) {
+              return r.parameter(i, j);
+            },
+            py::arg("i"), py::arg("j"))
+        .def(
+            "sro",
+            [](sqs_result_wrapper<T, Mode> &r, std::string const &i, std::string const &j) {
+              return r.parameter(i, j);
+            },
+            py::arg("i"), py::arg("j"))
         .def("rank", &sqs_result_wrapper<T, Mode>::rank);
   }
   if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
@@ -182,8 +221,16 @@ void bind_result_pack(py::module &m) {
       //.def("results", &sqs_result_pack<T, Mode>::results)
       .def_readonly("statistics", &sqs_result_pack<T, Mode>::statistics)
       .def_readonly("config", &sqs_result_pack<T, Mode>::config)
-      .def("__iter__", [](sqs_result_pack<T, Mode> &self) {
-        return py::make_iterator(self.begin(), self.end());
+      .def("__iter__",
+           [](sqs_result_pack<T, Mode> &self) {
+             return py::make_iterator(self.begin(), self.end());
+           })
+      .def("best", [](sqs_result_pack<T, Mode> &self) {
+        auto err = std::out_of_range("Cannot access empty result set");
+        if (self.results.empty()) throw err;
+        auto [_, set] = *self.begin();
+        if (set.empty()) throw err;
+        return set.front();
       });
 }
 
@@ -322,6 +369,9 @@ PYBIND11_MODULE(_core, m) {
 
   bind_callback_context<"SqsCallbackContext", float>(m);
   bind_callback_context<"SqsCallbackContext", double>(m);
+
+  bind_sro_parameter<"SroParameter", float>(m);
+  bind_sro_parameter<"SroParameter", double>(m);
 
   bind_result<"SqsResult", float, SUBLATTICE_MODE_INTERACT>(m);
   bind_result<"SqsResult", float, SUBLATTICE_MODE_SPLIT>(m);

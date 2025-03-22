@@ -157,6 +157,57 @@ namespace sqsgen::core {
         return core::rank_permutation(this->species).to_string(base);
       }
 
+      sro_parameter<T> parameter(usize_t shell, std::string const &i, std::string const &j) {
+        if (SYMBOL_MAP.contains(i))
+          throw std::domain_error(std::format("Unknown atomic element {}", i));
+        if (SYMBOL_MAP.contains(j))
+          throw std::domain_error(std::format("Unknown atomic element {}", j));
+        return parameter(shell, SYMBOL_MAP.at(i), SYMBOL_MAP.at(j));
+      }
+
+      sro_parameter<T> parameter(usize_t shell, specie_t i, specie_t j) {
+        auto shell_index = this->shell_index(shell);
+        if (shell_index.has_value()) {
+          auto ii = species_index(i);
+          if (ii.has_value()) {
+            auto jj = species_index(j);
+            if (jj.has_value()) {
+              return {shell_index.value(), ii.value(), jj.value(),
+                      this->sro(shell_index.value(), ii.value(), jj.value())};
+            }
+            throw std::domain_error(std::format("Unknown species Z={}", j));
+          } else
+            throw std::domain_error(std::format("Unknown species Z={}", i));
+        } else
+          throw std::domain_error(std::format("Unknown shell {}", shell));
+      }
+
+      std::vector<sro_parameter<T>> parameter(usize_t shell) {
+        const configuration_t s
+            = as<std::vector>{}(views::elements<0>(this->_opt_config->species_map.first));
+        std::vector<sro_parameter<T>> result;
+        for (int i = 0; i < s.size(); ++i)
+          for (int j = i; j < s.size(); ++j) result.push_back(parameter(shell, s[i], s[j]));
+        return result;
+      }
+
+      std::vector<sro_parameter<T>> parameter(auto i, auto j) {
+        return as<std::vector>{}(views::elements<0>(this->_opt_config->shell_map.first)
+                                 | views::transform([&](auto &&s) { return parameter(s, i, j); }));
+      }
+
+      std::optional<usize_t> shell_index(usize_t shell) {
+        auto result = this->_opt_config->shell_map.first.find(shell);
+        if (result != this->_opt_config->shell_map.first.end()) return result->second;
+        return std::nullopt;
+      }
+
+      std::optional<specie_t> species_index(specie_t shell) {
+        auto result = this->_opt_config->species_map.first.find(shell);
+        if (result != this->_opt_config->species_map.first.end()) return result->second;
+        return std::nullopt;
+      }
+
       friend class sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT>;
       friend class sqs_result<T, SUBLATTICE_MODE_SPLIT>;
 
