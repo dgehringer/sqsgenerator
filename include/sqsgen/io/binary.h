@@ -5,7 +5,10 @@
 #ifndef SQSGEN_IO_BINARY_H
 #define SQSGEN_IO_BINARY_H
 
+#include <sqsgen/core/statistics.h>
+
 #include "sqsgen/core/config.h"
+#include "sqsgen/core/results.h"
 #include "sqsgen/io/json.h"
 #include "sqsgen/types.h"
 
@@ -89,6 +92,23 @@ namespace sqsgen::io::binary {
     }
   };
 
+  template <class T> struct binary_adapter<sorted_vector<T>> {
+    static nlohmann::json save(sorted_vector<T> const& data) {
+      auto array = nlohmann::json::array();
+      ranges::for_each(data,
+                       [&array](auto const& element) { array.push_back(binary::save(element)); });
+      return array;
+    }
+
+    static sorted_vector<T> load(const nlohmann::json& j) {
+      if (!j.is_array()) throw std::invalid_argument("JSON object is not an array");
+      std::vector<T> result;
+      result.reserve(j.size());
+      for (const auto& element : j) result.push_back(binary::load<T>(element));
+      return {result};
+    }
+  };
+
   template <class T> struct binary_adapter<core::structure<T>> {
     static nlohmann::json save(core::structure<T> const& data) {
       return nlohmann::json{{"lattice", binary::save(data.lattice)},
@@ -151,6 +171,96 @@ namespace sqsgen::io::binary {
                                     j.at("thread_config").get<thread_config_t>());
     }
   };
+
+  template <class T> struct binary_adapter<sqs_result<T, SUBLATTICE_MODE_INTERACT>> {
+    static nlohmann::json save(sqs_result<T, SUBLATTICE_MODE_INTERACT> const& data) {
+      return nlohmann::json{{"objective", data.objective},
+                            {"species", data.species},
+                            {"sro", binary::save(data.sro)}};
+    }
+
+    static sqs_result<T, SUBLATTICE_MODE_INTERACT> load(const nlohmann::json& j) {
+      return sqs_result<T, SUBLATTICE_MODE_INTERACT>{j.at("objective").get<T>(),
+                                                     j.at("species").get<configuration_t>(),
+                                                     binary::load<cube_t<T>>(j.at("sro"))};
+    }
+  };
+
+  template <class T> struct binary_adapter<sqs_statistics_data<T>> {
+    static nlohmann::json save(sqs_statistics_data<T> const& data) {
+      return nlohmann::json{{"finished", data.finished},
+                            {"working", data.working},
+                            {"best_rank", data.best_rank},
+                            {"best_objective", data.best_objective},
+                            {"timings", data.timings}};
+    }
+
+    static sqs_statistics_data<T> load(const nlohmann::json& j) {
+      return sqs_statistics_data<T>{
+          j.at("finished").get<iterations_t>(),
+          j.at("working").get<iterations_t>(),
+          j.at("best_rank").get<iterations_t>(),
+          j.at("best_objective").get<T>(),
+          j.at("best_objective").get<std::map<Timing, nanoseconds_t>>(),
+      };
+    }
+  };
+
+  template <class T> struct binary_adapter<sqs_result<T, SUBLATTICE_MODE_SPLIT>> {
+    static nlohmann::json save(sqs_result<T, SUBLATTICE_MODE_SPLIT> const& data) {
+      return nlohmann::json{
+          {"objective", data.objective},
+          {"sublattices", binary::save(data.sublattices)},
+      };
+    }
+
+    static sqs_result<T, SUBLATTICE_MODE_INTERACT> load(const nlohmann::json& j) {
+      return sqs_result<T, SUBLATTICE_MODE_INTERACT>{
+          j.at("objective").get<T>(),
+          binary::load<sqs_result<T, SUBLATTICE_MODE_SPLIT>>(j.at("sublattices"))};
+    }
+  };
+
+  template <class T>
+  struct binary_adapter<core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT>> {
+    static nlohmann::json save(
+        core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT> const& data) {
+      return binary_adapter<sqs_result<T, SUBLATTICE_MODE_INTERACT>>::save(data);
+    }
+  };
+
+  template <class T>
+  struct binary_adapter<core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT>> {
+    static nlohmann::json save(
+        core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT> const& data) {
+      return binary_adapter<sqs_result<T, SUBLATTICE_MODE_SPLIT>>::save(
+          {data.objective,
+           core::helpers::as<std::vector>{}(
+               data.sublattices
+               | views::transform(
+                   [](auto&& sl) -> sqs_result<T, SUBLATTICE_MODE_INTERACT> { return sl; }))});
+    }
+  };
+
+  template <class T, SublatticeMode Mode> struct binary_adapter<core::sqs_result_pack<T, Mode>> {
+    static nlohmann::json save(core::sqs_result_pack<T, Mode> const& data) {
+      auto flattened
+          = core::helpers::as<std::vector>{}(data.results | views::elements<1> | views::join);
+      return nlohmann::json{
+          {"statistics", binary::save(data.statistics)},
+          {"config", binary::save(data.config)},
+          {"results", binary::save(flattened)},
+      };
+    }
+
+    static core::structure_config<T> load(const nlohmann::json& j) {
+      return core::sqs_result_pack<T, Mode>{
+          binary::load<core::configuration<T>>(j.at("config")),
+          binary::load<core::detail::sqs_result_pack_collection_t<T, Mode>>(j.at("results")),
+          binary::load<sqs_statistics_data<T>>(j.at("statistics"))};
+    }
+  };
+
 };  // namespace sqsgen::io::binary
 
 #endif  // SQSGEN_IO_BINARY_H

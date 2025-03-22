@@ -31,7 +31,7 @@ namespace sqsgen::core {
   }  // namespace detail
 
   template <class T> struct optimization_config_data {
-    vset<usize_t> sites;
+    std::vector<sublattice> sublattice;
     core::structure<T> structure;
     core::structure<T> sorted;
     std::vector<bounds_t<usize_t>> bounds;
@@ -52,9 +52,9 @@ namespace sqsgen::core {
 
     static std::vector<optimization_config> from_config(configuration<T> config) {
       auto [structures, sorted, bounds, sort_order] = decompose_sort_and_bounds(config);
-      if (!detail::same_length(structures, sorted, bounds, sort_order, config.shell_radii,
-                               config.shell_weights, config.prefactors, config.target_objective,
-                               config.pair_weights, config.composition))
+      if (!core::detail::same_length(structures, sorted, bounds, sort_order, config.shell_radii,
+                                     config.shell_weights, config.prefactors,
+                                     config.target_objective, config.pair_weights))
         throw std::invalid_argument("Incompatible configuration");
       auto num_sublattices = sorted.size();
 
@@ -65,9 +65,14 @@ namespace sqsgen::core {
               pair_weights]
             = shared(sorted[i], config.shell_radii[i], config.shell_weights[i],
                      config.pair_weights[i]);
+        std::vector<sublattice> sublattices;
+        if constexpr (Mode == SUBLATTICE_MODE_INTERACT)
+          sublattices = config.composition;
+        else if constexpr (Mode == SUBLATTICE_MODE_SPLIT)
+          sublattices = {config.composition[i]};
 
         configs.emplace_back(
-            optimization_config{config.composition[i].sites,
+            optimization_config{sublattices,
                                 std::move(structures[i]),
                                 std::move(sorted[i]),
                                 {bounds[i]},
