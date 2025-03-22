@@ -156,7 +156,8 @@ template <string_literal Name, class T> void bind_sro_parameter(py::module &m) {
       .def_readonly("value", &sqsgen::sro_parameter<T>::value)
       .def("__float__", [](sqsgen::sro_parameter<T> &p) { return p.value; })
       .def("__repr__", [](sqsgen::sro_parameter<T> &p) -> std::wstring {
-        return std::format(L"α{}₋{}({})", format_ordinal(p.i), format_ordinal(p.j), p.value);
+        return std::format(L"α{}{}₋{}({})", format_ordinal<false>(p.shell), format_ordinal(p.i),
+                           format_ordinal(p.j), p.value);
       });
 }
 

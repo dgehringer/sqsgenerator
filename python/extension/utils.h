@@ -21,8 +21,8 @@ namespace sqsgen::python::helpers {
     return buffer.str();
   }
 
-  inline auto format_ordinal(auto z) -> std::wstring {
-    std::wstring_view subscript = L"₀₁₂₃₄₅₆₇₈₉";
+  template <bool Subscript = true> inline auto format_ordinal(auto z) -> std::wstring {
+    std::wstring_view subscript = Subscript ? L"₀₁₂₃₄₅₆₇₈₉" : L"⁰¹²³⁴⁵⁶⁷⁸⁹";
     auto r{z};
     std::wstring out;
     out.reserve(3);
