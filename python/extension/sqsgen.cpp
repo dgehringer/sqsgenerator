@@ -8,11 +8,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "sqsgen/core/results.h"
 #include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/dict.h"
 #include "sqsgen/io/parsing.h"
 #include "sqsgen/io/structure.h"
-#include "sqsgen/optimization/sqs.h"
+#include "sqsgen/sqs.h"
 #include "sqsgen/types.h"
 #include "utils.h"
 
@@ -25,11 +26,18 @@ using namespace sqsgen::core::helpers;
 
 template <string_literal Name, class T>
   requires std::is_arithmetic_v<T>
-constexpr auto full_name() {
+constexpr auto format_prec() {
   if constexpr (std::is_same_v<double, T>)
     return (Name + string_literal("Double"));
   else if constexpr (std::is_same_v<float, T>)
     return (Name + string_literal("Float"));
+};
+
+template <string_literal Name, sqsgen::SublatticeMode Mode> constexpr auto format_sublattice() {
+  if constexpr (sqsgen::SUBLATTICE_MODE_INTERACT == Mode)
+    return (Name + string_literal("Interact"));
+  else if constexpr (sqsgen::SUBLATTICE_MODE_SPLIT == Mode)
+    return (Name + string_literal("Split"));
 };
 
 template <class... Args>
@@ -58,7 +66,7 @@ sqsgen::io::detail::unpacked_t<Args...> unwrap(sqsgen::io::parse_result<Args...>
 }
 
 template <string_literal Name, class T> void bind_sqs_statistics_data(py::module &m) {
-  py::class_<sqsgen::sqs_statistics_data<T>>(m, full_name<Name, T>().c_str())
+  py::class_<sqsgen::sqs_statistics_data<T>>(m, format_prec<Name, T>().c_str())
       .def_readonly("finished", &sqsgen::sqs_statistics_data<T>::finished)
       .def_readonly("working", &sqsgen::sqs_statistics_data<T>::working)
       .def_readonly("best_rank", &sqsgen::sqs_statistics_data<T>::best_rank)
@@ -69,7 +77,7 @@ template <string_literal Name, class T> void bind_sqs_statistics_data(py::module
 template <string_literal Name, class T> void bind_structure(py::module &m) {
   using namespace sqsgen;
   using namespace sqsgen::core;
-  py::class_<structure<T>>(m, full_name<Name, T>().c_str())
+  py::class_<structure<T>>(m, format_prec<Name, T>().c_str())
       .def(py::init<lattice_t<T>, coords_t<T>, configuration_t, std::array<bool, 3>>(),
            py::arg("lattice"), py::arg("coords"), py::arg("species"), py::arg("pbc"))
       .def(py::init<lattice_t<T>, coords_t<T>, configuration_t>(), py::arg("lattice"),
@@ -123,7 +131,7 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
 }
 
 template <string_literal Name, class T> void bind_configuration(py::module &m) {
-  py::class_<sqsgen::core::configuration<T>>(m, full_name<Name, T>().c_str())
+  py::class_<sqsgen::core::configuration<T>>(m, format_prec<Name, T>().c_str())
       .def_readwrite("sublattice_mode", &sqsgen::core::configuration<T>::sublattice_mode)
       .def_readwrite("iteration_mode", &sqsgen::core::configuration<T>::iteration_mode)
       .def("structure",
@@ -140,22 +148,54 @@ template <string_literal Name, class T> void bind_configuration(py::module &m) {
 }
 
 template <string_literal Name, class T> void bind_callback_context(py::module &m) {
-  py::class_<sqsgen::sqs_callback_context<T>>(m, full_name<Name, T>().c_str())
+  py::class_<sqsgen::sqs_callback_context<T>>(m, format_prec<Name, T>().c_str())
       .def("stop", &sqsgen::sqs_callback_context<T>::stop)
       .def_readonly("statistics", &sqsgen::sqs_callback_context<T>::statistics);
 }
 
-template <string_literal Name, class T> void bind_result(py::module &m) {
+template <string_literal Name, class T, sqsgen::SublatticeMode Mode>
+void bind_result(py::module &m) {
   using namespace sqsgen;
   using namespace sqsgen::core;
+  using namespace sqsgen::core::detail;
+
+  if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
+    py::class_<sqs_result_wrapper<T, Mode>>(
+        m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
+        .def("structure", &sqs_result_wrapper<T, Mode>::structure)
+        .def("rank", &sqs_result_wrapper<T, Mode>::rank);
+  }
+  if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
+    py::class_<sqs_result_wrapper<T, Mode>>(
+        m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
+        .def("structure", &sqs_result_wrapper<T, Mode>::structure)
+        .def("sublattices", [](sqs_result_wrapper<T, Mode> &self) { return self.sublattices; });
+  }
+}
+
+template <string_literal Name, class T, sqsgen::SublatticeMode Mode>
+void bind_result_pack(py::module &m) {
+  using namespace sqsgen;
+  using namespace sqsgen::core;
+  using namespace sqsgen::core::detail;
+  py::class_<sqs_result_pack<T, Mode>>(m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
+      //.def("results", &sqs_result_pack<T, Mode>::results)
+      .def_readonly("statistics", &sqs_result_pack<T, Mode>::statistics)
+      .def_readonly("config", &sqs_result_pack<T, Mode>::config)
+      .def("__iter__", [](sqs_result_pack<T, Mode> &self) {
+        return py::make_iterator(self.begin(), self.end());
+      });
 }
 
 PYBIND11_MODULE(_core, m) {
   using namespace sqsgen;
   m.doc() = "pybind11 example plugin";  // Optional module docstring
 
-#if defined(SQSGEN_MAJOR_VERSION) && defined(SQSGEN_MINOR_VERSION) && defined(SQSGEN_BUILD_NUMBER) &&  defined(SQSGEN_BUILD_BRANCH) && defined(SQSGEN_BUILD_COMMIT)
-  m.attr("__version__") = py::make_tuple(SQSGEN_MAJOR_VERSION, SQSGEN_MINOR_VERSION, SQSGEN_BUILD_NUMBER, stringify(SQSGEN_BUILD_BRANCH), stringify(SQSGEN_BUILD_COMMIT));
+#if defined(SQSGEN_MAJOR_VERSION) && defined(SQSGEN_MINOR_VERSION) && defined(SQSGEN_BUILD_NUMBER) \
+    && defined(SQSGEN_BUILD_BRANCH) && defined(SQSGEN_BUILD_COMMIT)
+  m.attr("__version__")
+      = py::make_tuple(SQSGEN_MAJOR_VERSION, SQSGEN_MINOR_VERSION, SQSGEN_BUILD_NUMBER,
+                       stringify(SQSGEN_BUILD_BRANCH), stringify(SQSGEN_BUILD_COMMIT));
 #endif
 
   py::enum_<Timing>(m, "Timing")
@@ -283,6 +323,16 @@ PYBIND11_MODULE(_core, m) {
   bind_callback_context<"SqsCallbackContext", float>(m);
   bind_callback_context<"SqsCallbackContext", double>(m);
 
+  bind_result<"SqsResult", float, SUBLATTICE_MODE_INTERACT>(m);
+  bind_result<"SqsResult", float, SUBLATTICE_MODE_SPLIT>(m);
+  bind_result<"SqsResult", double, SUBLATTICE_MODE_INTERACT>(m);
+  bind_result<"SqsResult", double, SUBLATTICE_MODE_SPLIT>(m);
+
+  bind_result_pack<"SqsResultPack", float, SUBLATTICE_MODE_INTERACT>(m);
+  bind_result_pack<"SqsResultPack", float, SUBLATTICE_MODE_SPLIT>(m);
+  bind_result_pack<"SqsResultPack", double, SUBLATTICE_MODE_INTERACT>(m);
+  bind_result_pack<"SqsResultPack", double, SUBLATTICE_MODE_SPLIT>(m);
+
   m.def(
       "parse_config",
       [](py::dict const &config) { return unwrap(io::config::parse_config(py::handle(config))); },
@@ -303,13 +353,13 @@ PYBIND11_MODULE(_core, m) {
          spdlog::level::level_enum log_level, std::optional<sqs_callback_t> callback) {
         if (callback.has_value()) {
           py::gil_scoped_release nogil{};
-          optimization::run_optimization(std::forward<decltype(config)>(config), log_level,
-                                         callback);
+          return sqsgen::run_optimization(std::forward<decltype(config)>(config), log_level,
+                                          callback);
         } else {
-          optimization::run_optimization(std::forward<decltype(config)>(config), log_level,
-                                         std::nullopt);
+          return sqsgen::run_optimization(std::forward<decltype(config)>(config), log_level,
+                                          std::nullopt);
         }
       },
-      py::arg("config"), py::arg("log_level") = spdlog::level::level_enum::info,
+      py::arg("config"), py::arg("log_level") = spdlog::level::level_enum::warn,
       py::arg("callback") = std::nullopt);
 }
