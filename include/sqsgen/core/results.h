@@ -172,14 +172,13 @@ namespace sqsgen::core {
           if (ii.has_value()) {
             auto jj = species_index(j);
             if (jj.has_value()) {
-              return {shell_index.value(), ii.value(), jj.value(),
-                      this->sro(shell_index.value(), ii.value(), jj.value())};
+              return {shell, i, j, this->sro(shell_index.value(), ii.value(), jj.value())};
             }
-            throw std::domain_error(std::format("Unknown species Z={}", j));
+            throw std::domain_error(std::format("This result does not contain species Z={}", j));
           } else
-            throw std::domain_error(std::format("Unknown species Z={}", i));
+            throw std::domain_error(std::format("This result does not contain Z={}", i));
         } else
-          throw std::domain_error(std::format("Unknown shell {}", shell));
+          throw std::domain_error(std::format("This result does not contain a shell {}", shell));
       }
 
       std::vector<sro_parameter<T>> parameter(usize_t shell) {
@@ -335,6 +334,8 @@ namespace sqsgen::core {
     const_iterator end() const { return results.end(); }
 
     auto size() { return results.size(); }
+
+    auto num_results() { return results.num_results(); }
 
     sqs_result_pack(configuration<T> &&configuration,
                     core::detail::opt_config_arg_t<T, SMode> &&opt_config,
