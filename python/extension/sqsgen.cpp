@@ -74,6 +74,19 @@ template <string_literal Name, class T> void bind_sqs_statistics_data(py::module
       .def_readonly("timings", &sqsgen::sqs_statistics_data<T>::timings);
 }
 
+template <string_literal Name, class T> void bind_site(py::module &m) {
+  using bind_t = sqsgen::core::detail::site<T>;
+  py::class_<bind_t>(m, format_prec<Name, T>().c_str())
+      .def_readonly("index", &bind_t::index)
+      .def_readonly("frac_coords", &bind_t::frac_coords)
+      .def_readonly("specie", &bind_t::specie)
+      .def("atom", &bind_t::atom)
+      .def("__hash__", [](bind_t &self) { return typename bind_t::hasher{}(self); })
+      .def(
+          "__eq__", [](bind_t &a, bind_t &b) { return a == b; }, py::is_operator())
+      .def("__lt__", [](bind_t &a, bind_t &b) { return a < b; }, py::is_operator());
+}
+
 template <string_literal Name, class T> void bind_structure(py::module &m) {
   using namespace sqsgen;
   using namespace sqsgen::core;
@@ -87,12 +100,21 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
       .def_readonly("frac_coords", &structure<T>::frac_coords)
       .def_readonly("pbc", &structure<T>::pbc)
       .def_readonly("num_species", &structure<T>::num_species)
-      .def("sites", [](structure<T> &s) { return as<std::vector>{}(s.sites()); })
+      .def("sites", [](structure<T> &s) { return as<std::set>{}(s.sites()); })
       .def("distance_matrix", &structure<T>::distance_matrix)
       .def("shell_matrix", &structure<T>::shell_matrix, py::arg("shell_radii"),
            py::arg("atol") = std::numeric_limits<T>::epsilon(), py::arg("rtol") = 1.0e-9)
       .def("supercell", &structure<T>::supercell, py::arg("sa"), py::arg("sb"), py::arg("sc"))
       .def("__len__", [](structure<T> &s) { return s.size(); })
+      .def("__mul__",
+           [](structure<T> &a, py::tuple const &scale) {
+             return a.supercell(scale[0].cast<std::size_t>(), scale[1].cast<std::size_t>(),
+                                scale[2].cast<std::size_t>());
+           })
+      .def("__eq__",
+           [](structure<T> &a, structure<T> &b) {
+             return as<std::set>{}(a.sites()) == as<std::set>{}(b.sites());
+           })
       .def("dump",
            [](structure<T> &s, StructureFormat format) {
              switch (format) {
@@ -373,6 +395,9 @@ PYBIND11_MODULE(_core, m) {
 
   bind_sro_parameter<"SroParameter", float>(m);
   bind_sro_parameter<"SroParameter", double>(m);
+
+  bind_site<"Site", float>(m);
+  bind_site<"Site", double>(m);
 
   bind_result<"SqsResult", float, SUBLATTICE_MODE_INTERACT>(m);
   bind_result<"SqsResult", float, SUBLATTICE_MODE_SPLIT>(m);
