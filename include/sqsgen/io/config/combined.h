@@ -61,9 +61,11 @@ namespace sqsgen::io::config {
                                               std::optional<iterations_t> iterations) {
     using result_t = parse_result<iterations_t>;
     return get_optional<key, iterations_t>(doc)
-        .value_or(parse_result<iterations_t>{chunk_size_default})
+        .value_or(parse_result<iterations_t>{iterations.has_value()
+                                                 ? std::min(iterations.value(), chunk_size_default)
+                                                 : chunk_size_default})
         .and_then([&](auto&& cs) -> result_t {
-          if (iterations.has_value() && cs >= iterations.value())
+          if (iterations.has_value() && cs > iterations.value())
             return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(std::format(
                 "\"chunk_size\" was set to {} and iterations set to {}", cs, iterations.value()));
           return result_t{cs};
