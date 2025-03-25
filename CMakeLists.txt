@@ -10,10 +10,10 @@ include(FetchContent)
 set(CPM_DOWNLOAD_VERSION 0.40.2)
 set(CPM_DOWNLOAD_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
 
-if(NOT (EXISTS ${CPM_DOWNLOAD_LOCATION}))
+if (NOT (EXISTS ${CPM_DOWNLOAD_LOCATION}))
     message(STATUS "Downloading CPM.cmake")
     file(DOWNLOAD https://github.com/cpm-cmake/CPM.cmake/releases/download/v${CPM_DOWNLOAD_VERSION}/CPM.cmake ${CPM_DOWNLOAD_LOCATION})
-endif()
+endif ()
 
 
 include(${CPM_DOWNLOAD_LOCATION})
@@ -49,7 +49,6 @@ CPMAddPackage("gh:gabime/spdlog@1.15.0")
 CPMAddPackage("gh:Nicoshev/rapidhash#rapidhash_v1.0")
 
 
-
 CPMAddPackage(
         NAME BS_thread_pool
         GITHUB_REPOSITORY bshoshany/thread-pool
@@ -69,9 +68,9 @@ endif ()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include" "${rapidhash_SOURCE_DIR}")
 
-if(MSVC)
+if (MSVC)
     add_compile_options(/permissive- /Zc:__cplusplus)
-endif()
+endif ()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     message(STATUS "Detected clang: adding -fexperimental-library")
@@ -113,7 +112,6 @@ endif ()
 message(STATUS "SQSGEN_LIBS=${SQSGEN_LIBS}")
 
 if (BUILD_CLI)
-    add_executable(sqsgen "main.cpp"
-            include/sqsgen/io/binary.h)
+    add_executable(sqsgen "main.cpp")
     target_link_libraries(sqsgen ${SQSGEN_LIBS})
 endif ()
