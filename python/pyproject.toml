@@ -1,3 +1,23 @@
+[project]
+name = "sqsgenerator"
+authors = [
+    {name = "Dominik Gehringer", email = "dgehringer@gmail.com"}
+]
+maintainers = [
+    {name = "Dominik Gehringer", email = "dgehringer@gmail.com"}
+]
+description="Create atomic structures for molecular simulations"
+dependencies = ["numpy", "click", "rich"]
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = {file = "version"}
+
+[project.optional-dependencies]
+test = [
+    "pytest"
+]
+
 [build-system]
 requires = [
     "setuptools>=42",
