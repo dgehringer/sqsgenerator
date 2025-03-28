@@ -19,7 +19,8 @@ namespace sqsgen::core::helpers {
   Out factorial(In n) {
     if (n < 0) throw std::invalid_argument("n must be positive");
     if (n == 1) return 1;
-    return helpers::fold_left(views::iota(In(1), In(n+1)), Out(1), [](auto a, auto b) { return a * b; });
+    return helpers::fold_left(views::iota(In(1), In(n + 1)), Out(1),
+                              [](auto a, auto b) { return a * b; });
   }
 }  // namespace sqsgen::core::helpers
 

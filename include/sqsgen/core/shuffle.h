@@ -51,7 +51,8 @@ namespace sqsgen::core {
       } else if constexpr (Mode == ITERATION_MODE_SYSTEMATIC) {
         assert(_bounds.size() == 1);
         auto [lower_bound, upper_bound] = _bounds.front();
-        auto result = next_permutation(configuration.begin() + lower_bound, configuration.begin() + upper_bound);
+        auto result = next_permutation(configuration.begin() + lower_bound,
+                                       configuration.begin() + upper_bound);
         /*std::next_permutation(configuration.begin() + lower_bound,
                               configuration.begin() + upper_bound);*/
       }

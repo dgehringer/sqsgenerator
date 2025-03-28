@@ -1,14 +1,11 @@
 import os
 import re
-import sys
-import json
 import shlex
-import logging
 import subprocess
-from typing import List
+import sys
 from pathlib import Path
 
-from setuptools import Extension, setup, find_packages
+from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
@@ -23,7 +20,7 @@ VERSION_FILE = "version"
 
 
 def make_version_info(path: str) -> dict[str, int]:
-    with open(path, "r") as version_file:
+    with open(path) as version_file:
         VERSION_STRING, *_ = version_file
         major, minor, build = VERSION_STRING.split(".")
         return dict(major=int(major), minor=int(minor), build=int(build))
@@ -48,22 +45,24 @@ def git_branch() -> str:
 # If you need multiple extensions, see scikit-build.
 class CMakeExtension(Extension):
     def __init__(
-            self,
-            name: str,
-            sourcedir: str = "",
-            output_dir: List[str] = None,
-            build_benchmarks: bool = False,
-            build_tests: bool = False,
-            build_type: str = "release",
-            version_file: tuple[str, ...] = ("python", VERSION_FILE)
+        self,
+        name: str,
+        sourcedir: str = "",
+        output_dir: list[str] | None = None,
+        build_benchmarks: bool = False,
+        build_tests: bool = False,
+        build_type: str = "release",
+        version_file: tuple[str, ...] = ("python", VERSION_FILE),
     ) -> None:
         super().__init__(name, sources=[])
         self.sourcedir = os.fspath(Path(sourcedir).resolve())
         self.build_type = build_type
         self.build_benchmarks = build_benchmarks
         self.build_tests = build_tests
-        self.output_dir = output_dir
-        self.version_info = make_version_info(os.path.join(self.sourcedir, *version_file))
+        self.output_dir = output_dir or []
+        self.version_info = make_version_info(
+            os.path.join(self.sourcedir, *version_file)
+        )
 
 
 class CMakeBuild(build_ext):

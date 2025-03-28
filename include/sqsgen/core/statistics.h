@@ -77,6 +77,6 @@ namespace sqsgen::core {
     }
   };
 
-}  // namespace sqsgen::optimization
+}  // namespace sqsgen::core
 
 #endif  // SQSGEN_CORE_STATISTICS_H

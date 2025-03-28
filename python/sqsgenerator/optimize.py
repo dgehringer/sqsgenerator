@@ -1,17 +1,20 @@
-from typing import Dict, Any, Union
+from typing import Any
+
 from .core import (
-    parse_config,
-    optimize as _optimize,
-    SqsConfiguration,
-    SqsConfigurationFloat,
-    SqsConfigurationDouble,
-    SqsResultPack,
     LogLevel,
+    SqsConfiguration,
+    SqsConfigurationDouble,
+    SqsConfigurationFloat,
+    SqsResultPack,
+    parse_config,
+)
+from .core import (
+    optimize as _optimize,
 )
 
 
 def optimize(
-    config: Union[Dict[str, Any], SqsConfiguration], level: LogLevel = LogLevel.info
+    config: dict[str, Any] | SqsConfiguration, level: LogLevel = LogLevel.info
 ) -> SqsResultPack:
     c = (
         config

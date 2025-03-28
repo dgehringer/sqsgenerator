@@ -6,8 +6,8 @@
 #define SQSGEN_IO_CONFIG_COMPOSITION_H
 #include <pybind11/pybind11.h>
 
-#include "sqsgen/core/config.h"
 #include "sqsgen/core/atom.h"
+#include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/io/json.h"
 #include "sqsgen/io/parsing.h"

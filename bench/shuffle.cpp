@@ -23,10 +23,10 @@ namespace sqsgen::bench {
     return ss.str();
   }
 
-  void shuffle_configuration(configuration_t &configuration, uint64_t &seed) {
-    for (auto i=static_cast<uint32_t>(configuration.size()); i > 1; i--) {
-      uint32_t p = core::random_bounded(i, seed); // number in [0,i)
-      std::swap(configuration[i-1], configuration[p]); // swap the values at i-1 and p
+  void shuffle_configuration(configuration_t& configuration, uint64_t& seed) {
+    for (auto i = static_cast<uint32_t>(configuration.size()); i > 1; i--) {
+      uint32_t p = core::random_bounded(i, seed);         // number in [0,i)
+      std::swap(configuration[i - 1], configuration[p]);  // swap the values at i-1 and p
     }
   }
 
@@ -52,20 +52,18 @@ int main() {
       .relative(true);
   b.performanceCounters(true);
 
-
-
   bench_shuffle<std::mt19937>(&b, "mt19937");
   bench_shuffle<std::mt19937_64>(&b, "mt19937_64");
-  //bench_shuffle<std::ranlux24>(&b, "ranlux24");
+  // bench_shuffle<std::ranlux24>(&b, "ranlux24");
   bench_shuffle<std::knuth_b>(&b, "knuth_b");
 
   sqsgen::configuration_t species(64);
   std::iota(species.begin(), species.end(), 0);
   uint64_t seed = 0xbdd89aa982704029ull;
   b.run("rapidhash", [&]() {
-      shuffle_configuration(species, seed);
-      ankerl::nanobench::doNotOptimizeAway(species);
-    });
+    shuffle_configuration(species, seed);
+    ankerl::nanobench::doNotOptimizeAway(species);
+  });
 
   std::cout << format_vector<sqsgen::specie_t, int>(species) << std::endl;
 }

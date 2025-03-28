@@ -1,19 +1,17 @@
 import collections
-import json
 import math
 
-import pytest
 import numpy as np
+import pytest
+
+from sqsgenerator import optimize
 from sqsgenerator.core import (
-    single,
+    Prec,
     double,
     parse_config,
-    interact,
+    single,
     systematic,
-    optimize,
-    Prec,
 )
-from sqsgenerator import optimize
 
 
 def default_settings(prec: Prec):

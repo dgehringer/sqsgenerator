@@ -5,13 +5,12 @@
 #ifndef SQSGEN_IO_CONFIG_STRUCTURE_H
 #define SQSGEN_IO_CONFIG_STRUCTURE_H
 
-#include "sqsgen/types.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/parsing.h"
-
+#include "sqsgen/types.h"
 
 namespace sqsgen::io {
   namespace config {

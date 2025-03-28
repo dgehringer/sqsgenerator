@@ -2,7 +2,6 @@ import json
 
 import numpy as np
 from pymatgen.core import Structure, Lattice
-from scipy.spatial import distance_matrix
 
 NUM_ATOMS = 32
 
@@ -32,10 +31,11 @@ def dump_structure(s: Structure):
                     frac_coords=s.frac_coords.tolist(),
                     distance_matrix=s.distance_matrix.tolist(),
                     shell_matrix=shell_matrix(s).tolist(),
-                    species=[site.species_string for site in s]
+                    species=[site.species_string for site in s],
                 )
-            )
-        , file=handle)
+            ),
+            file=handle,
+        )
 
 
 dump_structure(Structure(Lattice(LATTICE), ["Al"] * NUM_ATOMS, FRAC_COORDS))

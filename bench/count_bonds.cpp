@@ -185,9 +185,7 @@ namespace sqsgen::bench {
     auto [pairs, species, num_species, num_shells, num_params] = prepare_test_data();
     core::shuffler shuffler{std::vector<bounds_t<usize_t>>{{0, species.size()}}};
     std::vector<usize_t> bonds(num_shells * num_params);
-    std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) {
-      return p.shell > q.shell;
-    });
+    std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) { return p.shell > q.shell; });
     bench->run("draft-half-off-sorted-shells", [&]() {
       shuffler.shuffle(species);
       std::fill(bonds.begin(), bonds.end(), 0);
@@ -240,7 +238,6 @@ namespace sqsgen::bench {
       }
     });
   }
-
 
   void gen(std::string const& typeName, char const* mustacheTemplate,
            ankerl::nanobench::Bench const& bench) {

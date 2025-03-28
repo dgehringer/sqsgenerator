@@ -29,7 +29,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.mypy]
 files = "setup.py"
-python_version = ">=3.9"
+python_version = ">=3.10"
 strict = true
 show_error_codes = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
@@ -58,6 +58,9 @@ test-skip = ["*universal2:arm64"]
 before-build = "rm -rf {project}/build"
 
 
+[tool.ruff]
+extend-exclude = ["sqsgenerator/core/_core.pyi", "setup.py"]
+
 [tool.ruff.lint]
 extend-select = [
     "B",    # flake8-bugbear
@@ -66,3 +69,4 @@ extend-select = [
     "RUF",  # Ruff-specific
     "UP",   # pyupgrade
 ]
+ignore = ["F401"]

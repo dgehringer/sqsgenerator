@@ -85,7 +85,6 @@ namespace sqsgen::io {
       return res;
     }
 
-
     template <class T> parse_result<T> parse_number(std::string_view view) {
       std::string input{view};
       try {

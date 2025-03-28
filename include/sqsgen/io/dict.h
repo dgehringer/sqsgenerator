@@ -89,9 +89,7 @@ namespace sqsgen::io {
       return accessor<py::handle>::get(d, std::forward<std::string>(key));
     }
 
-    static auto range(py::object const& d) {
-      return accessor<py::handle>::range(d);
-    }
+    static auto range(py::object const& d) { return accessor<py::handle>::range(d); }
 
     static auto is_list(py::object const& o) { return accessor<py::handle>::is_list(o); }
 
@@ -100,7 +98,6 @@ namespace sqsgen::io {
       return accessor<py::handle>::get_as<key, Option>(d);
     }
   };
-
 
 }  // namespace sqsgen::io
 

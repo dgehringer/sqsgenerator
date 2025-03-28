@@ -41,6 +41,6 @@ namespace sqsgen::core {
     thread_config_t thread_config;
   };
 
-}  // namespace sqsgen
+}  // namespace sqsgen::core
 
 #endif  // SQSGEN_CONFIGURATION_H

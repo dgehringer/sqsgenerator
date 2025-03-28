@@ -22,7 +22,6 @@ namespace sqsgen::testing::helpers {
     }
   }
 
-
   template <class T>
   void assert_vector_equal(const std::vector<T>& lhs, const std::vector<T>& rhs) {
     ASSERT_EQ(lhs.size(), rhs.size());
@@ -34,8 +33,7 @@ namespace sqsgen::testing::helpers {
   template <class T>
   void assert_vector_equal(stl_matrix_t<T> const& lhs, const stl_matrix_t<T>& rhs) {
     ASSERT_EQ(lhs.size(), rhs.size());
-    for (auto i = 0; i < lhs.size(); ++i)
-      assert_vector_equal(lhs[i], rhs[i]);
+    for (auto i = 0; i < lhs.size(); ++i) assert_vector_equal(lhs[i], rhs[i]);
   }
 
   template <class T> void assert_vector_is_close(const std::vector<T>& lhs,

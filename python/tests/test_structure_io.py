@@ -1,11 +1,10 @@
 import numpy as np
 import pytest
-from typing import Type, Union
+
 from sqsgenerator.core import (
-    StructureFloat,
     StructureDouble,
+    StructureFloat,
     StructureFormat,
-    __version__,
 )
 
 try:
@@ -24,8 +23,8 @@ else:
 
 
 def make_structure(
-    structure_type: Union[Type[StructureFloat], Type[StructureDouble]],
-) -> Union[StructureFloat, StructureDouble]:
+    structure_type: type[StructureFloat] | type[StructureDouble],
+) -> StructureFloat | StructureDouble:
     return structure_type(
         np.diag([1, 2, 3]),
         np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5]]),
