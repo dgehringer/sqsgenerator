@@ -162,9 +162,9 @@ namespace sqsgen::core {
       }
 
       sro_parameter<T> parameter(usize_t shell, std::string const &i, std::string const &j) {
-        if (SYMBOL_MAP.contains(i))
+        if (!SYMBOL_MAP.contains(i))
           throw std::domain_error(std::format("Unknown atomic species {}", i));
-        if (SYMBOL_MAP.contains(j))
+        if (!SYMBOL_MAP.contains(j))
           throw std::domain_error(std::format("Unknown atomic species {}", j));
         return parameter(shell, SYMBOL_MAP.at(i), SYMBOL_MAP.at(j));
       }
