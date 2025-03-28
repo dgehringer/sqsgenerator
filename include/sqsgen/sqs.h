@@ -279,6 +279,7 @@ namespace sqsgen {
         pull_best_objective();
 
         core::tick<TIMING_LOOP> tick_loop;
+
         for (auto i = rstart; i < rend; ++i) {
           if (stop.stop_requested()) {
             spdlog::info("[Rank {}, Thread {}] received stop signal ...", this->rank(),
@@ -291,7 +292,6 @@ namespace sqsgen {
             optimization::count_bonds(bonds, pairs, species);
             objective = optimization::compute_objective(sro, bonds, prefactors, pair_weights,
                                                         target_objective, num_shells, num_species);
-            shuffler.template shuffle<IMode>(species);
 
           } else if constexpr (SMode == SUBLATTICE_MODE_SPLIT) {
             std::vector<T> objectives(num_sublattices);
@@ -328,6 +328,8 @@ namespace sqsgen {
 
             statistics.log_result(iterations_t{rstart + i - start}, objective_value);
           }
+          if constexpr (SMode == SUBLATTICE_MODE_INTERACT)
+            shuffler.template shuffle<IMode>(species);
         }
         statistics.tock(tick_loop);
 

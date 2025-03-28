@@ -154,14 +154,18 @@ namespace sqsgen::core {
       }
 
       std::string rank(int base = 10) {
-        return core::rank_permutation(this->species).to_string(base);
+        return core::rank_permutation(
+                   as<std::vector>{}(this->species | views::transform([&](auto &&s) {
+                                       return this->_opt_config->species_map.first.at(s);
+                                     })))
+            .to_string(base);
       }
 
       sro_parameter<T> parameter(usize_t shell, std::string const &i, std::string const &j) {
         if (SYMBOL_MAP.contains(i))
-          throw std::domain_error(std::format("Unknown atomic element {}", i));
+          throw std::domain_error(std::format("Unknown atomic species {}", i));
         if (SYMBOL_MAP.contains(j))
-          throw std::domain_error(std::format("Unknown atomic element {}", j));
+          throw std::domain_error(std::format("Unknown atomic species {}", j));
         return parameter(shell, SYMBOL_MAP.at(i), SYMBOL_MAP.at(j));
       }
 
@@ -194,6 +198,8 @@ namespace sqsgen::core {
         return as<std::vector>{}(views::elements<0>(this->_opt_config->shell_map.first)
                                  | views::transform([&](auto &&s) { return parameter(s, i, j); }));
       }
+
+      cube_t<T> parameter() { return this->sro; }
 
       std::optional<usize_t> shell_index(usize_t shell) {
         auto result = this->_opt_config->shell_map.first.find(shell);
@@ -335,7 +341,10 @@ namespace sqsgen::core {
 
     auto size() { return results.size(); }
 
-    auto num_results() { return results.num_results(); }
+    auto num_results() {
+      return helpers::sum(results | views::values
+                          | views::transform([&](auto &c) { return c.size(); }));
+    }
 
     sqs_result_pack(configuration<T> &&configuration,
                     core::detail::opt_config_arg_t<T, SMode> &&opt_config,
