@@ -48,3 +48,9 @@ def test_structure_poscar(structure_type):
     assert structure == structure_type.from_poscar(
         structure.dump(StructureFormat.poscar)
     )
+
+
+@pytest.mark.parametrize("structure_type", [StructureFloat, StructureDouble])
+def test_structure_binary(structure_type):
+    structure = make_structure(structure_type)
+    assert structure == structure_type.from_bytes(structure.bytes())
