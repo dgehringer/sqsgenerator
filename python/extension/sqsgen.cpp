@@ -99,7 +99,6 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
       .def_readonly("lattice", &structure<T>::lattice)
       .def_readonly("species", &structure<T>::species)
       .def_readonly("frac_coords", &structure<T>::frac_coords)
-      .def_readonly("pbc", &structure<T>::pbc)
       .def_readonly("num_species", &structure<T>::num_species)
       .def("sites", [](structure<T> &s) { return as<std::set>{}(s.sites()); })
       .def("distance_matrix", &structure<T>::distance_matrix)

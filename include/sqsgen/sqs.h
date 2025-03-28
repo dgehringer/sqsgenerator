@@ -346,6 +346,7 @@ namespace sqsgen {
           statistics.tock(tick_comm);
         }
 #endif
+
         if (callback.has_value()) {
           spdlog::trace("[Rank {}, Thread {}] firing callback", this->rank(), this->thread_id());
           callback.value()(sqs_callback_context<T>{stop_source, statistics.data()});
@@ -442,6 +443,7 @@ namespace sqsgen {
 #else
       schedule_main_loop();
 #endif
+
       this->barrier();
 
       // collect statistics data
