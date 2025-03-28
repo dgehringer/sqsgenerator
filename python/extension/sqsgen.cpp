@@ -9,6 +9,7 @@
 #include <pybind11/stl.h>
 
 #include "sqsgen/core/results.h"
+#include "sqsgen/io/binary.h"
 #include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/dict.h"
 #include "sqsgen/io/parsing.h"
@@ -132,6 +133,17 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
                  throw py::value_error("Unknown Structure format");
              };
            })
+      .def("bytes",
+           [](structure<T> &self) {
+             auto data = nlohmann::json::to_msgpack(io::binary::save(self));
+             std::string_view view(reinterpret_cast<char *>(data.data()), data.size());
+             return py::bytes(view);
+           })
+      .def_static("from_bytes",
+                  [](std::string_view view) {
+                    auto data = nlohmann::json::from_msgpack(view);
+                    return io::binary::load<structure<T>>(data);
+                  })
       .def_static(
           "from_poscar",
           [](std::string const &string) {
@@ -198,6 +210,7 @@ void bind_result(py::module &m) {
   if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
     py::class_<sqs_result_wrapper<T, Mode>>(
         m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
+        .def_readonly("objective", &sqs_result_wrapper<T, Mode>::objective)
         .def("structure", &sqs_result_wrapper<T, Mode>::structure)
         .def(
             "sro",
@@ -225,11 +238,15 @@ void bind_result(py::module &m) {
               return r.parameter(i, j);
             },
             py::arg("i"), py::arg("j"))
-        .def("rank", &sqs_result_wrapper<T, Mode>::rank);
+        .def("sro", [](sqs_result_wrapper<T, Mode> &r) { return r.parameter(); })
+        .def("shell_index", &sqs_result_wrapper<T, Mode>::shell_index, py::arg("shell"))
+        .def("species_index", &sqs_result_wrapper<T, Mode>::species_index, py::arg("species"))
+        .def("rank", &sqs_result_wrapper<T, Mode>::rank, py::arg("base") = 10);
   }
   if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
     py::class_<sqs_result_wrapper<T, Mode>>(
         m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
+        .def_readonly("objective", &sqs_result_wrapper<T, Mode>::objective)
         .def("structure", &sqs_result_wrapper<T, Mode>::structure)
         .def("sublattices", [](sqs_result_wrapper<T, Mode> &self) { return self.sublattices; });
   }
@@ -248,6 +265,9 @@ void bind_result_pack(py::module &m) {
            [](sqs_result_pack<T, Mode> &self) {
              return py::make_iterator(self.begin(), self.end());
            })
+      .def("__len__", [](sqs_result_pack<T, Mode> &self) { return self.size(); })
+      .def("num_objectives", &sqs_result_pack<T, Mode>::size)
+      .def("num_results", &sqs_result_pack<T, Mode>::num_results)
       .def("best", [](sqs_result_pack<T, Mode> &self) {
         auto err = std::out_of_range("Cannot access empty result set");
         if (self.results.empty()) throw err;
