@@ -177,9 +177,7 @@ class CMakeBuild(build_ext):
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
-    ext_modules=[
-        CMakeExtension("_core", sourcedir="..", output_dir=["sqsgenerator", "core"])
-    ],
+    ext_modules=[CMakeExtension("_core", sourcedir="..")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     packages=find_packages(".", exclude=["tests"]),
