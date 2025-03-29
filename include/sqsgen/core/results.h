@@ -296,7 +296,10 @@ namespace sqsgen::core {
 
     template <class T, SublatticeMode Mode>
     opt_config_arg_t<T, Mode> opt_config_from_config(configuration<T> &&config) {
-      auto result = optimization_config_data<T>::from_config(std::move(config));
+      auto result = as<std::vector>{}(
+          optimization_config<T, Mode>::from_config(std::forward<configuration<T>>(config))
+          | views::transform([&](auto &&c) { return c.data(); }));
+
       if constexpr (Mode == SUBLATTICE_MODE_SPLIT)
         return result;
       else
@@ -360,7 +363,9 @@ namespace sqsgen::core {
                     sqs_statistics_data<T> &&stats)
         : statistics(stats),
           config(std::move(configuration)),
-          _optimization_config(core::detail::from_opt_config<T, SMode>()),
+          _optimization_config(core::detail::from_opt_config<T, SMode>(
+              core::detail::opt_config_from_config<T, SMode>(
+                  std::forward<decltype(config)>(config)))),
           _structure(std::make_shared<structure<T>>(config.structure.structure())),
           results(core::detail::from_result_collection(std::move(results), _structure,
                                                        _optimization_config)) {}

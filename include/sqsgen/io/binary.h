@@ -214,10 +214,10 @@ namespace sqsgen::io::binary {
       };
     }
 
-    static sqs_result<T, SUBLATTICE_MODE_INTERACT> load(const nlohmann::json& j) {
-      return sqs_result<T, SUBLATTICE_MODE_INTERACT>{
+    static sqs_result<T, SUBLATTICE_MODE_SPLIT> load(const nlohmann::json& j) {
+      return sqs_result<T, SUBLATTICE_MODE_SPLIT>{
           j.at("objective").get<T>(),
-          binary::load<sqs_result<T, SUBLATTICE_MODE_SPLIT>>(j.at("sublattices"))};
+          binary::load<std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>>>(j.at("sublattices"))};
     }
   };
 
@@ -253,10 +253,13 @@ namespace sqsgen::io::binary {
       };
     }
 
-    static core::structure_config<T> load(const nlohmann::json& j) {
+    static core::sqs_result_pack<T, Mode> load(const nlohmann::json& j) {
+      core::sqs_result_collection<T, Mode> results;
+      for (auto&& r : binary::load<std::vector<sqs_result<T, Mode>>>(j.at("results")))
+        results.insert_result(std::move(r));
+
       return core::sqs_result_pack<T, Mode>{
-          binary::load<core::configuration<T>>(j.at("config")),
-          binary::load<core::detail::sqs_result_pack_collection_t<T, Mode>>(j.at("results")),
+          binary::load<core::configuration<T>>(j.at("config")), results.results(),
           binary::load<sqs_statistics_data<T>>(j.at("statistics"))};
     }
   };

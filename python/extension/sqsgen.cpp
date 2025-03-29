@@ -34,6 +34,19 @@ constexpr auto format_prec() {
     return (Name + string_literal("Float"));
 };
 
+template <class T> py::bytes to_bytes(T &value) {
+  using namespace sqsgen;
+  auto data = nlohmann::json::to_msgpack(io::binary::save<T>(value));
+  std::string_view view(reinterpret_cast<char *>(data.data()), data.size());
+  return py::bytes(view);
+}
+
+template <class T> T from_bytes(std::string_view view) {
+  using namespace sqsgen;
+  auto data = nlohmann::json::from_msgpack(view);
+  return io::binary::load<T>(data);
+}
+
 template <string_literal Name, sqsgen::SublatticeMode Mode> constexpr auto format_sublattice() {
   if constexpr (sqsgen::SUBLATTICE_MODE_INTERACT == Mode)
     return (Name + string_literal("Interact"));
@@ -132,17 +145,8 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
                  throw py::value_error("Unknown Structure format");
              };
            })
-      .def("bytes",
-           [](structure<T> &self) {
-             auto data = nlohmann::json::to_msgpack(io::binary::save(self));
-             std::string_view view(reinterpret_cast<char *>(data.data()), data.size());
-             return py::bytes(view);
-           })
-      .def_static("from_bytes",
-                  [](std::string_view view) {
-                    auto data = nlohmann::json::from_msgpack(view);
-                    return io::binary::load<structure<T>>(data);
-                  })
+      .def("bytes", &to_bytes<structure<T>>)
+      .def_static("from_bytes", &from_bytes<structure<T>>, py::arg("bytes"))
       .def_static(
           "from_poscar",
           [](std::string const &string) {
@@ -177,7 +181,9 @@ template <string_literal Name, class T> void bind_configuration(py::module &m) {
       .def_readwrite("iterations", &sqsgen::core::configuration<T>::iterations)
       .def_readwrite("chunk_size", &sqsgen::core::configuration<T>::chunk_size)
       .def_readwrite("thread_config", &sqsgen::core::configuration<T>::thread_config)
-      .def_readwrite("composition", &sqsgen::core::configuration<T>::composition);
+      .def_readwrite("composition", &sqsgen::core::configuration<T>::composition)
+      .def("bytes", &to_bytes<sqsgen::core::configuration<T>>)
+      .def_static("from_bytes", &from_bytes<sqsgen::core::configuration<T>>, py::arg("bytes"));
 }
 
 template <string_literal Name, class T> void bind_sro_parameter(py::module &m) {
@@ -267,6 +273,8 @@ void bind_result_pack(py::module &m) {
       .def("__len__", [](sqs_result_pack<T, Mode> &self) { return self.size(); })
       .def("num_objectives", &sqs_result_pack<T, Mode>::size)
       .def("num_results", &sqs_result_pack<T, Mode>::num_results)
+      .def("bytes", &to_bytes<sqs_result_pack<T, Mode>>)
+      .def_static("from_bytes", &from_bytes<sqs_result_pack<T, Mode>>, py::arg("bytes"))
       .def("best", [](sqs_result_pack<T, Mode> &self) {
         auto err = std::out_of_range("Cannot access empty result set");
         if (self.results.empty()) throw err;
