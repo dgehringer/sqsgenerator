@@ -201,7 +201,7 @@ namespace sqsgen::io::binary {
           j.at("working").get<iterations_t>(),
           j.at("best_rank").get<iterations_t>(),
           j.at("best_objective").get<T>(),
-          j.at("best_objective").get<std::map<Timing, nanoseconds_t>>(),
+          j.at("timings").get<std::map<Timing, nanoseconds_t>>(),
       };
     }
   };
