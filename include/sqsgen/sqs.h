@@ -2,8 +2,8 @@
 // Created by Dominik Gehringer on 05.01.25.
 //
 
-#ifndef SQSGEN_OPTIMIZATION_SQS_H
-#define SQSGEN_OPTIMIZATION_SQS_H
+#ifndef SQSGEN_SQS_H
+#define SQSGEN_SQS_H
 
 #include <BS_thread_pool.hpp>
 #include <thread>
@@ -537,4 +537,4 @@ namespace sqsgen {
   }
 }  // namespace sqsgen
 
-#endif  // SQSGEN_OPTIMIZATION_SQS_H
+#endif  // SQSGEN_SQS_H

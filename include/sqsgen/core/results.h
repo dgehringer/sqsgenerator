@@ -136,12 +136,12 @@ namespace sqsgen::core {
 
     template <class T> class sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT>
         : public sqs_result<T, SUBLATTICE_MODE_INTERACT> {
-      std::shared_ptr<structure<T>> _structure;
+      std::shared_ptr<core::structure<T>> _structure;
       opt_config_t<T, SUBLATTICE_MODE_INTERACT> _opt_config;
 
     public:
       explicit sqs_result_wrapper(sqs_result<T, SUBLATTICE_MODE_INTERACT> &&result,
-                                  std::shared_ptr<structure<T>> structure,
+                                  std::shared_ptr<core::structure<T>> structure,
                                   opt_config_t<T, SUBLATTICE_MODE_INTERACT> opt_config)
           : sqs_result<T, SUBLATTICE_MODE_INTERACT>(std::move(result)),
             _structure(structure),
@@ -222,13 +222,13 @@ namespace sqsgen::core {
 
     template <class T> class sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT>
         : public sqs_result<T, SUBLATTICE_MODE_SPLIT> {
-      std::shared_ptr<structure<T>> _structure;
+      std::shared_ptr<core::structure<T>> _structure;
       opt_config_t<T, SUBLATTICE_MODE_SPLIT> _opt_config;
 
     public:
       std::vector<sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT>> sublattices;
       explicit sqs_result_wrapper(sqs_result<T, SUBLATTICE_MODE_SPLIT> &&result,
-                                  std::shared_ptr<structure<T>> structure,
+                                  std::shared_ptr<core::structure<T>> structure,
                                   opt_config_t<T, SUBLATTICE_MODE_SPLIT> opt_config)
           : sqs_result<T, SUBLATTICE_MODE_SPLIT>(std::move(result)),
             _structure(structure),

@@ -2,8 +2,8 @@
 // Created by Dominik Gehringer on 19.09.24.
 //
 
-#ifndef SQSGEN_PERMUTATION_HPP
-#define SQSGEN_PERMUTATION_HPP
+#ifndef SQSGEN_CORE_PERMUTATION_HPP
+#define SQSGEN_CORE_PERMUTATION_HPP
 
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
@@ -102,4 +102,4 @@ namespace sqsgen::core {
   }
 }  // namespace sqsgen::core
 
-#endif  // SQSGEN_PERMUTATION_HPP
+#endif  // SQSGEN_CORE_PERMUTATION_HPP

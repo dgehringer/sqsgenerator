@@ -2,8 +2,8 @@
 // Created by Dominik Gehringer on 19.09.24.
 //
 
-#ifndef SQSGEN_TYPES_HPP
-#define SQSGEN_TYPES_HPP
+#ifndef SQSGEN_TYPES_H
+#define SQSGEN_TYPES_H
 
 #include <Eigen/Core>
 #include <map>
@@ -175,4 +175,4 @@ namespace sqsgen {
       std::variant<sqs_callback_context<float>, sqs_callback_context<double>>)>;
 
 }  // namespace sqsgen
-#endif  // SQSGEN_TYPES_HPP
+#endif  // SQSGEN_TYPES_H

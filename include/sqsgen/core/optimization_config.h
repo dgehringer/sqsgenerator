@@ -2,8 +2,8 @@
 // Created by Dominik Gehringer on 03.03.25.
 //
 
-#ifndef OPTIMIZATION_CONFIG_H
-#define OPTIMIZATION_CONFIG_H
+#ifndef SQSGEN_CORE_OPTIMIZATION_CONFIG_H
+#define SQSGEN_CORE_OPTIMIZATION_CONFIG_H
 
 #include "sqsgen/core/optimization.h"
 #include "sqsgen/core/shuffle.h"
@@ -31,7 +31,7 @@ namespace sqsgen::core {
   }  // namespace detail
 
   template <class T> struct optimization_config_data {
-    std::vector<sublattice> sublattice;
+    std::vector<sqsgen::sublattice> sublattice;
     core::structure<T> structure;
     core::structure<T> sorted;
     std::vector<bounds_t<usize_t>> bounds;
@@ -48,7 +48,7 @@ namespace sqsgen::core {
   };
 
   template <class T, SublatticeMode Mode> struct optimization_config : optimization_config_data<T> {
-    shuffler shuffler;
+    sqsgen::core::shuffler shuffler;
 
     static std::vector<optimization_config> from_config(configuration<T> config) {
       auto [structures, sorted, bounds, sort_order] = decompose_sort_and_bounds(config);
@@ -137,4 +137,4 @@ namespace sqsgen::core {
 
 }  // namespace sqsgen::core
 
-#endif  // OPTIMIZATION_CONFIG_H
+#endif  // SQSGEN_CORE_OPTIMIZATION_CONFIG_H

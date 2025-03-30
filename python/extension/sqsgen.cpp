@@ -37,7 +37,7 @@ constexpr auto format_prec() {
 
 template <class T> py::bytes to_bytes(T &value) {
   using namespace sqsgen;
-  auto data = nlohmann::json::to_msgpack(io::binary::save<T>(value));
+  auto data = nlohmann::json::to_msgpack(io::binary::binary_adapter<T>::save(value));
   std::string_view view(reinterpret_cast<char *>(data.data()), data.size());
   return py::bytes(view);
 }
@@ -45,7 +45,7 @@ template <class T> py::bytes to_bytes(T &value) {
 template <class T> T from_bytes(std::string_view view) {
   using namespace sqsgen;
   auto data = nlohmann::json::from_msgpack(view);
-  return io::binary::load<T>(data);
+  return io::binary::binary_adapter<T>::load(data);
 }
 
 template <string_literal Name, sqsgen::SublatticeMode Mode> constexpr auto format_sublattice() {
@@ -187,22 +187,22 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
 }
 
 template <string_literal Name, class T> void bind_configuration(py::module &m) {
-  py::class_<sqsgen::core::configuration<T>>(m, format_prec<Name, T>().c_str())
-      .def_readwrite("sublattice_mode", &sqsgen::core::configuration<T>::sublattice_mode)
-      .def_readwrite("iteration_mode", &sqsgen::core::configuration<T>::iteration_mode)
-      .def("structure",
-           [](sqsgen::core::configuration<T> &conf) { return conf.structure.structure(); })
-      .def_readwrite("shell_radii", &sqsgen::core::configuration<T>::shell_radii)
-      .def_readwrite("shell_weights", &sqsgen::core::configuration<T>::shell_weights)
-      .def_readwrite("prefactors", &sqsgen::core::configuration<T>::prefactors)
-      .def_readwrite("pair_weights", &sqsgen::core::configuration<T>::pair_weights)
-      .def_readwrite("target_objective", &sqsgen::core::configuration<T>::target_objective)
-      .def_readwrite("iterations", &sqsgen::core::configuration<T>::iterations)
-      .def_readwrite("chunk_size", &sqsgen::core::configuration<T>::chunk_size)
-      .def_readwrite("thread_config", &sqsgen::core::configuration<T>::thread_config)
-      .def_readwrite("composition", &sqsgen::core::configuration<T>::composition)
-      .def("bytes", &to_bytes<sqsgen::core::configuration<T>>)
-      .def_static("from_bytes", &from_bytes<sqsgen::core::configuration<T>>, py::arg("bytes"));
+  using namespace sqsgen::core;
+  py::class_<configuration<T>>(m, format_prec<Name, T>().c_str())
+      .def_readwrite("sublattice_mode", &configuration<T>::sublattice_mode)
+      .def_readwrite("iteration_mode", &configuration<T>::iteration_mode)
+      .def("structure", [](configuration<T> &conf) { return conf.structure.structure(); })
+      .def_readwrite("shell_radii", &configuration<T>::shell_radii)
+      .def_readwrite("shell_weights", &configuration<T>::shell_weights)
+      .def_readwrite("prefactors", &configuration<T>::prefactors)
+      .def_readwrite("pair_weights", &configuration<T>::pair_weights)
+      .def_readwrite("target_objective", &configuration<T>::target_objective)
+      .def_readwrite("iterations", &configuration<T>::iterations)
+      .def_readwrite("chunk_size", &configuration<T>::chunk_size)
+      .def_readwrite("thread_config", &configuration<T>::thread_config)
+      .def_readwrite("composition", &configuration<T>::composition)
+      .def("bytes", &to_bytes<configuration<T>>)
+      .def_static("from_bytes", &from_bytes<configuration<T>>);
 }
 
 template <string_literal Name, class T> void bind_sro_parameter(py::module &m) {
@@ -292,13 +292,12 @@ void bind_result_pack(py::module &m) {
       .def("__len__", [](sqs_result_pack<T, Mode> &self) { return self.size(); })
       .def("num_objectives", &sqs_result_pack<T, Mode>::size)
       .def("num_results", &sqs_result_pack<T, Mode>::num_results)
-      .def("bytes", &to_bytes<sqs_result_pack<T, Mode>>)
-      .def_static("from_bytes", &from_bytes<sqs_result_pack<T, Mode>>, py::arg("bytes"))
+      //.def("bytes", &to_bytes<sqs_result_pack<T, Mode>>)
+      //.def_static("from_bytes", &from_bytes<sqs_result_pack<T, Mode>>, py::arg("bytes"))
       .def("best", [](sqs_result_pack<T, Mode> &self) {
-        auto err = std::out_of_range("Cannot access empty result set");
-        if (self.results.empty()) throw err;
+        if (self.results.empty()) throw std::out_of_range("Cannot access empty result set");
         auto [_, set] = *self.begin();
-        if (set.empty()) throw err;
+        if (set.empty()) throw std::out_of_range("Cannot access empty result set");
         return set.front();
       });
 }
@@ -440,9 +439,6 @@ PYBIND11_MODULE(_core, m) {
   bind_structure<"Structure", float>(m);
   bind_structure<"Structure", double>(m);
 
-  bind_configuration<"SqsConfiguration", float>(m);
-  bind_configuration<"SqsConfiguration", double>(m);
-
   bind_callback_context<"SqsCallbackContext", float>(m);
   bind_callback_context<"SqsCallbackContext", double>(m);
 
@@ -456,6 +452,9 @@ PYBIND11_MODULE(_core, m) {
   bind_result<"SqsResult", float, SUBLATTICE_MODE_SPLIT>(m);
   bind_result<"SqsResult", double, SUBLATTICE_MODE_INTERACT>(m);
   bind_result<"SqsResult", double, SUBLATTICE_MODE_SPLIT>(m);
+
+  bind_configuration<"SqsConfiguration", float>(m);
+  bind_configuration<"SqsConfiguration", double>(m);
 
   bind_result_pack<"SqsResultPack", float, SUBLATTICE_MODE_INTERACT>(m);
   bind_result_pack<"SqsResultPack", float, SUBLATTICE_MODE_SPLIT>(m);

@@ -2,11 +2,10 @@
 // Created by Dominik Gehringer on 11.03.25.
 //
 
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef EXTENSION_UTILS_H
+#define EXTENSION_UTILS_H
 
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -37,4 +36,4 @@ namespace sqsgen::python::helpers {
 
 }  // namespace sqsgen::python::helpers
 
-#endif  // UTILS_H
+#endif  // EXTENSION_UTILS_H

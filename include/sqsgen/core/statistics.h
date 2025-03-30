@@ -13,7 +13,7 @@ namespace sqsgen::core {
   using namespace core::helpers;
 
   template <Timing> struct tick {
-    high_resolution_clock::time_point now{steady_clock::now()};
+    steady_clock::time_point now = steady_clock::now();
   };
 
   template <class T> class sqs_statistics {

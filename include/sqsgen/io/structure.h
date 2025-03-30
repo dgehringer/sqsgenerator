@@ -136,7 +136,7 @@ namespace sqsgen::io {
     }
 
     static auto format_json(core::structure<T> const& structure) {
-      constexpr std::string dtype = "float64";
+      std::string dtype = "float64";
       auto cell = _format_array("float64", std::array{3, 3}, structure.lattice);
       cell["__ase_objtype__"] = "cell";
 

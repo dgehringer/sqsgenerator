@@ -2,8 +2,8 @@
 // Created by Dominik Gehringer on 11.11.24.
 //
 
-#ifndef SQSGEN_CORE_HELPER_STATIC_STRING_H
-#define SQSGEN_CORE_HELPER_STATIC_STRING_H
+#ifndef SQSGEN_CORE_HELPERS_STATIC_STRING_H
+#define SQSGEN_CORE_HELPERS_STATIC_STRING_H
 
 namespace sqsgen::core::helpers {
 
@@ -38,4 +38,4 @@ namespace sqsgen::core::helpers {
 
 }  // namespace sqsgen::core::helpers
 
-#endif  // SQSGEN_CORE_HELPER_STATIC_STRING_H
+#endif  // SQSGEN_CORE_HELPERS_STATIC_STRING_H
