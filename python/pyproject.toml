@@ -25,7 +25,8 @@ requires = [
     "ninja",
     "cmake>=3.14",
     "mypy",
-    "numpy"
+    "numpy",
+    "pybind11"
 ]
 build-backend = "setuptools.build_meta"
 

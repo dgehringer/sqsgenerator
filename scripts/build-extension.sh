@@ -19,7 +19,7 @@ MINOR_VERSION=$(python -c "f = open('${VERSION_FILE}'); l = f.readline(); f.clos
 BUILD_NUMBER=$(python -c "f = open('${VERSION_FILE}'); l = f.readline(); f.close(); print(l.split('.')[2])")
 
 cmake \
-  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_MAKE_PROGRAM=${NINJA_EXECUTABLE} \
   -DBUILD_PYTHON=ON \
   -DMPPP_BUILD_STATIC_LIBRARY=ON \
