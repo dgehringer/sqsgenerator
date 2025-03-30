@@ -4,6 +4,7 @@
 
 #include <pybind11/eigen.h>
 #include <pybind11/eigen/tensor.h>
+#include <pybind11/embed.h>
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -113,8 +114,26 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
       .def_readonly("species", &structure<T>::species)
       .def_readonly("frac_coords", &structure<T>::frac_coords)
       .def_readonly("num_species", &structure<T>::num_species)
-      .def("sites", [](structure<T> &s) { return as<std::set>{}(s.sites()); })
-      .def("distance_matrix", &structure<T>::distance_matrix)
+      .def_property_readonly(
+          "symbols",
+          [](structure<T> &self) {
+            return as<std::vector>{}(
+                self.species | views::transform([](auto &&z) { return atom::from_z(z).symbol; }));
+          })
+      .def_property_readonly(
+          "atoms",
+          [](structure<T> &self) {
+            return as<std::vector>{}(self.species
+                                     | views::transform([](auto &&z) { return atom::from_z(z); }));
+          })
+      .def_property_readonly("uuid",
+                             [](structure<T> &self) {
+                               py::scoped_interpreter guard{};
+                               auto uuid = py::module_::import("uuid");
+                               return uuid.attr("to_string")(self.uuid());
+                             })
+      .def_property_readonly("sites", [](structure<T> &s) { return as<std::set>{}(s.sites()); })
+      .def_property_readonly("distance_matrix", &structure<T>::distance_matrix)
       .def("shell_matrix", &structure<T>::shell_matrix, py::arg("shell_radii"),
            py::arg("atol") = std::numeric_limits<T>::epsilon(), py::arg("rtol") = 1.0e-9)
       .def("supercell", &structure<T>::supercell, py::arg("sa"), py::arg("sb"), py::arg("sc"))
@@ -363,7 +382,14 @@ PYBIND11_MODULE(_core, m) {
       .def_readonly("z", &core::atom::Z)
       .def_readonly("electronegativity", &core::atom::en)
       .def_static("from_z", &core::atom::from_z<int>, py::arg("ordinal"))
-      .def_static("from_symbol", &core::atom::from_symbol, py::arg("symbol"));
+      .def_static("from_symbol", &core::atom::from_symbol, py::arg("symbol"))
+      .def(
+          "__lt__", [](core::atom &a, core::atom &b) { return a.Z < b.Z; }, py::is_operator())
+      .def(
+          "__eq__", [](core::atom &a, core::atom &b) { return a.Z == b.Z; }, py::is_operator())
+      .def("__repr__", [](core::atom &a) -> std::string {
+        return std::format("Atom(symbol=\"{}\", Z={}, mass={})", a.symbol, a.Z, a.mass);
+      });
 
   py::class_<vset<usize_t>>(m, "Indices")
       .def(py::init<>())

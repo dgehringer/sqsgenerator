@@ -37,9 +37,8 @@ namespace sqsgen {
       const auto restore_order
           = [&](configuration_t& species,
                 optimization_config<T, Mode> const& config) -> configuration_t {
-        auto species_rmap = std::get<1>(config.species_map);
         return as<std::vector>{}(config.sort_order | views::transform([&](auto&& index) {
-                                   return species_rmap[species[index]];
+                                   return config.species_map.second.at(species[index]);
                                  }));
       };
       if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
@@ -272,7 +271,7 @@ namespace sqsgen {
         statistics.add_working(iterations);
 
         if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC)
-          shuffler.unrank_permutation(species, rstart + 1);
+          shuffler.template unrank_permutation<ITERATION_MODE_SYSTEMATIC>(species, rstart + 1);
 
         statistics.tock(tick_setup);
 

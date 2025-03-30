@@ -66,9 +66,25 @@ namespace sqsgen::core {
                             | views::transform([&](auto &&i) { return configuration[i]; })));
     }
 
+    template <IterationMode Mode>
     void unrank_permutation(configuration_t &configuration, rank_t rank) {
+      static_assert(Mode == ITERATION_MODE_SYSTEMATIC);
       assert(_bounds.size() == 1);
-      core::unrank_permutation(configuration, rank, _bounds.front());
+      if (_bounds.empty() || _bounds.front() == bounds_t<usize_t>{0, configuration.size()})
+        core::unrank_permutation(configuration, rank);
+      else {
+        auto [start, end] = _bounds.front();
+        auto irange = helpers::range(std::forward<bounds_t<usize_t>>(_bounds.front()));
+        auto [species_map, species_rmap] = helpers::make_index_mapping<specie_t>(
+            irange | views::transform([&](auto &&i) { return configuration[i]; }));
+        configuration_t conf{helpers::as<std::vector>{}(
+            irange | views::transform([&](auto &&i) { return species_map.at(configuration[i]); }))};
+        core::unrank_permutation(conf, rank);
+        ranges::for_each(helpers::range(conf.size()), [&, start](auto &&i) {
+          configuration[start + i] = species_rmap.at(conf[i]);
+        });
+        return;
+      }
     }
 
   private:

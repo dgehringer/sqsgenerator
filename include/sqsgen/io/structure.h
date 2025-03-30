@@ -59,7 +59,7 @@ namespace sqsgen::io {
       return {angle(0), angle(1), angle(2)};
     }
 
-    std::vector<std::string_view> split(std::string_view str, std::string_view delimeters) {
+    inline std::vector<std::string_view> split(std::string_view str, std::string_view delimeters) {
       std::vector<std::string_view> res;
       res.reserve(str.length() / 2);
       const char* ptr = str.data();
