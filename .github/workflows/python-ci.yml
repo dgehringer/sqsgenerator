@@ -27,7 +27,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Compile build dependencies
-        run: pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
+        run: |
+          pip install pip-tools
+          pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
 
       - name: Install build dependencies
         run: pip install -r requirements-ci.txt
