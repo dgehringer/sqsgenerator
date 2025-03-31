@@ -1,7 +1,6 @@
 //
 // Created by Dominik Gehringer on 08.03.25.
 //
-
 #include <pybind11/eigen.h>
 #include <pybind11/eigen/tensor.h>
 #include <pybind11/embed.h>
@@ -37,7 +36,7 @@ constexpr auto format_prec() {
 
 template <class T> py::bytes to_bytes(T &value) {
   using namespace sqsgen;
-  auto data = nlohmann::json::to_msgpack(io::binary::binary_adapter<T>::save(value));
+  auto data = nlohmann::json::to_msgpack(io::binary::save(value));
   std::string_view view(reinterpret_cast<char *>(data.data()), data.size());
   return py::bytes(view);
 }
@@ -45,7 +44,7 @@ template <class T> py::bytes to_bytes(T &value) {
 template <class T> T from_bytes(std::string_view view) {
   using namespace sqsgen;
   auto data = nlohmann::json::from_msgpack(view);
-  return io::binary::binary_adapter<T>::load(data);
+  return io::binary::load<T>(data);
 }
 
 template <string_literal Name, sqsgen::SublatticeMode Mode> constexpr auto format_sublattice() {
@@ -453,14 +452,6 @@ PYBIND11_MODULE(_core, m) {
   bind_result<"SqsResult", double, SUBLATTICE_MODE_INTERACT>(m);
   bind_result<"SqsResult", double, SUBLATTICE_MODE_SPLIT>(m);
 
-  bind_configuration<"SqsConfiguration", float>(m);
-  bind_configuration<"SqsConfiguration", double>(m);
-
-  bind_result_pack<"SqsResultPack", float, SUBLATTICE_MODE_INTERACT>(m);
-  bind_result_pack<"SqsResultPack", float, SUBLATTICE_MODE_SPLIT>(m);
-  bind_result_pack<"SqsResultPack", double, SUBLATTICE_MODE_INTERACT>(m);
-  bind_result_pack<"SqsResultPack", double, SUBLATTICE_MODE_SPLIT>(m);
-
   m.def(
       "parse_config",
       [](py::dict const &config) { return unwrap(io::config::parse_config(py::handle(config))); },
@@ -490,4 +481,12 @@ PYBIND11_MODULE(_core, m) {
       },
       py::arg("config"), py::arg("log_level") = spdlog::level::level_enum::warn,
       py::arg("callback") = std::nullopt);
+
+  bind_configuration<"SqsConfiguration", float>(m);
+  bind_configuration<"SqsConfiguration", double>(m);
+
+  bind_result_pack<"SqsResultPack", float, SUBLATTICE_MODE_INTERACT>(m);
+  bind_result_pack<"SqsResultPack", float, SUBLATTICE_MODE_SPLIT>(m);
+  bind_result_pack<"SqsResultPack", double, SUBLATTICE_MODE_INTERACT>(m);
+  bind_result_pack<"SqsResultPack", double, SUBLATTICE_MODE_SPLIT>(m);
 }

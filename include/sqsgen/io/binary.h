@@ -17,7 +17,10 @@ namespace sqsgen::io::binary {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  template <class> struct binary_adapter;
+  template <class T> struct binary_adapter {
+    static nlohmann::json save(T const& data);
+    static T load(const nlohmann::json& j);
+  };
 
   namespace detail {
 
