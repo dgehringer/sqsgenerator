@@ -36,7 +36,8 @@ constexpr auto format_prec() {
 
 template <class T> py::bytes to_bytes(T &value) {
   using namespace sqsgen;
-  auto data = nlohmann::json::to_msgpack(nlohmann::json{{value}});
+  nlohmann::json j = value;
+  auto data = nlohmann::json::to_msgpack(j);
   std::string_view view(reinterpret_cast<char *>(data.data()), data.size());
   return py::bytes(view);
 }
