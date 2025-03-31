@@ -1,0 +1,58 @@
+name: python-ci.yml
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Compile build dependencies
+        run: |
+          pip install pip-tools
+          pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
+
+      - name: Install build dependencies
+        run: pip install -r requirements-ci.txt
+
+      - name: Install CI dependencies
+        run: pip install ruff pytest
+
+      - name: Lint
+        run: ruff check ./python/sqsgenerator --output-format=github
+
+      - name: Format
+        run: ruff format --diff ./python/sqsgenerator
+
+      - name: Build Package
+        run: pip install ./python -v
+
+      - name: Run unit tests
+        run: pytest ./python -vv --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+
+      - name: Upload pytest test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-${{ matrix.python-version }}
+          path: junit/test-results-${{ matrix.python-version }}.xml
+        # Use always() to always run this step to publish test results when there are test failures
+        if: ${{ always() }}

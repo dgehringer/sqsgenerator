@@ -3,6 +3,7 @@
 //
 
 #include <gtest/gtest.h>
+
 #include <Eigen/Dense>
 #include <filesystem>
 #include <fstream>
@@ -217,19 +218,23 @@ namespace sqsgen::testing {
 
     auto dists = distances_naive(std::forward<decltype(fcc_one_species)>(fcc_one_species));
     helpers::assert_vector_is_close(
-        dists, {0, 1.0 / std::sqrt(2), 1.0, std::sqrt(1.5), std::sqrt(2),std::sqrt(2.5), std::sqrt(3), std::sqrt(3.5), std::sqrt(4.5), std::sqrt(5.5)});
+        dists, {0, 1.0 / std::sqrt(2), 1.0, std::sqrt(1.5), std::sqrt(2), std::sqrt(2.5),
+                std::sqrt(3), std::sqrt(3.5), std::sqrt(4.5), std::sqrt(5.5)});
 
-    shell_weights_t<double> w {{1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}};
+    shell_weights_t<double> w{{1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}};
 
-    const auto coordination_number = [&](auto && prefactor) {
+    const auto coordination_number = [&](auto&& prefactor) {
       // x_a
       return static_cast<usize_t>((1.0 / prefactor) / static_cast<double>(fcc_one_species.size()));
     };
 
-    auto f = core::detail::compute_prefactors(fcc_one_species.shell_matrix(dists), w, fcc_one_species.species);
+    auto f = core::detail::compute_prefactors(fcc_one_species.shell_matrix(dists), w,
+                                              fcc_one_species.species);
     std::vector prefactors(f.data(), f.data() + f.size());
     // compute the coordination number of a fcc lattice by inverting the prefactors
-    helpers::assert_vector_equal(core::helpers::as<std::vector>{}(prefactors | views::transform(coordination_number)), {12, 6, 24, 12, 12, 8});
+    helpers::assert_vector_equal(
+        core::helpers::as<std::vector>{}(prefactors | views::transform(coordination_number)),
+        {12, 6, 24, 12, 12, 8});
   }
 
 }  // namespace sqsgen::testing

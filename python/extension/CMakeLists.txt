@@ -1,3 +1,4 @@
+add_compile_options("-fvisibility=hidden")
 
 if (DEFINED SQSGEN_MAJOR_VERSION)
     add_compile_options("-DSQSGEN_MAJOR_VERSION=${SQSGEN_MAJOR_VERSION}")
@@ -18,6 +19,7 @@ endif ()
 if (DEFINED SQSGEN_BUILD_COMMIT)
     add_compile_options("-DSQSGEN_BUILD_COMMIT=${SQSGEN_BUILD_COMMIT}")
 endif ()
+
 
 pybind11_add_module(_core sqsgen.cpp utils.h)
 target_link_libraries(_core PUBLIC ${SQSGEN_LIBS})

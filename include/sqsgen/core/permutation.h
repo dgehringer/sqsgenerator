@@ -2,8 +2,8 @@
 // Created by Dominik Gehringer on 19.09.24.
 //
 
-#ifndef SQSGEN_PERMUTATION_HPP
-#define SQSGEN_PERMUTATION_HPP
+#ifndef SQSGEN_CORE_PERMUTATION_HPP
+#define SQSGEN_CORE_PERMUTATION_HPP
 
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
@@ -49,18 +49,15 @@ namespace sqsgen::core {
     return rank;
   }
 
-  inline void unrank_permutation(configuration_t& configuration, rank_t const& to_rank,
-                                 std::optional<bounds_t<usize_t>> bounds = std::nullopt) {
+  inline void unrank_permutation(configuration_t& configuration, rank_t const& to_rank) {
     using namespace core::helpers;
-    auto b = bounds.value_or(bounds_t<usize_t>{0, configuration.size()});
-    auto freqs = count(range(std::forward<decltype(b)>(b))
-                       | views::transform([&](auto&& i) { return configuration[i]; }));
+    auto freqs = count(configuration);
     rank_t total_permutations{num_permutations(freqs)}, rank{to_rank};
     if (rank > total_permutations) {
       throw std::out_of_range("The rank is larger than the total number of permutations");
     }
     auto k{0};
-    auto num_atoms{std::get<1>(b) - std::get<0>(b)};
+    auto num_atoms{configuration.size()};
     auto num_species{freqs.size()};
     auto hist = helpers::as<std::vector>{}(views::values(freqs));
 
@@ -105,4 +102,4 @@ namespace sqsgen::core {
   }
 }  // namespace sqsgen::core
 
-#endif  // SQSGEN_PERMUTATION_HPP
+#endif  // SQSGEN_CORE_PERMUTATION_HPP

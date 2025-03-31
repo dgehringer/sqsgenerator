@@ -59,7 +59,7 @@ namespace sqsgen::io {
       return {angle(0), angle(1), angle(2)};
     }
 
-    std::vector<std::string_view> split(std::string_view str, std::string_view delimeters) {
+    inline std::vector<std::string_view> split(std::string_view str, std::string_view delimeters) {
       std::vector<std::string_view> res;
       res.reserve(str.length() / 2);
       const char* ptr = str.data();
@@ -84,7 +84,6 @@ namespace sqsgen::io {
       std::erase_if(res, [](auto&& s) { return s.empty(); });
       return res;
     }
-
 
     template <class T> parse_result<T> parse_number(std::string_view view) {
       std::string input{view};
@@ -137,7 +136,7 @@ namespace sqsgen::io {
     }
 
     static auto format_json(core::structure<T> const& structure) {
-      constexpr std::string dtype = "float64";
+      std::string dtype = "float64";
       auto cell = _format_array("float64", std::array{3, 3}, structure.lattice);
       cell["__ase_objtype__"] = "cell";
 

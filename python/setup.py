@@ -1,14 +1,11 @@
-import json
-import logging
 import os
 import re
 import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Union
 
-from setuptools import Extension, setup, find_packages
+from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
@@ -19,11 +16,22 @@ PLAT_TO_CMAKE = {
     "win-arm64": "ARM64",
 }
 
+VERSION_FILE = "version"
+
+
+def make_version_info(path: str) -> dict[str, int]:
+    with open(path) as version_file:
+        VERSION_STRING, *_ = version_file
+        major, minor, build = VERSION_STRING.split(".")
+        return dict(major=int(major), minor=int(minor), build=int(build))
+
+
 def git_sha1() -> str:
     try:
         return os.popen("git rev-parse HEAD").read().strip()
     except:
         return "unknown"
+
 
 def git_branch() -> str:
     try:
@@ -36,20 +44,25 @@ def git_branch() -> str:
 # The name must be the _single_ output extension from the CMake build.
 # If you need multiple extensions, see scikit-build.
 class CMakeExtension(Extension):
-    def __init__(self, name: str, sourcedir: str = "", output_dir: List[str] = None, build_benchmarks: bool = False,
-                 build_tests: bool = False, build_type: str = "release", version_file: str = "version.json") -> None:
+    def __init__(
+        self,
+        name: str,
+        sourcedir: str = "",
+        output_dir: list[str] | None = None,
+        build_benchmarks: bool = False,
+        build_tests: bool = False,
+        build_type: str = "release",
+        version_file: tuple[str, ...] = ("python", VERSION_FILE),
+    ) -> None:
         super().__init__(name, sources=[])
         self.sourcedir = os.fspath(Path(sourcedir).resolve())
         self.build_type = build_type
         self.build_benchmarks = build_benchmarks
         self.build_tests = build_tests
-        self.output_dir = output_dir
-        version_path = os.path.join(self.sourcedir, version_file)
-        if not os.path.exists(version_path):
-            raise FileNotFoundError(version_path)
-        else:
-            with open(version_path, 'rb') as f:
-                self.version_info = json.load(f)
+        self.output_dir = output_dir or []
+        self.version_info = make_version_info(
+            os.path.join(self.sourcedir, *version_file)
+        )
 
 
 class CMakeBuild(build_ext):
@@ -82,8 +95,8 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DBUILD_TESTS={'ON' if ext.build_tests else 'OFF'}",
             f"-DBUILD_BENCHMARKS={'ON' if ext.build_benchmarks else 'OFF'}",
-            f"-DWITH_MPI=OFF",
-            f"-DBUILD_PYTHON=ON",
+            "-DWITH_MPI=OFF",
+            "-DBUILD_PYTHON=ON",
             f"-DSQSGEN_MAJOR_VERSION={ext.version_info['major']}",
             f"-DSQSGEN_MINOR_VERSION={ext.version_info['minor']}",
             f"-DSQSGEN_BUILD_NUMBER={ext.version_info['build']}",
@@ -164,17 +177,8 @@ class CMakeBuild(build_ext):
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
-    name="sqsgenerator",
-    version="0.4.1",
-    author="Dominik Gehringer",
-    author_email="dgehringer@protonmail.com",
-    description="Create atomic structures for molecular simulations",
-    long_description="",
-    ext_modules=[CMakeExtension("_core", sourcedir="..", output_dir=["sqsgenerator", "core"])],
+    ext_modules=[CMakeExtension("_core", sourcedir="..")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
-    install_requires=['numpy', 'click', 'rich'],
-    extras_require={"test": ["pytest>=6.0"]},
-    python_requires=">=3.9",
-    packages=find_packages('.', exclude=['tests']),
+    packages=find_packages(".", exclude=["tests"]),
 )

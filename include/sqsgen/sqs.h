@@ -2,8 +2,8 @@
 // Created by Dominik Gehringer on 05.01.25.
 //
 
-#ifndef SQSGEN_OPTIMIZATION_SQS_H
-#define SQSGEN_OPTIMIZATION_SQS_H
+#ifndef SQSGEN_SQS_H
+#define SQSGEN_SQS_H
 
 #include <BS_thread_pool.hpp>
 #include <thread>
@@ -11,115 +11,22 @@
 #include "spdlog/spdlog.h"
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
+#include "sqsgen/core/optimization.h"
 #include "sqsgen/core/optimization_config.h"
 #include "sqsgen/core/results.h"
 #include "sqsgen/core/shuffle.h"
+#include "sqsgen/core/statistics.h"
 #include "sqsgen/io/mpi.h"
-#include "sqsgen/optimization/helpers.h"
 #include "sqsgen/types.h"
-#include "statistics.h"
 
-namespace sqsgen::optimization {
+namespace sqsgen {
 
   namespace detail {
-    using namespace core::helpers;
+    using namespace sqsgen::core;
+    using namespace sqsgen::core::helpers;
+
     namespace ranges = std::ranges;
     namespace views = ranges::views;
-
-    template <ranges::sized_range... R> bool same_length(R&&... r) {
-      if constexpr (sizeof...(R) == 0)
-        return false;
-      else if constexpr (sizeof...(R) == 1)
-        return true;
-      else {
-        std::array<size_t, sizeof...(R)> lengths{ranges::size(r)...};
-        auto first_length = std::get<0>(lengths);
-        return ranges::all_of(lengths, [first_length](auto l) { return l == first_length; });
-      }
-    }
-
-    template <class T, SublatticeMode Mode> struct optimization_config
-        : core::optimization_config_data<T> {
-      core::shuffler shuffler;
-
-      static std::vector<optimization_config> from_config(core::configuration<T> config) {
-        auto [structures, sorted, bounds, sort_order] = decompose_sort_and_bounds(config);
-        if (!detail::same_length(structures, sorted, bounds, sort_order, config.shell_radii,
-                                 config.shell_weights, config.prefactors, config.target_objective,
-                                 config.pair_weights, config.composition))
-          throw std::invalid_argument("Incompatible configuration");
-        auto num_sublattices = sorted.size();
-
-        std::vector<optimization_config> configs;
-        configs.reserve(num_sublattices);
-        for (auto i = 0u; i < num_sublattices; i++) {
-          auto [species_packed, species_map, species_rmap, pairs, shells_map, shells_rmap,
-                pair_weights]
-              = shared(sorted[i], config.shell_radii[i], config.shell_weights[i],
-                       config.pair_weights[i]);
-          // core::shuffler shuffler(bounds[i]);
-          configs.emplace_back(
-              optimization_config{config.composition[i].sites,
-                                  std::move(structures[i]),
-                                  std::move(sorted[i]),
-                                  {bounds[i]},
-                                  std::move(sort_order[i]),
-                                  std::move(species_packed),
-                                  std::make_pair(std::move(species_map), std::move(species_rmap)),
-                                  std::make_pair(std::move(shells_map), std::move(shells_rmap)),
-                                  std::move(pairs),
-                                  std::move(config.pair_weights[i]),
-                                  std::move(config.prefactors[i]),
-                                  std::move(config.target_objective[i]),
-                                  std::move(config.shell_radii[i]),
-                                  std::move(config.shell_weights[i]),
-                                  core::shuffler({bounds[i]})});
-        }
-        return configs;
-      }
-
-      core::optimization_config_data<T> data() const { return *this; }
-
-    private:
-      static auto decompose_sort_and_bounds(core::configuration<T> const& config) {
-        if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
-          auto s = config.structure.structure().apply_composition(config.composition);
-
-          auto [sorted, bounds, sort_order]
-              = helpers::compute_shuffling_bounds(s, config.composition);
-
-          return std::make_tuple(std::vector{s}, std::vector{sorted},
-                                 stl_matrix_t<bounds_t<usize_t>>{bounds},
-                                 stl_matrix_t<usize_t>{sort_order});
-        } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
-          auto structures
-              = config.structure.structure().apply_composition_and_decompose(config.composition);
-          return std::make_tuple(
-              structures, structures,
-              as<std::vector>{}(structures | views::transform([](auto&& s) -> bounds_t<usize_t> {
-                                  return {0, s.size()};
-                                })),
-              as<std::vector>{}(structures | views::transform([](auto&& s) -> std::vector<usize_t> {
-                                  return as<std::vector>{}(range(static_cast<usize_t>(s.size())));
-                                })));
-        }
-      }
-      static auto shared(core::structure<T> sorted, std::vector<T> const& radii,
-                         shell_weights_t<T> const& weights, cube_t<T> const& pair_weights) {
-        auto [species_map, species_rmap] = make_index_mapping<specie_t>(sorted.species);
-        auto species_packed
-            = as<std::vector>{}(sorted.species | views::transform([&species_map](auto&& s) {
-                                  return species_map.at(s);
-                                }));
-        auto [pairs, shells_map, shells_rmap] = sorted.pairs(radii, weights);
-        std::sort(pairs.begin(), pairs.end(), [](auto p, auto q) {
-          return absolute(p.i - p.j) < absolute(q.i - q.j) && p.i < q.i;
-        });
-        return std::make_tuple(
-            species_packed, species_map, species_rmap, pairs, shells_map, shells_rmap,
-            helpers::scaled_pair_weights(pair_weights, weights, sorted.num_species));
-      }
-    };
 
     template <class T, SublatticeMode Mode> using lift_t
         = std::conditional_t<Mode == SUBLATTICE_MODE_INTERACT, T, std::vector<T>>;
@@ -130,9 +37,8 @@ namespace sqsgen::optimization {
       const auto restore_order
           = [&](configuration_t& species,
                 optimization_config<T, Mode> const& config) -> configuration_t {
-        auto species_rmap = std::get<1>(config.species_map);
         return as<std::vector>{}(config.sort_order | views::transform([&](auto&& index) {
-                                   return species_rmap[species[index]];
+                                   return config.species_map.second.at(species[index]);
                                  }));
       };
       if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
@@ -166,6 +72,8 @@ namespace sqsgen::optimization {
 
   }  // namespace detail
 
+  namespace optimization = sqsgen::core::optimization;
+
   template <class T, SublatticeMode Mode> struct optimizer_base {
 #ifdef WITH_MPI
     mpl::communicator comm;
@@ -177,7 +85,7 @@ namespace sqsgen::optimization {
   protected:
     core::configuration<T> config;
     core::sqs_result_collection<T, Mode> results;
-    std::vector<detail::optimization_config<T, Mode>> opt_configs;
+    std::vector<core::optimization_config<T, Mode>> opt_configs;
 
     int thread_id() {
       auto this_thread_id = std::this_thread::get_id();
@@ -245,9 +153,8 @@ namespace sqsgen::optimization {
       }
     }
 
-    template <class Fn>
-    detail::lift_t<std::decay_t<std::invoke_result_t<Fn, detail::optimization_config<T, Mode>>>,
-                   Mode>
+    template <class Fn> sqsgen::detail::lift_t<
+        std::decay_t<std::invoke_result_t<Fn, core::optimization_config<T, Mode>>>, Mode>
     transpose_setting(Fn&& fn) {
       if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
         return fn(opt_configs.front());
@@ -271,7 +178,7 @@ namespace sqsgen::optimization {
           comm(comm),
 #endif
           _thread_config(config.thread_config),
-          opt_configs(detail::optimization_config<T, Mode>::from_config(config)) {
+          opt_configs(core::optimization_config<T, Mode>::from_config(config)) {
     }
 
     void insert_result(sqs_result<T, Mode>&& result) {
@@ -320,7 +227,7 @@ namespace sqsgen::optimization {
       auto num_shells{this->transpose_setting([](auto&& c) { return c.shell_weights.size(); })};
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
-      sqs_statistics<T> statistics;
+      core::sqs_statistics<T> statistics;
       auto stop_source = std::make_shared<std::stop_source>();
 
       const auto pull_best_objective = [&] {
@@ -337,7 +244,7 @@ namespace sqsgen::optimization {
 
       const auto worker = [&, stop = stop_source->get_token()](rank_t rstart, rank_t rend) {
         if (stop.stop_requested()) return;
-        tick<TIMING_TOTAL> tick_total;
+        core::tick<TIMING_TOTAL> tick_total;
         spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(),
                       this->thread_id(), rstart.to_string(), rend.to_string());
 #ifdef WITH_MPI
@@ -349,7 +256,7 @@ namespace sqsgen::optimization {
         }
 #endif
 
-        tick<TIMING_CHUNK_SETUP> tick_setup;
+        core::tick<TIMING_CHUNK_SETUP> tick_setup;
         iterations_t iterations{rend - rstart};
 
         auto bonds{this->transpose_setting([](auto&& c) {
@@ -364,13 +271,14 @@ namespace sqsgen::optimization {
         statistics.add_working(iterations);
 
         if constexpr (SMode == SUBLATTICE_MODE_INTERACT && IMode == ITERATION_MODE_SYSTEMATIC)
-          shuffler.unrank_permutation(species, rstart + 1);
+          shuffler.template unrank_permutation<ITERATION_MODE_SYSTEMATIC>(species, rstart + 1);
 
         statistics.tock(tick_setup);
 
         pull_best_objective();
 
-        tick<TIMING_LOOP> tick_loop;
+        core::tick<TIMING_LOOP> tick_loop;
+
         for (auto i = rstart; i < rend; ++i) {
           if (stop.stop_requested()) {
             spdlog::info("[Rank {}, Thread {}] received stop signal ...", this->rank(),
@@ -380,17 +288,16 @@ namespace sqsgen::optimization {
           if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
             if constexpr (IMode == ITERATION_MODE_SYSTEMATIC)
               assert(i + 1 == shuffler.rank_permutation(species));
-            helpers::count_bonds(bonds, pairs, species);
-            objective = helpers::compute_objective(sro, bonds, prefactors, pair_weights,
-                                                   target_objective, num_shells, num_species);
-            shuffler.template shuffle<IMode>(species);
+            optimization::count_bonds(bonds, pairs, species);
+            objective = optimization::compute_objective(sro, bonds, prefactors, pair_weights,
+                                                        target_objective, num_shells, num_species);
 
           } else if constexpr (SMode == SUBLATTICE_MODE_SPLIT) {
             std::vector<T> objectives(num_sublattices);
             for (auto sigma = 0; sigma < num_sublattices; ++sigma) {
               shuffler.at(sigma).template shuffle<IMode>(species.at(sigma));
-              helpers::count_bonds(bonds.at(sigma), pairs.at(sigma), species.at(sigma));
-              objective.at(sigma) = helpers::compute_objective(
+              optimization::count_bonds(bonds.at(sigma), pairs.at(sigma), species.at(sigma));
+              objective.at(sigma) = optimization::compute_objective(
                   sro.at(sigma), bonds.at(sigma), prefactors.at(sigma), pair_weights.at(sigma),
                   target_objective.at(sigma), num_shells.at(sigma), num_species.at(sigma));
             }
@@ -420,6 +327,8 @@ namespace sqsgen::optimization {
 
             statistics.log_result(iterations_t{rstart + i - start}, objective_value);
           }
+          if constexpr (SMode == SUBLATTICE_MODE_INTERACT)
+            shuffler.template shuffle<IMode>(species);
         }
         statistics.tock(tick_loop);
 
@@ -436,6 +345,7 @@ namespace sqsgen::optimization {
           statistics.tock(tick_comm);
         }
 #endif
+
         if (callback.has_value()) {
           spdlog::trace("[Rank {}, Thread {}] firing callback", this->rank(), this->thread_id());
           callback.value()(sqs_callback_context<T>{stop_source, statistics.data()});
@@ -532,6 +442,7 @@ namespace sqsgen::optimization {
 #else
       schedule_main_loop();
 #endif
+
       this->barrier();
 
       // collect statistics data
@@ -544,14 +455,14 @@ namespace sqsgen::optimization {
                      std::get<1>(filtered_results.front()).size());
       }
 
-      detail::log_statistics(statistics.data(), this->rank());
+      sqsgen::detail::log_statistics(statistics.data(), this->rank());
 
       // compute the rank of each permutation, and reorder in case of interact mode
       if (this->is_head())
         for (auto& [_, results] : filtered_results)
           for (auto& result : results)  // use reference here, otherwise
                                         // the reference gets moved
-            detail::postprocess_results(result, this->opt_configs);
+            sqsgen::detail::postprocess_results(result, this->opt_configs);
 
       std::conditional_t<SMode == SUBLATTICE_MODE_INTERACT, core::optimization_config_data<T>,
                          std::vector<core::optimization_config_data<T>>>
@@ -624,6 +535,6 @@ namespace sqsgen::optimization {
         },
         std::forward<decltype(conf)>(conf));
   }
-}  // namespace sqsgen::optimization
+}  // namespace sqsgen
 
-#endif  // SQSGEN_OPTIMIZATION_SQS_H
+#endif  // SQSGEN_SQS_H

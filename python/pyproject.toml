@@ -1,15 +1,38 @@
+[project]
+name = "sqsgenerator"
+authors = [
+    {name = "Dominik Gehringer", email = "dgehringer@gmail.com"}
+]
+maintainers = [
+    {name = "Dominik Gehringer", email = "dgehringer@gmail.com"}
+]
+description="Create atomic structures for molecular simulations"
+dependencies = ["numpy", "click", "rich"]
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = {file = "version"}
+
+[project.optional-dependencies]
+test = [
+    "pytest"
+]
+
 [build-system]
 requires = [
     "setuptools>=42",
     "wheel",
     "ninja",
     "cmake>=3.14",
+    "mypy",
+    "numpy",
+    "pybind11"
 ]
 build-backend = "setuptools.build_meta"
 
 [tool.mypy]
 files = "setup.py"
-python_version = ">=3.9"
+python_version = ">=3.10"
 strict = true
 show_error_codes = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
@@ -38,6 +61,9 @@ test-skip = ["*universal2:arm64"]
 before-build = "rm -rf {project}/build"
 
 
+[tool.ruff]
+extend-exclude = ["sqsgenerator/core/_core.pyi", "setup.py"]
+
 [tool.ruff.lint]
 extend-select = [
     "B",    # flake8-bugbear
@@ -46,3 +72,4 @@ extend-select = [
     "RUF",  # Ruff-specific
     "UP",   # pyupgrade
 ]
+ignore = ["F401"]

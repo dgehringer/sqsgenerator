@@ -2,18 +2,18 @@
 // Created by Dominik Gehringer on 19.01.25.
 //
 
-#ifndef SQSGEN_OPTIMIZATION_STATISTICS_H
-#define SQSGEN_OPTIMIZATION_STATISTICS_H
+#ifndef SQSGEN_CORE_STATISTICS_H
+#define SQSGEN_CORE_STATISTICS_H
 
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/types.h"
 
-namespace sqsgen::optimization {
+namespace sqsgen::core {
   using namespace std::chrono;
   using namespace core::helpers;
 
   template <Timing> struct tick {
-    high_resolution_clock::time_point now{steady_clock::now()};
+    steady_clock::time_point now = steady_clock::now();
   };
 
   template <class T> class sqs_statistics {
@@ -77,6 +77,6 @@ namespace sqsgen::optimization {
     }
   };
 
-}  // namespace sqsgen::optimization
+}  // namespace sqsgen::core
 
-#endif  // SQSGEN_OPTIMIZATION_STATISTICS_H
+#endif  // SQSGEN_CORE_STATISTICS_H

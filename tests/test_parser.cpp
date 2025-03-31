@@ -462,8 +462,7 @@ namespace sqsgen::testing {
 
     auto parse_weights = []<class Doc>(Doc const& doc, SublatticeMode mode) -> weights_t<double> {
       auto radii = parse_radii(doc, mode);
-      return config::parse_shell_weights<"shell_weights", double>(doc, mode,
-                                                                  radii.result());
+      return config::parse_shell_weights<"shell_weights", double>(doc, mode, radii.result());
     };
 
     auto rjson = parse_weights(json, SUBLATTICE_MODE_INTERACT);

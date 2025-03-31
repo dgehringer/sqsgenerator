@@ -1,26 +1,25 @@
 //
-// Created by Dominik Gehringer on 06.01.25.
+// Created by Dominik Gehringer on 18.03.25.
 //
 
-#ifndef SQSGEN_OPTIMIZATION_HELPERS_H
-#define SQSGEN_OPTIMIZATION_HELPERS_H
+#ifndef SQSGEN_CORE_OPTIMIZATION_H
+#define SQSGEN_CORE_OPTIMIZATION_H
 
+#include "sqsgen/core/helpers.h"
+#include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
-namespace sqsgen::optimization::helpers {
+namespace sqsgen::core::optimization {
 
   namespace ranges = std::ranges;
   namespace views = ranges::views;
-
-  namespace detail {}
-
 
   template <class T> cube_t<T> scaled_pair_weights(cube_t<T> const& pair_weights,
                                                    shell_weights_t<T> const& weights,
                                                    usize_t num_species) {
     auto w(pair_weights);
     auto shells_rmap
-        = std::get<1>(core::helpers::make_index_mapping<usize_t>(weights | views::elements<0>));
+        = std::get<1>(helpers::make_index_mapping<usize_t>(weights | views::elements<0>));
     for (auto s = 0; s < weights.size(); ++s) {
       auto w_s = weights.at(shells_rmap.at(s));
       for (auto xi = 0; xi < num_species; ++xi)
@@ -33,7 +32,7 @@ namespace sqsgen::optimization::helpers {
     return w;
   }
 
-  template <class T> auto compute_shuffling_bounds(core::structure<T> const& structure,
+  template <class T> auto compute_shuffling_bounds(structure<T> const& structure,
                                                    std::vector<sublattice> const& composition) {
     using namespace core::helpers;
     auto num_atoms = structure.size();
@@ -94,11 +93,12 @@ namespace sqsgen::optimization::helpers {
           T sigma_s_xi_eta = T(1.0) - static_cast<T>(pair_bonds) * prefactors(s, xi, eta);
           sro(s, xi, eta) = sigma_s_xi_eta;
           sro(s, eta, xi) = sigma_s_xi_eta;
-          objective += pair_weights(s, xi, eta) * core::helpers::absolute(sigma_s_xi_eta - target(s, xi, eta));
+          objective += pair_weights(s, xi, eta)
+                       * core::helpers::absolute(sigma_s_xi_eta - target(s, xi, eta));
         }
     return objective;
   }
 
-}  // namespace sqsgen::optimization::helpers
+}  // namespace sqsgen::core::optimization
 
-#endif  // SQSGEN_OPTIMIZATION_HELPERS_H
+#endif  // SQSGEN_CORE_OPTIMIZATION_H

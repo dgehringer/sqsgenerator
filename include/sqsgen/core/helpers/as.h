@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
 #include "sqsgen/core/helpers/sorted_vector.h"
 
 namespace sqsgen::core::helpers {
@@ -17,7 +18,6 @@ namespace sqsgen::core::helpers {
   template <template <class...> class> struct as {};
 
   template <> struct as<std::vector> {
-
     template <ranges::range R>
     std::vector<std::decay_t<ranges::range_value_t<R>>> operator()(R&& r) {
       return {std::begin(r), std::end(r)};

@@ -24,6 +24,8 @@ namespace sqsgen::core::helpers {
     const_iterator begin() const { return _values.begin(); }
     const_iterator end() const { return _values.end(); }
 
+    void clear() { _values.clear(); }
+
     void reserve(std::size_t size) { _values.reserve(size); }
 
     sorted_vector(const Compare& c = Compare()) : _values(), cmp(c) {}

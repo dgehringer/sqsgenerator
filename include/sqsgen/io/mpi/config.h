@@ -6,7 +6,7 @@
 #define SQSGEN_IO_MPI_CONFIG_H
 
 #ifdef WITH_MPI
-#include <mpl/mpl.hpp>
+#  include <mpl/mpl.hpp>
 #endif
 
 namespace sqsgen::io::mpi {

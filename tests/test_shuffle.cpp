@@ -4,6 +4,4 @@
 
 #include "sqsgen/core/shuffle.h"
 
-namespace sqsgen::testing {
-
-}
+namespace sqsgen::testing {}
