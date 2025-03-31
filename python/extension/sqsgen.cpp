@@ -9,9 +9,9 @@
 #include <pybind11/stl.h>
 
 #include "sqsgen/core/results.h"
-#include "sqsgen/io/binary.h"
 #include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/dict.h"
+#include "sqsgen/io/json.h"
 #include "sqsgen/io/parsing.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/sqs.h"
@@ -36,7 +36,7 @@ constexpr auto format_prec() {
 
 template <class T> py::bytes to_bytes(T &value) {
   using namespace sqsgen;
-  auto data = nlohmann::json::to_msgpack(io::binary::save(value));
+  auto data = nlohmann::json::to_msgpack(nlohmann::json{{value}});
   std::string_view view(reinterpret_cast<char *>(data.data()), data.size());
   return py::bytes(view);
 }
@@ -44,7 +44,9 @@ template <class T> py::bytes to_bytes(T &value) {
 template <class T> T from_bytes(std::string_view view) {
   using namespace sqsgen;
   auto data = nlohmann::json::from_msgpack(view);
-  return io::binary::load<T>(data);
+  std::cerr << data << std::endl;
+  T result = data.get<T>();
+  return result;
 }
 
 template <string_literal Name, sqsgen::SublatticeMode Mode> constexpr auto format_sublattice() {

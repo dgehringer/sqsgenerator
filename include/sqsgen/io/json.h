@@ -105,6 +105,112 @@ template <class T> struct adl_serializer<core::structure<T>> {
   }
 };
 
+template <class T> struct adl_serializer<core::structure_config<T>> {
+  static void to_json(json& j, core::structure_config<T> const& s) {
+    j = json{
+        {"lattice", s.lattice},
+        {"species", s.species},
+        {"coords", s.coords},
+        {"supercell", s.supercell},
+    };
+  }
+
+  static void from_json(const json& j, core::structure_config<T>& s) {
+    j.at("species").get_to(s.species);
+    j.at("lattice").get_to(s.lattice);
+    j.at("coords").get_to(s.coords);
+    j.at("supercell").get_to(s.supercell);
+  }
+};
+
+template <class T> struct adl_serializer<core::configuration<T>> {
+  static void to_json(json& j, core::configuration<T> const& data) {
+    j = json{{"sublattice_mode", data.sublattice_mode},
+             {"iteration_mode", data.iteration_mode},
+             {"structure", data.structure},
+             {"composition", data.composition},
+             {"shell_radii", data.shell_radii},
+             {"shell_weights", data.shell_weights},
+             {"prefactors", data.prefactors},
+             {"pair_weights", data.pair_weights},
+             {"target_objective", data.target_objective},
+             {"iterations", data.iterations},
+             {"chunk_size", data.chunk_size},
+             {"thread_config", data.thread_config}};
+  }
+
+  static void from_json(const json& j, core::configuration<T>& c) {
+    j.at("sublattice_mode").get_to<SublatticeMode>(c.sublattice_mode);
+    j.at("iteration_mode").get_to<IterationMode>(c.iteration_mode);
+    j.at("structure").get_to<core::structure_config<T>>(c.structure);
+    j.at("composition").get_to<std::vector<sublattice>>(c.composition);
+    j.at("shell_radii").get_to<stl_matrix_t<T>>(c.shell_radii);
+    j.at("shell_weights").get_to<std::vector<shell_weights_t<T>>>(c.shell_weights);
+    j.at("prefactors").get_to<std::vector<cube_t<T>>>(c.prefactors);
+    j.at("pair_weights").get_to<std::vector<cube_t<T>>>(c.pair_weights);
+    j.at("target_objective").get_to<std::vector<cube_t<T>>>(c.target_objective);
+    j.at("iterations").get_to<std::optional<iterations_t>>(c.iterations);
+    j.at("chunk_size").get_to<iterations_t>(c.chunk_size);
+    j.at("thread_config").get_to<thread_config_t>(c.thread_config);
+  }
+};
+
+template <class T> struct adl_serializer<sqs_result<T, SUBLATTICE_MODE_INTERACT>> {
+  static void to_json(json& j, sqs_result<T, SUBLATTICE_MODE_INTERACT> const& data) {
+    j = json{{"objective", data.objective}, {"species", data.species}, {"sro", data.sro}};
+  }
+
+  static void from_json(const json& j, sqs_result<T, SUBLATTICE_MODE_INTERACT>& r) {
+    j.at("objective").get_to<T>(r.objective);
+    j.at("species").get_to<configuration_t>(r.species);
+    j.at("sro").get_to<T>(r.sro);
+  }
+};
+
+template <class T>
+struct adl_serializer<core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT>> {
+  static void to_json(json& j,
+                      core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT> const& data) {
+    adl_serializer<sqs_result<T, SUBLATTICE_MODE_INTERACT>>::to_json(j, data);
+  }
+};
+
+template <class T>
+struct adl_serializer<core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT>> {
+  static void to_json(json& j,
+                      core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT> const& data) {
+    namespace views = std::ranges::views;
+    adl_serializer<std::vector<sqs_result<T, SUBLATTICE_MODE_SPLIT>>>::to_json(
+        j, {data.objective,
+            core::helpers::as<std::vector>{}(
+                data.sublattices
+                | views::transform(
+                    [](auto&& sl) -> sqs_result<T, SUBLATTICE_MODE_INTERACT> { return sl; }))});
+  }
+};
+
+template <class T, SublatticeMode Mode> struct adl_serializer<core::sqs_result_pack<T, Mode>> {
+  static void to_json(json& j, core::sqs_result_pack<T, Mode> const& data) {
+    namespace views = std::ranges::views;
+    auto flattened
+        = core::helpers::as<std::vector>{}(data.results | views::elements<1> | views::join);
+    j = json{
+        {"statistics", data.statistics},
+        {"config", data.config},
+        {"results", flattened},
+    };
+  }
+
+  static void from_json(const json& j, core::sqs_result_pack<T, Mode>& p) {
+    core::sqs_result_collection<T, Mode> results;
+    for (auto&& r : j.at("results").get<std::vector<sqs_result<T, Mode>>>())
+      results.insert_result(std::move(r));
+    core::configuration<T> config{j.at("config").get<core::configuration<T>>()};
+    sqs_statistics_data<T> statistics{j.at("statistics").get<sqs_statistics_data<T>>()};
+    p = sqs_result_pack<T, Mode>(results, config, statistics);
+  }
+};
+
 template <class T> struct adl_serializer<std::optional<T>> {
   static void to_json(json& j, const std::optional<T>& opt) {
     if (opt.has_value()) {
