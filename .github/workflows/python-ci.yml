@@ -6,17 +6,29 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  VCPKG_FEATURE_FLAGS: dependencygraph
+
 jobs:
   build:
 
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
         python-version: ["3.11"]
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -41,7 +53,7 @@ jobs:
         run: ruff format --diff ./python/sqsgenerator
 
       - name: Build Package
-        run: pip install ./python -v
+        run: pip install ./python -v  --no-build-isolation
 
       - name: Run unit tests
         run: pytest ./python -vv --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml

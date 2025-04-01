@@ -20,6 +20,11 @@ if (DEFINED SQSGEN_BUILD_COMMIT)
     add_compile_options("-DSQSGEN_BUILD_COMMIT=${SQSGEN_BUILD_COMMIT}")
 endif ()
 
+find_path(RAPIDHASH_INCLUDE_DIRS "rapidhash.h")
+find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
+
 
 pybind11_add_module(_core sqsgen.cpp utils.h)
-target_link_libraries(_core PUBLIC ${SQSGEN_LIBS})
+target_include_directories(_core PRIVATE ${BS_THREAD_POOL_INCLUDE_DIRS})
+target_include_directories(_core PRIVATE ${RAPIDHASH_INCLUDE_DIRS})
+target_link_libraries(_core PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only PkgConfig::gmp Eigen3::Eigen mp++ ${Python3_LIBRARIES})

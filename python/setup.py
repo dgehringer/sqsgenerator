@@ -1,8 +1,12 @@
+import json
 import os
 import re
-import shlex
-import subprocess
 import sys
+import shlex
+import uuid
+
+import pybind11
+import subprocess
 from pathlib import Path
 
 from setuptools import Extension, find_packages, setup
@@ -16,13 +20,14 @@ PLAT_TO_CMAKE = {
     "win-arm64": "ARM64",
 }
 
-VERSION_FILE = "version"
+VERSION_FILE = "vcpkg.json"
 
 
 def make_version_info(path: str) -> dict[str, int]:
     with open(path) as version_file:
-        VERSION_STRING, *_ = version_file
-        major, minor, build = VERSION_STRING.split(".")
+        major, minor, build = (
+            json.load(version_file).get("version-string", "0.0.0").split(".")
+        )
         return dict(major=int(major), minor=int(minor), build=int(build))
 
 
@@ -52,7 +57,8 @@ class CMakeExtension(Extension):
         build_benchmarks: bool = False,
         build_tests: bool = False,
         build_type: str = "release",
-        version_file: tuple[str, ...] = ("python", VERSION_FILE),
+        version_file: tuple[str, ...] = (VERSION_FILE,),
+        vcpkg_root: str | None = None,
     ) -> None:
         super().__init__(name, sources=[])
         self.sourcedir = os.fspath(Path(sourcedir).resolve())
@@ -62,6 +68,10 @@ class CMakeExtension(Extension):
         self.output_dir = output_dir or []
         self.version_info = make_version_info(
             os.path.join(self.sourcedir, *version_file)
+        )
+        self.build_dir = uuid.uuid4().hex
+        self.vcpkg_root = os.fspath(
+            Path(vcpkg_root or os.environ["VCPKG_ROOT"]).resolve()
         )
 
 
@@ -89,6 +99,9 @@ class CMakeBuild(build_ext):
         # Set Python_EXECUTABLE instead if you use PYBIND11_FINDPYTHON
         # EXAMPLE_VERSION_INFO shows you how to pass a value into the C++ code
         # from Python.
+        vcpkg_toolchain = os.path.join(
+            ext.vcpkg_root, "scripts", "buildsystems", "vcpkg.cmake"
+        )
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPython3_EXECUTABLE={sys.executable}",
@@ -97,11 +110,14 @@ class CMakeBuild(build_ext):
             f"-DBUILD_BENCHMARKS={'ON' if ext.build_benchmarks else 'OFF'}",
             "-DWITH_MPI=OFF",
             "-DBUILD_PYTHON=ON",
+            f"-DCMAKE_TOOLCHAIN_FILE={vcpkg_toolchain}",
+            f"-DCMAKE_PREFIX_PATH={pybind11.get_cmake_dir()}",
             f"-DSQSGEN_MAJOR_VERSION={ext.version_info['major']}",
             f"-DSQSGEN_MINOR_VERSION={ext.version_info['minor']}",
             f"-DSQSGEN_BUILD_NUMBER={ext.version_info['build']}",
             f"-DSQSGEN_BUILD_BRANCH={git_branch()}",
             f"-DSQSGEN_BUILD_COMMIT={git_sha1()}",
+            f"-B=build",
         ]
         build_args = []
         # Adding CMake arguments set as environment variable
@@ -170,14 +186,16 @@ class CMakeBuild(build_ext):
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
         )
         subprocess.run(
-            ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
+            ["cmake", "--build", "build", *build_args], cwd=build_temp, check=True
         )
 
 
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
-    ext_modules=[CMakeExtension("_core", sourcedir="..")],
+    ext_modules=[
+        CMakeExtension("_core", sourcedir="..", vcpkg_root=os.path.join("..", "vcpkg"))
+    ],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     packages=find_packages(".", exclude=["tests"]),
