@@ -19,10 +19,10 @@ FetchContent_MakeAvailable(mp++)
 set_property(TARGET mp++ PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 
-find_package(eigen3 REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(gmp REQUIRED IMPORTED_TARGET gmp)
+find_package(eigen3 REQUIRED IMPORTED_TARGET Eigen3::Eigen)
+find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 if (WITH_MPI)
