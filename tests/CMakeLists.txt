@@ -22,6 +22,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID
     add_compile_options(-fexperimental-library)
 endif ()
 
+if (MSVC)
+    add_compile_options(/permissive-)
+endif ()
+
 
 enable_testing()
 

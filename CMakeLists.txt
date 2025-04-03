@@ -9,7 +9,7 @@ include(FetchContent)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(MPPP_BUILD_STATIC_LIBRARY ON)
+set(MPPP_BUILD_STATIC_LIBRARY ON CACHE INTERNAL "Build mp++ as a static library")
 FetchContent_Declare(
         mp++
         GIT_REPOSITORY https://github.com/bluescarni/mppp.git
