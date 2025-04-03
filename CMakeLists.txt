@@ -18,9 +18,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(mp++)
 set_property(TARGET mp++ PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+if (WIN32)
+    find_package(gmp REQUIRED)
+else ()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(gmp REQUIRED IMPORTED_TARGET gmp)
+endif ()
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(gmp REQUIRED IMPORTED_TARGET gmp)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
