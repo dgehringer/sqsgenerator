@@ -10,7 +10,7 @@
     "bshoshany-thread-pool",
     "gtest",
     {
-      "name": "pkgconfig",
+      "name": "pkgconf",
       "platform": "windows"
     }
   ]
