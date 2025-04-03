@@ -41,6 +41,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID
     add_compile_options(-fexperimental-library)
 endif ()
 
+if (MSVC)
+    add_compile_options(/permissive-)
+endif ()
+
+
 if (BUILD_TESTS)
     message(STATUS "BUILD_TESTS=${BUILD_TESTS}")
     add_subdirectory(tests)
