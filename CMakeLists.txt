@@ -42,7 +42,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID
 endif ()
 
 if (MSVC)
-    add_compile_options(/permissive- /EHsc /nologo /W4 /Zc:twoPhase-)
+    add_compile_options(/permissive- /Zc:twoPhase-)
 endif ()
 
 
