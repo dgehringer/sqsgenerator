@@ -8,6 +8,10 @@
     "gmp",
     "nlohmann-json",
     "bshoshany-thread-pool",
-    "gtest"
+    "gtest",
+    {
+      "name": "pkgconfig",
+      "platform": "windows"
+    }
   ]
 }
