@@ -6,7 +6,6 @@
 #define SQSGEN_CORE_HELPERS_AS_H
 
 #include <map>
-#include <ranges>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -22,9 +21,7 @@ namespace sqsgen::core::helpers {
     template <ranges::range R> using return_t = std::vector<std::decay_t<ranges::range_value_t<R>>>;
 
     template <ranges::range R> return_t<R> operator()(R&& r) {
-      // for some reason MSVC does not compile return_t<R>(std::ranges::begin(r),
-      // std::ranges::end(r));
-      return_t<R>{std::begin(r), std::end(r)};
+      return return_t<R>(std::ranges::begin(r), std::ranges::end(r));
     }
   };
 
@@ -33,7 +30,7 @@ namespace sqsgen::core::helpers {
         = std::unordered_set<std::decay_t<ranges::range_value_t<R>>, hash>;
 
     template <class hash, ranges::range R> return_t<hash, R> operator()(R&& r) {
-      return return_t<hash, R>{std::begin(r), std::end(r)};
+      return return_t<hash, R>(std::ranges::begin(r), std::ranges::end(r));
     }
 
     template <ranges::range R> auto operator()(R&& r) {
@@ -56,7 +53,7 @@ namespace sqsgen::core::helpers {
         = std::set<std::decay_t<ranges::range_value_t<R>>, compare>;
 
     template <class compare, ranges::range R> return_t<compare, R> operator()(R&& r) {
-      return return_t<compare, R>{std::begin(r), std::end(r)};
+      return return_t<compare, R>(std::ranges::begin(r), std::ranges::end(r));
     }
 
     template <ranges::range R> auto operator()(R&& r) {
@@ -73,6 +70,7 @@ namespace sqsgen::core::helpers {
       using return_t = std::unordered_map<key_t, value_t>;
       return_t result{};
       for (const auto& [key, value] : r) result[key] = value;
+      ;
       return result;
     }
   };
