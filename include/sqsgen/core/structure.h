@@ -201,10 +201,10 @@ namespace sqsgen::core {
     T min_dist{distances.front()}, max_dist{distances.back()};
 
     auto num_edges{static_cast<std::size_t>((max_dist - min_dist) / bin_width) + 2};
-    auto edges
-        = helpers::as<std::vector>{}(views::iota(0UL, num_edges) | views::transform([&](auto i) {
-                                       return min_dist + static_cast<T>(i) * bin_width;
-                                     }));
+
+    // for some reason as<std::vector> does not work here
+    auto edges = std::vector<T>(num_edges);
+    for (std::size_t i = 0; i < num_edges; i++) edges[i] = min_dist + static_cast<T>(i) * bin_width;
 
     if (edges.size() < 10)
       throw std::invalid_argument(
@@ -219,7 +219,7 @@ namespace sqsgen::core {
       } else
         freqs[++bin] = std::vector<T>{};
     }
-    // make sure our histogramm contians the same number of distances as the corresponding input
+    // make sure our histogramm contains the same number of distances as the corresponding input
     // vector
     assert(helpers::fold_left(
                views::elements<1>(freqs) | views::transform([&](auto v) { return v.size(); }), 0,
