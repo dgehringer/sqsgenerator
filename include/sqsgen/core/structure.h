@@ -336,7 +336,8 @@ namespace sqsgen::core {
       helpers::for_each(
           [&](auto i, auto j, auto k) {
             using vec3_t = Eigen::Matrix<T, 1, 3>;
-            vec3_t translation = vec3_t{i, j, k} * iscale;
+            vec3_t translation
+                = vec3_t{static_cast<T>(i), static_cast<T>(j), static_cast<T>(k)} * iscale;
             helpers::for_each(
                 [&](auto index) {
                   supercell_coords.row(site_index) = translation + scaled_frac_coords.row(index);
