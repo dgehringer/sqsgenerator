@@ -56,12 +56,12 @@ jobs:
         run: pip install ./python -v  --no-build-isolation
 
       - name: Run unit tests
-        run: pytest ./python -vv --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+        run: pytest ./python -vv --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
 
       - name: Upload pytest test results
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-results-${{ matrix.python-version }}
-          path: junit/test-results-${{ matrix.python-version }}.xml
+          name: pytest-results-${{ matrix.python-version }}-${{ matrix.os }}
+          path: junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
         # Use always() to always run this step to publish test results when there are test failures
         if: ${{ always() }}
