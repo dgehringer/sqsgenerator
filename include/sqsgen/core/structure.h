@@ -246,8 +246,8 @@ namespace sqsgen::core {
   template <class T> cube_t<T> compute_prefactors(structure<T> &&structure,
                                                   std::vector<T> const &shell_radii,
                                                   shell_weights_t<T> const &weights) {
-    return detail::compute_prefactors<T>(structure.shell_matrix(shell_radii), weights,
-                                         structure.species);
+    return sqsgen::core::detail::compute_prefactors<T>(structure.shell_matrix(shell_radii), weights,
+                                                       structure.species);
   }
 
   template <class T>
@@ -278,7 +278,7 @@ namespace sqsgen::core {
       };
       frac_coords = fc;
       _distance_matrix = std::nullopt;
-      num_species = detail::compute_num_species(species);
+      num_species = sqsgen::core::detail::compute_num_species(species);
     }
 
     structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
@@ -287,7 +287,7 @@ namespace sqsgen::core {
           frac_coords(frac_coords),
           species(species),
           pbc(pbc),
-          num_species(detail::compute_num_species(species)) {
+          num_species(sqsgen::core::detail::compute_num_species(species)) {
       if (frac_coords.rows() != species.size() || species.empty())
         throw std::invalid_argument(
             "frac coords must have the same size as the species input and must not be empty");
@@ -299,7 +299,7 @@ namespace sqsgen::core {
           frac_coords(frac_coords),
           species(species),
           pbc(pbc),
-          num_species(detail::compute_num_species(species)) {
+          num_species(sqsgen::core::detail::compute_num_species(species)) {
       if (frac_coords.rows() != species.size() || species.empty())
         throw std::invalid_argument(
             "frac coords must have the same size as the species input and must not be empty");
@@ -307,7 +307,7 @@ namespace sqsgen::core {
 
     [[nodiscard]] const matrix_t<T> &distance_matrix() {
       if (!_distance_matrix.has_value())
-        _distance_matrix = detail::distance_matrix(lattice, frac_coords);
+        _distance_matrix = sqsgen::core::detail::distance_matrix(lattice, frac_coords);
 
       return _distance_matrix.value();
     }
@@ -379,7 +379,7 @@ namespace sqsgen::core {
         for (auto &&[specie, amount] : species)
           for (auto _ = 0; _ < amount; _++, ++index) copy.species[*index] = specie;
       }
-      copy.num_species = detail::compute_num_species(copy.species);
+      copy.num_species = sqsgen::core::detail::compute_num_species(copy.species);
       return copy;
     }
 
@@ -402,12 +402,12 @@ namespace sqsgen::core {
     template <ranges::input_range R, class V = ranges::range_value_t<R>>
       requires std::is_integral_v<V>
     structure sliced(R &&r) const {
-      auto sites = std::vector<detail::site<T>>{};
+      auto sites = std::vector<sqsgen::core::detail::site<T>>{};
       for (auto index : r) {
         if (index >= size() || index < 0)
           throw std::out_of_range(std::format("index out of range 0 <= {} < {}", index, size()));
-        sites.push_back(detail::site<T>{static_cast<usize_t>(index), species[index],
-                                        Eigen::Vector3<T>(frac_coords.row(index))});
+        sites.push_back(sqsgen::core::detail::site<T>{static_cast<usize_t>(index), species[index],
+                                                      Eigen::Vector3<T>(frac_coords.row(index))});
       }
       return structure(lattice, sites);
     }
@@ -473,7 +473,7 @@ namespace sqsgen::core {
     }
   };
 
-  template <typename T> using site_t = detail::site<T>;
+  template <typename T> using site_t = sqsgen::core::detail::site<T>;
 
 }  // namespace sqsgen::core
 
