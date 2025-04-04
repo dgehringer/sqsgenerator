@@ -266,7 +266,7 @@ namespace sqsgen::core {
     structure() = default;
 
     template <ranges::input_range R>
-      requires std::is_same_v<ranges::range_value_t<R>, detail::site<T>>
+      requires std::is_same_v<ranges::range_value_t<R>, sqsgen::core::detail::site<T>>
     structure(const lattice_t<T> &lattice, R &&r) : lattice(lattice) {
       auto sites = helpers::as<std::vector>{}(r);
       if (sites.empty()) throw std::invalid_argument("Cannot create a structure without atoms");
@@ -355,7 +355,8 @@ namespace sqsgen::core {
     auto sites() const {
       return ranges::iota_view(static_cast<usize_t>(0), static_cast<usize_t>(size()))
              | views::transform([&](auto i) {
-                 return detail::site<T>{i, species[i], Eigen::Vector3<T>(frac_coords.row(i))};
+                 return sqsgen::core::detail::site<T>{i, species[i],
+                                                      Eigen::Vector3<T>(frac_coords.row(i))};
                });
     }
 
