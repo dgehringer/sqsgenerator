@@ -198,12 +198,12 @@ namespace sqsgen::core {
         structure.distance_matrix().reshaped()
         | views::filter([](auto dist) { return dist > 0.0 && !helpers::is_close<T>(dist, 0.0); }));
     std::sort(distances.begin(), distances.end());
-    auto min_dist{distances.front()}, max_dist{distances.back()};
+    T min_dist{distances.front()}, max_dist{distances.back()};
 
     auto num_edges{static_cast<std::size_t>((max_dist - min_dist) / bin_width) + 2};
     auto edges
         = helpers::as<std::vector>{}(views::iota(0UL, num_edges) | views::transform([&](auto i) {
-                                       return T(min_dist) + i * bin_width;
+                                       return min_dist + static_cast<T>(i) * bin_width;
                                      }));
 
     if (edges.size() < 10)
