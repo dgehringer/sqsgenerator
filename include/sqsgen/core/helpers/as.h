@@ -20,7 +20,7 @@ namespace sqsgen::core::helpers {
   template <> struct as<std::vector> {
     template <ranges::range R>
     std::vector<std::decay_t<ranges::range_value_t<R>>> operator()(R&& r) {
-      return {std::begin(r), std::end(r)};
+      return std::vector<std::decay_t<ranges::range_value_t<R>>>{std::begin(r), std::end(r)};
     }
   };
 
