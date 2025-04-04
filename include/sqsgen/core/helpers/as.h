@@ -21,7 +21,7 @@ namespace sqsgen::core::helpers {
     template <ranges::range R> using return_t = std::vector<std::decay_t<ranges::range_value_t<R>>>;
 
     template <ranges::range R> return_t<R> operator()(R&& r) {
-      return return_t(std::ranges::begin(r), std::ranges::end(r));
+      return return_t<R>(std::ranges::begin(r), std::ranges::end(r));
     }
   };
 
@@ -30,7 +30,7 @@ namespace sqsgen::core::helpers {
         = std::unordered_set<std::decay_t<ranges::range_value_t<R>>, hash>;
 
     template <class hash, ranges::range R> return_t<hash, R> operator()(R&& r) {
-      return return_t(std::ranges::begin(r), std::ranges::end(r));
+      return return_t<hash, R>(std::ranges::begin(r), std::ranges::end(r));
     }
 
     template <ranges::range R> auto operator()(R&& r) {
