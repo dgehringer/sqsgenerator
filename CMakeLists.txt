@@ -33,16 +33,14 @@ if (WITH_MPI)
 endif ()
 
 if (MSVC)
+    add_definitions(-DUNICODE)
+    add_definitions(-D_UNICODE)
     add_compile_options(/permissive- /Zc:__cplusplus)
 endif ()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     message(STATUS "Detected clang: adding -fexperimental-library")
     add_compile_options(-fexperimental-library)
-endif ()
-
-if (MSVC)
-    add_compile_options(/permissive- /Zc:twoPhase-)
 endif ()
 
 
