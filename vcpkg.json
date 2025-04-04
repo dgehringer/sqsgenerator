@@ -1,0 +1,17 @@
+{
+  "name": "sqsgenerator",
+  "version-string": "0.4.1",
+  "dependencies": [
+    "eigen3",
+    "spdlog",
+    "rapidhash",
+    "gmp",
+    "nlohmann-json",
+    "bshoshany-thread-pool",
+    "gtest",
+    {
+      "name": "pkgconf",
+      "platform": "windows"
+    }
+  ]
+}

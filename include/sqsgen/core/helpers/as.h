@@ -18,16 +18,19 @@ namespace sqsgen::core::helpers {
   template <template <class...> class> struct as {};
 
   template <> struct as<std::vector> {
-    template <ranges::range R>
-    std::vector<std::decay_t<ranges::range_value_t<R>>> operator()(R&& r) {
-      return {std::begin(r), std::end(r)};
+    template <ranges::range R> using return_t = std::vector<std::decay_t<ranges::range_value_t<R>>>;
+
+    template <ranges::range R> return_t<R> operator()(R&& r) {
+      return return_t<R>{std::ranges::begin(r), std::ranges::end(r)};
     }
   };
 
   template <> struct as<std::unordered_set> {
-    template <class hash, ranges::range R>
-    std::unordered_set<std::decay_t<ranges::range_value_t<R>>, hash> operator()(R&& r) {
-      return {std::begin(r), std::end(r)};
+    template <class hash, ranges::range R> using return_t
+        = std::unordered_set<std::decay_t<ranges::range_value_t<R>>, hash>;
+
+    template <class hash, ranges::range R> return_t<hash, R> operator()(R&& r) {
+      return return_t<hash, R>{std::ranges::begin(r), std::ranges::end(r)};
     }
 
     template <ranges::range R> auto operator()(R&& r) {
@@ -46,9 +49,11 @@ namespace sqsgen::core::helpers {
   };
 
   template <> struct as<std::set> {
-    template <class compare, ranges::range R>
-    std::set<std::decay_t<ranges::range_value_t<R>>, compare> operator()(R&& r) {
-      return {std::begin(r), std::end(r)};
+    template <class compare, ranges::range R> using return_t
+        = std::set<std::decay_t<ranges::range_value_t<R>>, compare>;
+
+    template <class compare, ranges::range R> return_t<compare, R> operator()(R&& r) {
+      return return_t<compare, R>{std::ranges::begin(r), std::ranges::end(r)};
     }
 
     template <ranges::range R> auto operator()(R&& r) {
@@ -65,7 +70,6 @@ namespace sqsgen::core::helpers {
       using return_t = std::unordered_map<key_t, value_t>;
       return_t result{};
       for (const auto& [key, value] : r) result[key] = value;
-      ;
       return result;
     }
   };

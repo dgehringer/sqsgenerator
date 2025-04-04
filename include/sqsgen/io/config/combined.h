@@ -119,10 +119,10 @@ namespace sqsgen::io::config {
                                                                    sublattice_mode)
               .and_then([&](auto&& composition) {
                 return config::parse_shell_radii<"shell_radii">(
-                           doc, sublattice_mode, std::forward<decltype(structure)>(structure),
+                           doc, sublattice_mode, std::forward<core::structure<T>>(structure),
                            composition)
                     .combine(parse_iterations<"iterations">(
-                        doc, std::forward<decltype(structure)>(structure), composition,
+                        doc, std::forward<core::structure<T>>(structure), composition,
                         iteration_mode))
                     .and_then([&](auto&& radii_and_iterations) {
                       auto [radii, iterations] = radii_and_iterations;
@@ -131,15 +131,15 @@ namespace sqsgen::io::config {
                           .and_then([&](auto&& weights) {
                             return config::parse_prefactors<"prefactors", T>(
                                        doc, sublattice_mode,
-                                       std::forward<decltype(structure)>(structure), composition,
+                                       std::forward<core::structure<T>>(structure), composition,
                                        radii, weights)
                                 .combine(config::parse_pair_weights<"pair_weights", T>(
                                     doc, sublattice_mode,
-                                    std::forward<decltype(structure)>(structure), composition,
+                                    std::forward<core::structure<T>>(structure), composition,
                                     weights))
                                 .combine(config::parse_target_objective<"target_objective", T>(
                                     doc, sublattice_mode,
-                                    std::forward<decltype(structure)>(structure), composition,
+                                    std::forward<core::structure<T>>(structure), composition,
                                     weights))
                                 .combine(parse_chunk_size<"chunk_size">(doc, iterations))
                                 .combine(parse_threads_per_rank<"threads_per_rank">(doc))

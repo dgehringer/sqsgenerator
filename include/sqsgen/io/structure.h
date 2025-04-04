@@ -12,6 +12,11 @@
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/json.h"
 
+// PI is not defined on standard C++ headers when using MSVC
+#ifndef M_PI
+#  define M_PI 3.14159265358979323846
+#endif
+
 namespace sqsgen::io {
   namespace ranges = std::ranges;
   namespace views = ranges::views;

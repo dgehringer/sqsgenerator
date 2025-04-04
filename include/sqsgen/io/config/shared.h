@@ -35,10 +35,10 @@ namespace sqsgen::io::config {
   lift(Fn&& fn, Ranges&&... ranges) {
     using inner_t = typename detail::parse_result_inner_type_from_fn<Fn, Ranges...>::type;
     auto arglen = ranges::size(std::get<0>(std::forward_as_tuple(ranges...)));
-    bool all_same_size = ((ranges::size(ranges) == arglen) && ...);
+    bool all_same_size = ((std::ranges::size(ranges) == arglen) && ...);
     if (!all_same_size)
       return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("The sizes do not match");
-    auto ptr = std::make_tuple(ranges::begin(ranges)...);
+    auto ptr = std::make_tuple(std::ranges::begin(ranges)...);
     std::vector<inner_t> results;
     for (auto i = 0u; i < arglen; ++i) {
       auto r = [&]<std::size_t... I>(std::index_sequence<I...>) {

@@ -2,13 +2,7 @@ set(SQSGEN_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 set(SQSGEN_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/sqsgen)
 set(SQSGEN_TEST_SOURCE_DIR ${PROJECT_SOURCE_DIR}/tests)
 
-CPMAddPackage(
-        NAME googletest
-        GITHUB_REPOSITORY google/googletest
-        GIT_TAG v1.15.2
-        OPTIONS "INSTALL_GTEST OFF" "gtest_force_shared_crt"
-)
-
+find_package(gtest CONFIG REQUIRED)
 file(GLOB tests "${SQSGEN_TEST_SOURCE_DIR}/*.cpp")
 list(REMOVE_ITEM tests "${SQSGEN_TEST_SOURCE_DIR}/main.cpp")
 
@@ -17,16 +11,19 @@ include_directories(${SQSGEN_INCLUDE_DIR})
 
 list(APPEND SQSGEN_TEST_LIBS "mp++")
 list(APPEND SQSGEN_TEST_LIBS "Eigen3::Eigen")
-list(APPEND SQSGEN_TEST_LIBS "nlohmann_json")
+list(APPEND SQSGEN_TEST_LIBS "nlohmann_json::nlohmann_json")
 list(APPEND SQSGEN_TEST_LIBS "spdlog::spdlog_header_only")
-list(APPEND SQSGEN_TEST_LIBS "gtest_main")
-list(APPEND SQSGEN_TEST_LIBS "pybind11::pybind11")
+list(APPEND SQSGEN_TEST_LIBS "GTest::gtest_main")
 list(APPEND SQSGEN_TEST_LIBS "${Python3_LIBRARIES}")
 
 message(STATUS "SQSGEN_TEST_LIBS=${SQSGEN_TEST_LIBS}")
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     add_compile_options(-fexperimental-library)
+endif ()
+
+if (MSVC)
+    add_compile_options(/permissive-)
 endif ()
 
 
