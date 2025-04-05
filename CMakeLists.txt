@@ -48,6 +48,21 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID
 endif ()
 
 
+if (WITH_MPI AND BUILD_PYTHON)
+    message(FATAL_ERROR "MPI and Python bindings are not supported together")
+endif ()
+
+if (BUILD_PYTHON OR BUILD_TESTS)
+    find_package(Python3 COMPONENTS Interpreter Development)
+    find_package(pybind11 CONFIG REQUIRED)
+    add_compile_options(-DWITH_PYTHON)
+endif ()
+
+if (BUILD_PYTHON)
+    message(STATUS "BUILD_PYTHON=${BUILD_PYTHON}")
+    add_subdirectory("python/extension")
+endif ()
+
 if (BUILD_TESTS)
     message(STATUS "BUILD_TESTS=${BUILD_TESTS}")
     add_subdirectory(tests)
@@ -56,19 +71,6 @@ endif ()
 if (BUILD_BENCHMARKS)
     message(STATUS "BUILD_BENCHMARKS=${BUILD_BENCHMARKS}")
     add_subdirectory(bench)
-endif ()
-
-
-if (WITH_MPI AND BUILD_PYTHON)
-    message(FATAL_ERROR "MPI and Python bindings are not supported together")
-endif ()
-
-if (BUILD_PYTHON)
-    message(STATUS "BUILD_PYTHON=${BUILD_PYTHON}")
-    find_package(Python3 COMPONENTS Interpreter Development)
-    find_package(pybind11 CONFIG REQUIRED)
-    add_compile_options(-DWITH_PYTHON)
-    add_subdirectory("python/extension")
 endif ()
 
 

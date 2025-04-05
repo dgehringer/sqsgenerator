@@ -11,6 +11,7 @@ include_directories(${SQSGEN_INCLUDE_DIR})
 
 list(APPEND SQSGEN_TEST_LIBS "mp++")
 list(APPEND SQSGEN_TEST_LIBS "Eigen3::Eigen")
+list(APPEND SQSGEN_TEST_LIBS "pybind11::embed")
 list(APPEND SQSGEN_TEST_LIBS "nlohmann_json::nlohmann_json")
 list(APPEND SQSGEN_TEST_LIBS "spdlog::spdlog_header_only")
 list(APPEND SQSGEN_TEST_LIBS "GTest::gtest_main")
@@ -61,5 +62,6 @@ add_executable(test_parser
         "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
         "${SQSGEN_TEST_SOURCE_DIR}/test_parser.cpp"
 )
+target_include_directories(test_parser PRIVATE ${RAPIDHASH_INCLUDE_DIRS})
 target_link_libraries(test_parser ${SQSGEN_TEST_LIBS} "${Python3_LIBRARIES}")
 add_test(NAME test_parser COMMAND test_parser)
