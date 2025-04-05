@@ -27,8 +27,12 @@ find_package(nlohmann_json CONFIG REQUIRED)
 
 if (WITH_MPI)
     find_package(MPI REQUIRED)
-    CPMAddPackage("gh:rabauke/mpl@0.3.0")
-    include_directories("${mpl_SOURCE_DIR}" "${MPI_INCLUDE_PATH}")
+    FetchContent_Declare(
+            mpl
+            GIT_REPOSITORY https://github.com/rabauke/mpl.git
+            GIT_TAG v0.3.0
+    )
+    FetchContent_MakeAvailable(mpl)
     add_compile_options(-DWITH_MPI)
 endif ()
 
@@ -55,11 +59,6 @@ if (BUILD_BENCHMARKS)
 endif ()
 
 
-if (WITH_MPI)
-    message(STATUS "WITH_MPI=${WITH_MPI}")
-    list(APPEND SQSGEN_LIBS "${MPI_LIBRARIES}")
-endif ()
-
 if (WITH_MPI AND BUILD_PYTHON)
     message(FATAL_ERROR "MPI and Python bindings are not supported together")
 endif ()
@@ -68,11 +67,15 @@ if (BUILD_PYTHON)
     message(STATUS "BUILD_PYTHON=${BUILD_PYTHON}")
     find_package(Python3 COMPONENTS Interpreter Development)
     find_package(pybind11 CONFIG REQUIRED)
+    add_compile_options(-DWITH_PYTHON)
     add_subdirectory("python/extension")
 endif ()
 
 
 if (BUILD_CLI)
     add_executable(sqsgen "main.cpp")
-    target_link_libraries(sqsgen ${SQSGEN_LIBS})
+    target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only PkgConfig::gmp Eigen3::Eigen mp++)
+    if (WITH_MPI)
+        target_link_libraries(sqsgen PRIVATE ${MPI_LIBRARIES} mpl)
+    endif ()
 endif ()
