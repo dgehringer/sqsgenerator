@@ -233,7 +233,7 @@ namespace sqsgen {
       const auto pull_best_objective = [&] {
 #ifdef WITH_MPI
         if (mpi_mode && !head) {
-          tick<TIMING_COMM> tick_comm;
+          core::tick<TIMING_COMM> tick_comm;
           io::mpi::recv_all<sqsgen::objective<T>>(
               this->comm, sqsgen::objective<T>{},
               [&](auto&& o, auto) { this->update_best_objective(o.value); }, io::mpi::RANK_HEAD);
@@ -249,7 +249,7 @@ namespace sqsgen {
                       this->thread_id(), rstart.to_string(), rend.to_string());
 #ifdef WITH_MPI
         if (mpi_mode && rstart == start) {
-          tick<TIMING_COMM> tick_comm;
+          core::tick<TIMING_COMM> tick_comm;
           io::mpi::send(this->comm, io::mpi::rank_state{true}, io::mpi::RANK_HEAD);
           statistics.tock(tick_comm);
           this->barrier();
@@ -315,7 +315,7 @@ namespace sqsgen {
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
 #ifdef WITH_MPI
             if (!head && mpi_mode) {
-              tick<TIMING_COMM> tick_comm;
+              core::tick<TIMING_COMM> tick_comm;
               io::mpi::send(this->comm, std::forward<decltype(current)>(current),
                             io::mpi::RANK_HEAD);
               statistics.tock(tick_comm);
@@ -339,7 +339,7 @@ namespace sqsgen {
 
 #ifdef WITH_MPI
         if (mpi_mode && (rend == end || stop.stop_requested())) {
-          tick<TIMING_COMM> tick_comm;
+          core::tick<TIMING_COMM> tick_comm;
           io::mpi::send(this->comm, statistics.data(), io::mpi::RANK_HEAD);
           io::mpi::send(this->comm, io::mpi::rank_state{false}, io::mpi::RANK_HEAD);
           statistics.tock(tick_comm);
@@ -430,13 +430,13 @@ namespace sqsgen {
         // print average statistics over all ranks
         sqs_statistics_data<T> average = core::helpers::fold_left(
             rank_statistics, sqs_statistics_data<T>{}, [](auto&& avg, auto&& rank_stats) {
-              auto stats = sqs_statistics<T>{avg};
+              auto stats = core::sqs_statistics<T>{avg};
               stats.merge(std::forward<sqs_statistics_data<T>>(rank_stats));
               return stats.data();
             });
 
-        detail::log_statistics(std::forward<sqs_statistics_data<T>>(average), io::mpi::RANK_HEAD,
-                               "(averaged)");
+        sqsgen::detail::log_statistics(std::forward<sqs_statistics_data<T>>(average),
+                                       io::mpi::RANK_HEAD, "(averaged)");
       } else
         schedule_main_loop();
 #else

@@ -4,7 +4,10 @@
 
 #ifndef SQSGEN_IO_CONFIG_COMPOSITION_H
 #define SQSGEN_IO_CONFIG_COMPOSITION_H
-#include <pybind11/pybind11.h>
+
+#ifdef WITH_PYTHON
+#  include <pybind11/pybind11.h>
+#endif
 
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/config.h"
@@ -84,13 +87,14 @@ namespace sqsgen::io::config {
 
     template <string_literal key, class Document>
     parse_result<std::string> parse_symbol_string(auto value) {
-      if constexpr (std::is_same_v<std::decay_t<Document>, nlohmann::json>) {
-        return value;
-      } else if constexpr (std::is_same_v<std::decay_t<Document>, pybind11::handle>
-                           || std::is_same_v<std::decay_t<Document>, pybind11::object>) {
+      if constexpr (std::is_same_v<std::decay_t<Document>, nlohmann::json>) return value;
+#ifdef WITH_PYTHON
+      if constexpr (std::is_same_v<std::decay_t<Document>, pybind11::handle>
+                    || std::is_same_v<std::decay_t<Document>, pybind11::object>)
+#endif
         return accessor<Document>::template get_as<KEY_NONE, std::string>(value);
-      } else
-        return parse_error::from_msg<key, CODE_TYPE_ERROR>("Unknown document type");
+
+      return parse_error::from_msg<key, CODE_TYPE_ERROR>("Unknown document type");
     }
 
     template <string_literal key, class Document>

@@ -5,7 +5,9 @@
 #ifndef SQSGEN_IO_CONFIG_SHELL_WEIGHTS_H
 #define SQSGEN_IO_CONFIG_SHELL_WEIGHTS_H
 
-#include <pybind11/pybind11.h>
+#ifdef WITH_PYTHON
+#  include <pybind11/pybind11.h>
+#endif
 
 #include <nlohmann/json.hpp>
 
@@ -32,11 +34,14 @@ namespace sqsgen::io::config {
           return parse_error::from_msg<key, CODE_BAD_VALUE>(
               std::format("Could not parse shell index: {}", e.what()));
         }
-      } else if constexpr (std::is_same_v<std::decay_t<Document>, pybind11::handle>
-                           || std::is_same_v<std::decay_t<Document>, pybind11::object>) {
+      }
+#ifdef WITH_PYTHON
+      if constexpr (std::is_same_v<std::decay_t<Document>, pybind11::handle>
+                    || std::is_same_v<std::decay_t<Document>, pybind11::object>)
         return accessor<Document>::template get_as<KEY_NONE, usize_t>(value);
-      } else
-        return parse_error::from_msg<key, CODE_TYPE_ERROR>("Unknown document type");
+#endif
+
+      return parse_error::from_msg<key, CODE_TYPE_ERROR>("Unknown document type");
     }
 
     template <string_literal key, class T, class Document>
