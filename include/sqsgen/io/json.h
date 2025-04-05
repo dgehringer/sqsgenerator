@@ -167,6 +167,17 @@ template <class T> struct adl_serializer<sqs_result<T, SUBLATTICE_MODE_INTERACT>
   }
 };
 
+template <class T> struct adl_serializer<sqs_result<T, SUBLATTICE_MODE_SPLIT>> {
+  static void to_json(json& j, sqs_result<T, SUBLATTICE_MODE_SPLIT> const& data) {
+    j = json{{"objective", data.objective}, {"sublattices", data.sublattices}};
+  }
+
+  static void from_json(const json& j, sqs_result<T, SUBLATTICE_MODE_INTERACT>& r) {
+    j.at("objective").get_to<T>(r.objective);
+    j.at("sublattices").get_to<std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>>>(r.species);
+  }
+};
+
 template <class T>
 struct adl_serializer<core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_INTERACT>> {
   static void to_json(json& j,
@@ -180,19 +191,20 @@ struct adl_serializer<core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT>
   static void to_json(json& j,
                       core::detail::sqs_result_wrapper<T, SUBLATTICE_MODE_SPLIT> const& data) {
     namespace views = std::ranges::views;
-    adl_serializer<std::vector<sqs_result<T, SUBLATTICE_MODE_SPLIT>>>::to_json(
-        j, {data.objective,
-            core::helpers::as<std::vector>{}(
-                data.sublattices
-                | views::transform(
-                    [](auto&& sl) -> sqs_result<T, SUBLATTICE_MODE_INTERACT> { return sl; }))});
+    sqs_result<T, SUBLATTICE_MODE_SPLIT> r{
+        data.objective,
+        core::helpers::as<std::vector>{}(
+            data.sublattices
+            | views::transform(
+                [](auto&& sl) -> sqs_result<T, SUBLATTICE_MODE_INTERACT> { return sl; }))};
+    adl_serializer<sqs_result<T, SUBLATTICE_MODE_SPLIT>>::to_json(j, r);
   }
 };
 
 template <class T, SublatticeMode Mode> struct adl_serializer<core::sqs_result_pack<T, Mode>> {
   static void to_json(json& j, core::sqs_result_pack<T, Mode> const& data) {
     namespace views = std::ranges::views;
-    auto flattened
+    std::vector<core::detail::sqs_result_wrapper<T, Mode>> flattened
         = core::helpers::as<std::vector>{}(data.results | views::elements<1> | views::join);
     j = json{
         {"statistics", data.statistics},
