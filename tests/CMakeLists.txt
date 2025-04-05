@@ -2,7 +2,7 @@ set(SQSGEN_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 set(SQSGEN_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/sqsgen)
 set(SQSGEN_TEST_SOURCE_DIR ${PROJECT_SOURCE_DIR}/tests)
 
-find_package(gtest CONFIG REQUIRED)
+find_package(GTest CONFIG REQUIRED)
 file(GLOB tests "${SQSGEN_TEST_SOURCE_DIR}/*.cpp")
 list(REMOVE_ITEM tests "${SQSGEN_TEST_SOURCE_DIR}/main.cpp")
 
