@@ -131,6 +131,7 @@ namespace sqsgen {
     }
 
     [[nodiscard]] usize_t num_threads() {
+      if (_thread_config.size() == 1) return _thread_config.front();
       if (_thread_config.size() != num_ranks())
         throw std::invalid_argument(std::format(
             "The communicator has {} ranks, but the thread configuration contains {} entries",
@@ -395,7 +396,7 @@ namespace sqsgen {
                   if (o <= this->best_objective()) {
                     spdlog::debug("[Rank {}, COMM] recieved result from rank {} (objective={}) ",
                                   io::mpi::RANK_HEAD, rank, o);
-                    this->insert_result(std::forward<decltype(result)>(result));
+                    this->insert_result(std::move(result));
                     if (o < this->best_objective()) {
                       this->update_best_objective(o);
                       objective_to_distribute = o;
