@@ -132,11 +132,11 @@ namespace sqsgen::io::mpi {
                 sublattices.push_back(sqs_result<T, SUBLATTICE_MODE_INTERACT>{
                     objective_buff[sigma],
                     configuration_t(species_buff.begin() + offset_species,
-                                    species_buff.begin() + offset_sro + num_species[sigma]),
+                                    species_buff.begin() + offset_species + num_atoms[sigma]),
                     cube_t<T>(Eigen::TensorMap<cube_t<T>>(sro_buff.data() + offset_sro,
                                                           num_shells[sigma], num_species[sigma],
                                                           num_species[sigma]))});
-                offset_species += num_species[sigma];
+                offset_species += num_atoms[sigma];
                 offset_sro += num_shells[sigma] * num_species[sigma] * num_species[sigma];
               }
               recieved.push_back(
