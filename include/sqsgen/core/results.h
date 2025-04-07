@@ -349,6 +349,8 @@ namespace sqsgen::core {
                           | views::transform([&](auto &c) { return c.size(); }));
     }
 
+    sqs_result_pack() {}
+
     sqs_result_pack(configuration<T> &&configuration,
                     core::detail::opt_config_arg_t<T, SMode> &&opt_config,
                     sqs_result_collection_t &&results, sqs_statistics_data<T> &&stats)

@@ -96,9 +96,11 @@ namespace sqsgen {
     configuration_t species;
     cube_t<T> sro;
 
+    sqs_result() = default;
+
     sqs_result(T objective, configuration_t species, cube_t<T> sro)
         : objective(objective), species(std::move(species)), sro(std::move(sro)) {}
-    // compatibility constructor to
+    // compatibility constructor to SPLIT mode result
     sqs_result(T, T objective, configuration_t species, cube_t<T> sro)
         : sqs_result(objective, species, std::move(sro)) {}
   };
@@ -106,6 +108,8 @@ namespace sqsgen {
   template <class T> struct sqs_result<T, SUBLATTICE_MODE_SPLIT> {
     T objective;
     std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>> sublattices;
+
+    sqs_result() = default;
 
     sqs_result(T objective, std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>> const &sublattices)
         : objective(objective), sublattices(sublattices) {}
