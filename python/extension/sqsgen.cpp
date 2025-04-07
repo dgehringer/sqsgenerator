@@ -45,9 +45,7 @@ template <class T> py::bytes to_bytes(T &value) {
 template <class T> T from_bytes(std::string_view view) {
   using namespace sqsgen;
   auto data = nlohmann::json::from_msgpack(view);
-  std::cerr << data << std::endl;
-  T result = data.get<T>();
-  return result;
+  return data.get<T>();
 }
 
 template <string_literal Name, sqsgen::SublatticeMode Mode> constexpr auto format_sublattice() {
@@ -284,18 +282,18 @@ void bind_result_pack(py::module &m) {
   using namespace sqsgen::core;
   using namespace sqsgen::core::detail;
   py::class_<sqs_result_pack<T, Mode>>(m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
-      //.def("results", &sqs_result_pack<T, Mode>::results)
       .def_readonly("statistics", &sqs_result_pack<T, Mode>::statistics)
       .def_readonly("config", &sqs_result_pack<T, Mode>::config)
       .def("__iter__",
            [](sqs_result_pack<T, Mode> &self) {
              return py::make_iterator(self.begin(), self.end());
            })
+
       .def("__len__", [](sqs_result_pack<T, Mode> &self) { return self.size(); })
       .def("num_objectives", &sqs_result_pack<T, Mode>::size)
       .def("num_results", &sqs_result_pack<T, Mode>::num_results)
-      //.def("bytes", &to_bytes<sqs_result_pack<T, Mode>>)
-      //.def_static("from_bytes", &from_bytes<sqs_result_pack<T, Mode>>, py::arg("bytes"))
+      .def("bytes", &to_bytes<sqs_result_pack<T, Mode>>)
+      .def_static("from_bytes", &from_bytes<sqs_result_pack<T, Mode>>, py::arg("bytes"))
       .def("best", [](sqs_result_pack<T, Mode> &self) {
         if (self.results.empty()) throw std::out_of_range("Cannot access empty result set");
         auto [_, set] = *self.begin();
@@ -306,13 +304,15 @@ void bind_result_pack(py::module &m) {
 
 PYBIND11_MODULE(_core, m) {
   using namespace sqsgen;
-  m.doc() = "pybind11 example plugin";  // Optional module docstring
+  m.doc()
+      = "This is the _core extension module. Please use it's method via the sqsgenerator package";
 
 #if defined(SQSGEN_MAJOR_VERSION) && defined(SQSGEN_MINOR_VERSION) && defined(SQSGEN_BUILD_NUMBER) \
     && defined(SQSGEN_BUILD_BRANCH) && defined(SQSGEN_BUILD_COMMIT)
   m.attr("__version__")
-      = py::make_tuple(SQSGEN_MAJOR_VERSION, SQSGEN_MINOR_VERSION, SQSGEN_BUILD_NUMBER,
-                       stringify(SQSGEN_BUILD_BRANCH), stringify(SQSGEN_BUILD_COMMIT));
+      = py::make_tuple(SQSGEN_MAJOR_VERSION, SQSGEN_MINOR_VERSION, SQSGEN_BUILD_NUMBER);
+  m.attr("__build__")
+      = py::make_tuple(stringify(SQSGEN_BUILD_BRANCH), stringify(SQSGEN_BUILD_COMMIT));
 #endif
 
   py::enum_<Timing>(m, "Timing")
