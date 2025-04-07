@@ -75,8 +75,17 @@ endif ()
 
 
 if (BUILD_CLI)
-    add_executable(sqsgen "main.cpp")
-    target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only PkgConfig::gmp Eigen3::Eigen mp++)
+    find_package(cxxopts CONFIG REQUIRED)
+    find_package(ftxui CONFIG REQUIRED)
+
+    add_compile_options("-DSQSGEN_MAJOR_VERSION=${SQSGEN_MAJOR_VERSION}")
+    add_compile_options("-DSQSGEN_MINOR_VERSION=${SQSGEN_MINOR_VERSION}")
+    add_compile_options("-DSQSGEN_BUILD_NUMBER=${SQSGEN_BUILD_NUMBER}")
+    add_compile_options("-DSQSGEN_BUILD_BRANCH=${SQSGEN_BUILD_BRANCH}")
+    add_compile_options("-DSQSGEN_BUILD_COMMIT=${SQSGEN_BUILD_COMMIT}")
+
+    add_executable(sqsgen "cli/main.cpp")
+    target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only PkgConfig::gmp Eigen3::Eigen mp++ cxxopts::cxxopts ftxui::dom ftxui::screen ftxui::component)
     if (WITH_MPI)
         target_link_libraries(sqsgen PRIVATE ${MPI_LIBRARIES} mpl)
     endif ()
