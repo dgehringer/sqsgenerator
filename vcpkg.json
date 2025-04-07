@@ -9,6 +9,8 @@
     "nlohmann-json",
     "bshoshany-thread-pool",
     "gtest",
+    "cxxopts",
+    "ftxui",
     {
       "name": "pkgconf",
       "platform": "windows"
