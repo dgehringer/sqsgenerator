@@ -18,6 +18,55 @@
 // partial specialization (full specialization works too)
 NLOHMANN_JSON_NAMESPACE_BEGIN
 
+template <class> struct binary_adapter;
+
+namespace detail {
+
+  template <class T, std::size_t... Is>
+  constexpr int product_impl(const std::array<T, sizeof...(Is)>& arr, std::index_sequence<Is...>) {
+    return (arr[Is] * ...);
+  }
+
+  template <class T, std::size_t N> constexpr T product(const std::array<T, N>& arr) {
+    return product_impl(arr, std::make_index_sequence<N>{});
+  }
+
+};  // namespace detail
+
+template <class T, int Rows, int Cols> struct binary_adapter<Eigen::Matrix<T, Rows, Cols>> {
+  static json save(Eigen::Matrix<T, Rows, Cols> const& data) {
+    return json{{"shape", std::array{data.rows(), data.cols()}},
+                {"data", std::vector<T>(data.data(), data.data() + data.size())}};
+  }
+
+  static Eigen::Matrix<T, Rows, Cols> load(const json& j) {
+    const auto [rows, cols] = j.at("shape").get<std::array<int, 2>>();
+    std::vector<T> data;
+    data.reserve(rows * cols);
+    j.at("data").get_to(data);
+    return Eigen::Map<Eigen::Matrix<T, Rows, Cols>>(data.data(), rows, cols);
+  }
+};
+
+template <class T, long Dims> struct binary_adapter<Eigen::Tensor<T, Dims>> {
+  static json save(Eigen::Tensor<T, Dims> const& data) {
+    return json{
+        {"shape", std::array<long, Dims>{data.dimensions()}},
+        {"data", std::vector<T>(data.data(), data.data() + data.size())},
+    };
+  }
+
+  static Eigen::Tensor<T, Dims> load(const nlohmann::json& j) {
+    const auto shape = j.at("shape").get<std::array<int, Dims>>();
+    std::vector<T> data;
+    data.reserve(detail::product(shape));
+    j.at("data").get_to(data);
+    return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+      return Eigen::TensorMap<Eigen::Tensor<T, Dims>>(data.data(), shape[Is]...);
+    }(std::make_index_sequence<Dims>{});
+  }
+};
+
 using namespace sqsgen;
 template <class T> struct adl_serializer<matrix_t<T>> {
   static void to_json(json& j, const matrix_t<T>& m) { j = core::helpers::eigen_to_stl(m); }
@@ -157,13 +206,17 @@ template <class T> struct adl_serializer<core::configuration<T>> {
 
 template <class T> struct adl_serializer<sqs_result<T, SUBLATTICE_MODE_INTERACT>> {
   static void to_json(json& j, sqs_result<T, SUBLATTICE_MODE_INTERACT> const& data) {
-    j = json{{"objective", data.objective}, {"species", data.species}, {"sro", data.sro}};
+    // at this point we want to have a faster array serialization (flat) -> we do not need human
+    // readability at this point
+    j = json{{"objective", data.objective},
+             {"species", data.species},
+             {"sro", binary_adapter<cube_t<T>>::save(data.sro)}};
   }
 
   static void from_json(const json& j, sqs_result<T, SUBLATTICE_MODE_INTERACT>& r) {
     j.at("objective").get_to<T>(r.objective);
     j.at("species").get_to<configuration_t>(r.species);
-    j.at("sro").get_to<T>(r.sro);
+    r.sro = binary_adapter<cube_t<T>>::load(j.at("sro"));
   }
 };
 
@@ -172,9 +225,9 @@ template <class T> struct adl_serializer<sqs_result<T, SUBLATTICE_MODE_SPLIT>> {
     j = json{{"objective", data.objective}, {"sublattices", data.sublattices}};
   }
 
-  static void from_json(const json& j, sqs_result<T, SUBLATTICE_MODE_INTERACT>& r) {
+  static void from_json(const json& j, sqs_result<T, SUBLATTICE_MODE_SPLIT>& r) {
     j.at("objective").get_to<T>(r.objective);
-    j.at("sublattices").get_to<std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>>>(r.species);
+    j.at("sublattices").get_to<std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>>>(r.sublattices);
   }
 };
 
@@ -217,9 +270,9 @@ template <class T, SublatticeMode Mode> struct adl_serializer<core::sqs_result_p
     core::sqs_result_collection<T, Mode> results;
     for (auto&& r : j.at("results").get<std::vector<sqs_result<T, Mode>>>())
       results.insert_result(std::move(r));
-    core::configuration<T> config{j.at("config").get<core::configuration<T>>()};
-    sqs_statistics_data<T> statistics{j.at("statistics").get<sqs_statistics_data<T>>()};
-    p = sqs_result_pack<T, Mode>(results, config, statistics);
+    p = core::sqs_result_pack<T, Mode>{j.at("config").get<core::configuration<T>>(),
+                                       std::move(results),
+                                       j.at("statistics").get<sqs_statistics_data<T>>()};
   }
 };
 
