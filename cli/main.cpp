@@ -117,6 +117,7 @@ void run_main(std::string_view input, std::string_view output, std::string_view 
     sqs_callback_t callback = [total = total.value(), &progress](auto ctx) {
       auto finished = std::visit([](auto&& c) { return c.statistics.finished; }, ctx);
       progress.set_progress(finished);
+      progress.rendered();
     };
 
     auto result = run_optimization(conf.result(), spdlog::level::info, callback);
