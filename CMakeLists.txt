@@ -76,7 +76,6 @@ endif ()
 
 if (BUILD_CLI)
     find_package(argparse CONFIG REQUIRED)
-    find_package(indicators CONFIG REQUIRED)
     find_path(TERMCOLOR_INCLUDE_DIRS "termcolor/termcolor.hpp")
 
     add_compile_options("-DSQSGEN_MAJOR_VERSION=${SQSGEN_MAJOR_VERSION}")
@@ -87,7 +86,7 @@ if (BUILD_CLI)
 
     add_executable(sqsgen "cli/main.cpp" "cli/progress.h")
     target_include_directories(sqsgen PRIVATE ${TERMCOLOR_INCLUDE_DIRS})
-    target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only PkgConfig::gmp Eigen3::Eigen mp++ argparse::argparse indicators::indicators)
+    target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only PkgConfig::gmp Eigen3::Eigen mp++ argparse::argparse)
     if (WITH_MPI)
         target_link_libraries(sqsgen PRIVATE ${MPI_LIBRARIES} mpl)
     endif ()
