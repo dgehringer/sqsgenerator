@@ -84,7 +84,7 @@ if (BUILD_CLI)
     add_compile_options("-DSQSGEN_BUILD_BRANCH=${SQSGEN_BUILD_BRANCH}")
     add_compile_options("-DSQSGEN_BUILD_COMMIT=${SQSGEN_BUILD_COMMIT}")
 
-    add_executable(sqsgen "cli/main.cpp" "cli/progress.h")
+    add_executable(sqsgen "cli/main.cpp" "cli/progress.h" "cli/templates.h" "cli/helpers.h")
     target_include_directories(sqsgen PRIVATE ${TERMCOLOR_INCLUDE_DIRS})
     target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only PkgConfig::gmp Eigen3::Eigen mp++ argparse::argparse)
     if (WITH_MPI)
