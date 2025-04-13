@@ -100,13 +100,13 @@ namespace sqsgen::io::config {
 
   template <class T, class Document>
   parse_result<configuration<T>> parse_config_for_prec(Document const& doc) {
-    return parse_iteration_mode<"mode">(doc)
+    return parse_iteration_mode<"iteration_mode">(doc)
         .combine(parse_sublattice_mode<"sublattice_mode">(doc))
         .and_then([](auto&& modes) -> parse_result<std::tuple<IterationMode, SublatticeMode>> {
           auto [iteration_mode, sublattice_mode] = modes;
           if (iteration_mode == ITERATION_MODE_SYSTEMATIC
               && sublattice_mode == SUBLATTICE_MODE_SPLIT)
-            return {parse_error::from_msg<"mode", CODE_BAD_VALUE>(
+            return {parse_error::from_msg<"iteration_mode", CODE_BAD_VALUE>(
                 "It is not possible to do an exhaustive search on multiple sublattices in mode "
                 "\"split\"")};
           return modes;

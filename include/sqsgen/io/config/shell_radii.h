@@ -22,7 +22,7 @@ namespace sqsgen::io::config {
   template <class T> static constexpr T peak_isolation_default = 0.25;  // Angstrom
 
   namespace detail {
-    template <class T> using accepted_types_t = parse_result<ShellRadiiDetection, std::vector<T>>;
+    template <class T> using accepted_types_t = parse_result<std::vector<T>, ShellRadiiDetection>;
 
     template <string_literal key, class T, class Document>
     parse_result<std::vector<T>> parse_radii(Document const& doc, accepted_types_t<T>&& value,
@@ -80,7 +80,7 @@ namespace sqsgen::io::config {
       static radii_t<T> parse(Document const& doc, core::structure<T>&& structure) {
         return parse_radii<key, T>(
                    doc,
-                   get_either_optional<key, ShellRadiiDetection, std::vector<T>>(doc).value_or(
+                   get_either_optional<key, std::vector<T>, ShellRadiiDetection>(doc).value_or(
                        detail::accepted_types_t<T>{SHELL_RADII_DETECTION_PEAK}),
                    std::forward<core::structure<T>>(structure))
             .and_then([&](auto&& radii) -> radii_t<T> { return stl_matrix_t<T>{radii}; });
@@ -102,7 +102,7 @@ namespace sqsgen::io::config {
                 "have to specify the shell radii per sublattice");
           auto default_radii = [&](auto&& subdoc, auto&& sublattice) {
             return parse_radii<key, T>(
-                doc, get_either<KEY_NONE, ShellRadiiDetection, std::vector<T>>(subdoc),
+                doc, get_either<KEY_NONE, std::vector<T>, ShellRadiiDetection>(subdoc),
                 std::move(structure.sliced(sublattice.sites)));
           };
           return lift<key>(default_radii, accessor_t::range(list), sublattices);
