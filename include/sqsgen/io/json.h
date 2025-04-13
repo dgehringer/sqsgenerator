@@ -270,9 +270,11 @@ template <class T, SublatticeMode Mode> struct adl_serializer<core::sqs_result_p
     core::sqs_result_collection<T, Mode> results;
     for (auto&& r : j.at("results").get<std::vector<sqs_result<T, Mode>>>())
       results.insert_result(std::move(r));
-    p = core::sqs_result_pack<T, Mode>{j.at("config").get<core::configuration<T>>(),
-                                       std::move(results),
-                                       j.at("statistics").get<sqs_statistics_data<T>>()};
+    auto config = j.at("config").get<core::configuration<T>>();
+    p = core::sqs_result_pack<T, Mode>{core::configuration<T>(config), std::move(results),
+                                       sqs_statistics_data<T>{}};
+    p.config = config;
+    j.at("statistics").get_to<sqs_statistics_data<T>>(p.statistics);
   }
 };
 
