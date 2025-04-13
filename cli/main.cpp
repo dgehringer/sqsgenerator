@@ -3,10 +3,12 @@
 #include <fstream>
 #include <termcolor/termcolor.hpp>
 
+#include "helpers.h"
 #include "progress.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/combined.h"
+#include "sqsgen/io/mpi.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/sqs.h"
 
@@ -87,51 +89,121 @@ void render_error(std::string_view message, bool exit = true,
   if (exit) std::exit(1);
 }
 
+nlohmann::json read_msgpack(std::string_view filename) {
+  if (!std::filesystem::exists(filename)) render_error("File '{}' does not exist", true);
+  std::ifstream ifs(filename, std::ios::in | std::ios::binary);
+  nlohmann::json config_json;
+  try {
+    config_json = nlohmann::json::from_msgpack(ifs);
+  } catch (nlohmann::json::parse_error& e) {
+    render_error(std::format("'{}' is not a valid msgpack file", filename), true, std::nullopt,
+                 e.what());
+  }
+  return config_json;
+}
+
+nlohmann::json read_json(std::string_view filename) {
+  if (!std::filesystem::exists(filename)) render_error("File '{}' does not exist", true);
+  std::string data;
+  try {
+    data = read_file(filename);
+  } catch (const std::exception& e) {
+    render_error(std::format("Error reading file '{}'", filename), true, std::nullopt, e.what());
+  }
+
+  nlohmann::json config_json;
+  try {
+    config_json = nlohmann::json::parse(data);
+  } catch (nlohmann::json::parse_error& e) {
+    render_error(std::format("'{}' is not a valid JSON file", filename), true, std::nullopt,
+                 e.what());
+  }
+  return config_json;
+}
+
+using result_packt_t
+    = std::variant<sqsgen::core::sqs_result_pack<float, sqsgen::SUBLATTICE_MODE_SPLIT>,
+                   sqsgen::core::sqs_result_pack<double, sqsgen::SUBLATTICE_MODE_SPLIT>,
+                   sqsgen::core::sqs_result_pack<float, sqsgen::SUBLATTICE_MODE_INTERACT>,
+                   sqsgen::core::sqs_result_pack<double, sqsgen::SUBLATTICE_MODE_INTERACT>>;
+result_packt_t load_result_pack(std::string_view path, sqsgen::Prec prec = sqsgen::PREC_SINGLE) {
+  using namespace sqsgen;
+  auto pack_json = read_msgpack(path);
+  if (!pack_json.contains("config")) render_error("Invalid result pack - cannot find config", true);
+  if (!pack_json["config"].contains("sublattice_mode"))
+    render_error("Invalid result pack - cannot find sublattice_mode", true);
+  SublatticeMode mode = pack_json["config"]["sublattice_mode"].get<SublatticeMode>();
+  if (prec == PREC_SINGLE && mode == SUBLATTICE_MODE_SPLIT)
+    return pack_json.get<core::sqs_result_pack<float, SUBLATTICE_MODE_SPLIT>>();
+  if (prec == PREC_SINGLE && mode == SUBLATTICE_MODE_INTERACT)
+    return pack_json.get<core::sqs_result_pack<float, SUBLATTICE_MODE_INTERACT>>();
+  if (prec == PREC_DOUBLE && mode == SUBLATTICE_MODE_SPLIT)
+    return pack_json.get<core::sqs_result_pack<double, SUBLATTICE_MODE_SPLIT>>();
+  if (prec == PREC_DOUBLE && mode == SUBLATTICE_MODE_INTERACT)
+    return pack_json.get<core::sqs_result_pack<double, SUBLATTICE_MODE_INTERACT>>();
+  throw std::invalid_argument("Invalid result pack - invalid sublattice_mode");
+}
+
+template <class T, sqsgen::SublatticeMode Mode>
+void show_result_pack(sqsgen::core::sqs_result_pack<T, Mode>&& pack) {
+  using namespace termcolor;
+
+  std::cout << bold << "Mode: " << reset << italic
+            << (Mode == sqsgen::SUBLATTICE_MODE_INTERACT ? "interact" : "split") << std::endl;
+}
+
 void run_main(std::string_view input, std::string_view output, std::string_view log_level,
               bool quiet) {
   using namespace sqsgen;
   using namespace sqsgen::core;
   using namespace sqsgen::core::helpers;
 
+  auto log_levels
+      = std::map<std::string_view, spdlog::level::level_enum>{{"error", spdlog::level::critical},
+                                                              {"warn", spdlog::level::warn},
+                                                              {"info", spdlog::level::info},
+                                                              {"debug", spdlog::level::debug},
+                                                              {"trace", spdlog::level::trace}};
+
+  if (!log_levels.contains(log_level))
+    render_error(std::format("Invalid log level '{}'", log_level));
+
   if (!std::filesystem::exists(input)) render_error(std::format("File '{}' does not exist", input));
 
-  std::string data;
-  try {
-    data = read_file(input);
-  } catch (const std::exception& e) {
-    render_error(std::format("Error reading file '{}'", input), true, std::nullopt, e.what());
-  }
-
-  nlohmann::json config_json;
-  try {
-    config_json = json::parse(data);
-  } catch (nlohmann::json::parse_error& e) {
-    render_error(std::format("'{}' is not a valid JSON file", input), true, std::nullopt, e.what());
-  }
-
-  auto conf = io::config::parse_config(config_json);
+  auto conf = io::config::parse_config(read_json(input));
   if (conf.ok()) {
     auto total = std::visit([](auto&& config) { return config.iterations; }, conf.result());
 
     auto progress = cli::Progress("Progress", total.value(), 50);
-    sqs_callback_t callback = [total = total.value(), &progress](auto ctx) {
-      auto finished = std::visit([](auto&& c) { return c.statistics.finished; }, ctx);
-      progress.set_progress(finished);
-      progress.rendered();
-    };
 
-    auto result = run_optimization(conf.result(), spdlog::level::info, callback);
-    progress.set_progress(total.value());
-    progress.rendered(std::cout, true);
-    std::vector<uint8_t> dump;
-    std::visit(
-        [&dump](auto&& r) {
-          nlohmann::json j = r;
-          dump = nlohmann::json::to_msgpack(j);
-        },
-        result);
-    std::ofstream out(output, std::ios::out | std::ios::binary);
-    out.write(reinterpret_cast<const std::ostream::char_type*>(dump.data()), dump.size());
+    std::optional<sqs_callback_t> callback = std::nullopt;
+    if (!quiet)
+      callback = [total = total.value(), &progress](auto&& ctx) {
+        progress.set_progress(std::forward<decltype(ctx)>(ctx));
+        auto finished = std::visit([](auto&& c) { return c.statistics.finished; }, ctx);
+        progress.render(std::cout, finished >= total);
+      };
+
+    auto result = run_optimization(conf.result(), log_levels[log_level], callback);
+
+#ifdef WITH_MPI
+    bool should_dump{mpl::environment::comm_world().rank() == io::mpi::RANK_HEAD};
+#else
+    bool should_dump{true};
+#endif
+
+    if (should_dump) {
+      std::vector<uint8_t> dump;
+      std::visit(
+          [&dump](auto&& r) {
+            nlohmann::json j = r;
+            std::cout << j;
+            dump = nlohmann::json::to_msgpack(j);
+          },
+          result);
+      std::ofstream out(output, std::ios::out | std::ios::binary);
+      out.write(reinterpret_cast<const std::ostream::char_type*>(dump.data()), dump.size());
+    }
   } else {
     auto err = conf.error();
     render_error(err.msg, true, err.key);
@@ -160,9 +232,10 @@ int main(int argc, char** argv) {
       .default_value(false)
       .implicit_value(true);
 
-  program.add_argument("config")
+  program.add_argument("-i", "--input")
       .help("The configuration file to use")
       .default_value("sqs.json")
+      .implicit_value("sqs.json")
       .nargs(1);
 
   program.add_argument("-o", "--output")
@@ -180,6 +253,20 @@ int main(int argc, char** argv) {
   template_command.add_description("use templates to create a new configuration file quickly");
 
   program.add_subparser(template_command);
+
+  argparse::ArgumentParser output_command("output");
+  output_command.add_description("export the results of a SQS optimization run");
+
+  argparse::ArgumentParser output_show_command("show");
+  output_show_command.add_description("display the configuration of a SQS optimization run");
+
+  argparse::ArgumentParser output_config_command("config");
+  output_config_command.add_description("export the config as a JSON file. E.g. sqs.config.json");
+
+  output_command.add_subparser(output_show_command);
+  output_command.add_subparser(output_config_command);
+
+  program.add_subparser(output_command);
   // "A simple tool to create special-quasirandom-structures (SQS)"
 
   try {
@@ -191,11 +278,45 @@ int main(int argc, char** argv) {
 
   if (program["--version"] == true) {
     display_version_info();
-    return 0;
+    return EXIT_SUCCESS;
   }
 
-  run_main(program.get<std::string>("config"), program.get<std::string>("output"),
-           program.get<std::string>("log"), program["--quiet"] == true);
+  if (program.is_subcommand_used("template")) {
+    std::cout << "TEMPLATES" << std::endl;
+    return EXIT_SUCCESS;
+  }
+
+  if (program.is_subcommand_used("output") && output_command.is_subcommand_used("show")) {
+    load_result_pack(program.get<std::string>("--output"));
+    return EXIT_SUCCESS;
+  }
+
+  if (program.is_subcommand_used("output") && output_command.is_subcommand_used("show")) {
+    load_result_pack(program.get<std::string>("--output"));
+    return EXIT_SUCCESS;
+  }
+
+  if (program.is_subcommand_used("output") && output_command.is_subcommand_used("config")) {
+    std::string output
+        = std::format("{}.config.json",
+                      std::filesystem::path(program.get<std::string>("--input")).stem().string());
+    auto result_pack = load_result_pack(program.get<std::string>("--output"));
+    std::ofstream out(output, std::ios::out);
+    if (!out.good()) render_error(std::format("Failed to open output file '{}'", output));
+    out << std::visit([](auto&& p) { return cli::fixup_config_json(p.config).dump(); },
+                      result_pack);
+    return EXIT_SUCCESS;
+  }
+
+  std::string output = program.get<std::string>("--output");
+  if (program.is_used("--input") && !program.is_used("--output")) {
+    // The user has specified a custom input file we try to split the extension
+    output = std::format(
+        "{}.mpack", std::filesystem::path(program.get<std::string>("--input")).stem().string());
+  }
+
+  run_main(program.get<std::string>("--input"), output, program.get<std::string>("--log"),
+           program["--quiet"] == true);
 
   return 0;
 }
