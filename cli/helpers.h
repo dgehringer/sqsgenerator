@@ -42,8 +42,21 @@ namespace sqsgen::cli {
       j["pair_weights"] = config.pair_weights.front();
       j["target_objective"] = config.target_objective.front();
     }
-    std::cout << j;
     return j;
+  }
+
+  inline std::string pad_right(std::string const& str, size_t s) {
+    if (str.size() < s)
+      return str + std::string(s - str.size(), ' ');
+    else
+      return str;
+  }
+
+  inline std::string pad_left(std::string const& str, size_t s) {
+    if (str.size() < s)
+      return std::string(s - str.size(), ' ') + str;
+    else
+      return str;
   }
 }  // namespace sqsgen::cli
 

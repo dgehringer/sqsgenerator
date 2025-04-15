@@ -110,20 +110,23 @@ namespace sqsgen::cli {
         if (!millis_passed(_last_render_time, 1000 / _fps)) return;
 
       std::scoped_lock l{_m};
-      eraseLines(3);
+      if (_last_render_time.has_value()) eraseLines(3);
       using namespace termcolor;
       auto percent = _current / _total * 100;
       auto blocks_to_fill = static_cast<int>(std::floor(percent / _block_percent));
       auto last_block_index
           = static_cast<int>(std::round(std::fmod(percent, _block_percent) / _block_percent * 8))
             - 1;
-
       os << bold << std::format(" {:.2f}%", percent) << reset << ": [";
       for (int i = 0; i < blocks_to_fill; i++) std::cout << _INDICATORS.back();
-      os << _INDICATORS[last_block_index];
       auto remaining_blocks = _width - blocks_to_fill;
+      if (last_block_index >= 0)
+        os << _INDICATORS[last_block_index];
+      else
+        remaining_blocks++;
       for (int i = 0; i < remaining_blocks; i++) std::cout << _remaining.front();
       os << "] [" << format_time(millis_since(_start_time)) << "]";
+
       os << std::endl;
       auto now = std::chrono::high_resolution_clock::now();
       if (_last_speed_calc_time.has_value() && _last_speed_calc_finished.has_value()

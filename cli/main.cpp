@@ -90,7 +90,8 @@ void render_error(std::string_view message, bool exit = true,
 }
 
 nlohmann::json read_msgpack(std::string_view filename) {
-  if (!std::filesystem::exists(filename)) render_error("File '{}' does not exist", true);
+  if (!std::filesystem::exists(filename))
+    render_error(std::format("File '{}' does not exist", filename), true);
   std::ifstream ifs(filename, std::ios::in | std::ios::binary);
   nlohmann::json config_json;
   try {
@@ -145,11 +146,23 @@ result_packt_t load_result_pack(std::string_view path, sqsgen::Prec prec = sqsge
 }
 
 template <class T, sqsgen::SublatticeMode Mode>
-void show_result_pack(sqsgen::core::sqs_result_pack<T, Mode>&& pack) {
+void show_result_pack(sqsgen::core::sqs_result_pack<T, Mode> const& pack) {
   using namespace termcolor;
 
   std::cout << bold << "Mode: " << reset << italic
-            << (Mode == sqsgen::SUBLATTICE_MODE_INTERACT ? "interact" : "split") << std::endl;
+            << (Mode == sqsgen::SUBLATTICE_MODE_INTERACT ? "interact" : "split") << reset
+            << std::endl;
+  std::cout << bold << "min(O(σ)): " << reset
+            << std::format("{:.5f}", pack.statistics.best_objective) << std::endl;
+  std::cout << bold << "Num. objectives: " << reset << pack.results.size() << std::endl;
+  std::cout << std::endl;
+  std::cout << bold << "index" << " O(σ)        " << "Num. results" << std::endl;
+  auto index = 0;
+  for (auto&& [objective, results] : pack.results) {
+    std::cout << bold << std::format("{:<5} ", index++) << reset;
+    std::cout << sqsgen::cli::pad_right(std::format("{:.5f} ", objective), 12);
+    std::cout << results.size() << std::endl;
+  }
 }
 
 void run_main(std::string_view input, std::string_view output, std::string_view log_level,
@@ -197,7 +210,6 @@ void run_main(std::string_view input, std::string_view output, std::string_view 
       std::visit(
           [&dump](auto&& r) {
             nlohmann::json j = r;
-            std::cout << j;
             dump = nlohmann::json::to_msgpack(j);
           },
           result);
@@ -215,12 +227,10 @@ int main(int argc, char** argv) {
 
   using namespace sqsgen::core;
   using namespace sqsgen::core::helpers;
-
-  argparse::ArgumentParser program(
-      "sqsgen",
-      std::format("{}.{}.{}", stringify(SQSGEN_MAJOR_VERSION), stringify(SQSGEN_MINOR_VERSION),
-                  stringify(SQSGEN_BUILD_NUMBER)),
-      argparse::default_arguments::help);
+  auto version_string
+      = std::format("{}.{}.{}", stringify(SQSGEN_MAJOR_VERSION), stringify(SQSGEN_MINOR_VERSION),
+                    stringify(SQSGEN_BUILD_NUMBER));
+  argparse::ArgumentParser program("sqsgen", version_string, argparse::default_arguments::help);
 
   program.add_argument("-v", "--version")
       .help("Display version info")
@@ -254,17 +264,42 @@ int main(int argc, char** argv) {
 
   program.add_subparser(template_command);
 
-  argparse::ArgumentParser output_command("output");
+  argparse::ArgumentParser output_command("output", version_string,
+                                          argparse::default_arguments::help);
   output_command.add_description("export the results of a SQS optimization run");
 
-  argparse::ArgumentParser output_show_command("show");
-  output_show_command.add_description("display the configuration of a SQS optimization run");
+  output_command.add_argument("-o", "--output")
+      .help("The output file to write the results to in binary format")
+      .default_value("sqs.mpack")
+      .nargs(1);
 
   argparse::ArgumentParser output_config_command("config");
   output_config_command.add_description("export the config as a JSON file. E.g. sqs.config.json");
 
-  output_command.add_subparser(output_show_command);
+  argparse::ArgumentParser output_structure_command("structure", version_string,
+                                                    argparse::default_arguments::help);
+  output_structure_command.add_description("export the structure of a result file");
+
+  output_structure_command.add_argument("-f", "--format")
+      .help("The output format to use")
+      .default_value(std::string{"sqsgen"})
+      .choices("pymatgen", "ase", "vasp", "poscar", "sqsgen")
+      .nargs(1);
+
+  output_structure_command.add_argument("--objective")
+      .help("select the n-th best objective")
+      .default_value(0)
+      .append();
+
+  output_structure_command.add_argument("-i", "--index")
+      .help("the index of the structure to export,  specified by the --objective option")
+      .default_value(0)
+      .append();
+  output_structure_command.add_argument("--all").default_value(false).implicit_value(true).help(
+      "Export all structures of a certain objective value, specified by the --objective option");
+
   output_command.add_subparser(output_config_command);
+  output_command.add_subparser(output_structure_command);
 
   program.add_subparser(output_command);
   // "A simple tool to create special-quasirandom-structures (SQS)"
@@ -282,30 +317,33 @@ int main(int argc, char** argv) {
   }
 
   if (program.is_subcommand_used("template")) {
-    std::cout << "TEMPLATES" << std::endl;
+    std::cout << template_command;
     return EXIT_SUCCESS;
   }
 
-  if (program.is_subcommand_used("output") && output_command.is_subcommand_used("show")) {
-    load_result_pack(program.get<std::string>("--output"));
-    return EXIT_SUCCESS;
-  }
-
-  if (program.is_subcommand_used("output") && output_command.is_subcommand_used("show")) {
-    load_result_pack(program.get<std::string>("--output"));
-    return EXIT_SUCCESS;
-  }
-
-  if (program.is_subcommand_used("output") && output_command.is_subcommand_used("config")) {
-    std::string output
-        = std::format("{}.config.json",
-                      std::filesystem::path(program.get<std::string>("--input")).stem().string());
-    auto result_pack = load_result_pack(program.get<std::string>("--output"));
-    std::ofstream out(output, std::ios::out);
-    if (!out.good()) render_error(std::format("Failed to open output file '{}'", output));
-    out << std::visit([](auto&& p) { return cli::fixup_config_json(p.config).dump(); },
-                      result_pack);
-    return EXIT_SUCCESS;
+  if (program.is_subcommand_used("output")) {
+    auto pack = load_result_pack(output_command.get<std::string>("--output"));
+    if (output_command.is_subcommand_used("config")) {
+      std::string output = std::format(
+          "{}.config.json",
+          std::filesystem::path(output_command.get<std::string>("--output")).stem().string());
+      std::ofstream out(output, std::ios::out);
+      if (!out.good()) render_error(std::format("Failed to open output file '{}'", output));
+      out << std::visit([](auto&& p) { return cli::fixup_config_json(p.config).dump(); }, pack);
+      return EXIT_SUCCESS;
+    } else if (output_command.is_subcommand_used("structure")) {
+      auto objective_indices
+          = output_structure_command.get<std::vector<std::string>>("--objective");
+      auto structure_indices = output_structure_command.get<std::vector<std::string>>("--index");
+      nlohmann::json s;
+      s["o"] = objective_indices;
+      s["i"] = structure_indices;
+      std::cout << s.dump(2) << std::endl;
+      return EXIT_SUCCESS;
+    } else {
+      std::visit([](auto const& p) { show_result_pack(p); }, pack);
+      return EXIT_FAILURE;
+    }
   }
 
   std::string output = program.get<std::string>("--output");
