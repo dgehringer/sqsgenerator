@@ -52,11 +52,8 @@ jobs:
         run: ruff format --diff ./python/sqsgenerator
 
         # Required on macOS to build gmp package
-      - uses: msys2/setup-msys2@v2
-        with:
-           update: true
-           install: >-
-             autotools
+      - uses: Install auto conf
+        run: brew install autoconf automake libtool
         if: ${{ runner.os == 'macOS' }}
 
       - name: Build Package
