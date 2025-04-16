@@ -64,7 +64,7 @@ jobs:
         run: pip install ./python -v  --no-build-isolation
 
       - name: Run unit tests
-        run: pytest ./python -vv --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
+        run: pytest ./python -vv --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml --import-mode=importlib
 
       - name: Upload pytest test results
         uses: actions/upload-artifact@v4
