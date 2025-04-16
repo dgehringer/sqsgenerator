@@ -28,11 +28,15 @@ jobs:
 
       # Required on macOS to build gmp package
       - name: Install autoconf
-        run: brew install autoconf-archive autoconf libtool automake pkgconf pkg-config
+        run: brew install autoconf-archive libtool automake pkgconf pkg-config
         if: ${{ runner.os == 'macOS' }}
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
+
+      - name: Setup vcpkg
+        run: ${{ github.workspace }}/vcpkg/vcpkg install
+        if: ${{ runner.os == 'macOS' }}
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
