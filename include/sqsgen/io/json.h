@@ -33,7 +33,7 @@ namespace detail {
 template <class T, long Dims> struct binary_adapter {
   static json save(Eigen::Tensor<T, Dims> const& data) {
     return json{
-        {"shape", std::array<long, Dims>{data.dimensions()}},
+        {"shape", data.dimensions()},
         {"data", std::vector<T>(data.data(), data.data() + data.size())},
     };
   }
