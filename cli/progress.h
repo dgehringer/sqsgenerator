@@ -9,7 +9,7 @@
 #include <string>
 
 #include "sqsgen/types.h"
-#include "termcolor/termcolor.hpp"
+#include "termcolor.h"
 
 namespace sqsgen::cli {
 

@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 
 #include "sqsgen/io/json.h"
+#include "termcolor.h"
 
 namespace sqsgen::cli {
 
