@@ -18,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.11"]
 
     steps:
@@ -71,6 +71,15 @@ jobs:
 
       - name: Run ctest
         run: ctest --test-dir ${{ github.workspace }}/build/tests --verbose --output-junit ${{ github.workspace }}/junit/test-results-${{ matrix.os }}.xml
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+
+
+      - name: Build CLI app
+        run: ${{ github.workspace }}/scripts/build-tests.sh build
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+
+      - name: Run sqsgen --version
+        run: ${{ github.workspace }}/build/sqsgen --version
         if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
 
       - name: Upload ctest test results
