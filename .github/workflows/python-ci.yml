@@ -53,7 +53,7 @@ jobs:
 
         # Required on macOS to build gmp package
       - name: Install autoconf
-        run: brew install autoconf-archive autoconf
+        run: brew install autoconf-archive autoconf libtool
         if: ${{ runner.os == 'macOS' }}
 
       - name: Build Package
