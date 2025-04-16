@@ -34,9 +34,9 @@ jobs:
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
 
-      - name: Setup vcpkg
+      - name: vcpkg install
         run: ${{ github.workspace }}/vcpkg/vcpkg install
-        if: ${{ runner.os == 'macOS' }}
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
