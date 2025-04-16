@@ -26,6 +26,11 @@ jobs:
         with:
           submodules: recursive
 
+      # Required on macOS to build gmp package
+      - name: Install autoconf
+        run: brew install autoconf-archive autoconf libtool automake
+        if: ${{ runner.os == 'macOS' }}
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
 
@@ -50,11 +55,6 @@ jobs:
 
       - name: Format
         run: ruff format --diff ./python/sqsgenerator
-
-        # Required on macOS to build gmp package
-      - name: Install autoconf
-        run: brew install autoconf-archive autoconf libtool automake
-        if: ${{ runner.os == 'macOS' }}
 
       - name: Build Package
         run: pip install ./python -v  --no-build-isolation
