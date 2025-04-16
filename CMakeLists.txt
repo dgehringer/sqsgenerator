@@ -9,6 +9,12 @@ include(FetchContent)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(gmp REQUIRED IMPORTED_TARGET gmp)
+find_package(Eigen3 CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+
 set(MPPP_BUILD_STATIC_LIBRARY ON CACHE INTERNAL "Build mp++ as a static library")
 FetchContent_Declare(
         mp++
@@ -17,13 +23,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(mp++)
 set_property(TARGET mp++ PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(gmp REQUIRED IMPORTED_TARGET gmp)
-find_package(Eigen3 CONFIG REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
 
 if (WITH_MPI)
     find_package(MPI REQUIRED)
@@ -75,8 +74,16 @@ endif ()
 
 
 if (BUILD_CLI)
-    add_executable(sqsgen "main.cpp")
-    target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only PkgConfig::gmp Eigen3::Eigen mp++)
+    find_package(argparse CONFIG REQUIRED)
+
+    add_compile_options("-DSQSGEN_MAJOR_VERSION=${SQSGEN_MAJOR_VERSION}")
+    add_compile_options("-DSQSGEN_MINOR_VERSION=${SQSGEN_MINOR_VERSION}")
+    add_compile_options("-DSQSGEN_BUILD_NUMBER=${SQSGEN_BUILD_NUMBER}")
+    add_compile_options("-DSQSGEN_BUILD_BRANCH=${SQSGEN_BUILD_BRANCH}")
+    add_compile_options("-DSQSGEN_BUILD_COMMIT=${SQSGEN_BUILD_COMMIT}")
+
+    add_executable(sqsgen "cli/main.cpp" "cli/progress.h" "cli/helpers.h" "cli/termcolor.h")
+    target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only PkgConfig::gmp Eigen3::Eigen mp++ argparse::argparse)
     if (WITH_MPI)
         target_link_libraries(sqsgen PRIVATE ${MPI_LIBRARIES} mpl)
     endif ()

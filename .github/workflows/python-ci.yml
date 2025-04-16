@@ -26,8 +26,14 @@ jobs:
         with:
           submodules: recursive
 
+      # Required on macOS to build gmp package
+      - name: Install autoconf
+        run: brew install autoconf-archive libtool automake pkgconf pkg-config
+        if: ${{ runner.os == 'macOS' }}
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
+
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -71,6 +77,15 @@ jobs:
 
       - name: Run ctest
         run: ctest --test-dir ${{ github.workspace }}/build/tests --verbose --output-junit ${{ github.workspace }}/junit/test-results-${{ matrix.os }}.xml
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+
+
+      - name: Build CLI app
+        run: ${{ github.workspace }}/scripts/build-cli.sh build
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+
+      - name: Run sqsgen --version
+        run: ${{ github.workspace }}/build/sqsgen --version
         if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
 
       - name: Upload ctest test results

@@ -349,26 +349,29 @@ namespace sqsgen::core {
                           | views::transform([&](auto &c) { return c.size(); }));
     }
 
+    sqs_result_pack() = default;
+
     sqs_result_pack(configuration<T> &&configuration,
                     core::detail::opt_config_arg_t<T, SMode> &&opt_config,
                     sqs_result_collection_t &&results, sqs_statistics_data<T> &&stats)
         : statistics(stats),
-          config(std::move(configuration)),
-          _optimization_config(core::detail::from_opt_config<T, SMode>(std::move(opt_config))),
+          config(std::forward<core::configuration<T>>(configuration)),
+          _optimization_config(core::detail::from_opt_config<T, SMode>(
+              std::forward<detail::opt_config_arg_t<T, SMode>>(opt_config))),
           _structure(std::make_shared<structure<T>>(config.structure.structure())),
-          results(core::detail::from_result_collection(std::move(results), _structure,
-                                                       _optimization_config)) {}
+          results(core::detail::from_result_collection(std::forward<decltype(results)>(results),
+                                                       _structure, _optimization_config)) {}
 
     sqs_result_pack(configuration<T> &&configuration, sqs_result_collection_t &&results,
                     sqs_statistics_data<T> &&stats)
         : statistics(stats),
-          config(std::move(configuration)),
+          config(std::forward<core::configuration<T>>(configuration)),
           _optimization_config(core::detail::from_opt_config<T, SMode>(
               core::detail::opt_config_from_config<T, SMode>(
                   std::forward<decltype(config)>(config)))),
           _structure(std::make_shared<structure<T>>(config.structure.structure())),
-          results(core::detail::from_result_collection(std::move(results), _structure,
-                                                       _optimization_config)) {}
+          results(core::detail::from_result_collection(std::forward<decltype(results)>(results),
+                                                       _structure, _optimization_config)) {}
   };
 
 }  // namespace sqsgen::core

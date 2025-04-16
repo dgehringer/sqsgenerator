@@ -50,6 +50,8 @@ namespace sqsgen::core::helpers {
 
     auto back() const { return _values.back(); }
 
+    auto at(auto index) const { return _values.at(index); }
+
     iterator insert(T&& t) {
       iterator i = std::lower_bound(begin(), end(), t, cmp);
       if (i == end() || cmp(t, *i)) _values.insert(i, t);
