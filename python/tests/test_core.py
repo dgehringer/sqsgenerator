@@ -17,7 +17,7 @@ from sqsgenerator.core import (
 def default_settings(prec: Prec):
     return dict(
         prec=prec,
-        mode=systematic,
+        iteration_mode=systematic,
         structure=dict(
             lattice=np.diag([1, 2, 3]),
             coords=np.array(
