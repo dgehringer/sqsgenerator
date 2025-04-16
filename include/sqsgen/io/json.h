@@ -17,9 +17,6 @@
 
 // partial specialization (full specialization works too)
 NLOHMANN_JSON_NAMESPACE_BEGIN
-
-template <class> struct binary_adapter;
-
 namespace detail {
 
   template <class T, std::size_t... Is>
@@ -33,22 +30,7 @@ namespace detail {
 
 };  // namespace detail
 
-template <class T, int Rows, int Cols> struct binary_adapter<Eigen::Matrix<T, Rows, Cols>> {
-  static json save(Eigen::Matrix<T, Rows, Cols> const& data) {
-    return json{{"shape", std::array{data.rows(), data.cols()}},
-                {"data", std::vector<T>(data.data(), data.data() + data.size())}};
-  }
-
-  static Eigen::Matrix<T, Rows, Cols> load(const json& j) {
-    const auto [rows, cols] = j.at("shape").get<std::array<int, 2>>();
-    std::vector<T> data;
-    data.reserve(rows * cols);
-    j.at("data").get_to(data);
-    return Eigen::Map<Eigen::Matrix<T, Rows, Cols>>(data.data(), rows, cols);
-  }
-};
-
-template <class T, long Dims> struct binary_adapter<Eigen::Tensor<T, Dims>> {
+template <class T, long Dims> struct binary_adapter {
   static json save(Eigen::Tensor<T, Dims> const& data) {
     return json{
         {"shape", std::array<long, Dims>{data.dimensions()}},
@@ -210,13 +192,13 @@ template <class T> struct adl_serializer<sqs_result<T, SUBLATTICE_MODE_INTERACT>
     // readability at this point
     j = json{{"objective", data.objective},
              {"species", data.species},
-             {"sro", binary_adapter<cube_t<T>>::save(data.sro)}};
+             {"sro", binary_adapter<T, 3>::save(data.sro)}};
   }
 
   static void from_json(const json& j, sqs_result<T, SUBLATTICE_MODE_INTERACT>& r) {
     j.at("objective").get_to<T>(r.objective);
     j.at("species").get_to<configuration_t>(r.species);
-    r.sro = binary_adapter<cube_t<T>>::load(j.at("sro"));
+    r.sro = binary_adapter<T, 3>::load(j.at("sro"));
   }
 };
 
