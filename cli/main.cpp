@@ -2,7 +2,6 @@
 #include <argparse/argparse.hpp>
 #include <fstream>
 #include <ranges>
-#include <termcolor/termcolor.hpp>
 
 #include "helpers.h"
 #include "progress.h"
@@ -12,6 +11,7 @@
 #include "sqsgen/io/mpi.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/sqs.h"
+#include "termcolor.h"
 
 #define stringify_helper(x) #x
 #define stringify(x) stringify_helper(x)

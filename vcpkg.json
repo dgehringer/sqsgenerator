@@ -10,8 +10,6 @@
     "bshoshany-thread-pool",
     "gtest",
     "argparse",
-    "indicators",
-    "termcolor",
     {
       "name": "pkgconf",
       "platform": "windows"
