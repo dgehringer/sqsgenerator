@@ -51,16 +51,16 @@ jobs:
       - name: Format
         run: ruff format --diff ./python/sqsgenerator
 
-      - name: Build Package
-        run: pip install ./python -v  --no-build-isolation
-
-       # Required on macOS to build gmp package
+        # Required on macOS to build gmp package
       - uses: msys2/setup-msys2@v2
         with:
-          update: true
-          install: >-
-            autotools
+           update: true
+           install: >-
+             autotools
         if: ${{ runner.os == 'macOS' }}
+
+      - name: Build Package
+        run: pip install ./python -v  --no-build-isolation
 
       - name: Run unit tests
         run: pytest ./python -vv --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
