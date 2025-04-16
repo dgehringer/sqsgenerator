@@ -5,10 +5,7 @@
     "eigen3",
     "spdlog",
     "rapidhash",
-    {
-      "name": "gmp",
-      "platform": "!osx"
-    },
+    "gmp",
     "nlohmann-json",
     "bshoshany-thread-pool",
     "gtest",

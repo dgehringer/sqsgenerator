@@ -28,7 +28,7 @@ jobs:
 
       # Required on macOS to build gmp package
       - name: Install autoconf and gmp
-        run: brew install autoconf-archive autoconf libtool automake gmp
+        run: brew install autoconf-archive autoconf libtool automake
         if: ${{ runner.os == 'macOS' }}
 
       - name: Setup vcpkg
