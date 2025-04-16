@@ -84,7 +84,7 @@ jobs:
 
 
       - name: Build CLI app
-        run: ${{ github.workspace }}/scripts/build-tests.sh build
+        run: ${{ github.workspace }}/scripts/build-cli.sh build
         if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
 
       - name: Run sqsgen --version
