@@ -52,7 +52,7 @@ jobs:
         run: ruff format --diff ./python/sqsgenerator
 
         # Required on macOS to build gmp package
-      - uses: Install auto conf
+      - name: Install autoconf
         run: brew install autoconf automake libtool
         if: ${{ runner.os == 'macOS' }}
 
