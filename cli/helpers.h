@@ -58,6 +58,48 @@ namespace sqsgen::cli {
     else
       return str;
   }
+
+  inline std::string format_hyperlink(std::string_view text, std::string_view link) {
+    return std::format("\033]8;;{}\007{}\033]8;;\007", link, text);
+  }
+
+  inline void render_error(std::string_view message, bool exit = true,
+                           std::optional<std::string> parameter = std::nullopt,
+                           std::optional<std::string> info = std::nullopt) {
+    using namespace termcolor;
+    std::cout << red << bold << underline << "Error:" << reset << " " << message << std::endl;
+    if (info.has_value())
+      std::cout << "       (" << blue << italic << "info: " << reset << italic << info.value()
+                << reset << ")" << std::endl;
+    if (parameter.has_value())
+      std::cout
+          << bold << blue << "Help: " << reset
+          << std::format(
+                 "the documentation for parameter \"{}\" is available at: {}", parameter.value(),
+                 format_hyperlink(
+                     std::format(
+                         "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#{}",
+                         parameter.value()),
+                     std::format(
+                         "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#{}",
+                         parameter.value())))
+          << std::endl;
+    if (exit) std::exit(1);
+  }
+
+  int validate_index(auto const& raw, auto size) {
+    int index{-1};
+    try {
+      index = std::stoi(raw);
+    } catch (const std::invalid_argument& e) {
+      render_error(std::format("Invalid index '{}'", raw), true, std::nullopt, e.what());
+    }
+    if (index < 0 || index >= size)
+      render_error(std::format("Invalid index '{}'", raw), true, std::nullopt,
+                   std::format("index must be between 0 and {}", size - 1));
+    return index;
+  }
+
 }  // namespace sqsgen::cli
 
 #endif  // HELPERS_H

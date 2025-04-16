@@ -1,6 +1,7 @@
 
 #include <argparse/argparse.hpp>
 #include <fstream>
+#include <ranges>
 #include <termcolor/termcolor.hpp>
 
 #include "helpers.h"
@@ -18,6 +19,7 @@
 using json = nlohmann::json;
 
 namespace ranges = std::ranges;
+using namespace sqsgen;
 
 std::string read_file(const std::string_view filename) {
   std::ifstream ifs(filename);
@@ -29,19 +31,13 @@ std::string read_file(const std::string_view filename) {
 
 namespace views = ranges::views;
 
-template <class CharT> using formatter_t
-    = std::function<std::basic_ostream<CharT>(std::basic_ostream<CharT>&)>;
-
-std::string format_hyperlink(std::string_view text, std::string_view link) {
-  return std::format("\033]8;;{}\007{}\033]8;;\007", link, text);
-}
-
 void display_version_info() {
   using namespace termcolor;
   const auto print_row = [](std::string_view label, std::string_view value,
                             std::optional<std::string_view> link = std::nullopt) {
     std::cout << green << bold << std::format("{}: ", label) << reset
-              << (link.has_value() ? format_hyperlink(value, link.value()) : value) << std::endl;
+              << (link.has_value() ? cli::format_hyperlink(value, link.value()) : value)
+              << std::endl;
   };
 
   std::cout << bold << italic << "sqsgen" << reset
@@ -65,74 +61,51 @@ void display_version_info() {
   print_row("MPI", sqsgen::io::mpi::HAVE_MPI ? "yes" : "no");
 }
 
-void render_error(std::string_view message, bool exit = true,
-                  std::optional<std::string> parameter = std::nullopt,
-                  std::optional<std::string> info = std::nullopt) {
-  using namespace termcolor;
-  std::cout << red << bold << underline << "Error:" << reset << " " << message << std::endl;
-  if (info.has_value())
-    std::cout << "      (" << blue << italic << "info: " << reset << italic << info.value() << reset
-              << ")" << std::endl;
-  if (parameter.has_value())
-    std::cout
-        << bold << blue << "Help: " << reset
-        << std::format(
-               "the documentation for parameter \"{}\" is available at: {}", parameter.value(),
-               format_hyperlink(
-                   std::format(
-                       "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#{}",
-                       parameter.value()),
-                   std::format(
-                       "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#{}",
-                       parameter.value())))
-        << std::endl;
-  if (exit) std::exit(1);
-}
-
 nlohmann::json read_msgpack(std::string_view filename) {
   if (!std::filesystem::exists(filename))
-    render_error(std::format("File '{}' does not exist", filename), true);
+    cli::render_error(std::format("File '{}' does not exist", filename), true);
   std::ifstream ifs(filename, std::ios::in | std::ios::binary);
   nlohmann::json config_json;
   try {
     config_json = nlohmann::json::from_msgpack(ifs);
   } catch (nlohmann::json::parse_error& e) {
-    render_error(std::format("'{}' is not a valid msgpack file", filename), true, std::nullopt,
-                 e.what());
+    cli::render_error(std::format("'{}' is not a valid msgpack file", filename), true, std::nullopt,
+                      e.what());
   }
   return config_json;
 }
 
 nlohmann::json read_json(std::string_view filename) {
-  if (!std::filesystem::exists(filename)) render_error("File '{}' does not exist", true);
+  if (!std::filesystem::exists(filename)) cli::render_error("File '{}' does not exist", true);
   std::string data;
   try {
     data = read_file(filename);
   } catch (const std::exception& e) {
-    render_error(std::format("Error reading file '{}'", filename), true, std::nullopt, e.what());
+    cli::render_error(std::format("Error reading file '{}'", filename), true, std::nullopt,
+                      e.what());
   }
 
   nlohmann::json config_json;
   try {
     config_json = nlohmann::json::parse(data);
   } catch (nlohmann::json::parse_error& e) {
-    render_error(std::format("'{}' is not a valid JSON file", filename), true, std::nullopt,
-                 e.what());
+    cli::render_error(std::format("'{}' is not a valid JSON file", filename), true, std::nullopt,
+                      e.what());
   }
   return config_json;
 }
 
-using result_packt_t
-    = std::variant<sqsgen::core::sqs_result_pack<float, sqsgen::SUBLATTICE_MODE_SPLIT>,
-                   sqsgen::core::sqs_result_pack<double, sqsgen::SUBLATTICE_MODE_SPLIT>,
-                   sqsgen::core::sqs_result_pack<float, sqsgen::SUBLATTICE_MODE_INTERACT>,
-                   sqsgen::core::sqs_result_pack<double, sqsgen::SUBLATTICE_MODE_INTERACT>>;
-result_packt_t load_result_pack(std::string_view path, sqsgen::Prec prec = sqsgen::PREC_SINGLE) {
+using result_packt_t = std::variant<core::sqs_result_pack<float, SUBLATTICE_MODE_SPLIT>,
+                                    core::sqs_result_pack<double, SUBLATTICE_MODE_SPLIT>,
+                                    core::sqs_result_pack<float, SUBLATTICE_MODE_INTERACT>,
+                                    core::sqs_result_pack<double, SUBLATTICE_MODE_INTERACT>>;
+result_packt_t load_result_pack(std::string_view path, Prec prec = PREC_SINGLE) {
   using namespace sqsgen;
   auto pack_json = read_msgpack(path);
-  if (!pack_json.contains("config")) render_error("Invalid result pack - cannot find config", true);
+  if (!pack_json.contains("config"))
+    cli::render_error("Invalid result pack - cannot find config", true);
   if (!pack_json["config"].contains("sublattice_mode"))
-    render_error("Invalid result pack - cannot find sublattice_mode", true);
+    cli::render_error("Invalid result pack - cannot find sublattice_mode", true);
   SublatticeMode mode = pack_json["config"]["sublattice_mode"].get<SublatticeMode>();
   if (prec == PREC_SINGLE && mode == SUBLATTICE_MODE_SPLIT)
     return pack_json.get<core::sqs_result_pack<float, SUBLATTICE_MODE_SPLIT>>();
@@ -179,9 +152,10 @@ void run_main(std::string_view input, std::string_view output, std::string_view 
                                                               {"trace", spdlog::level::trace}};
 
   if (!log_levels.contains(log_level))
-    render_error(std::format("Invalid log level '{}'", log_level));
+    cli::render_error(std::format("Invalid log level '{}'", log_level));
 
-  if (!std::filesystem::exists(input)) render_error(std::format("File '{}' does not exist", input));
+  if (!std::filesystem::exists(input))
+    cli::render_error(std::format("File '{}' does not exist", input));
 
   auto conf = io::config::parse_config(read_json(input));
   if (conf.ok()) {
@@ -218,7 +192,7 @@ void run_main(std::string_view input, std::string_view output, std::string_view 
     }
   } else {
     auto err = conf.error();
-    render_error(err.msg, true, err.key);
+    cli::render_error(err.msg, true, err.key);
   }
 }
 
@@ -288,12 +262,12 @@ int main(int argc, char** argv) {
 
   output_structure_command.add_argument("--objective")
       .help("select the n-th best objective")
-      .default_value(0)
+      .default_value(std::vector<std::string>{"0"})
       .append();
 
   output_structure_command.add_argument("-i", "--index")
       .help("the index of the structure to export,  specified by the --objective option")
-      .default_value(0)
+      .default_value(std::vector<std::string>{"0"})
       .append();
   output_structure_command.add_argument("--all").default_value(false).implicit_value(true).help(
       "Export all structures of a certain objective value, specified by the --objective option");
@@ -328,17 +302,28 @@ int main(int argc, char** argv) {
           "{}.config.json",
           std::filesystem::path(output_command.get<std::string>("--output")).stem().string());
       std::ofstream out(output, std::ios::out);
-      if (!out.good()) render_error(std::format("Failed to open output file '{}'", output));
+      if (!out.good()) cli::render_error(std::format("Failed to open output file '{}'", output));
       out << std::visit([](auto&& p) { return cli::fixup_config_json(p.config).dump(); }, pack);
       return EXIT_SUCCESS;
     } else if (output_command.is_subcommand_used("structure")) {
-      auto objective_indices
-          = output_structure_command.get<std::vector<std::string>>("--objective");
-      auto structure_indices = output_structure_command.get<std::vector<std::string>>("--index");
-      nlohmann::json s;
-      s["o"] = objective_indices;
-      s["i"] = structure_indices;
-      std::cout << s.dump(2) << std::endl;
+      auto num_objectives = std::visit([](auto&& p) { return p.results.size(); }, pack);
+      auto objective_indices = helpers::as<std::set>{}(
+          output_structure_command.get<std::vector<std::string>>("--objective")
+          | views::transform(
+              [num_objectives](auto&& raw) { return cli::validate_index(raw, num_objectives); }));
+      bool export_all = output_structure_command["--all"] == true;
+      auto structure_indices = std::vector<std::pair<int, int>>{};
+      ranges::for_each(objective_indices, [&, export_all](auto&& index) {
+        int num_structures = std::visit(
+            [index](auto& p) { return std::get<1>(p.results.at(index)).size(); }, pack);
+        const auto append = [&, index](int i) { structure_indices.push_back({index, i}); };
+        if (export_all)
+          ranges::for_each(range<int>(num_structures), append);
+        else
+          ranges::for_each(output_structure_command.get<std::vector<std::string>>("--index"),
+                           [&](auto&& raw) { append(cli::validate_index(raw, num_structures)); });
+      });
+
       return EXIT_SUCCESS;
     } else {
       std::visit([](auto const& p) { show_result_pack(p); }, pack);
