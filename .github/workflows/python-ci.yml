@@ -54,6 +54,14 @@ jobs:
       - name: Build Package
         run: pip install ./python -v  --no-build-isolation
 
+       # Required on macOS to build gmp package
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            autotools
+        if: ${{ runner.os == 'macOS' }}
+
       - name: Run unit tests
         run: pytest ./python -vv --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
 
