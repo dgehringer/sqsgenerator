@@ -9,8 +9,10 @@ import pybind11
 import subprocess
 from pathlib import Path
 
-from setuptools import Extension, find_packages, setup
+from setuptools import Extension, find_packages, setup, findall
 from setuptools.command.build_ext import build_ext
+from setuptools.command.build_py import build_py as _build_py
+
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
 PLAT_TO_CMAKE = {
@@ -81,6 +83,8 @@ class CMakeBuild(build_ext):
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)
         extdir = ext_fullpath.parent.resolve()
 
+        print(extdir)
+
         if ext.output_dir:
             extdir = os.path.join(extdir, *ext.output_dir)
 
@@ -117,7 +121,6 @@ class CMakeBuild(build_ext):
             f"-DSQSGEN_BUILD_NUMBER={ext.version_info['build']}",
             f"-DSQSGEN_BUILD_BRANCH={git_branch()}",
             f"-DSQSGEN_BUILD_COMMIT={git_sha1()}",
-            f"-B=build",
         ]
         build_args = []
         # Adding CMake arguments set as environment variable
@@ -181,22 +184,39 @@ class CMakeBuild(build_ext):
         build_temp = Path(self.build_temp) / ext.name
         if not build_temp.exists():
             build_temp.mkdir(parents=True)
+        print(build_temp)
         print(shlex.join(["cmake", ext.sourcedir, *cmake_args]))
         subprocess.run(
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
         )
         subprocess.run(
-            ["cmake", "--build", "build", *build_args], cwd=build_temp, check=True
+            ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
         )
+
+
+class BuildExtBeforePy(_build_py):
+    def run(self):
+        self.run_command("build_ext")
+        return super().run()
+
+
+def wrapper(where, exclude=[]):
+    r = find_packages(".", exclude=exclude)
+    print("Packages found: ", findall(where))
+    return r
 
 
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     ext_modules=[
-        CMakeExtension("_core", sourcedir="..", vcpkg_root=os.path.join("..", "vcpkg"))
+        CMakeExtension(
+            "sqsgenerator.core._core",
+            sourcedir="..",
+            vcpkg_root=os.path.join("..", "vcpkg"),
+        )
     ],
-    cmdclass={"build_ext": CMakeBuild},
+    cmdclass={"build_ext": CMakeBuild, "build_py": BuildExtBeforePy},
     zip_safe=False,
     packages=find_packages(".", exclude=["tests"]),
 )
