@@ -1,6 +1,7 @@
 
 #include <argparse/argparse.hpp>
 #include <fstream>
+#include <iostream>
 #include <ranges>
 
 #include "helpers.h"
@@ -21,7 +22,7 @@ using json = nlohmann::json;
 namespace ranges = std::ranges;
 using namespace sqsgen;
 
-std::string read_file(const std::string_view filename) {
+std::string read_file(std::string const& filename) {
   std::ifstream ifs(filename);
   if (!ifs) throw std::runtime_error(std::format("Could not open file: {}", filename));
   std::ostringstream oss;
@@ -61,7 +62,7 @@ void display_version_info() {
   print_row("MPI", sqsgen::io::mpi::HAVE_MPI ? "yes" : "no");
 }
 
-nlohmann::json read_msgpack(std::string_view filename) {
+nlohmann::json read_msgpack(std::string const& filename) {
   if (!std::filesystem::exists(filename))
     cli::render_error(std::format("File '{}' does not exist", filename), true);
   std::ifstream ifs(filename, std::ios::in | std::ios::binary);
@@ -75,7 +76,7 @@ nlohmann::json read_msgpack(std::string_view filename) {
   return config_json;
 }
 
-nlohmann::json read_json(std::string_view filename) {
+nlohmann::json read_json(std::string const& filename) {
   if (!std::filesystem::exists(filename)) cli::render_error("File '{}' does not exist", true);
   std::string data;
   try {
@@ -99,7 +100,7 @@ using result_packt_t = std::variant<core::sqs_result_pack<float, SUBLATTICE_MODE
                                     core::sqs_result_pack<double, SUBLATTICE_MODE_SPLIT>,
                                     core::sqs_result_pack<float, SUBLATTICE_MODE_INTERACT>,
                                     core::sqs_result_pack<double, SUBLATTICE_MODE_INTERACT>>;
-result_packt_t load_result_pack(std::string_view path, Prec prec = PREC_SINGLE) {
+result_packt_t load_result_pack(std::string const& path, Prec prec = PREC_SINGLE) {
   using namespace sqsgen;
   auto pack_json = read_msgpack(path);
   if (!pack_json.contains("config"))
@@ -118,18 +119,17 @@ result_packt_t load_result_pack(std::string_view path, Prec prec = PREC_SINGLE) 
   throw std::invalid_argument("Invalid result pack - invalid sublattice_mode");
 }
 
-template <class T, sqsgen::SublatticeMode Mode>
-void show_result_pack(sqsgen::core::sqs_result_pack<T, Mode> const& pack) {
+template <class T, SublatticeMode Mode>
+void show_result_pack(core::sqs_result_pack<T, Mode> const& pack) {
   using namespace termcolor;
 
   std::cout << bold << "Mode: " << reset << italic
-            << (Mode == sqsgen::SUBLATTICE_MODE_INTERACT ? "interact" : "split") << reset
-            << std::endl;
+            << (Mode == SUBLATTICE_MODE_INTERACT ? "interact" : "split") << reset << std::endl;
   std::cout << bold << "min(O(σ)): " << reset
             << std::format("{:.5f}", pack.statistics.best_objective) << std::endl;
   std::cout << bold << "Num. objectives: " << reset << pack.results.size() << std::endl;
   std::cout << std::endl;
-  std::cout << bold << "index" << " O(σ)        " << "Num. results" << std::endl;
+  std::cout << bold << "index" << " O(σ)        " << "N" << std::endl;
   auto index = 0;
   for (auto&& [objective, results] : pack.results) {
     std::cout << bold << std::format("{:<5} ", index++) << reset;
@@ -138,7 +138,7 @@ void show_result_pack(sqsgen::core::sqs_result_pack<T, Mode> const& pack) {
   }
 }
 
-void run_main(std::string_view input, std::string_view output, std::string_view log_level,
+void run_main(std::string const& input, std::string const& output, std::string const& log_level,
               bool quiet) {
   using namespace sqsgen;
   using namespace sqsgen::core;
