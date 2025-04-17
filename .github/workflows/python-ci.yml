@@ -39,7 +39,6 @@ jobs:
         with:
           doNotCache: 'false'
 
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -62,19 +61,11 @@ jobs:
       - name: Format
         run: ruff format --diff ./python/sqsgenerator
 
-      - name: Build Package (Linux/macOS)
-        run: |
-          cd ${{ github.workspace }}/python
-          python setup.py build_ext --inplace
-          cd ${{ github.workspace }}
-        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
-
-      - name: Build package for Windows
+      - name: Build package
         run: pip install ./python --no-build-isolation -v
-        if: ${{ runner.os == 'Windows' }}
 
       - name: Run unit tests
-        run: pytest ./python -vv --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
+        run: pytest ./python -vv --import-mode=importlib --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
 
       - name: Upload pytest test results
         uses: actions/upload-artifact@v4
