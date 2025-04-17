@@ -121,6 +121,7 @@ class CMakeBuild(build_ext):
             f"-DSQSGEN_BUILD_NUMBER={ext.version_info['build']}",
             f"-DSQSGEN_BUILD_BRANCH={git_branch()}",
             f"-DSQSGEN_BUILD_COMMIT={git_sha1()}",
+            '-DVCPKG_INSTALL_OPTIONS="--debug"',
         ]
         build_args = []
         # Adding CMake arguments set as environment variable
@@ -194,18 +195,6 @@ class CMakeBuild(build_ext):
         )
 
 
-class BuildExtBeforePy(_build_py):
-    def run(self):
-        self.run_command("build_ext")
-        return super().run()
-
-
-def wrapper(where, exclude=[]):
-    r = find_packages(".", exclude=exclude)
-    print("Packages found: ", findall(where))
-    return r
-
-
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
@@ -216,7 +205,7 @@ setup(
             vcpkg_root=os.path.join("..", "vcpkg"),
         )
     ],
-    cmdclass={"build_ext": CMakeBuild, "build_py": BuildExtBeforePy},
+    cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     packages=find_packages(".", exclude=["tests"]),
 )
