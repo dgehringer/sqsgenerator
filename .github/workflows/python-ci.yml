@@ -21,10 +21,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-15]
         python-version: ["3.11"]
     env:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
 
     steps:
       - name: Export GitHub Actions cache environment variables
