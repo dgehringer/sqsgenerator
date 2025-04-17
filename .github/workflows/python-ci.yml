@@ -33,6 +33,8 @@ jobs:
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
+        with:
+          doNotCache: 'false'
 
 
       - name: Set up Python ${{ matrix.python-version }}
