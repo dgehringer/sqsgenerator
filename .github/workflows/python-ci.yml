@@ -5,6 +5,9 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -59,8 +62,16 @@ jobs:
       - name: Format
         run: ruff format --diff ./python/sqsgenerator
 
-      - name: Build Package
-        run: pip install ./python -v  --no-build-isolation
+      - name: Build Package (Linux/macOS)
+        run: |
+          cd ${{ github.workspace }}/python
+          python setup.py build_ext --inplace
+          cd ${{ github.workspace }}
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+
+      - name: Build package for Windows
+        run: pip install ./python --no-build-isolation -v
+        if: ${{ runner.os == 'Windows' }}
 
       - name: Run unit tests
         run: pytest ./python -vv --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
