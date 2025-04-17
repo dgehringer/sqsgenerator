@@ -47,8 +47,7 @@ jobs:
       - uses: friendlyanon/setup-vcpkg@v1
 
       - name: run vcpkg install
-        run: |
-          vcpkg install
+        run: ./vcpkg/vcpkg install
         if: ${{ runner.os == 'macOS' }}
 
       - name: Set up Python ${{ matrix.python-version }}
