@@ -14,7 +14,7 @@ permissions:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  VCPKG_FEATURE_FLAGS: dependencygraph
+  VCPKG_FEATURE_FLAGS: "-manifests"
 
 jobs:
   build:
