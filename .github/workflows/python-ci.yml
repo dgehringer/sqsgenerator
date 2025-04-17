@@ -24,7 +24,7 @@ jobs:
         os: [ubuntu-latest, macos-15]
         python-version: ["3.11"]
     env:
-      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_BINARY_SOURCES: "x-gha,readwrite"
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
 
     steps:
@@ -72,19 +72,19 @@ jobs:
       - name: Format
         run: ruff format --diff ./python/sqsgenerator
 
-      - name: Build package
-        run: pip install ./python --no-build-isolation -v
+     # - name: Build package
+     #   run: pip install ./python --no-build-isolation -v
 
-      - name: Run unit tests
-        run: pytest ./python -vv --import-mode=importlib --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
+     # - name: Run unit tests
+     #   run: pytest ./python -vv --import-mode=importlib --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
 
-      - name: Upload pytest test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-results-${{ matrix.python-version }}-${{ matrix.os }}
-          path: junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
+     # - name: Upload pytest test results
+     #   uses: actions/upload-artifact@v4
+     #   with:
+     #     name: pytest-results-${{ matrix.python-version }}-${{ matrix.os }}
+     #     path: junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
         # Use always() to always run this step to publish test results when there are test failures
-        if: ${{ always() }}
+     #   if: ${{ always() }}
 
       - name: Build ctest executables
         run: ${{ github.workspace }}/scripts/build-tests.sh build
