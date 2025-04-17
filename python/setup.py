@@ -121,7 +121,6 @@ class CMakeBuild(build_ext):
             f"-DSQSGEN_BUILD_NUMBER={ext.version_info['build']}",
             f"-DSQSGEN_BUILD_BRANCH={git_branch()}",
             f"-DSQSGEN_BUILD_COMMIT={git_sha1()}",
-            '-DVCPKG_INSTALL_OPTIONS="--debug"',
         ]
         build_args = []
         # Adding CMake arguments set as environment variable
