@@ -52,7 +52,7 @@ jobs:
         run: ${{ github.workspace }}\vcpkg/bootstrap-vcpkg.bat
 
       - name: vcpkg install
-        run: vcpkg install --debug
+        run: vcpkg install
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
