@@ -9,6 +9,7 @@ from sqsgenerator.core import (
 
 try:
     from pymatgen.core import Structure
+    from pymatgen.io.vasp import Poscar
 except ImportError:
     HAVE_PYMATGEN = False
 else:
@@ -53,3 +54,27 @@ def test_structure_poscar(structure_type):
 def test_structure_binary(structure_type):
     structure = make_structure(structure_type)
     assert structure == structure_type.from_bytes(structure.bytes())
+
+
+@pytest.mark.parametrize("structure_type", [StructureFloat, StructureDouble])
+def test_structure_pymatgen(structure_type):
+    structure = make_structure(structure_type) * (2, 2, 2)
+
+    def to_pymatgen(s: StructureFloat | StructureDouble) -> Structure:
+        return Structure(
+            s.lattice,
+            s.symbols,
+            s.frac_coords,
+            coords_are_cartesian=False,
+        )
+
+    pymatgen_structure = to_pymatgen(structure)
+
+    assert (
+        Poscar.from_str(structure.dump(StructureFormat.poscar)).structure
+        == pymatgen_structure
+    )
+    assert (
+        Structure.from_str(structure.dump(StructureFormat.json_pymatgen), fmt="json")
+        == pymatgen_structure
+    )
