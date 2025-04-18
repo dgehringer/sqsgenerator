@@ -501,7 +501,7 @@ namespace sqsgen {
 
     template <class T>
     optimizer_output_t run_optimization(core::configuration<T>&& conf,
-                                        spdlog::level::level_enum log_level = spdlog::level::info,
+                                        spdlog::level::level_enum log_level = spdlog::level::warn,
                                         std::optional<sqs_callback_t> callback = std::nullopt) {
       if (conf.iteration_mode == ITERATION_MODE_RANDOM
           && conf.sublattice_mode == SUBLATTICE_MODE_INTERACT)
@@ -527,7 +527,7 @@ namespace sqsgen {
 
   inline detail::optimizer_output_t run_optimization(
       std::variant<core::configuration<float>, core::configuration<double>>&& conf,
-      spdlog::level::level_enum level = spdlog::level::info,
+      spdlog::level::level_enum level = spdlog::level::warn,
       std::optional<sqs_callback_t> callback = std::nullopt) {
     return std::visit(
         [&]<class T>(core::configuration<T>&& c) {
