@@ -15,7 +15,9 @@ version = {file = "version"}
 
 [project.optional-dependencies]
 test = [
-    "pytest"
+    "pytest",
+    "pymatgen",
+    "ase",
 ]
 
 [build-system]

@@ -23,7 +23,37 @@
 
 namespace py = pybind11;
 
+using namespace sqsgen;
 using namespace sqsgen::core::helpers;
+
+nlohmann::json read_msgpack(std::string const &filename) {
+  std::ifstream ifs(filename, std::ios::in | std::ios::binary);
+  return nlohmann::json::from_msgpack(ifs);
+}
+
+using result_packt_t = std::variant<core::sqs_result_pack<float, SUBLATTICE_MODE_SPLIT>,
+                                    core::sqs_result_pack<double, SUBLATTICE_MODE_SPLIT>,
+                                    core::sqs_result_pack<float, SUBLATTICE_MODE_INTERACT>,
+                                    core::sqs_result_pack<double, SUBLATTICE_MODE_INTERACT>>;
+result_packt_t load_result_pack(bool is_file, std::string const &data, Prec prec = PREC_SINGLE) {
+  using namespace sqsgen;
+  nlohmann::json pack_json;
+  if (!is_file)
+    pack_json = nlohmann::json::from_msgpack(data);
+  else
+    pack_json = read_msgpack(data);
+
+  SublatticeMode mode = pack_json["config"]["sublattice_mode"].get<SublatticeMode>();
+  if (prec == PREC_SINGLE && mode == SUBLATTICE_MODE_SPLIT)
+    return pack_json.get<core::sqs_result_pack<float, SUBLATTICE_MODE_SPLIT>>();
+  if (prec == PREC_SINGLE && mode == SUBLATTICE_MODE_INTERACT)
+    return pack_json.get<core::sqs_result_pack<float, SUBLATTICE_MODE_INTERACT>>();
+  if (prec == PREC_DOUBLE && mode == SUBLATTICE_MODE_SPLIT)
+    return pack_json.get<core::sqs_result_pack<double, SUBLATTICE_MODE_SPLIT>>();
+  if (prec == PREC_DOUBLE && mode == SUBLATTICE_MODE_INTERACT)
+    return pack_json.get<core::sqs_result_pack<double, SUBLATTICE_MODE_INTERACT>>();
+  throw std::invalid_argument("Invalid result pack - invalid sublattice_mode");
+}
 
 template <string_literal Name, class T>
   requires std::is_arithmetic_v<T>
@@ -92,10 +122,17 @@ template <string_literal Name, class T> void bind_sqs_statistics_data(py::module
 template <string_literal Name, class T> void bind_site(py::module &m) {
   using bind_t = sqsgen::core::detail::site<T>;
   py::class_<bind_t>(m, format_prec<Name, T>().c_str())
+      .def_property_readonly("__match__args",
+                             []() { return py::make_tuple("index", "frac_coords", "specie"); })
       .def_readonly("index", &bind_t::index)
       .def_readonly("frac_coords", &bind_t::frac_coords)
       .def_readonly("specie", &bind_t::specie)
       .def("atom", &bind_t::atom)
+      .def("__iter__",
+           [&](bind_t &self) {
+             return py::make_range_iterator(std::vector{
+                 py::cast(self.index), py::cast(self.frac_coords), py::cast(self.specie)});
+           })
       .def("__hash__", [](bind_t &self) { return typename bind_t::hasher{}(self); })
       .def(
           "__eq__", [](bind_t &a, bind_t &b) { return a == b; }, py::is_operator())
@@ -114,6 +151,7 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
       .def_readonly("species", &structure<T>::species)
       .def_readonly("frac_coords", &structure<T>::frac_coords)
       .def_readonly("num_species", &structure<T>::num_species)
+      .def("__iter__", [](structure<T> &self) { return py::make_range_iterator(self.sites()); })
       .def_property_readonly(
           "symbols",
           [](structure<T> &self) {
@@ -132,7 +170,7 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
                                auto uuid = py::module_::import("uuid");
                                return uuid.attr("to_string")(self.uuid());
                              })
-      .def_property_readonly("sites", [](structure<T> &s) { return as<std::set>{}(s.sites()); })
+      .def_property_readonly("sites", [](structure<T> &s) { return as<std::vector>{}(s.sites()); })
       .def_property_readonly("distance_matrix", &structure<T>::distance_matrix)
       .def("shell_matrix", &structure<T>::shell_matrix, py::arg("shell_radii"),
            py::arg("atol") = std::numeric_limits<T>::epsilon(), py::arg("rtol") = 1.0e-9)
@@ -145,7 +183,7 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
            })
       .def("__eq__",
            [](structure<T> &a, structure<T> &b) {
-             return as<std::set>{}(a.sites()) == as<std::set>{}(b.sites());
+             return as<std::vector>{}(a.sites()) == as<std::vector>{}(b.sites());
            })
       .def("dump",
            [](structure<T> &s, StructureFormat format) {
@@ -191,7 +229,9 @@ template <string_literal Name, class T> void bind_configuration(py::module &m) {
   py::class_<configuration<T>>(m, format_prec<Name, T>().c_str())
       .def_readwrite("sublattice_mode", &configuration<T>::sublattice_mode)
       .def_readwrite("iteration_mode", &configuration<T>::iteration_mode)
-      .def("structure", [](configuration<T> &conf) { return conf.structure.structure(); })
+      .def(
+          "structure", [](configuration<T> &conf) { return conf.structure.structure(); },
+          py::return_value_policy::move)
       .def_readwrite("shell_radii", &configuration<T>::shell_radii)
       .def_readwrite("shell_weights", &configuration<T>::shell_weights)
       .def_readwrite("prefactors", &configuration<T>::prefactors)
@@ -235,7 +275,7 @@ void bind_result(py::module &m) {
     py::class_<sqs_result_wrapper<T, Mode>>(
         m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
         .def_readonly("objective", &sqs_result_wrapper<T, Mode>::objective)
-        .def("structure", &sqs_result_wrapper<T, Mode>::structure)
+        .def("structure", &sqs_result_wrapper<T, Mode>::structure, py::return_value_policy::move)
         .def(
             "sro",
             [](sqs_result_wrapper<T, Mode> &r, usize_t shell, std::string const &i,
@@ -492,4 +532,11 @@ PYBIND11_MODULE(_core, m) {
   bind_result_pack<"SqsResultPack", float, SUBLATTICE_MODE_SPLIT>(m);
   bind_result_pack<"SqsResultPack", double, SUBLATTICE_MODE_INTERACT>(m);
   bind_result_pack<"SqsResultPack", double, SUBLATTICE_MODE_SPLIT>(m);
+
+  m.def(
+      "load_result_pack",
+      [](std::string const &data, Prec prec) {
+        return load_result_pack(std::filesystem::exists(data), data, prec);
+      },
+      py::arg("data"), py::arg("prec") = PREC_SINGLE);
 }
