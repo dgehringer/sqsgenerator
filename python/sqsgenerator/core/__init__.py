@@ -1,5 +1,3 @@
-from typing import Union
-
 from ._core import (
     IterationMode,
     LogLevel,
@@ -33,15 +31,15 @@ from ._core import (
 
 __version__ = __core__version__
 
-SqsConfiguration = Union[SqsConfigurationFloat, SqsConfigurationDouble]
-Structure = Union[StructureFloat, StructureDouble]
-SqsResultSplit = Union[SqsResultSplitFloat, SqsResultSplitDouble]
-SqsResultInteract = Union[SqsResultInteractFloat, SqsResultInteractDouble]
-SqsResultPackSplit = Union[SqsResultPackSplitFloat, SqsResultPackSplitDouble]
-SqsResultPackInteract = Union[SqsResultPackInteractFloat, SqsResultPackInteractDouble]
+SqsConfiguration = SqsConfigurationFloat | SqsConfigurationDouble
+Structure = StructureFloat | StructureDouble
+SqsResultSplit = SqsResultSplitFloat | SqsResultSplitDouble
+SqsResultInteract = SqsResultInteractFloat | SqsResultInteractDouble
+SqsResultPackSplit = SqsResultPackSplitFloat | SqsResultPackSplitDouble
+SqsResultPackInteract = SqsResultPackInteractFloat | SqsResultPackInteractDouble
 
-SqsResult = Union[SqsResultInteract, SqsResultSplit]
-SqsResultPack = Union[SqsResultPackInteract, SqsResultPackSplit]
+SqsResult = SqsResultInteract | SqsResultSplit
+SqsResultPack = SqsResultPackInteract | SqsResultPackSplit
 
 __all__ = [
     "IterationMode",
