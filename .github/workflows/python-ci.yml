@@ -51,16 +51,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Compile build dependencies
+      - name: Install CI dependencies
+        run: pip install ruff
+
+      - name: Compile & install build dependencies
         run: |
           pip install pip-tools
           pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
-
-      - name: Install build dependencies
-        run: pip install -r requirements-ci.txt
-
-      - name: Install CI dependencies
-        run: pip install ruff pytest
+          pip install -r requirements-ci.txt
 
       - name: Lint
         run: ruff check ./python/sqsgenerator --output-format=github
@@ -70,6 +68,12 @@ jobs:
 
       - name: Build package
         run: pip install ./python --no-build-isolation -v
+
+      - name: Compile & install test dependencies
+        run: |
+          pip install pip-tools
+          pip-compile --extra=test -o requirements-test.txt ./python/pyproject.toml
+          pip install -r requirements-test.txt
 
       - name: Run unit tests
         run: pytest ./python -vv --import-mode=importlib --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
