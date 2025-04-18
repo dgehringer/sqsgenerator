@@ -37,9 +37,14 @@ namespace sqsgen {
       const auto restore_order
           = [&](configuration_t& species,
                 optimization_config<T, Mode> const& config) -> configuration_t {
-        return as<std::vector>{}(config.sort_order | views::transform([&](auto&& index) {
-                                   return config.species_map.second.at(species[index]);
-                                 }));
+        auto sorted = as<std::vector>{}(config.sort_order | views::transform([&](auto&& index) {
+                                          return config.species_map.second.at(species[index]);
+                                        }));
+        configuration_t reversed(species.size());
+        for (auto i = 0; i < species.size(); i++)
+          reversed[config.sort_order[i]] = config.species_map.second.at(species[i]);
+
+        return reversed;
       };
       if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
         r.species = restore_order(r.species, configs.front());
