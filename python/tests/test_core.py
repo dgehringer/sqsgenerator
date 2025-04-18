@@ -1,5 +1,6 @@
 import collections
 import math
+import sys
 import tempfile
 
 import numpy as np
@@ -119,6 +120,9 @@ def test_systematic_all_results_partial(prec):
             assert as_tuple(coords) == site_by_index[index]
 
 
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="Test not supported on Windows"
+)
 @pytest.mark.parametrize("prec", [single, double])
 def test_structure_pack_io(prec):
     settings = default_settings(prec)
