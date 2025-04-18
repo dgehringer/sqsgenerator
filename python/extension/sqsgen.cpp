@@ -92,10 +92,17 @@ template <string_literal Name, class T> void bind_sqs_statistics_data(py::module
 template <string_literal Name, class T> void bind_site(py::module &m) {
   using bind_t = sqsgen::core::detail::site<T>;
   py::class_<bind_t>(m, format_prec<Name, T>().c_str())
+      .def_property_readonly("__match__args",
+                             []() { return py::make_tuple("index", "frac_coords", "specie"); })
       .def_readonly("index", &bind_t::index)
       .def_readonly("frac_coords", &bind_t::frac_coords)
       .def_readonly("specie", &bind_t::specie)
       .def("atom", &bind_t::atom)
+      .def("__iter__",
+           [&](bind_t &self) {
+             return py::make_range_iterator(std::vector{
+                 py::cast(self.index), py::cast(self.frac_coords), py::cast(self.specie)});
+           })
       .def("__hash__", [](bind_t &self) { return typename bind_t::hasher{}(self); })
       .def(
           "__eq__", [](bind_t &a, bind_t &b) { return a == b; }, py::is_operator())
@@ -114,6 +121,7 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
       .def_readonly("species", &structure<T>::species)
       .def_readonly("frac_coords", &structure<T>::frac_coords)
       .def_readonly("num_species", &structure<T>::num_species)
+      .def("__iter__", [](structure<T> &self) { return py::make_range_iterator(self.sites()); })
       .def_property_readonly(
           "symbols",
           [](structure<T> &self) {
@@ -132,7 +140,7 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
                                auto uuid = py::module_::import("uuid");
                                return uuid.attr("to_string")(self.uuid());
                              })
-      .def_property_readonly("sites", [](structure<T> &s) { return as<std::set>{}(s.sites()); })
+      .def_property_readonly("sites", [](structure<T> &s) { return as<std::vector>{}(s.sites()); })
       .def_property_readonly("distance_matrix", &structure<T>::distance_matrix)
       .def("shell_matrix", &structure<T>::shell_matrix, py::arg("shell_radii"),
            py::arg("atol") = std::numeric_limits<T>::epsilon(), py::arg("rtol") = 1.0e-9)
@@ -145,7 +153,7 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
            })
       .def("__eq__",
            [](structure<T> &a, structure<T> &b) {
-             return as<std::set>{}(a.sites()) == as<std::set>{}(b.sites());
+             return as<std::vector>{}(a.sites()) == as<std::vector>{}(b.sites());
            })
       .def("dump",
            [](structure<T> &s, StructureFormat format) {
