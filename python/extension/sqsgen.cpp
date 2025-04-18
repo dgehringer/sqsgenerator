@@ -23,7 +23,37 @@
 
 namespace py = pybind11;
 
+using namespace sqsgen;
 using namespace sqsgen::core::helpers;
+
+nlohmann::json read_msgpack(std::string const &filename) {
+  std::ifstream ifs(filename, std::ios::in | std::ios::binary);
+  return nlohmann::json::from_msgpack(ifs);
+}
+
+using result_packt_t = std::variant<core::sqs_result_pack<float, SUBLATTICE_MODE_SPLIT>,
+                                    core::sqs_result_pack<double, SUBLATTICE_MODE_SPLIT>,
+                                    core::sqs_result_pack<float, SUBLATTICE_MODE_INTERACT>,
+                                    core::sqs_result_pack<double, SUBLATTICE_MODE_INTERACT>>;
+result_packt_t load_result_pack(bool is_file, std::string const &data, Prec prec = PREC_SINGLE) {
+  using namespace sqsgen;
+  nlohmann::json pack_json;
+  if (!is_file)
+    pack_json = nlohmann::json::from_msgpack(data);
+  else
+    pack_json = read_msgpack(data);
+
+  SublatticeMode mode = pack_json["config"]["sublattice_mode"].get<SublatticeMode>();
+  if (prec == PREC_SINGLE && mode == SUBLATTICE_MODE_SPLIT)
+    return pack_json.get<core::sqs_result_pack<float, SUBLATTICE_MODE_SPLIT>>();
+  if (prec == PREC_SINGLE && mode == SUBLATTICE_MODE_INTERACT)
+    return pack_json.get<core::sqs_result_pack<float, SUBLATTICE_MODE_INTERACT>>();
+  if (prec == PREC_DOUBLE && mode == SUBLATTICE_MODE_SPLIT)
+    return pack_json.get<core::sqs_result_pack<double, SUBLATTICE_MODE_SPLIT>>();
+  if (prec == PREC_DOUBLE && mode == SUBLATTICE_MODE_INTERACT)
+    return pack_json.get<core::sqs_result_pack<double, SUBLATTICE_MODE_INTERACT>>();
+  throw std::invalid_argument("Invalid result pack - invalid sublattice_mode");
+}
 
 template <string_literal Name, class T>
   requires std::is_arithmetic_v<T>
@@ -245,7 +275,7 @@ void bind_result(py::module &m) {
     py::class_<sqs_result_wrapper<T, Mode>>(
         m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
         .def_readonly("objective", &sqs_result_wrapper<T, Mode>::objective)
-        .def("structure", &sqs_result_wrapper<T, Mode>::structure)
+        .def("structure", &sqs_result_wrapper<T, Mode>::structure, py::return_value_policy::move)
         .def(
             "sro",
             [](sqs_result_wrapper<T, Mode> &r, usize_t shell, std::string const &i,
@@ -502,4 +532,11 @@ PYBIND11_MODULE(_core, m) {
   bind_result_pack<"SqsResultPack", float, SUBLATTICE_MODE_SPLIT>(m);
   bind_result_pack<"SqsResultPack", double, SUBLATTICE_MODE_INTERACT>(m);
   bind_result_pack<"SqsResultPack", double, SUBLATTICE_MODE_SPLIT>(m);
+
+  m.def(
+      "load_result_pack",
+      [](std::string const &data, Prec prec) {
+        return load_result_pack(std::filesystem::exists(data), data, prec);
+      },
+      py::arg("data"), py::arg("prec") = PREC_SINGLE);
 }
