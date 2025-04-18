@@ -1,5 +1,6 @@
 import collections
 import math
+import tempfile
 
 import numpy as np
 import pytest
@@ -8,6 +9,7 @@ from sqsgenerator import optimize
 from sqsgenerator.core import (
     Prec,
     double,
+    load_result_pack,
     parse_config,
     single,
     systematic,
@@ -115,3 +117,30 @@ def test_systematic_all_results_partial(prec):
 
         for index, coords, _ in structure:
             assert as_tuple(coords) == site_by_index[index]
+
+
+@pytest.mark.parametrize("prec", [single, double])
+def test_structure_pack_io(prec):
+    settings = default_settings(prec)
+
+    config = parse_config(settings)
+    results = optimize(config)
+
+    assert type(results) is type(load_result_pack(results.bytes(), prec))
+
+    with tempfile.NamedTemporaryFile(mode="wb") as f:
+        f.write(results.bytes())
+        f.flush()
+        loaded = load_result_pack(f.name, prec)
+        assert type(results) is type(loaded)
+        for a, b in zip(loaded, results):
+            (aobj, ares), (bobj, bres) = a, b
+            assert math.isclose(aobj, bobj)
+            assert len(ares) == len(bres)
+            for ar, br in zip(ares, bres):
+                assert math.isclose(ar.objective, br.objective)
+                assert np.allclose(ar.sro(), br.sro())
+                sa, sb = ar.structure(), br.structure()
+                # TODO: investrigate
+                # sa == sb
+                assert np.allclose(sa.frac_coords, sb.frac_coords)
