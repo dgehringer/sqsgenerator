@@ -152,7 +152,8 @@ namespace sqsgen {
   };
 
   template <class T> struct objective {
-    T value;
+    T best;    // the best objective value
+    T search;  // the search limit in case we want to enure that more that one result is found.
   };
 
   enum StructureFormat {

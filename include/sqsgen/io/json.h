@@ -167,7 +167,8 @@ template <class T> struct adl_serializer<core::configuration<T>> {
              {"target_objective", data.target_objective},
              {"iterations", data.iterations},
              {"chunk_size", data.chunk_size},
-             {"thread_config", data.thread_config}};
+             {"thread_config", data.thread_config},
+             {"keep", data.keep}};
   }
 
   static void from_json(const json& j, core::configuration<T>& c) {
@@ -183,6 +184,7 @@ template <class T> struct adl_serializer<core::configuration<T>> {
     j.at("iterations").get_to<std::optional<iterations_t>>(c.iterations);
     j.at("chunk_size").get_to<iterations_t>(c.chunk_size);
     j.at("thread_config").get_to<thread_config_t>(c.thread_config);
+    j.at("keep").get_to<std::size_t>(c.keep);
   }
 };
 

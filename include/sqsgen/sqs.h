@@ -84,6 +84,7 @@ namespace sqsgen {
     mpl::communicator comm;
 #endif
     std::atomic<T> _best_objective;
+    std::atomic<T> _search_objective;
     thread_config_t _thread_config;
     std::map<std::thread::id, int> _thread_map;
 
@@ -131,8 +132,19 @@ namespace sqsgen {
 
     T best_objective() { return _best_objective.load(); }
 
+    T search_objective() { return _search_objective.load(); }
+
+    void update_objectives(objective<T>&& objective) {
+      if (objective.best < _best_objective.load()) _best_objective.store(objective.best);
+      if (objective.search < _search_objective.load()) _search_objective.store(objective.search);
+    }
+
     void update_best_objective(T objective) {
       if (objective < _best_objective.load()) _best_objective.store(objective);
+    }
+
+    void update_search_objective(T objective) {
+      if (objective < _search_objective.load()) _search_objective.store(objective);
     }
 
     [[nodiscard]] usize_t num_threads() {
@@ -179,6 +191,7 @@ namespace sqsgen {
                                 )
         : config(config),
           _best_objective(std::numeric_limits<T>::max()),
+          _search_objective(std::numeric_limits<T>::max()),
           results(),
 #ifdef WITH_MPI
           comm(comm),
@@ -190,6 +203,8 @@ namespace sqsgen {
     void insert_result(sqs_result<T, Mode>&& result) {
       results.insert_result(std::forward<sqs_result<T, Mode>>(result));
     }
+
+    auto nth_best_objective(auto n) { return results.nth_best(n); }
 
     sqs_result<T, Mode> make_empty_result() {
       using namespace sqsgen::core::helpers;
@@ -233,6 +248,8 @@ namespace sqsgen {
       auto num_shells{this->transpose_setting([](auto&& c) { return c.shell_weights.size(); })};
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
+      auto keep = this->config.keep;
+
       core::sqs_statistics<T> statistics;
       auto stop_source = std::make_shared<std::stop_source>();
 
@@ -242,7 +259,7 @@ namespace sqsgen {
           core::tick<TIMING_COMM> tick_comm;
           io::mpi::recv_all<sqsgen::objective<T>>(
               this->comm, sqsgen::objective<T>{},
-              [&](auto&& o, auto) { this->update_best_objective(o.value); }, io::mpi::RANK_HEAD);
+              [&](auto&& o, auto) { this->update_objectives(std::move(o)); }, io::mpi::RANK_HEAD);
           statistics.tock(tick_comm);
         }
 #endif
@@ -315,9 +332,8 @@ namespace sqsgen {
             objective_value = sum(objective);
           }
           // symmetrize bonds for each shell and compute objective function
-          if (objective_value <= this->best_objective()) {
+          if (objective_value <= this->search_objective()) {
             // pull in changes from other ranks. Has another rank found a better
-            this->update_best_objective(objective_value);
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
 #ifdef WITH_MPI
             if (!head && mpi_mode) {
@@ -330,6 +346,9 @@ namespace sqsgen {
 #else
             this->insert_result(std::move(current));
 #endif
+            // we update the search object. A new entry has been found (on the head rank we will
+            // automatically update it)
+            this->update_objectives({objective_value, this->nth_best_objective(keep)});
 
             statistics.log_result(iterations_t{rstart + i - start}, objective_value);
           }
@@ -398,21 +417,21 @@ namespace sqsgen {
                 this->comm, std::forward<decltype(buffer)>(buffer),
                 [&](auto&& result, auto&& rank) {
                   auto o = result.objective;
-                  if (o <= this->best_objective()) {
+                  if (o <= this->search_objective()) {
                     spdlog::debug("[Rank {}, COMM] recieved result from rank {} (objective={}) ",
                                   io::mpi::RANK_HEAD, rank, o);
                     this->insert_result(std::move(result));
+                    this->update_objectives({o, this->nth_best_objective(keep)});
                     if (o < this->best_objective()) {
-                      this->update_best_objective(o);
-                      objective_to_distribute = o;
                       spdlog::debug(
                           "[Rank {}, COMM] received lower objective from rank {} "
                           "(objective={}) ",
                           io::mpi::RANK_HEAD, rank, o);
+                      std::pair<T, T> objective_mpi_buff{o, this->nth_best_objective(keep)};
                       for (auto other : range(this->num_ranks()))
                         if (other != io::mpi::RANK_HEAD && other != rank)
                           pool_objectives.push(this->comm.isend(
-                              objective_to_distribute, other, mpl::tag_t(io::mpi::TAG_OBJECTIVE)));
+                              objective_mpi_buff, other, mpl::tag_t(io::mpi::TAG_OBJECTIVE)));
                     }
                   }
                 });
@@ -459,6 +478,10 @@ namespace sqsgen {
                      std::get<0>(filtered_results.front()));
         spdlog::info("[Rank {}] num_best_solutions={}", this->rank(),
                      std::get<1>(filtered_results.front()).size());
+        spdlog::info("[Rank {}] num_objectives={}", this->rank(), filtered_results.size());
+        spdlog::info("[Rank {}] num_solutions={}", this->rank(),
+                     sum(filtered_results
+                         | views::transform([](auto&& r) { return std::get<1>(r).size(); })));
       }
 
       sqsgen::detail::log_statistics(statistics.data(), this->rank());

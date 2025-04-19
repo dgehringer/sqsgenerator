@@ -91,6 +91,11 @@ namespace sqsgen::core {
       for (auto &&[_, collection] : this->_values) size += collection.size();
       return size;
     }
+
+    [[nodiscard]] auto nth_best(std::size_t n) {
+      if (n >= this->size()) return std::numeric_limits<T>::infinity();
+      return std::get<0>(this->at(n));
+    }
   };
 
   template <class, SublatticeMode> struct sqs_result_factory;
