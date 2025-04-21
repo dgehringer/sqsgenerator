@@ -539,12 +539,12 @@ namespace sqsgen::io {
       println(std::format("_cell_volume   {}", std::abs(structure.lattice.determinant())));
       println(std::format("_cell_formula_units_Z   {}", structure.size()));
 
-      println("_loop");
+      println("loop_");
       println(" _symmetry_equiv_pos_site_id");
       println(" _symmetry_equiv_pos_as_xyz");
       println("  1  'x, y, z'");
 
-      println("_loop");
+      println("loop_");
       println(" _atom_type_symbol");
       println(" _atom_type_oxidation_number");
       for (auto z : unique_species) println(std::format("  {}0+  0.0", z_to_symbol(z)));
