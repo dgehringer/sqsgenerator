@@ -95,7 +95,7 @@ jobs:
         if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
 
       - name: Generate templates
-        run: python ${{ github.workspace }}/scripts/package-templates templates
+        run: python ${{ github.workspace }}/scripts/package-templates.py templates
         if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
 
       - name: Build CLI app
