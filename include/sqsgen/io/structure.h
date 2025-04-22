@@ -568,5 +568,22 @@ namespace sqsgen::io {
     }
   };
 
+  template <class T>
+  std::string format(core::structure<T> const& structure, StructureFormat format) {
+    switch (format) {
+      case STRUCTURE_FORMAT_CIF:
+        return structure_adapter<T, STRUCTURE_FORMAT_CIF>::format(structure);
+      case STRUCTURE_FORMAT_POSCAR:
+        return structure_adapter<T, STRUCTURE_FORMAT_POSCAR>::format(structure);
+      case STRUCTURE_FORMAT_JSON_ASE:
+        return structure_adapter<T, STRUCTURE_FORMAT_JSON_ASE>::format(structure);
+      case STRUCTURE_FORMAT_JSON_PYMATGEN:
+        return structure_adapter<T, STRUCTURE_FORMAT_JSON_PYMATGEN>::format(structure);
+      case STRUCTURE_FORMAT_JSON_SQSGEN:
+        return structure_adapter<T, STRUCTURE_FORMAT_JSON_SQSGEN>::format(structure);
+    }
+    throw std::invalid_argument("invalid structure format");
+  }
+
 }  // namespace sqsgen::io
 #endif  // SQSGEN_IO_STRUCTURE_H
