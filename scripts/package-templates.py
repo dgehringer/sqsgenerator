@@ -36,8 +36,8 @@ config_template {{
 "{t["name"]}",
 "{t["description"]}",
 std::vector<std::string>{{{", ".join(f'"{tag}"' for tag in t.get("tags", []))}}},
-std::vector<config_template_author>{{{", ".join(format_author(a) for a in t.get("authors", []))}}},
-nlohmann::json::parse(R"({json.dumps(t["config"]).replace('"', '\\"')})")
+std::vector{{{", ".join(format_author(a) for a in t.get("authors", []))}}},
+nlohmann::json::parse(R"({json.dumps(t["config"])})")
 }}
 """,
     )
@@ -69,7 +69,7 @@ namespace {NAMESPACE} {{
         std::vector<config_template_author> authors;
         nlohmann::json config;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_template_author, name, description, tags, authors, config);
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_template, name, description, tags, authors, config);
     }};
 
     namespace detail {{
@@ -92,7 +92,6 @@ if __name__ == "__main__":
         output_dir = os.path.abspath(output_dir)
     else:
         output_dir = os.path.abspath(os.path.join(template_dir, "..", "cli"))
-    print(template_dir, output_dir)
 
     templates = dict(
         load_template(f) for f in glob.glob(os.path.join(template_dir, "*.json"))

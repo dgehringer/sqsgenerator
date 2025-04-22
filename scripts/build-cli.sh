@@ -25,6 +25,8 @@ BUILD_NUMBER=$(version_field 2)
 
 echo "SQSGEN-VERSION: ${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_NUMBER}"
 
+python scripts/package-templates.py templates
+
 cmake \
   -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE} \
   -DCMAKE_BUILD_TYPE=Release \
