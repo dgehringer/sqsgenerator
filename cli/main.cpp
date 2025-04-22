@@ -12,6 +12,7 @@
 #include "sqsgen/io/mpi.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/sqs.h"
+#include "templates.h"
 #include "termcolor.h"
 
 #define stringify_helper(x) #x
@@ -21,14 +22,6 @@ using json = nlohmann::json;
 
 namespace ranges = std::ranges;
 using namespace sqsgen;
-
-std::string read_file(std::string const& filename) {
-  std::ifstream ifs(filename);
-  if (!ifs) throw std::runtime_error(std::format("Could not open file: {}", filename));
-  std::ostringstream oss;
-  oss << ifs.rdbuf();
-  return oss.str();
-}
 
 namespace views = ranges::views;
 
@@ -62,47 +55,13 @@ void display_version_info() {
   print_row("MPI", sqsgen::io::mpi::HAVE_MPI ? "yes" : "no");
 }
 
-nlohmann::json read_msgpack(std::string const& filename) {
-  if (!std::filesystem::exists(filename))
-    cli::render_error(std::format("File '{}' does not exist", filename), true);
-  std::ifstream ifs(filename, std::ios::in | std::ios::binary);
-  nlohmann::json config_json;
-  try {
-    config_json = nlohmann::json::from_msgpack(ifs);
-  } catch (nlohmann::json::parse_error& e) {
-    cli::render_error(std::format("'{}' is not a valid msgpack file", filename), true, std::nullopt,
-                      e.what());
-  }
-  return config_json;
-}
-
-nlohmann::json read_json(std::string const& filename) {
-  if (!std::filesystem::exists(filename)) cli::render_error("File '{}' does not exist", true);
-  std::string data;
-  try {
-    data = read_file(filename);
-  } catch (const std::exception& e) {
-    cli::render_error(std::format("Error reading file '{}'", filename), true, std::nullopt,
-                      e.what());
-  }
-
-  nlohmann::json config_json;
-  try {
-    config_json = nlohmann::json::parse(data);
-  } catch (nlohmann::json::parse_error& e) {
-    cli::render_error(std::format("'{}' is not a valid JSON file", filename), true, std::nullopt,
-                      e.what());
-  }
-  return config_json;
-}
-
 using result_packt_t = std::variant<core::sqs_result_pack<float, SUBLATTICE_MODE_SPLIT>,
                                     core::sqs_result_pack<double, SUBLATTICE_MODE_SPLIT>,
                                     core::sqs_result_pack<float, SUBLATTICE_MODE_INTERACT>,
                                     core::sqs_result_pack<double, SUBLATTICE_MODE_INTERACT>>;
 result_packt_t load_result_pack(std::string const& path, Prec prec = PREC_SINGLE) {
   using namespace sqsgen;
-  auto pack_json = read_msgpack(path);
+  auto pack_json = cli::read_msgpack(path);
   if (!pack_json.contains("config"))
     cli::render_error("Invalid result pack - cannot find config", true);
   if (!pack_json["config"].contains("sublattice_mode"))
@@ -157,7 +116,7 @@ void run_main(std::string const& input, std::string const& output, std::string c
   if (!std::filesystem::exists(input))
     cli::render_error(std::format("File '{}' does not exist", input));
 
-  auto conf = io::config::parse_config(read_json(input));
+  auto conf = io::config::parse_config(cli::read_json(input));
   if (conf.ok()) {
     auto total = std::visit([](auto&& config) { return config.iterations; }, conf.result());
 
@@ -260,6 +219,11 @@ int main(int argc, char** argv) {
       .choices("pymatgen", "ase", "vasp", "poscar", "sqsgen")
       .nargs(1);
 
+  output_structure_command.add_argument("-p", "--print")
+      .help("print to stdout instead of writing it into a file")
+      .default_value(false)
+      .implicit_value(true);
+
   output_structure_command.add_argument("--objective")
       .help("select the n-th best objective")
       .default_value(std::vector<std::string>{"0"})
@@ -291,7 +255,7 @@ int main(int argc, char** argv) {
   }
 
   if (program.is_subcommand_used("template")) {
-    std::cout << template_command;
+    for (auto&& [name, _] : templates::detail::templates) std::cout << name << std::endl;
     return EXIT_SUCCESS;
   }
 
@@ -313,6 +277,7 @@ int main(int argc, char** argv) {
               [num_objectives](auto&& raw) { return cli::validate_index(raw, num_objectives); }));
       bool export_all = output_structure_command["--all"] == true;
       auto structure_indices = std::vector<std::pair<int, int>>{};
+
       ranges::for_each(objective_indices, [&, export_all](auto&& index) {
         int num_structures = std::visit(
             [index](auto& p) { return std::get<1>(p.results.at(index)).size(); }, pack);
@@ -322,6 +287,48 @@ int main(int argc, char** argv) {
         else
           ranges::for_each(output_structure_command.get<std::vector<std::string>>("--index"),
                            [&](auto&& raw) { append(cli::validate_index(raw, num_structures)); });
+      });
+
+      ranges::for_each(structure_indices, [&](auto&& indices) {
+        auto [objective_index, structure_index] = indices;
+        std::visit(
+            [&, objective_index,
+             structure_index]<class T, SublatticeMode Mode>(sqs_result_pack<T, Mode> const& p) {
+              auto structure
+                  = std::get<1>(p.results.at(objective_index)).at(structure_index).structure();
+              auto format = output_structure_command.get<std::string>("--format");
+              auto basename = std::filesystem::path(output_command.get<std::string>("--output"))
+                                  .stem()
+                                  .string();
+
+              std::map<std::string, std::pair<StructureFormat, std::string>> formats{
+                  {"vasp", {STRUCTURE_FORMAT_POSCAR, "poscar"}},
+                  {"poscar", {STRUCTURE_FORMAT_POSCAR, "poscar"}},
+                  {"pymatgen", {STRUCTURE_FORMAT_JSON_PYMATGEN, "pymatgen.json"}},
+                  {"sqsgen", {STRUCTURE_FORMAT_JSON_SQSGEN, "sqsgen.json"}},
+                  {"cif", {STRUCTURE_FORMAT_CIF, "cif"}},
+                  {"ase", {STRUCTURE_FORMAT_JSON_ASE, "ase.json"}}};
+
+              auto result = formats.find(format);
+              if (result != formats.end()) {
+                auto [format, ext] = result->second;
+                auto text = io::format(structure, format);
+                std::string filename
+                    = std::format("{}-{}-{}.{}", basename, objective_index, structure_index, ext);
+                if (output_structure_command["--print"] == true) {
+                  if (structure_indices.size() > 1) std::cout << std::format("# {}", filename);
+                  std::cout << text << std::endl;
+                  if (structure_indices.size() > 1) std::cout << std::endl;
+                } else {
+                  std::ofstream out(filename, std::ios::out);
+                  if (!out.good())
+                    cli::render_error(std::format("Failed to open output file '{}'", filename));
+                  out << text;
+                }
+              } else
+                cli::render_error(std::format("Invalid format '{}'", format), true);
+            },
+            pack);
       });
 
       return EXIT_SUCCESS;
