@@ -13,47 +13,59 @@ INCLUDES = [
 
 
 def format_author(author: dict) -> str:
-    name = rf'"{author["name"]}"' if "name" in author else "std::nullopt"
-    surname = rf'"{author["surname"]}"' if "surname" in author else "std::nullopt"
-    email = rf'"{author["email"]}"' if "email" in author else "std::nullopt"
-    return rf"""
+    name = author["name"] if "name" in author else "std::nullopt"
+    surname = author["surname"] if "surname" in author else "std::nullopt"
+    email = author["email"] if "email" in author else "std::nullopt"
+    return """
 config_template_author{{
-    {name},
-    {surname},
-    {email},
-    std::vector<std::string>{{{", ".join(f'"{aff}"' for aff in author.get("affiliations", []))}}}
-}}"""
+    \"{name}\",
+    \"{surname}\",
+    \"{email}\",
+    std::vector<std::string>{{{affiliations}}}
+}}""".format(
+        name=name,
+        surname=surname,
+        email=email,
+        affiliations=", ".join('"{aff}"' for aff in author.get("affiliations", [])),
+    )
 
 
 def load_template(filename: str):
     with open(filename) as f:
         t = json.load(f)
-
-    return (
-        t["name"],
-        rf"""
+    template_code = """
 config_template {{
-"{t["name"]}",
-"{t["description"]}",
-std::vector<std::string>{{{", ".join(f'"{tag}"' for tag in t.get("tags", []))}}},
-std::vector{{{", ".join(format_author(a) for a in t.get("authors", []))}}},
-nlohmann::json::parse(R"({json.dumps(t["config"])})")
+\"{name}\",
+\"{description}\",
+std::vector<std::string>{{{tags}}},
+std::vector{{{authors}}},
+nlohmann::json::parse(R"({json})")
 }}
-""",
+""".format(
+        name=t["name"],
+        description=t["description"],
+        json=json.dumps(t["config"]),
+        authors=(", ".join(format_author(a) for a in t.get("authors", []))),
+        tags=(", ".join('"{tag}"'.format(tag=tag) for tag in t.get("tags", []))),
     )
+    return t["name"], template_code
 
 
 def file_template(templates):
     macro_name = (
-        rf"{NAMESPACE}::{FILENAME}".replace("::", "_").replace(".", "_").upper()
+        "{ns}::{fname}".format(ns=NAMESPACE, fname=FILENAME)
+        .upper()
+        .replace("::", "_")
+        .replace(".", "_")
     )
-    return rf"""
+
+    return """
 #ifndef {macro_name}
 #define {macro_name}
 
-{"\n".join(rf"#include {inc}" for inc in INCLUDES)}
+{includes}
 
-namespace {NAMESPACE} {{
+namespace {namespace} {{
 
     struct config_template_author {{
         std::optional<std::string> name;
@@ -76,14 +88,23 @@ namespace {NAMESPACE} {{
 
     namespace detail {{
         static const std::map<std::string, config_template> templates = {{
-         {",\n".join(rf'{{"{name}", {template}}}' for name, template in templates.items())}
+         {templates}
         }};
     }} // namespace detail
 
 }}
 
 #endif // {macro_name}
-"""
+""".format(
+        macro_name=macro_name,
+        includes=("\n".join("#include {}".format(inc) for inc in INCLUDES)),
+        templates=(
+            ",\n".join(
+                '{{"{}", {}}}'.format(*template) for template in templates.items()
+            )
+        ),
+        namespace=NAMESPACE,
+    )
 
 
 if __name__ == "__main__":
