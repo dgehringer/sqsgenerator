@@ -88,13 +88,21 @@ void show_result_pack(core::sqs_result_pack<T, Mode> const& pack) {
             << std::format("{:.5f}", pack.statistics.best_objective) << std::endl;
   std::cout << bold << "Num. objectives: " << reset << pack.results.size() << std::endl;
   std::cout << std::endl;
-  std::cout << bold << "index" << " O(σ)        " << "N" << std::endl;
+
+  auto format_num = [](std::string_view str) {
+    std::stringstream ss;
+    ss << colorize << cyan << bold << str << reset;
+    return ss.str();
+  };
+
   auto index = 0;
-  for (auto&& [objective, results] : pack.results) {
-    std::cout << bold << std::format("{:<5} ", index++) << reset;
-    std::cout << sqsgen::cli::pad_right(std::format("{:.5f} ", objective), 12);
-    std::cout << results.size() << std::endl;
-  }
+  // cli::table<"INDEX", "O(σ)", "N">
+  cli::table<"INDEX", "OBJ.", "N">::render(pack.results | views::transform([&](auto&& pair) {
+                                             auto [objective, results] = pair;
+                                             return std::array{format_num(std::to_string(index++)),
+                                                               std::format("{:.5f} ", objective),
+                                                               std::to_string(results.size())};
+                                           }));
 }
 
 void run_main(std::string const& input, std::string const& output, std::string const& log_level,

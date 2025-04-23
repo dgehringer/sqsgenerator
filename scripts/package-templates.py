@@ -26,7 +26,9 @@ config_template_author{{
         name=name,
         surname=surname,
         email=email,
-        affiliations=", ".join('"{aff}"' for aff in author.get("affiliations", [])),
+        affiliations=", ".join(
+            '"{}"'.format(aff) for aff in author.get("affiliations", [])
+        ),
     )
 
 
