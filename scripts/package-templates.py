@@ -13,10 +13,10 @@ INCLUDES = [
 
 
 def format_author(author: dict) -> str:
-    name = f'"{author["name"]}"' if "name" in author else "std::nullopt"
-    surname = f'"{author["surname"]}"' if "surname" in author else "std::nullopt"
-    email = f'"{author["email"]}"' if "email" in author else "std::nullopt"
-    return f"""
+    name = rf'"{author["name"]}"' if "name" in author else "std::nullopt"
+    surname = rf'"{author["surname"]}"' if "surname" in author else "std::nullopt"
+    email = rf'"{author["email"]}"' if "email" in author else "std::nullopt"
+    return rf"""
 config_template_author{{
     {name},
     {surname},
@@ -31,7 +31,7 @@ def load_template(filename: str):
 
     return (
         t["name"],
-        f"""
+        rf"""
 config_template {{
 "{t["name"]}",
 "{t["description"]}",
@@ -44,12 +44,14 @@ nlohmann::json::parse(R"({json.dumps(t["config"])})")
 
 
 def file_template(templates):
-    macro_name = f"{NAMESPACE}::{FILENAME}".replace("::", "_").replace(".", "_").upper()
-    return f"""
+    macro_name = (
+        rf"{NAMESPACE}::{FILENAME}".replace("::", "_").replace(".", "_").upper()
+    )
+    return rf"""
 #ifndef {macro_name}
 #define {macro_name}
 
-{"\n".join(f"#include {inc}" for inc in INCLUDES)}
+{"\n".join(rf"#include {inc}" for inc in INCLUDES)}
 
 namespace {NAMESPACE} {{
 
@@ -74,7 +76,7 @@ namespace {NAMESPACE} {{
 
     namespace detail {{
         static const std::map<std::string, config_template> templates = {{
-         {",\n".join(f'{{"{name}", {template}}}' for name, template in templates.items())}
+         {",\n".join(rf'{{"{name}", {template}}}' for name, template in templates.items())}
         }};
     }} // namespace detail
 
