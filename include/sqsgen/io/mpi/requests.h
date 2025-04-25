@@ -225,8 +225,10 @@ namespace sqsgen::io::mpi {
   private:
     std::vector<std::pair<value_t, int>> result_comm(mpl::communicator& comm, value_t&& result,
                                                      int to) {
+      std::pair<T, T> objective_buff;
       if constexpr (std::is_same_v<RequestType, detail::outbound_request>) {
-        auto req = comm.isend(result.value, to, mpl::tag_t(tag));
+        objective_buff = std::make_pair(result.best, result.search);
+        auto req = comm.isend(objective_buff, to, mpl::tag_t(tag));
         req.wait();
         return {};
       } else {
@@ -234,9 +236,10 @@ namespace sqsgen::io::mpi {
         detail::receive_messages<tag>(
             comm,
             [&](auto&& status) {
-              auto req = comm.irecv(result.value, status.source(), mpl::tag_t(tag));
+              auto req = comm.irecv(objective_buff, status.source(), mpl::tag_t(tag));
               req.wait();
-              results.push_back(std::make_pair(value_t{result.value}, status.source()));
+              results.push_back(std::make_pair(value_t{objective_buff.first, objective_buff.second},
+                                               status.source()));
             },
             to);
         return results;

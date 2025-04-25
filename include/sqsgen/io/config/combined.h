@@ -98,6 +98,18 @@ namespace sqsgen::io::config {
     ;
   }
 
+  template <string_literal key, class Document>
+  parse_result<std::size_t> parse_keep(Document const& doc) {
+    return get_optional<key, std::size_t>(doc)
+        .value_or(parse_result<std::size_t>{1UL})
+        .and_then([](auto&& keep) -> parse_result<std::size_t> {
+          if (keep == 0)
+            return parse_error::from_msg<key, CODE_BAD_VALUE>(
+                "The number of best kept structures must be greater than 0");
+          return keep;
+        });
+  }
+
   template <class T, class Document>
   parse_result<configuration<T>> parse_config_for_prec(Document const& doc) {
     return parse_iteration_mode<"iteration_mode">(doc)
@@ -143,9 +155,10 @@ namespace sqsgen::io::config {
                                     weights))
                                 .combine(parse_chunk_size<"chunk_size">(doc, iterations))
                                 .combine(parse_threads_per_rank<"threads_per_rank">(doc))
+                                .combine(parse_keep<"keep">(doc))
                                 .and_then([&](auto&& arrays) -> parse_result<configuration<T>> {
                                   auto [prefactors, pair_weights, target_objective, chunk_size,
-                                        thread_config]
+                                        thread_config, to_keep]
                                       = arrays;
                                   return configuration<T>{
                                       sublattice_mode,
@@ -159,7 +172,8 @@ namespace sqsgen::io::config {
                                       std::forward<std::vector<cube_t<T>>>(target_objective),
                                       iterations,
                                       chunk_size,
-                                      thread_config};
+                                      thread_config,
+                                      to_keep};
                                 });
                           });
                     });

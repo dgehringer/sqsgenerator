@@ -88,6 +88,49 @@ namespace sqsgen::cli {
     if (exit) std::exit(1);
   }
 
+  inline void write_file(std::string const& path, std::string const& content) {}
+
+  inline std::string read_file(std::string const& filename) {
+    std::ifstream ifs(filename);
+    if (!ifs) throw std::runtime_error(std::format("Could not open file: {}", filename));
+    std::ostringstream oss;
+    oss << ifs.rdbuf();
+    return oss.str();
+  }
+
+  nlohmann::json read_msgpack(std::string const& filename) {
+    if (!std::filesystem::exists(filename))
+      render_error(std::format("File '{}' does not exist", filename), true);
+    std::ifstream ifs(filename, std::ios::in | std::ios::binary);
+    nlohmann::json config_json;
+    try {
+      config_json = nlohmann::json::from_msgpack(ifs);
+    } catch (nlohmann::json::parse_error& e) {
+      render_error(std::format("'{}' is not a valid msgpack file", filename), true, std::nullopt,
+                   e.what());
+    }
+    return config_json;
+  }
+
+  nlohmann::json read_json(std::string const& filename) {
+    if (!std::filesystem::exists(filename)) render_error("File '{}' does not exist", true);
+    std::string data;
+    try {
+      data = read_file(filename);
+    } catch (const std::exception& e) {
+      render_error(std::format("Error reading file '{}'", filename), true, std::nullopt, e.what());
+    }
+
+    nlohmann::json config_json;
+    try {
+      config_json = nlohmann::json::parse(data);
+    } catch (nlohmann::json::parse_error& e) {
+      render_error(std::format("'{}' is not a valid JSON file", filename), true, std::nullopt,
+                   e.what());
+    }
+    return config_json;
+  }
+
   int validate_index(auto const& raw, auto size) {
     int index{-1};
     try {

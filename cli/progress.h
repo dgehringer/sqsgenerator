@@ -122,7 +122,7 @@ namespace sqsgen::cli {
       auto remaining_blocks = _width - blocks_to_fill;
       if (last_block_index >= 0)
         os << _INDICATORS[last_block_index];
-      else
+      else if (!core::helpers::is_close(percent, 100.0))
         remaining_blocks++;
       for (int i = 0; i < remaining_blocks; i++) std::cout << _remaining.front();
       os << "] [" << format_time(millis_since(_start_time)) << "]";
@@ -165,7 +165,7 @@ namespace sqsgen::cli {
 
   private:
     // https://stackoverflow.com/questions/61919292/c-how-do-i-erase-a-line-from-the-console
-    void eraseLines(int count) {
+    static void eraseLines(int count) {
       if (count > 0) {
         std::cout << "\x1b[2K";  // Delete current line
         // i=1 because we included the first line

@@ -78,3 +78,8 @@ def test_structure_pymatgen(structure_type):
         Structure.from_str(structure.dump(StructureFormat.json_pymatgen), fmt="json")
         == pymatgen_structure
     )
+
+    assert (
+        Structure.from_str(structure.dump(StructureFormat.cif), fmt="cif")
+        == pymatgen_structure
+    )

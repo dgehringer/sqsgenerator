@@ -39,6 +39,7 @@ namespace sqsgen::core {
     std::optional<iterations_t> iterations;
     iterations_t chunk_size{};
     thread_config_t thread_config;
+    std::size_t keep;
   };
 
 }  // namespace sqsgen::core

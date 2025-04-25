@@ -539,12 +539,12 @@ namespace sqsgen::io {
       println(std::format("_cell_volume   {}", std::abs(structure.lattice.determinant())));
       println(std::format("_cell_formula_units_Z   {}", structure.size()));
 
-      println("_loop");
+      println("loop_");
       println(" _symmetry_equiv_pos_site_id");
       println(" _symmetry_equiv_pos_as_xyz");
       println("  1  'x, y, z'");
 
-      println("_loop");
+      println("loop_");
       println(" _atom_type_symbol");
       println(" _atom_type_oxidation_number");
       for (auto z : unique_species) println(std::format("  {}0+  0.0", z_to_symbol(z)));
@@ -567,6 +567,23 @@ namespace sqsgen::io {
       return result;
     }
   };
+
+  template <class T>
+  std::string format(core::structure<T> const& structure, StructureFormat format) {
+    switch (format) {
+      case STRUCTURE_FORMAT_CIF:
+        return structure_adapter<T, STRUCTURE_FORMAT_CIF>::format(structure);
+      case STRUCTURE_FORMAT_POSCAR:
+        return structure_adapter<T, STRUCTURE_FORMAT_POSCAR>::format(structure);
+      case STRUCTURE_FORMAT_JSON_ASE:
+        return structure_adapter<T, STRUCTURE_FORMAT_JSON_ASE>::format(structure);
+      case STRUCTURE_FORMAT_JSON_PYMATGEN:
+        return structure_adapter<T, STRUCTURE_FORMAT_JSON_PYMATGEN>::format(structure);
+      case STRUCTURE_FORMAT_JSON_SQSGEN:
+        return structure_adapter<T, STRUCTURE_FORMAT_JSON_SQSGEN>::format(structure);
+    }
+    throw std::invalid_argument("invalid structure format");
+  }
 
 }  // namespace sqsgen::io
 #endif  // SQSGEN_IO_STRUCTURE_H

@@ -166,7 +166,6 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
           })
       .def_property_readonly("uuid",
                              [](structure<T> &self) {
-                               py::scoped_interpreter guard{};
                                auto uuid = py::module_::import("uuid");
                                return uuid.attr("to_string")(self.uuid());
                              })

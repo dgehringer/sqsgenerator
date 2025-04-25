@@ -23,7 +23,13 @@ MAJOR_VERSION=$(version_field 0)
 MINOR_VERSION=$(version_field 1)
 BUILD_NUMBER=$(version_field 2)
 
+THIS_DIR="$(dirname $0)"
+
+python ${THIS_DIR}/package-templates.py templates
+
 echo "SQSGEN-VERSION: ${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_NUMBER}"
+
+
 
 cmake \
   -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE} \
