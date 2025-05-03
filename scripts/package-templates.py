@@ -21,13 +21,15 @@ config_template_author{{
     \"{name}\",
     \"{surname}\",
     \"{email}\",
-    std::vector<std::string>{{{affiliations}}}
+   {affiliation}
 }}""".format(
         name=name,
         surname=surname,
         email=email,
-        affiliations=", ".join(
-            '"{}"'.format(aff) for aff in author.get("affiliations", [])
+        affiliation=(
+            'std::make_optional("{doi}")'.format(doi=author["affiliation"])
+            if "doi" in author
+            else "std::nullopt"
         ),
     )
 
@@ -40,6 +42,7 @@ config_template {{
 \"{name}\",
 \"{description}\",
 std::vector<std::string>{{{tags}}},
+{doi},
 std::vector{{{authors}}},
 nlohmann::json::parse(R"({json})")
 }}
@@ -49,6 +52,11 @@ nlohmann::json::parse(R"({json})")
         json=json.dumps(t["config"]),
         authors=(", ".join(format_author(a) for a in t.get("authors", []))),
         tags=(", ".join('"{tag}"'.format(tag=tag) for tag in t.get("tags", []))),
+        doi=(
+            'std::make_optional("{doi}")'.format(doi=t["doi"])
+            if "doi" in t
+            else "std::nullopt"
+        ),
     )
     return t["name"], template_code
 
@@ -73,15 +81,16 @@ namespace {namespace} {{
         std::optional<std::string> name;
         std::optional<std::string> surname;
         std::optional<std::string> email;
-        std::vector<std::string> affiliations;
+        std::optional<std::string> affiliation;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_template_author, name, surname, email, affiliations);
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(config_template_author, name, surname, email, affiliation);
     }};
 
     struct config_template {{
         std::string name;
         std::string description;
         std::vector<std::string> tags;
+        std::optional<std::string> doi;
         std::vector<config_template_author> authors;
         nlohmann::json config;
 
@@ -94,7 +103,11 @@ namespace {namespace} {{
         }};
     }} // namespace detail
 
-}}
+  inline const std::map<std::string, config_template>& templates() {{
+    return detail::templates;
+  }}
+
+}} // namespace {namespace}
 
 #endif // {macro_name}
 """.format(
