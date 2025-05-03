@@ -25,6 +25,13 @@ using namespace sqsgen;
 
 namespace views = ranges::views;
 
+auto format_cyan(std::string_view str) {
+  using namespace termcolor;
+  std::stringstream ss;
+  ss << colorize << cyan << bold << str << reset;
+  return ss.str();
+};
+
 void display_version_info() {
   using namespace termcolor;
   const auto print_row = [](std::string_view label, std::string_view value,
@@ -89,22 +96,69 @@ void show_result_pack(core::sqs_result_pack<T, Mode> const& pack) {
   std::cout << bold << "Num. objectives: " << reset << pack.results.size() << std::endl;
   std::cout << std::endl;
 
-  auto format_num = [](std::string_view str) {
-    std::stringstream ss;
-    ss << colorize << cyan << bold << str << reset;
-    return ss.str();
-  };
-
   auto index = 0;
-  // cli::table<"INDEX", "O(σ)", "N">
   cli::table<"INDEX", "OBJ.", "N">::render(pack.results | views::transform([&](auto&& pair) {
                                              auto [objective, results] = pair;
-                                             return std::array{format_num(std::to_string(index++)),
+                                             return std::array{format_cyan(std::to_string(index++)),
                                                                std::format("{:.5f} ", objective),
                                                                std::to_string(results.size())};
                                            }));
 }
 
+void render_template_overview() {
+  cli::table<"NAME", "AUTHOR(S)", "TAGS">::render(
+      templates::detail::templates
+      | views::transform([](auto&& pair) -> std::array<std::string, 3> {
+          auto [name, template_config] = pair;
+
+          auto format_author = [](auto&& author) -> std::string {
+            if (author.name.has_value() && author.surname.has_value())
+              return std::format(
+                  "{} {}{}", author.name.value(), author.surname.value(),
+                  author.email.has_value() ? std::format(" ({})", author.email.value()) : "");
+            return "";
+          };
+
+          return std::array{
+              format_cyan(name),
+              template_config.authors.empty() ? "" : format_author(template_config.authors.front()),
+              cli::join(template_config.tags, ", ")};
+        }));
+}
+
+void render_template(templates::config_template const& tpl) {
+  using namespace termcolor;
+
+  auto can_display_author = [](templates::config_template_author const& author) -> bool {
+    return (author.name.has_value() && author.surname.has_value()) || author.email.has_value();
+  };
+
+  auto format_author = [&](templates::config_template_author const& author) {
+    if (can_display_author(author)) {
+      if (author.name.has_value() && author.surname.has_value())
+        std::cout << italic << "  Name: " << reset
+                  << std::format("{} {}", author.name.value(), author.surname.value()) << std::endl;
+      if (author.email.has_value())
+        std::cout << italic << "  Mail: " << reset
+                  << cli::format_hyperlink(author.email.value(),
+                                           std::format("mailto:{}", author.email.value()))
+                  << std::endl;
+      if (author.affiliation.has_value())
+        std::cout << italic << "  Affilitation: " << reset << author.affiliation.value()
+                  << std::endl;
+      std::cout << std::endl;
+    }
+  };
+
+  std::cout << bold << "Template: " << format_cyan(tpl.name) << std::endl;
+
+  std::cout << std::endl;
+  std::cout << bold << "Description: " << reset << tpl.description << std::endl;
+  if (!tpl.authors.empty() && ranges::any_of(tpl.authors, can_display_author)) {
+    std::cout << bold << "Authors: " << reset << std::endl;
+    ranges::for_each(tpl.authors, format_author);
+  }
+}
 void run_main(std::string const& input, std::string const& output, std::string const& log_level,
               bool quiet) {
   using namespace sqsgen;
@@ -200,13 +254,21 @@ int main(int argc, char** argv) {
       .choices("error", "warn", "info", "debug", "trace")
       .nargs(1);
 
-  argparse::ArgumentParser template_command("template");
+  argparse::ArgumentParser template_command("template", version_string,
+                                            argparse::default_arguments::help);
+  template_command.add_argument("-v", "--version")
+      .help("Display version info")
+      .default_value(false)
+      .implicit_value(true);
+  template_command.add_argument("name")
+      .help("name of the template to use")
+      .nargs(argparse::nargs_pattern::optional);
   template_command.add_description("use templates to create a new configuration file quickly");
 
   program.add_subparser(template_command);
 
   argparse::ArgumentParser output_command("output", version_string,
-                                          argparse::default_arguments::help);
+                                          argparse::default_arguments::all);
   output_command.add_description("export the results of a SQS optimization run");
 
   output_command.add_argument("-o", "--output")
@@ -263,11 +325,31 @@ int main(int argc, char** argv) {
   }
 
   if (program.is_subcommand_used("template")) {
-    for (auto&& [name, _] : templates::detail::templates) std::cout << name << std::endl;
+    if (template_command["--version"] == true) {
+      display_version_info();
+      return EXIT_SUCCESS;
+    }
+    if (template_command.is_used("name")) {
+      auto name = template_command.get<std::string>("name");
+      if (!templates::templates().contains(name))
+        cli::render_error(
+            std::format("Cannot find a template with name '{}'. Use \"sqsgen template\" to display "
+                        "all packaged templates",
+                        name));
+      auto tpl = templates::templates().at(name);
+      render_template(tpl);
+      return EXIT_SUCCESS;
+    }
+
+    render_template_overview();
     return EXIT_SUCCESS;
   }
 
   if (program.is_subcommand_used("output")) {
+    if (output_command["--version"] == true) {
+      display_version_info();
+      return EXIT_SUCCESS;
+    }
     auto pack = load_result_pack(output_command.get<std::string>("--output"));
     if (output_command.is_subcommand_used("config")) {
       std::string output = std::format(

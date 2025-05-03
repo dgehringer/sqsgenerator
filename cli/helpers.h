@@ -6,12 +6,32 @@
 #define HELPERS_H
 
 #include <nlohmann/json.hpp>
+#include <ranges>
 #include <regex>
 
 #include "sqsgen/io/json.h"
 #include "termcolor.h"
 
 namespace sqsgen::cli {
+
+  namespace ranges = std::ranges;
+  namespace views = std::ranges::views;
+
+  template <ranges::range Range>
+    requires std::is_same_v<ranges::range_value_t<Range>, std::string>
+  std::string join(Range&& crumbs, std::string const& delimiter = " ") {
+    auto csize = ranges::size(crumbs);
+    if (csize == 0) return "";
+    std::string result;
+    result.reserve(core::helpers::sum(crumbs | views::transform([](auto&& s) { return s.size(); }))
+                   + (csize - 1) * delimiter.size());
+    for (auto it = ranges::begin(crumbs); it != ranges::end(crumbs); ++it) {
+      if (it != ranges::begin(crumbs)) result.append(delimiter);
+      result.append(*it);
+    }
+    result.shrink_to_fit();
+    return result;
+  }
 
   template <class T, class Fn> nlohmann::json fmap_to_json(Fn&& fn, std::vector<T> const& vec) {
     auto result = nlohmann::json::array();
@@ -118,6 +138,7 @@ namespace sqsgen::cli {
       });
     }
   };
+
   inline void render_error(std::string_view message, bool exit = true,
                            std::optional<std::string> parameter = std::nullopt,
                            std::optional<std::string> info = std::nullopt) {
