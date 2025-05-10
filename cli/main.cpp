@@ -55,6 +55,8 @@ void display_version_info() {
                         stringify(SQSGEN_BUILD_COMMIT)));
   print_row("Build Date", std::format("{} {}", __DATE__, __TIME__));
   print_row("Build Ver.", std::format("{}", __VERSION__));
+  print_row("Publication (DOI)", "10.1016/j.cpc.2023.108664",
+            "https://doi.org/10.1016/j.cpc.2023.108664");
   print_row("Repository", "dgehringer/sqsgenerator", "https://github.com/dgehringer/sqsgenerator");
   print_row("Author", "Dominik Gehringer", "mailto:dgehringer@gmail.com");
   print_row("Docs", "https://sqsgenerator.readthedocs.io/en/latest",
@@ -154,10 +156,19 @@ void render_template(templates::config_template const& tpl) {
 
   std::cout << std::endl;
   std::cout << bold << "Description: " << reset << tpl.description << std::endl;
+  if (tpl.doi.has_value())
+    std::cout << bold << "DOI: " << reset
+              << cli::format_hyperlink(std::format("https://doi.org/{}", tpl.doi.value()),
+                                       tpl.doi.value())
+              << std::endl;
   if (!tpl.authors.empty() && ranges::any_of(tpl.authors, can_display_author)) {
     std::cout << bold << "Authors: " << reset << std::endl;
     ranges::for_each(tpl.authors, format_author);
   }
+  std::ofstream out(std::format("{}.sqs.json", tpl.name));
+  if (!out.good())
+    cli::render_error(std::format("Cannot open output file \"{}.sqs.json\"", tpl.name), true);
+  out << tpl.config.dump(2);
 }
 void run_main(std::string const& input, std::string const& output, std::string const& log_level,
               bool quiet) {
@@ -271,22 +282,34 @@ int main(int argc, char** argv) {
                                           argparse::default_arguments::all);
   output_command.add_description("export the results of a SQS optimization run");
 
+  output_command.add_argument("-v", "--version")
+      .help("Display version info")
+      .default_value(false)
+      .implicit_value(true);
   output_command.add_argument("-o", "--output")
       .help("The output file to write the results to in binary format")
       .default_value("sqs.mpack")
       .nargs(1);
 
   argparse::ArgumentParser output_config_command("config");
+  output_config_command.add_argument("-v", "--version")
+      .help("Display version info")
+      .default_value(false)
+      .implicit_value(true);
   output_config_command.add_description("export the config as a JSON file. E.g. sqs.config.json");
 
   argparse::ArgumentParser output_structure_command("structure", version_string,
                                                     argparse::default_arguments::help);
   output_structure_command.add_description("export the structure of a result file");
+  output_structure_command.add_argument("-v", "--version")
+      .help("Display version info")
+      .default_value(false)
+      .implicit_value(true);
 
   output_structure_command.add_argument("-f", "--format")
       .help("The output format to use")
       .default_value(std::string{"sqsgen"})
-      .choices("pymatgen", "ase", "vasp", "poscar", "sqsgen")
+      .choices("pymatgen", "ase", "vasp", "poscar", "sqsgen", "cif")
       .nargs(1);
 
   output_structure_command.add_argument("-p", "--print")
@@ -319,16 +342,13 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  if (program["--version"] == true) {
+  if (program["--version"] == true || template_command["--version"] == true
+      || output_command["--version"] == true) {
     display_version_info();
     return EXIT_SUCCESS;
   }
 
   if (program.is_subcommand_used("template")) {
-    if (template_command["--version"] == true) {
-      display_version_info();
-      return EXIT_SUCCESS;
-    }
     if (template_command.is_used("name")) {
       auto name = template_command.get<std::string>("name");
       if (!templates::templates().contains(name))
@@ -346,10 +366,6 @@ int main(int argc, char** argv) {
   }
 
   if (program.is_subcommand_used("output")) {
-    if (output_command["--version"] == true) {
-      display_version_info();
-      return EXIT_SUCCESS;
-    }
     auto pack = load_result_pack(output_command.get<std::string>("--output"));
     if (output_command.is_subcommand_used("config")) {
       std::string output = std::format(
