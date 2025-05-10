@@ -58,7 +58,7 @@ class CMakeExtension(Extension):
         output_dir: list[str] | None = None,
         build_benchmarks: bool = False,
         build_tests: bool = False,
-        build_type: str = "release",
+        build_type: str = "Release",
         version_file: tuple[str, ...] = (VERSION_FILE,),
         vcpkg_root: str | None = None,
     ) -> None:
@@ -91,7 +91,7 @@ class CMakeBuild(build_ext):
         # Using this requires trailing slash for auto-detection & inclusion of
         # auxiliary "native" libs
 
-        if ext.build_type not in {"release", "debug"}:
+        if ext.build_type not in {"Release", "Debug", "MinSizeRel", "RelWithDebInfo"}:
             raise ValueError(f"Invalid build type {ext.build_type}")
 
         cfg = ext.build_type
