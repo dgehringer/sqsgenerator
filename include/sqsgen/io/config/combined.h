@@ -40,10 +40,10 @@ namespace sqsgen::io::config {
                         "this is too much even for me ;=)",
                         iterations.to_string()));
       return std::make_optional(iterations_t{iterations});
-    }
-    return get_optional<key, iterations_t>(doc)
-        .value_or(parse_result<iterations_t>{iterations_default})
-        .and_then([](auto&& iterations) -> result_t { return result_t{iterations}; });
+    } else
+      return get_optional<key, iterations_t>(doc)
+          .value_or(parse_result<iterations_t>{iterations_default})
+          .and_then([](auto&& it) -> result_t { return result_t{it}; });
   }
 
   template <string_literal key, class Document>

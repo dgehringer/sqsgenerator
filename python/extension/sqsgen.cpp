@@ -274,6 +274,7 @@ void bind_result(py::module &m) {
     py::class_<sqs_result_wrapper<T, Mode>>(
         m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
         .def_readonly("objective", &sqs_result_wrapper<T, Mode>::objective)
+        .def_property_readonly("species", &sqs_result_wrapper<T, Mode>::configuration)
         .def("structure", &sqs_result_wrapper<T, Mode>::structure, py::return_value_policy::move)
         .def(
             "sro",
@@ -310,6 +311,7 @@ void bind_result(py::module &m) {
     py::class_<sqs_result_wrapper<T, Mode>>(
         m, format_prec<format_sublattice<Name, Mode>(), T>().c_str())
         .def_readonly("objective", &sqs_result_wrapper<T, Mode>::objective)
+        .def_property_readonly("species", &sqs_result_wrapper<T, Mode>::configuration)
         .def("structure", &sqs_result_wrapper<T, Mode>::structure)
         .def("sublattices", [](sqs_result_wrapper<T, Mode> &self) { return self.sublattices; });
   }

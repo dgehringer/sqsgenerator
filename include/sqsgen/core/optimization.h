@@ -73,11 +73,7 @@ namespace sqsgen::core::optimization {
 
   void count_bonds(cube_t<usize_t>& bonds, auto const& pairs, configuration_t const& species) {
     bonds.setConstant(0);
-    for (auto& [i, j, s] : pairs) {
-      auto si{species[i]};
-      auto sj{species[j]};
-      ++bonds(s, si, sj);
-    }
+    for (auto& [i, j, s] : pairs) bonds(s, species[i], species[j])++;
   }
 
   template <class T> T compute_objective(cube_t<T>& sro, cube_t<usize_t> const& bonds,
@@ -87,8 +83,13 @@ namespace sqsgen::core::optimization {
     sro.setConstant(T(0.0));
     T objective{0.0};
     for (auto s = 0; s < num_shells; ++s)
-      for (auto xi = 0; xi < num_species; ++xi)
-        for (auto eta = xi; eta < num_species; ++eta) {
+      // symmetrize upper half of the matrix \alpha_{\xi\eta}^i
+      for (auto xi = 0; xi < num_species; ++xi) {
+        T sigma_s_xi_xi = T(1.0) - static_cast<T>(bonds(s, xi, xi)) * prefactors(s, xi, xi);
+        sro(s, xi, xi) = sigma_s_xi_xi;
+        objective
+            += pair_weights(s, xi, xi) * core::helpers::absolute(sigma_s_xi_xi - target(s, xi, xi));
+        for (auto eta = xi + 1; eta < num_species; ++eta) {
           auto pair_bonds = bonds(s, xi, eta) + bonds(s, eta, xi);
           T sigma_s_xi_eta = T(1.0) - static_cast<T>(pair_bonds) * prefactors(s, xi, eta);
           sro(s, xi, eta) = sigma_s_xi_eta;
@@ -96,6 +97,8 @@ namespace sqsgen::core::optimization {
           objective += pair_weights(s, xi, eta)
                        * core::helpers::absolute(sigma_s_xi_eta - target(s, xi, eta));
         }
+      }
+
     return objective;
   }
 

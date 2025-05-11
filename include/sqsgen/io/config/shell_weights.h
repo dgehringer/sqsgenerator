@@ -75,11 +75,11 @@ namespace sqsgen::io::config {
     template <class T>
     std::vector<shell_weights_t<T>> default_weights(std::vector<usize_t> const& num_shells) {
       return as<std::vector>{}(num_shells | views::transform([](auto nshells) {
-                                 return as<std::map>{}(
-                                     core::helpers::range<usize_t>({1, nshells - 1})
-                                     | views::transform([&](usize_t&& i) {
-                                         return std::make_tuple(i, T(1.0) / static_cast<T>(i));
-                                       }));
+                                 return as<std::map>{}(core::helpers::range<usize_t>({1, nshells})
+                                                       | views::transform([&](usize_t&& i) {
+                                                           return std::make_tuple(
+                                                               i, T(1.0) / static_cast<T>(i));
+                                                         }));
                                }));
     }
   }  // namespace detail

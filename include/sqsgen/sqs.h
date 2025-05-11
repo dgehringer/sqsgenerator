@@ -52,8 +52,11 @@ namespace sqsgen {
       }
       if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
         assert(configs.size() == r.sublattices.size());
-        for_each([&](auto&& i) { restore_order(r.sublattices[i].species, configs[i]); },
-                 range(configs.size()));
+        for_each(
+            [&](auto&& i) {
+              r.sublattices[i].species = restore_order(r.sublattices[i].species, configs[i]);
+            },
+            range(configs.size()));
         return r;
       }
     }

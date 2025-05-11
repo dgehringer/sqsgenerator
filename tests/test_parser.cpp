@@ -485,7 +485,7 @@ namespace sqsgen::testing {
     ASSERT_EQ(rjson.result().size(), 2);
     ASSERT_EQ(rdict.result(), rjson.result());
     shell_weights_t<double> w{{1, 1.0},       {2, 1.0 / 2.0}, {3, 1.0 / 3.0}, {4, 1.0 / 4.0},
-                              {5, 1.0 / 5.0}, {6, 1.0 / 6.0}, {7, 1.0 / 7.0}};
+                              {5, 1.0 / 5.0}, {6, 1.0 / 6.0}, {7, 1.0 / 7.0}, {8, 1.0 / 8.0}};
     ASSERT_EQ(rjson.result()[0], w);
     ASSERT_EQ(rjson.result()[1], w);
   }
@@ -508,7 +508,6 @@ namespace sqsgen::testing {
     ASSERT_EQ(rdict.result().target_objective.size(), 1);
     ASSERT_EQ(rjson.result().prefactors.size(), 1);
     ASSERT_EQ(rdict.result().prefactors.size(), 1);
-    std::cout << json << std::endl;
   }
 
 }  // namespace sqsgen::testing

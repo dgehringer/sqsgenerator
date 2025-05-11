@@ -1,7 +1,9 @@
 import collections
+import json
 import math
 import sys
 import tempfile
+from typing import NamedTuple, TypeVar
 
 import numpy as np
 import pytest
@@ -9,9 +11,13 @@ import pytest
 from sqsgenerator import optimize
 from sqsgenerator.core import (
     Prec,
+    SqsConfiguration,
+    SqsResult,
+    Structure,
     double,
     load_result_pack,
     parse_config,
+    random,
     single,
     systematic,
 )
@@ -31,6 +37,7 @@ def default_settings(prec: Prec):
         ),
         pair_weights=0,
         composition={"sites": "H", "Ti": 8, "Al": 8},
+        threads_per_rank=1,
     )
 
 
@@ -71,7 +78,7 @@ def coords(site) -> tuple[float, float, float]:
     return as_tuple(site.frac_coords)
 
 
-@pytest.mark.parametrize("prec", [single])
+@pytest.mark.parametrize("prec", [single, double])
 def test_systematic_all_results_partial(prec):
     settings = default_settings(prec)
     settings["structure"] = dict(
@@ -145,6 +152,111 @@ def test_structure_pack_io(prec):
                 assert math.isclose(ar.objective, br.objective)
                 assert np.allclose(ar.sro(), br.sro())
                 sa, sb = ar.structure(), br.structure()
-                # TODO: investrigate
-                # sa == sb
                 assert np.allclose(sa.frac_coords, sb.frac_coords)
+
+
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+def inverse(d: dict[K, V]) -> dict[V, K]:
+    return {v: k for k, v in d.items()}
+
+
+class OptimizationHelper(NamedTuple):
+    structure: Structure
+    shell_matrix: np.ndarray
+    shell_weights: dict[int, float]
+    pair_list: list[tuple[int, int, int]]
+    shell_map: dict[int, int]
+    species_map: dict[int, int]
+    shell_hist: collections.Counter[int]
+    sro_shape: tuple[int, int, int]
+
+    @classmethod
+    def from_structure(
+        cls,
+        structure: Structure,
+        shell_radii: list[float],
+        shell_weights: dict[int, float],
+    ):
+        return cls(
+            structure,
+            sm := structure.shell_matrix(shell_radii, 1.0e-3),
+            w := shell_weights,
+            pair_list := [
+                (i, j, int(s))
+                for (i, j), s in np.ndenumerate(sm)
+                if i > j
+                if int(s) in w
+            ],
+            shell_map := {s: i for i, s in enumerate(w)},
+            species_map := {v: i for i, v in enumerate(sorted(set(structure.species)))},
+            collections.Counter(s for *_, s in pair_list),
+            (len(shell_map), nspecies := len(species_map), nspecies),
+        )
+
+
+def assert_bonds_correct_interact(results: SqsResult, config: SqsConfiguration) -> None:
+    helper: OptimizationHelper | None = None
+
+    for _, solutions in results:
+        first, *rest = solutions
+        helper = helper or OptimizationHelper.from_structure(
+            first.structure(), config.shell_radii[0], config.shell_weights[0]
+        )
+        sros = np.zeros(shape=helper.sro_shape)
+        species = first.species
+        nspecies = len(helper.species_map)
+        for i, j, s in helper.pair_list:
+            sros[
+                helper.shell_map[s],
+                helper.species_map[species[i]],
+                helper.species_map[species[j]],
+            ] += 1
+        for i in range(nspecies):
+            for j in range(i + 1, nspecies):
+                sum_ = sros[:, i, j] + sros[:, j, i]
+                sros[:, j, i] = sum_
+                sros[:, i, j] = sum_
+        for i, (bonds, sro_per_shell) in enumerate(zip(sros, first.sro())):
+            nbonds = sum(
+                bonds[si, sj] for si in range(nspecies) for sj in range(si, nspecies)
+            )
+            assert helper.shell_hist[inverse(helper.shell_map)[i]] == nbonds
+            assert np.allclose(bonds, 1 - sro_per_shell)
+
+
+@pytest.mark.parametrize("prec", [single, double])
+@pytest.mark.parametrize(
+    "iteration_mode",
+    [systematic, random],
+)
+def test_bonds_correct_one_sublattice(prec, iteration_mode):
+    settings = default_settings(prec)
+    del settings["pair_weights"]
+
+    settings["prefactors"] = 1
+    settings["iteration_mode"] = iteration_mode
+    settings["iterations"] = 15000
+
+    config = parse_config(settings)
+    results = optimize(config)
+    assert_bonds_correct_interact(results, config)
+
+
+@pytest.mark.parametrize("prec", [single, double])
+def test_bonds_correct_one_sublattice_non_exhaustive(prec):
+    settings = default_settings(prec)
+    del settings["pair_weights"]
+
+    settings["prefactors"] = 1
+    settings["iteration_mode"] = random
+    settings["iterations"] = 1200
+    settings["structure"]["species"] = [1, 1, 2, 2]
+    settings["structure"]["supercell"] = [2, 2, 2]
+    settings["composition"] = {"sites": "He", "Ti": 6, "Al": 5, "O": 5}
+
+    config = parse_config(settings)
+    results = optimize(config)
+    assert_bonds_correct_interact(results, config)
