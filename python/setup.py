@@ -184,14 +184,15 @@ class CMakeBuild(build_ext):
         build_temp = Path(self.build_temp) / ext.name
         if not build_temp.exists():
             build_temp.mkdir(parents=True)
-        print(build_temp)
-        print(shlex.join(["cmake", ext.sourcedir, *cmake_args]))
+
         subprocess.run(
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
         )
         subprocess.run(
             ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
         )
+
+        subprocess.run(["stubgen", "-m", "_core", "-o", "."], check=True, cwd=extdir)
 
 
 # The information here can also be placed in setup.cfg - better separation of
