@@ -58,7 +58,7 @@ void display_version_info() {
   print_row("Publication (DOI)", "10.1016/j.cpc.2023.108664",
             "https://doi.org/10.1016/j.cpc.2023.108664");
   print_row("Repository", "dgehringer/sqsgenerator", "https://github.com/dgehringer/sqsgenerator");
-  print_row("Author", "Dominik Gehringer", "mailto:dgehringer@gmail.com");
+  print_row("Author", "Dominik Gehringer");
   print_row("Docs", "https://sqsgenerator.readthedocs.io/en/latest",
             "https://sqsgenerator.readthedocs.io/en/latest");
   print_row("MPI", sqsgen::io::mpi::HAVE_MPI ? "yes" : "no");
@@ -260,7 +260,7 @@ int main(int argc, char** argv) {
       .nargs(1);
 
   program.add_argument("-l", "--log")
-      .help("sets the log value")
+      .help("set the log value")
       .default_value(std::string{"warn"})
       .choices("error", "warn", "info", "debug", "trace")
       .nargs(1);
