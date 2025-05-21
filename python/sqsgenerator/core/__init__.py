@@ -1,6 +1,7 @@
 from ._core import (
     IterationMode,
     LogLevel,
+    ParseError,
     Prec,
     SqsConfigurationDouble,
     SqsConfigurationFloat,
@@ -51,6 +52,7 @@ SqsResultPack = SqsResultPackInteract | SqsResultPackSplit
 __all__ = [
     "IterationMode",
     "LogLevel",
+    "ParseError",
     "Prec",
     "SqsConfiguration",
     "SqsConfigurationDouble",
