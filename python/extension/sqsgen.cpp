@@ -85,29 +85,8 @@ template <string_literal Name, sqsgen::SublatticeMode Mode> constexpr auto forma
     return (Name + string_literal("Split"));
 };
 
-template <class... Args>
-sqsgen::io::detail::unpacked_t<Args...> unwrap(sqsgen::io::parse_result<Args...> &&result) {
-  if (result.ok()) {
-    return result.result();
-  } else {
-    sqsgen::io::parse_error error = result.error();
-    switch (error.code) {
-      case sqsgen::io::CODE_UNKNOWN:
-        throw std::runtime_error(error.msg);
-      case sqsgen::io::CODE_OUT_OF_RANGE:
-        throw py::index_error(error.msg);
-      case sqsgen::io::CODE_TYPE_ERROR:
-        throw py::type_error(error.msg);
-      case sqsgen::io::CODE_NOT_FOUND:
-        throw py::key_error(error.msg);
-      case sqsgen::io::CODE_BAD_VALUE:
-        throw py::value_error(error.msg);
-      case sqsgen::io::CODE_BAD_ARGUMENT:
-        throw py::value_error(error.msg);
-      default:
-        throw std::runtime_error(error.msg);
-    }
-  }
+template <class... Args> auto unwrap(sqsgen::io::parse_result<Args...> &&result) {
+  return result.value();
 }
 
 template <string_literal Name, class T> void bind_sqs_statistics_data(py::module &m) {
@@ -364,6 +343,14 @@ PYBIND11_MODULE(_core, m) {
       .value("comm", TIMING_COMM)
       .export_values();
 
+  py::enum_<io::parse_error_code>(m, "ParseErrorCode")
+      .value("bad_argument", io::parse_error_code::CODE_BAD_ARGUMENT)
+      .value("bad_value", io::parse_error_code::CODE_BAD_VALUE)
+      .value("not_found", io::parse_error_code::CODE_NOT_FOUND)
+      .value("type_error", io::parse_error_code::CODE_TYPE_ERROR)
+      .value("out_of_range", io::parse_error_code::CODE_OUT_OF_RANGE)
+      .value("unknown", io::parse_error_code::CODE_UNKNOWN);
+
   py::enum_<Prec>(m, "Prec")
       .value("single", PREC_SINGLE)
       .value("double", PREC_DOUBLE)
@@ -390,15 +377,6 @@ PYBIND11_MODULE(_core, m) {
       .value("json_pymatgen", STRUCTURE_FORMAT_JSON_PYMATGEN)
       .value("cif", STRUCTURE_FORMAT_CIF)
       .value("poscar", STRUCTURE_FORMAT_POSCAR)
-      .export_values();
-
-  py::enum_<io::parse_error_code>(m, "ParseErrorCode")
-      .value("unknown", io::CODE_UNKNOWN)
-      .value("bad_value", io::CODE_BAD_VALUE)
-      .value("bad_argument", io::CODE_BAD_ARGUMENT)
-      .value("out_of_range", io::CODE_OUT_OF_RANGE)
-      .value("type_error", io::CODE_TYPE_ERROR)
-      .value("not_found", io::CODE_NOT_FOUND)
       .export_values();
 
   py::enum_<spdlog::level::level_enum>(m, "LogLevel")
