@@ -5,11 +5,14 @@
 #ifndef SQSGEN_IO_CONFIG_STRUCTURE_H
 #define SQSGEN_IO_CONFIG_STRUCTURE_H
 
+#include <fstream>
+
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/parsing.h"
+#include "sqsgen/io/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::io {
@@ -81,22 +84,72 @@ namespace sqsgen::io {
           .value_or(result_t{std::array{1, 1, 1}});
     }
 
+    template <string_literal key>
+    inline parse_result<std::string> read_file(std::string const& filename) {
+      if (!std::filesystem::exists(filename))
+        return parse_error::from_msg<key, CODE_NOT_FOUND>(
+            std::format("The file {} does not exist", filename));
+      std::ifstream ifs(filename);
+      if (!ifs)
+        parse_error::from_msg<key, CODE_BAD_ARGUMENT>(
+            std::format("Could not open file: {}", filename));
+      std::ostringstream oss;
+      oss << ifs.rdbuf();
+      return oss.str();
+    }
+
+    template <string_literal key, class T>
+    parse_result<structure<T>> parse_structure_from_file(std::string const& path) {
+      if (path.ends_with(".pymatgen.json"))
+        return read_file<key>(path).and_then([&](auto&& data) {
+          return io::structure_adapter<T, STRUCTURE_FORMAT_JSON_PYMATGEN>::from_json(
+              std::forward<std::string>(data));
+        });
+
+      if (path.ends_with(".sqs.json"))
+        return read_file<key>(path).and_then([&](auto&& data) {
+          return io::structure_adapter<T, STRUCTURE_FORMAT_JSON_SQSGEN>::from_json(
+              std::forward<std::string>(data));
+        });
+
+      if (path.ends_with(".vasp") || path.ends_with(".poscar"))
+        return read_file<key>(path).and_then([&](auto&& data) {
+          return io::structure_adapter<T, STRUCTURE_FORMAT_POSCAR>::from_string(
+              std::forward<std::string>(data));
+        });
+
+      return parse_error::from_msg<key, CODE_BAD_ARGUMENT>(
+          std::format("Unsupported file extension \"{}\". Currently only .pymatgen.json, "
+                      ".sqs.json, .vasp and .poscar are supported",
+                      path));
+    }
+
     template <string_literal key, class T, class Document>
     parse_result<structure_config<T>> parse_structure_config(Document const& document) {
       if (!accessor<Document>::contains(document, key.data))
         return parse_error::from_msg<key, CODE_NOT_FOUND>("You need to specify a structure");
       const auto doc = accessor<Document>::get(document, key.data);
-      return get_as<"lattice", lattice_t<T>>(doc)
-          .combine(get_as<"coords", coords_t<T>>(doc))
-          .combine(parse_supercell<"supercell">(doc))
-          .and_then([&](auto&& data) {
-            auto [lattice, coords, supercell] = data;
-            return parse_species<"species">(doc, coords.rows())
-                .and_then([&](auto&& species) -> parse_result<structure_config<T>> {
-                  return structure_config<T>{std::move(lattice), std::move(coords), species,
-                                             std::move(supercell)};
-                });
-          });
+      if (accessor<Document>::contains(doc, "file"))
+        return get_as<"file", std::string>(doc)
+            .and_then(parse_structure_from_file<key, T>)
+            .combine(parse_supercell<"supercell">(doc))
+            .and_then([](auto&& structure_and_supercell) -> parse_result<structure_config<T>> {
+              auto [structure, supercell] = structure_and_supercell;
+              return structure_config<T>{structure.lattice, structure.frac_coords,
+                                         structure.species, std::move(supercell)};
+            });
+      else
+        return get_as<"lattice", lattice_t<T>>(doc)
+            .combine(get_as<"coords", coords_t<T>>(doc))
+            .combine(parse_supercell<"supercell">(doc))
+            .and_then([&](auto&& data) {
+              auto [lattice, coords, supercell] = data;
+              return parse_species<"species">(doc, coords.rows())
+                  .and_then([&](auto&& species) -> parse_result<structure_config<T>> {
+                    return structure_config<T>{std::move(lattice), std::move(coords), species,
+                                               std::move(supercell)};
+                  });
+            });
     }
   };  // namespace config
 
