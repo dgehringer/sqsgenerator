@@ -4,8 +4,6 @@ from typing import ClassVar, Iterable, Iterator, overload
 
 __build__: tuple
 __version__: tuple
-bad_argument: ParseErrorCode
-bad_value: ParseErrorCode
 chunk_setup: Timing
 cif: StructureFormat
 comm: Timing
@@ -19,8 +17,6 @@ json_pymatgen: StructureFormat
 json_sqsgen: StructureFormat
 loop: Timing
 naive: ShellRadiiDetection
-not_found: ParseErrorCode
-out_of_range: ParseErrorCode
 peak: ShellRadiiDetection
 poscar: StructureFormat
 random: IterationMode
@@ -29,9 +25,7 @@ split: SublatticeMode
 systematic: IterationMode
 total: Timing
 trace: LogLevel
-type_error: ParseErrorCode
 undefined: Timing
-unknown: ParseErrorCode
 warn: LogLevel
 
 class Atom:
@@ -116,16 +110,7 @@ class LogLevel:
     @property
     def value(self) -> int: ...
 
-class ParseError:
-    def __init__(self, *args, **kwargs) -> None: ...
-    @property
-    def code(self) -> ParseErrorCode: ...
-    @property
-    def key(self) -> str: ...
-    @property
-    def msg(self) -> str: ...
-    @property
-    def parameter(self) -> str | None: ...
+class ParseError(Exception): ...
 
 class ParseErrorCode:
     __members__: ClassVar[dict] = ...  # read-only
@@ -146,6 +131,15 @@ class ParseErrorCode:
     def name(self) -> str: ...
     @property
     def value(self) -> int: ...
+
+class ParseErrorDetails:
+    def __init__(self, *args, **kwargs) -> None: ...
+    @property
+    def code(self) -> ParseErrorCode: ...
+    @property
+    def key(self) -> str: ...
+    @property
+    def message(self) -> str: ...
 
 class Prec:
     __members__: ClassVar[dict] = ...  # read-only
@@ -273,6 +267,8 @@ class SqsResultInteractDouble:
     def structure(self) -> StructureDouble: ...
     @property
     def objective(self) -> float: ...
+    @property
+    def species(self) -> list[int]: ...
 
 class SqsResultInteractFloat:
     def __init__(self, *args, **kwargs) -> None: ...
@@ -292,6 +288,8 @@ class SqsResultInteractFloat:
     def structure(self) -> StructureFloat: ...
     @property
     def objective(self) -> float: ...
+    @property
+    def species(self) -> list[int]: ...
 
 class SqsResultPackInteractDouble:
     def __init__(self, *args, **kwargs) -> None: ...
@@ -359,6 +357,8 @@ class SqsResultSplitDouble:
     def sublattices(self) -> list[SqsResultInteractDouble]: ...
     @property
     def objective(self) -> float: ...
+    @property
+    def species(self) -> list[int]: ...
 
 class SqsResultSplitFloat:
     def __init__(self, *args, **kwargs) -> None: ...
@@ -366,6 +366,8 @@ class SqsResultSplitFloat:
     def sublattices(self) -> list[SqsResultInteractFloat]: ...
     @property
     def objective(self) -> float: ...
+    @property
+    def species(self) -> list[int]: ...
 
 class SqsStatisticsDataDouble:
     def __init__(self, *args, **kwargs) -> None: ...

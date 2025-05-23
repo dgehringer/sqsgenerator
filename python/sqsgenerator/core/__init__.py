@@ -1,6 +1,7 @@
 from ._core import (
     IterationMode,
     LogLevel,
+    ParseError,
     Prec,
     SqsConfigurationDouble,
     SqsConfigurationFloat,
@@ -28,10 +29,15 @@ from ._core import (
     systematic,
 )
 from ._core import (
+    __build__ as __core__build__,
+)
+from ._core import (
     __version__ as __core__version__,
 )
 
 __version__ = __core__version__
+
+__build__ = __core__build__
 
 SqsConfiguration = SqsConfigurationFloat | SqsConfigurationDouble
 Structure = StructureFloat | StructureDouble
@@ -46,6 +52,7 @@ SqsResultPack = SqsResultPackInteract | SqsResultPackSplit
 __all__ = [
     "IterationMode",
     "LogLevel",
+    "ParseError",
     "Prec",
     "SqsConfiguration",
     "SqsConfigurationDouble",

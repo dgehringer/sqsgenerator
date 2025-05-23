@@ -110,6 +110,9 @@ namespace sqsgen::io {
     [[nodiscard]] bool failed() const { return std::holds_alternative<parse_error>(_value); }
     [[nodiscard]] bool ok() const { return !failed(); }
     [[nodiscard]] parse_error error() const { return std::get<parse_error>(_value); }
+
+    auto value() const { return _value; }
+
     detail::unpacked_t<Args...> result() const {
       if (failed()) {
         throw std::bad_variant_access{};

@@ -158,6 +158,8 @@ namespace sqsgen::core {
                                   _opt_config->structure.pbc};
       }
 
+      configuration_t configuration() { return this->species; }
+
       std::string rank(int base = 10) {
         return core::rank_permutation(
                    as<std::vector>{}(this->species | views::transform([&](auto &&s) {
@@ -244,17 +246,23 @@ namespace sqsgen::core {
             std::move(sqs_result<T, SUBLATTICE_MODE_SPLIT>::sublattices), structure, opt_config);
       }
 
-      auto structure() {
+      configuration_t configuration() {
         configuration_t new_species(_structure->species);
         for (auto &&sublattice : sublattices) {
           auto sls = sublattice.sublattices();
           if (sls.size() != 1)
-            throw std::out_of_range("a split mode result must have exactly one result");
+            throw std::out_of_range(
+                "a split mode result must have exactly one sublattice. Sublattices cannot contain "
+                "sublattices themselves");
           auto index{0};
           for (auto site_index : sls.front().sites)
             new_species[site_index] = sublattice.species[index++];
         }
-        return core::structure<T>{_structure->lattice, _structure->frac_coords, new_species,
+        return new_species;
+      }
+
+      auto structure() {
+        return core::structure<T>{_structure->lattice, _structure->frac_coords, configuration(),
                                   _structure->pbc};
       }
 

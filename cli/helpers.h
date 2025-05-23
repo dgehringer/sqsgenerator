@@ -6,11 +6,32 @@
 #define HELPERS_H
 
 #include <nlohmann/json.hpp>
+#include <ranges>
+#include <regex>
 
 #include "sqsgen/io/json.h"
 #include "termcolor.h"
 
 namespace sqsgen::cli {
+
+  namespace ranges = std::ranges;
+  namespace views = std::ranges::views;
+
+  template <ranges::range Range>
+    requires std::is_same_v<ranges::range_value_t<Range>, std::string>
+  std::string join(Range&& crumbs, std::string const& delimiter = " ") {
+    auto csize = ranges::size(crumbs);
+    if (csize == 0) return "";
+    std::string result;
+    result.reserve(core::helpers::sum(crumbs | views::transform([](auto&& s) { return s.size(); }))
+                   + (csize - 1) * delimiter.size());
+    for (auto it = ranges::begin(crumbs); it != ranges::end(crumbs); ++it) {
+      if (it != ranges::begin(crumbs)) result.append(delimiter);
+      result.append(*it);
+    }
+    result.shrink_to_fit();
+    return result;
+  }
 
   template <class T, class Fn> nlohmann::json fmap_to_json(Fn&& fn, std::vector<T> const& vec) {
     auto result = nlohmann::json::array();
@@ -63,6 +84,60 @@ namespace sqsgen::cli {
   inline std::string format_hyperlink(std::string_view text, std::string_view link) {
     return std::format("\033]8;;{}\007{}\033]8;;\007", link, text);
   }
+
+  inline std::size_t print_width(const std::string& str) {
+    // Regex to match ANSI escape sequences
+    static const std::regex ansi_escape("\033\\[[0-9;]*[a-zA-Z]");
+    // Remove ANSI escape sequences
+    std::string stripped = std::regex_replace(str, ansi_escape, "");
+    // Return the length of the stripped string
+    return stripped.size();
+  }
+
+  template <core::helpers::string_literal... Columns> struct table {
+    using row = std::array<std::string, sizeof...(Columns)>;
+    template <std::ranges::range R>
+      requires std::is_same_v<row, std::ranges::range_value_t<R>>
+    static void render(R&& r) {
+      using namespace termcolor;
+      constexpr std::size_t num_columns = sizeof...(Columns);
+      std::array<std::size_t, num_columns> col_widths{(Columns.length - 1)...};
+      std::array<std::string, num_columns> col_headers{std::string{Columns.data}...};
+      std::vector<row> rows;
+      // find maximum col width for each row in the range
+      std::ranges::for_each(r, [&](auto&& row) {
+        [&]<std::size_t... I>(std::index_sequence<I...>) {
+          ((col_widths[I]
+            = std::max(col_widths[I], print_width(std::get<I>(std::forward<decltype(row)>(row))))),
+           ...);
+          rows.push_back(std::forward<decltype(row)>(row));
+        }(std::make_index_sequence<num_columns>{});
+      });
+
+      constexpr auto separator = "  ";
+
+      const auto format_header = [&](std::string const& header, std::size_t w, bool sep) {
+        std::cout << grey << bold << underline << pad_right(header, w) << reset;
+        std::cout << (sep ? separator : "\n");
+      };
+
+      [&]<std::size_t... I>(std::index_sequence<I...>) {
+        ((format_header(col_headers[I], col_widths[I], I != num_columns - 1)), ...);
+      }(std::make_index_sequence<num_columns>{});
+
+      const auto format_cell = [&](std::string const& header, std::size_t w, bool sep) {
+        auto diff = header.size() > print_width(header) ? (header.size() - print_width(header)) : 0;
+        std::cout << pad_right(header, w + diff);
+        std::cout << (sep ? separator : "\n");
+      };
+
+      std::ranges::for_each(rows, [&](auto&& row) {
+        [&]<std::size_t... I>(std::index_sequence<I...>) {
+          ((format_cell(std::get<I>(row), col_widths[I], I != num_columns - 1)), ...);
+        }(std::make_index_sequence<num_columns>{});
+      });
+    }
+  };
 
   inline void render_error(std::string_view message, bool exit = true,
                            std::optional<std::string> parameter = std::nullopt,

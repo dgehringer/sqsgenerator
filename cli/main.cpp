@@ -25,6 +25,13 @@ using namespace sqsgen;
 
 namespace views = ranges::views;
 
+auto format_cyan(std::string_view str) {
+  using namespace termcolor;
+  std::stringstream ss;
+  ss << colorize << cyan << bold << str << reset;
+  return ss.str();
+};
+
 void display_version_info() {
   using namespace termcolor;
   const auto print_row = [](std::string_view label, std::string_view value,
@@ -48,8 +55,10 @@ void display_version_info() {
                         stringify(SQSGEN_BUILD_COMMIT)));
   print_row("Build Date", std::format("{} {}", __DATE__, __TIME__));
   print_row("Build Ver.", std::format("{}", __VERSION__));
+  print_row("Publication (DOI)", "10.1016/j.cpc.2023.108664",
+            "https://doi.org/10.1016/j.cpc.2023.108664");
   print_row("Repository", "dgehringer/sqsgenerator", "https://github.com/dgehringer/sqsgenerator");
-  print_row("Author", "Dominik Gehringer", "mailto:dgehringer@gmail.com");
+  print_row("Author", "Dominik Gehringer");
   print_row("Docs", "https://sqsgenerator.readthedocs.io/en/latest",
             "https://sqsgenerator.readthedocs.io/en/latest");
   print_row("MPI", sqsgen::io::mpi::HAVE_MPI ? "yes" : "no");
@@ -88,15 +97,79 @@ void show_result_pack(core::sqs_result_pack<T, Mode> const& pack) {
             << std::format("{:.5f}", pack.statistics.best_objective) << std::endl;
   std::cout << bold << "Num. objectives: " << reset << pack.results.size() << std::endl;
   std::cout << std::endl;
-  std::cout << bold << "index" << " O(σ)        " << "N" << std::endl;
+
   auto index = 0;
-  for (auto&& [objective, results] : pack.results) {
-    std::cout << bold << std::format("{:<5} ", index++) << reset;
-    std::cout << sqsgen::cli::pad_right(std::format("{:.5f} ", objective), 12);
-    std::cout << results.size() << std::endl;
-  }
+  cli::table<"INDEX", "OBJ.", "N">::render(pack.results | views::transform([&](auto&& pair) {
+                                             auto [objective, results] = pair;
+                                             return std::array{format_cyan(std::to_string(index++)),
+                                                               std::format("{:.5f} ", objective),
+                                                               std::to_string(results.size())};
+                                           }));
 }
 
+void render_template_overview() {
+  cli::table<"NAME", "AUTHOR(S)", "TAGS">::render(
+      templates::detail::templates
+      | views::transform([](auto&& pair) -> std::array<std::string, 3> {
+          auto [name, template_config] = pair;
+
+          auto format_author = [](auto&& author) -> std::string {
+            if (author.name.has_value() && author.surname.has_value())
+              return std::format(
+                  "{} {}{}", author.name.value(), author.surname.value(),
+                  author.email.has_value() ? std::format(" ({})", author.email.value()) : "");
+            return "";
+          };
+
+          return std::array{
+              format_cyan(name),
+              template_config.authors.empty() ? "" : format_author(template_config.authors.front()),
+              cli::join(template_config.tags, ", ")};
+        }));
+}
+
+void render_template(templates::config_template const& tpl) {
+  using namespace termcolor;
+
+  auto can_display_author = [](templates::config_template_author const& author) -> bool {
+    return (author.name.has_value() && author.surname.has_value()) || author.email.has_value();
+  };
+
+  auto format_author = [&](templates::config_template_author const& author) {
+    if (can_display_author(author)) {
+      if (author.name.has_value() && author.surname.has_value())
+        std::cout << italic << "  Name: " << reset
+                  << std::format("{} {}", author.name.value(), author.surname.value()) << std::endl;
+      if (author.email.has_value())
+        std::cout << italic << "  Mail: " << reset
+                  << cli::format_hyperlink(author.email.value(),
+                                           std::format("mailto:{}", author.email.value()))
+                  << std::endl;
+      if (author.affiliation.has_value())
+        std::cout << italic << "  Affilitation: " << reset << author.affiliation.value()
+                  << std::endl;
+      std::cout << std::endl;
+    }
+  };
+
+  std::cout << bold << "Template: " << format_cyan(tpl.name) << std::endl;
+
+  std::cout << std::endl;
+  std::cout << bold << "Description: " << reset << tpl.description << std::endl;
+  if (tpl.doi.has_value())
+    std::cout << bold << "DOI: " << reset
+              << cli::format_hyperlink(std::format("https://doi.org/{}", tpl.doi.value()),
+                                       tpl.doi.value())
+              << std::endl;
+  if (!tpl.authors.empty() && ranges::any_of(tpl.authors, can_display_author)) {
+    std::cout << bold << "Authors: " << reset << std::endl;
+    ranges::for_each(tpl.authors, format_author);
+  }
+  std::ofstream out(std::format("{}.sqs.json", tpl.name));
+  if (!out.good())
+    cli::render_error(std::format("Cannot open output file \"{}.sqs.json\"", tpl.name), true);
+  out << tpl.config.dump(2);
+}
 void run_main(std::string const& input, std::string const& output, std::string const& log_level,
               bool quiet) {
   using namespace sqsgen;
@@ -187,36 +260,56 @@ int main(int argc, char** argv) {
       .nargs(1);
 
   program.add_argument("-l", "--log")
-      .help("sets the log value")
+      .help("set the log value")
       .default_value(std::string{"warn"})
       .choices("error", "warn", "info", "debug", "trace")
       .nargs(1);
 
-  argparse::ArgumentParser template_command("template");
+  argparse::ArgumentParser template_command("template", version_string,
+                                            argparse::default_arguments::help);
+  template_command.add_argument("-v", "--version")
+      .help("Display version info")
+      .default_value(false)
+      .implicit_value(true);
+  template_command.add_argument("name")
+      .help("name of the template to use")
+      .nargs(argparse::nargs_pattern::optional);
   template_command.add_description("use templates to create a new configuration file quickly");
 
   program.add_subparser(template_command);
 
   argparse::ArgumentParser output_command("output", version_string,
-                                          argparse::default_arguments::help);
+                                          argparse::default_arguments::all);
   output_command.add_description("export the results of a SQS optimization run");
 
+  output_command.add_argument("-v", "--version")
+      .help("Display version info")
+      .default_value(false)
+      .implicit_value(true);
   output_command.add_argument("-o", "--output")
       .help("The output file to write the results to in binary format")
       .default_value("sqs.mpack")
       .nargs(1);
 
   argparse::ArgumentParser output_config_command("config");
+  output_config_command.add_argument("-v", "--version")
+      .help("Display version info")
+      .default_value(false)
+      .implicit_value(true);
   output_config_command.add_description("export the config as a JSON file. E.g. sqs.config.json");
 
   argparse::ArgumentParser output_structure_command("structure", version_string,
                                                     argparse::default_arguments::help);
   output_structure_command.add_description("export the structure of a result file");
+  output_structure_command.add_argument("-v", "--version")
+      .help("Display version info")
+      .default_value(false)
+      .implicit_value(true);
 
   output_structure_command.add_argument("-f", "--format")
       .help("The output format to use")
       .default_value(std::string{"sqsgen"})
-      .choices("pymatgen", "ase", "vasp", "poscar", "sqsgen")
+      .choices("pymatgen", "ase", "vasp", "poscar", "sqsgen", "cif")
       .nargs(1);
 
   output_structure_command.add_argument("-p", "--print")
@@ -249,13 +342,26 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  if (program["--version"] == true) {
+  if (program["--version"] == true || template_command["--version"] == true
+      || output_command["--version"] == true) {
     display_version_info();
     return EXIT_SUCCESS;
   }
 
   if (program.is_subcommand_used("template")) {
-    for (auto&& [name, _] : templates::detail::templates) std::cout << name << std::endl;
+    if (template_command.is_used("name")) {
+      auto name = template_command.get<std::string>("name");
+      if (!templates::templates().contains(name))
+        cli::render_error(
+            std::format("Cannot find a template with name '{}'. Use \"sqsgen template\" to display "
+                        "all packaged templates",
+                        name));
+      auto tpl = templates::templates().at(name);
+      render_template(tpl);
+      return EXIT_SUCCESS;
+    }
+
+    render_template_overview();
     return EXIT_SUCCESS;
   }
 

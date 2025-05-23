@@ -1,5 +1,7 @@
 from typing import Any
 
+__all__ = ["optimize", "parse_config"]
+
 from .core import (
     LogLevel,
     SqsConfiguration,
@@ -14,7 +16,7 @@ from .core import (
 
 
 def optimize(
-    config: dict[str, Any] | SqsConfiguration, level: LogLevel = LogLevel.info
+    config: dict[str, Any] | SqsConfiguration, level: LogLevel = LogLevel.warn
 ) -> SqsResultPack:
     c = (
         config
