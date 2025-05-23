@@ -1,20 +1,23 @@
-import io
-import threading
-
 import click
 
-from ..core import LogLevel, optimize, parse_config
+from ..core import LogLevel
+from ..templates import load_templates
+from ._shared import render_table
 from .run import run_optimization
 from .version import print_version, version_string
 
 
-@click.command(
-    name="sqsgen",
-    help="A simple, fast and efficient tool to find optimized Special-Quasirandom-Structures (SQS)",
+@click.group(
+    help="A simple, fast and efficient tool to find optimized Special-Quasirandom-Structures (SQS)"
 )
 @click.version_option(
     prog_name="sqsgen", version=version_string(), message=print_version()
 )
+def cli():
+    pass
+
+
+@cli.command(name="run")
 @click.option(
     "-l",
     "--log",
@@ -32,7 +35,14 @@ from .version import print_version, version_string
     default="sqs.json",
     show_default=True,
 )
-def cli(_input, log: str):
+@click.option(
+    "-q",
+    "--quiet",
+    is_flag=True,
+    default=False,
+    help="Suppress progress bar and optimization info",
+)
+def run(_input, log: str, quiet: bool) -> None:
     match log:
         case "critical":
             log_level = LogLevel.critical
@@ -47,41 +57,53 @@ def cli(_input, log: str):
         case _:
             raise click.UsageError(f"Invalid log level: {log!r}")
 
-    run_optimization(_input.read(), log_level=log_level)
-    raise click.Abort
+    run_optimization(_input.read(), log_level=log_level, quiet=quiet)
 
-    config = parse_config(_input.read())
-    with click.progressbar(length=config.iterations, label="Optimizing") as bar:
-        iterations_finished = 0
-        stop_gracefully: bool = False
-        stop_event = threading.Event()
 
-        def _callback(ctx):
-            nonlocal iterations_finished, stop_gracefully
-            print(stop_gracefully)
-            if stop_gracefully:
-                print("Stop signal received...")
-                ctx.stop()
-            if (actual := ctx.statistics.finished) > iterations_finished:
-                bar.update(actual - iterations_finished)
-                iterations_finished = actual
+@cli.command(
+    name="template",
+    help="use templates to create a new configuration file quickly",
+)
+@click.argument(
+    "name",
+    required=False,
+    type=click.Choice(list(load_templates().keys())),
+    metavar="NAME",
+)
+def template(name: str | None) -> None:
+    if name is None:
 
-        def _optimize():
-            result = optimize(config, log_level=log_level, callback=_callback)
-            print("Optimization finished", result)
-            stop_event.set()
+        def format_author(authors: list[dict[str, str]]) -> str:
+            if authors:
+                first_author = authors[0]
+                if "name" in first_author and "surname" in first_author:
+                    return "{} {} {}".format(
+                        first_author["name"],
+                        first_author["surname"],
+                        (
+                            "({})".format(first_author["email"])
+                            if "email" in first_author
+                            and first_author["email"] is not None
+                            else ""
+                        ),
+                    )
+            return ""
 
-        t = threading.Thread(target=_optimize)
-        t.start()
-        try:
-            while t.is_alive() and not stop_event.is_set():
-                stop_event.wait()
-        except KeyboardInterrupt:
-            print("Stopping gracefully...")
-            stop_gracefully = True
-
-        t.join()
-        print()
+        render_table(
+            [
+                (
+                    template_name,
+                    format_author(template.get("authors", [])),
+                    ", ".join(template.get("tags", [])),
+                )
+                for template_name, template in load_templates().items()
+            ],
+            "NAME",
+            "AUTHOR(S)",
+            "TAGS",
+            sep=" ",
+            NAME=dict(fg="cyan", bold=True),
+        )
 
 
 if __name__ == "__main__":
