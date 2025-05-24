@@ -283,7 +283,7 @@ int main(int argc, char** argv) {
   output_command.add_description("export the results of a SQS optimization run");
 
   output_command.add_argument("-v", "--version")
-      .help("Display version info")
+      .help("Displays version info")
       .default_value(false)
       .implicit_value(true);
   output_command.add_argument("-o", "--output")
@@ -307,7 +307,7 @@ int main(int argc, char** argv) {
       .implicit_value(true);
 
   output_structure_command.add_argument("-f", "--format")
-      .help("The output format to use")
+      .help("The output format to use (vasp, poscar, ase, pymatgen, cif)")
       .default_value(std::string{"sqsgen"})
       .choices("pymatgen", "ase", "vasp", "poscar", "sqsgen", "cif")
       .nargs(1);
