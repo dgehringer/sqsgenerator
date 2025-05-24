@@ -8,7 +8,6 @@
 #include <BS_thread_pool.hpp>
 #include <thread>
 
-#include "../../cmake-build-minsizerel/_deps/mpl-src/mpl/environment.hpp"
 #include "spdlog/spdlog.h"
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
