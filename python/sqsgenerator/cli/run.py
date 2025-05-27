@@ -61,3 +61,5 @@ def run_optimization(
             stop_gracefully = True
         finally:
             t.join()
+
+        return optimization_result

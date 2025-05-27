@@ -1,3 +1,5 @@
+import os
+
 import click
 
 from ..core import LogLevel
@@ -57,7 +59,12 @@ def run(_input, log: str, quiet: bool) -> None:
         case _:
             raise click.UsageError(f"Invalid log level: {log!r}")
 
-    run_optimization(_input.read(), log_level=log_level, quiet=quiet)
+    if (
+        result := run_optimization(_input.read(), log_level=log_level, quiet=quiet)
+    ) is not None:
+        path, ext = os.path.splitext(_input.name)
+        with open(f"{path}.mpack", "wb") as output_file:
+            output_file.write(result.bytes())
 
 
 @cli.command(
@@ -104,6 +111,25 @@ def template(name: str | None) -> None:
             sep=" ",
             NAME=dict(fg="cyan", bold=True),
         )
+
+
+@cli.group()
+@click.option(
+    "--output",
+    "-o",
+    type=click.File(mode="rb"),
+    default="sqs.mpack",
+    help="The output file from which structures should be exported from",
+)
+@click.pass_context
+def output(ctx: click.Context, output: str) -> None:
+    ctx.obj = output
+
+
+@output.command(name="structure")
+@click.pass_obj
+def structure(output: click.File) -> None:
+    print(output)
 
 
 if __name__ == "__main__":
