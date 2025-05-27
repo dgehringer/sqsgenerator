@@ -30,7 +30,12 @@ def make_version_info(path: str) -> dict[str, int]:
         major, minor, build = (
             json.load(version_file).get("version-string", "0.0.0").split(".")
         )
-        return dict(major=int(major), minor=int(minor), build=int(build))
+
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(this_dir, "version"), "w") as version_file:
+        version_file.write(f"{major}.{minor}.{build}\n")
+
+    return dict(major=int(major), minor=int(minor), build=int(build))
 
 
 def git_sha1() -> str:
