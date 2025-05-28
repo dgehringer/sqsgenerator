@@ -282,12 +282,8 @@ int main(int argc, char** argv) {
                                           argparse::default_arguments::all);
   output_command.add_description("export the results of a SQS optimization run");
 
-  output_command.add_argument("-v", "--version")
-      .help("Displays version info")
-      .default_value(false)
-      .implicit_value(true);
   output_command.add_argument("-o", "--output")
-      .help("The output file to write the results to in binary format")
+      .help("The output file to which should be displayed")
       .default_value("sqs.mpack")
       .nargs(1);
 
@@ -307,7 +303,7 @@ int main(int argc, char** argv) {
       .implicit_value(true);
 
   output_structure_command.add_argument("-f", "--format")
-      .help("The output format to use (vasp, poscar, ase, pymatgen, cif)")
+      .help("The output format to use (vasp, poscar, ase, pymatgen, cif, sqsgen)")
       .default_value(std::string{"sqsgen"})
       .choices("pymatgen", "ase", "vasp", "poscar", "sqsgen", "cif")
       .nargs(1);
@@ -366,11 +362,17 @@ int main(int argc, char** argv) {
   }
 
   if (program.is_subcommand_used("output")) {
-    auto pack = load_result_pack(output_command.get<std::string>("--output"));
+    auto output_switch = "--output";
+
+    // disambiguate. The argparse library works slightly differently for subcommands with ambiguous
+    // switches
+    auto output_file = !output_command.is_used(output_switch) && program.is_used(output_switch)
+                           ? program.get<std::string>(output_switch)
+                           : output_command.get<std::string>(output_switch);
+    auto pack = load_result_pack(output_file);
     if (output_command.is_subcommand_used("config")) {
-      std::string output = std::format(
-          "{}.config.json",
-          std::filesystem::path(output_command.get<std::string>("--output")).stem().string());
+      std::string output
+          = std::format("{}.config.json", std::filesystem::path(output_file).stem().string());
       std::ofstream out(output, std::ios::out);
       if (!out.good()) cli::render_error(std::format("Failed to open output file '{}'", output));
       out << std::visit([](auto&& p) { return cli::fixup_config_json(p.config).dump(); }, pack);
@@ -403,13 +405,11 @@ int main(int argc, char** argv) {
               auto structure
                   = std::get<1>(p.results.at(objective_index)).at(structure_index).structure();
               auto format = output_structure_command.get<std::string>("--format");
-              auto basename = std::filesystem::path(output_command.get<std::string>("--output"))
-                                  .stem()
-                                  .string();
+              auto basename = std::filesystem::path(output_file).stem().string();
 
               std::map<std::string, std::pair<StructureFormat, std::string>> formats{
-                  {"vasp", {STRUCTURE_FORMAT_POSCAR, "poscar"}},
-                  {"poscar", {STRUCTURE_FORMAT_POSCAR, "poscar"}},
+                  {"vasp", {STRUCTURE_FORMAT_POSCAR, "vasp"}},
+                  {"poscar", {STRUCTURE_FORMAT_POSCAR, "vasp"}},
                   {"pymatgen", {STRUCTURE_FORMAT_JSON_PYMATGEN, "pymatgen.json"}},
                   {"sqsgen", {STRUCTURE_FORMAT_JSON_SQSGEN, "sqsgen.json"}},
                   {"cif", {STRUCTURE_FORMAT_CIF, "cif"}},

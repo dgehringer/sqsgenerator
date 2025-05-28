@@ -10,6 +10,7 @@
 #include "sqsgen/io/config/shell_radii.h"
 #include "sqsgen/io/config/shell_weights.h"
 #include "sqsgen/io/config/structure.h"
+#include "sqsgen/io/mpi.h"
 #include "sqsgen/io/parsing.h"
 
 namespace sqsgen::io::config {

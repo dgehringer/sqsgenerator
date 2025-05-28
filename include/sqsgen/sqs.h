@@ -6,6 +6,9 @@
 #define SQSGEN_SQS_H
 
 #include <BS_thread_pool.hpp>
+#include <atomic>
+#include <csignal>
+#include <iostream>
 #include <thread>
 
 #include "spdlog/spdlog.h"
@@ -19,7 +22,66 @@
 #include "sqsgen/io/mpi.h"
 #include "sqsgen/types.h"
 
+#ifdef _WIN32
+#  include <windows.h>
+#else
+#  include <cstring>
+#endif
+
 namespace sqsgen {
+
+  namespace signal {
+
+    static std::atomic _interrupted{false};
+
+    static bool interrupted() { return _interrupted.load(std::memory_order_relaxed); }
+
+#ifdef _WIN32
+    // Windows handler
+    BOOL WINAPI console_handler(DWORD ctrl_type) {
+      spdlog::warn(std::format("Interrupt oder termination signal received: {}", ctrl_type));
+      switch (ctrl_type) {
+        case CTRL_C_EVENT:
+          _interrupted.store(true);
+          return TRUE;
+        case CTRL_CLOSE_EVENT:
+          _interrupted.store(true);
+          return TRUE;
+        case CTRL_SHUTDOWN_EVENT:
+          _interrupted.store(true);
+          return TRUE;
+        default:
+          return FALSE;
+      }
+    }
+#else
+    // Unix-like handler
+    static void signal_handler(int signal) {
+      spdlog::warn(
+          std::format("Interrupt oder termination signal received: {}", strsignal(signal)));
+      _interrupted.store(true);
+    }
+#endif
+
+    // Setup handlers
+    static void setup_signal_handlers() {
+#ifdef _WIN32
+      SetConsoleCtrlHandler(console_handler, TRUE);
+#else
+      std::signal(SIGINT, signal_handler);
+      std::signal(SIGTERM, signal_handler);
+#endif
+    }
+
+    static void teardown_signal_handlers() {
+#ifdef _WIN32
+      SetConsoleCtrlHandler(nullptr, FALSE);  // Remove handler
+#else
+      std::signal(SIGINT, SIG_DFL);  // Restore default behavior
+      std::signal(SIGTERM, SIG_DFL);
+#endif
+    }
+  }  // namespace signal
 
   namespace detail {
     using namespace sqsgen::core;
@@ -237,6 +299,10 @@ namespace sqsgen {
 
       auto head = this->is_head();
       auto mpi_mode = this->num_ranks() > 1;
+
+      // if we are not in MPI mode we install the signal handlers
+      if (!mpi_mode) signal::setup_signal_handlers();
+
       if (mpi_mode && head) spdlog::info("[Rank {}] Running optimizer in MPI mode", this->rank());
       auto [start, end] = this->iteration_range();
       spdlog::info("[Rank {}] start={}, end={}", this->rank(), start.to_string(), end.to_string());
@@ -284,6 +350,11 @@ namespace sqsgen {
         core::tick<TIMING_LOOP> tick_loop;
 
         for (auto i = rstart; i < rend; ++i) {
+          if (!mpi_mode && signal::interrupted()) {
+            spdlog::info("[Rank {}, Thread {}] Process received SIGTERM or SIGINT ...",
+                         this->rank(), this->thread_id());
+            break;
+          }
           if (stop.stop_requested()) {
             spdlog::info("[Rank {}, Thread {}] received stop signal ...", this->rank(),
                          this->thread_id());
@@ -355,6 +426,9 @@ namespace sqsgen {
         pool.wait();
       };
       schedule_main_loop();
+
+      // again we immdeiatly remove the signal handler after they have been used
+      if (!mpi_mode) signal::teardown_signal_handlers();
 
       this->barrier();
 #ifdef WITH_MPI
