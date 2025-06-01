@@ -22,7 +22,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-15]
-        python-version: ["3.10", "3.11"]
     env:
       VCPKG_BINARY_SOURCES: "x-gha,readwrite"
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
@@ -48,20 +47,6 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Compile & install build dependencies
-        run: |
-          pip install pip-tools
-          pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
-          pip install -r requirements-ci.txt
-
-      - name: Compile & install test dependencies
-        run: |
-          pip install pip-tools
-          pip-compile --extra=test -o requirements-test.txt ./python/pyproject.toml
-          pip install -r requirements-test.txt
 
       - uses: pypa/cibuildwheel@v2.17
         with:
@@ -79,8 +64,6 @@ jobs:
         with:
           name: cibw-wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
-
-
 
 
   upload_all:
