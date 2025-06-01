@@ -22,7 +22,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-15]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11"]
     env:
       VCPKG_BINARY_SOURCES: "x-gha,readwrite"
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
@@ -64,6 +64,9 @@ jobs:
           pip install -r requirements-test.txt
 
       - uses: pypa/cibuildwheel@v2.17
+        with:
+            package-dir: ./python
+            output-dir: wheelhouse
         env:
           CIBW_ARCHS_MACOS: auto universal2
 
