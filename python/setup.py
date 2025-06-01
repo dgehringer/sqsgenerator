@@ -191,13 +191,21 @@ class CMakeBuild(build_ext):
             build_temp.mkdir(parents=True)
 
         subprocess.run(
-            ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
+            ["cmake", ext.sourcedir, *cmake_args],
+            cwd=build_temp,
+            check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
         )
         subprocess.run(
-            ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
+            ["cmake", "--build", ".", *build_args],
+            cwd=build_temp,
+            check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
         )
 
-        subprocess.run(["stubgen", "-m", "_core", "-o", "."], check=True, cwd=extdir)
+        subprocess.run(["stubgen", "-m", "_core", "-o", "."], check=False, cwd=extdir)
 
 
 # The information here can also be placed in setup.cfg - better separation of
