@@ -32,18 +32,6 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.mypy]
-files = "setup.py"
-python_version = ">=3.10"
-strict = true
-show_error_codes = true
-enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
-warn_unreachable = true
-
-[[tool.mypy.overrides]]
-module = ["ninja"]
-ignore_missing_imports = true
-
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -55,7 +43,12 @@ filterwarnings = [
 ]
 testpaths = ["tests"]
 
+[tool.setuptools.package-data]
+sqsgenerator = ["*.json", "*.pyi"]
+
+
 [tool.cibuildwheel]
+build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*"]
 test-command = "pytest {project}/tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
