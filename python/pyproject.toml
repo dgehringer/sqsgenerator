@@ -50,10 +50,9 @@ sqsgenerator = ["*.json", "*.pyi"]
 [tool.cibuildwheel]
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*"]
 test-command = "pytest {project}/tests"
+build-verbosity = 1
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
-# Setuptools bug causes collision between pypy and cpython artifacts
-before-build = "rm -rf {project}/build"
 
 
 [tool.ruff]
