@@ -53,6 +53,12 @@ jobs:
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel
 
+      - name: Compile & install build dependencies
+        run: |
+          pip install pip-tools
+          pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
+          pip install -r requirements-ci.txt
+
       - name: Build wheels
         run: python -m cibuildwheel ./python --output-dir wheelhouse
 
