@@ -4,40 +4,64 @@ on:
   release:
     types:
       - published
+  push:
+    branches:
+      - main
+
+
+permissions:
+  contents: write
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  VCPKG_FEATURE_FLAGS: "-manifests"
 
 jobs:
-  build_sdist:
-    name: Build SDist
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Build SDist
-        run: pipx run build --sdist
-
-      - name: Check metadata
-        run: pipx run twine check dist/*
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: cibw-sdist
-          path: dist/*.tar.gz
-
-
   build_wheels:
-    name: Wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13]
+        os: [ubuntu-latest, windows-latest, macos-15]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    env:
+      VCPKG_BINARY_SOURCES: "x-gha,readwrite"
+      VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
 
     steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '')
+
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
+
+      # Required on macOS to build gmp package
+      - name: Install autoconf
+        run: brew install autoconf-archive libtool automake pkgconf pkg-config
+        if: ${{ runner.os == 'macOS' }}
+
+      - uses: friendlyanon/setup-vcpkg@v1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Compile & install build dependencies
+        run: |
+          pip install pip-tools
+          pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
+          pip install -r requirements-ci.txt
+
+      - name: Compile & install test dependencies
+        run: |
+          pip install pip-tools
+          pip-compile --extra=test -o requirements-test.txt ./python/pyproject.toml
+          pip install -r requirements-test.txt
 
       - uses: pypa/cibuildwheel@v2.17
         env:
@@ -54,9 +78,11 @@ jobs:
           path: wheelhouse/*.whl
 
 
+
+
   upload_all:
     name: Upload if release
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
