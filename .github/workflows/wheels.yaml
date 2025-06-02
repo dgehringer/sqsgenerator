@@ -57,6 +57,7 @@ jobs:
             dnf upgrade -y almalinux-release
             dnf clean all
             dnf install -y gmp-devel
+            dnf install -y pkg-config
           CIBW_BEFORE_BUILD: |
             pip install pip-tools
             pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
