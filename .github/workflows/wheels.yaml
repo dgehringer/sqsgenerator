@@ -69,7 +69,6 @@ jobs:
           name: cibw-wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
 
-
   upload_all:
     name: Upload if release
     needs: [build_wheels]
