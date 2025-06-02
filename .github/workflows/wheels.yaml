@@ -60,6 +60,9 @@ jobs:
       - name: Build wheel package
         run: python -m build --wheel ./python --no-isolation
 
+      - name: Install package
+        run: pip install ./python/dist/*.whl
+
       - name: Compile & install test dependencies
         run: |
           pip install pip-tools
@@ -67,7 +70,7 @@ jobs:
           pip install -r requirements-test.txt
 
       - name: Run unit tests
-        run: pytest ./python -vv
+        run: pytest ./python -vv --import-mode=importlib
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
