@@ -49,7 +49,7 @@ jobs:
           output-dir: wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
-          CIBW_BEFORE_ALL_LINUX: dnf install -y libgmp-devel
+          CIBW_BEFORE_ALL_LINUX: apt install -y libgmp-dev
           CIBW_BEFORE_BUILD: |
             pip install pip-tools
             pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
