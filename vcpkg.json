@@ -16,10 +16,6 @@
     {
       "name": "pkgconf",
       "platform": "windows"
-    },
-    {
-      "name": "gmp",
-      "platform": "linux"
     }
   ]
 }
