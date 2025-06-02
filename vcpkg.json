@@ -9,10 +9,6 @@
       "name": "gmp",
       "platform": "windows"
     },
-    {
-      "name": "gmp",
-      "platform": "linux"
-    },
     "nlohmann-json",
     "bshoshany-thread-pool",
     "gtest",
