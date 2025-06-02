@@ -47,7 +47,7 @@ jobs:
         run: python -m pip install cibuildwheel
 
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: python -m cibuildwheel ./python --output-dir wheelhouse
         env:
           CIBW_BUILD_COMMAND: python -m build --wheel --no-isolation -v
           CIBW_BEFORE_ALL: |
