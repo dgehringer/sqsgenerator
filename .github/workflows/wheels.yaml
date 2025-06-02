@@ -43,9 +43,6 @@ jobs:
         run: brew install autoconf-archive libtool automake pkgconf pkg-config
         if: ${{ runner.os == 'macOS' }}
 
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel
-
       - uses: pypa/cibuildwheel@v2.16.2  # Use latest version
         with:
           package-dir: ./python
