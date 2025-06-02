@@ -1,12 +1,9 @@
 name: python-ci.yml
 
-#on:
-  #pull_request:
-  #  branches:
-  #    - main
-  #push:
-  #  branches:
-  #    - main
+on:
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
