@@ -17,11 +17,12 @@ env:
   VCPKG_FEATURE_FLAGS: "-manifests"
 
 jobs:
-  build_wheels:
+  build_wheel:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-15]
+        python-version: ["3.10", "3.11"]
     env:
       VCPKG_BINARY_SOURCES: "x-gha,readwrite"
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
@@ -38,40 +39,45 @@ jobs:
         with:
           submodules: recursive
 
-      # Required on macOS to build gmp package
+          # Required on macOS to build gmp package
       - name: Install autoconf
         run: brew install autoconf-archive libtool automake pkgconf pkg-config
         if: ${{ runner.os == 'macOS' }}
 
-      - uses: pypa/cibuildwheel@v2.16.2  # Use latest version
+      - uses: friendlyanon/setup-vcpkg@v1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
-          package-dir: ./python
-          output-dir: wheelhouse
-        env:
-          CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
-          CIBW_MANYLINUX_I686_IMAGE: manylinux_2_28
-          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
-          CIBW_BEFORE_ALL_LINUX: |
-            rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux
-            dnf upgrade -y almalinux-release
-            dnf clean all
-            dnf install -y gmp-devel
-            dnf install -y pkg-config
-          CIBW_BEFORE_BUILD: |
-            pip install pip-tools
-            pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
-            pip install -r requirements-ci.txt
+          python-version: ${{ matrix.python-version }}
+
+      - name: Compile & install build dependencies
+        run: |
+          pip install pip-tools
+          pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
+          pip install -r requirements-ci.txt
+
+      - name: Build wheel package
+        run: python -m build --wheel ./python --no-isolation
+
+      - name: Compile & install test dependencies
+        run: |
+          pip install pip-tools
+          pip-compile --extra=test -o requirements-test.txt ./python/pyproject.toml
+          pip install -r requirements-test.txt
+
+      - name: Run unit tests
+        run: pytest ./python -vv
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: cibw-wheels-${{ matrix.os }}
-          path: wheelhouse/*.whl
+          path: python/dist/*.whl
 
   upload_all:
     name: Upload if release
-    needs: [build_wheels]
+    needs: [build_wheel]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
