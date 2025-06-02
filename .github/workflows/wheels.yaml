@@ -76,7 +76,7 @@ jobs:
     name: Upload if release
     needs: [build_wheel]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'release' && github.event.action == 'published' &&  runner.os == 'Linux'
 
     steps:
       - uses: actions/setup-python@v5
@@ -85,7 +85,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: cibw-*
+          pattern: wheel-*
           path: dist
           merge-multiple: true
 
