@@ -43,11 +43,11 @@ jobs:
         run: brew install autoconf-archive libtool automake pkgconf pkg-config
         if: ${{ runner.os == 'macOS' }}
 
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel
+
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0b4
-        with:
-          package-dir: ./python
-          output-dir: wheelhouse
+        run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD_COMMAND: python -m build --wheel --no-isolation -v
           CIBW_BEFORE_ALL: |
