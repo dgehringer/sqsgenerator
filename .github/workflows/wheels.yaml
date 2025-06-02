@@ -52,7 +52,9 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_I686_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
-          CIBW_BEFORE_ALL_LINUX: dnf install -y gmp-devel
+          CIBW_BEFORE_ALL_LINUX: |
+            dnf update -y
+            dnf install -y gmp-devel
           CIBW_BEFORE_BUILD: |
             pip install pip-tools
             pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
