@@ -17,12 +17,11 @@ env:
   VCPKG_FEATURE_FLAGS: "-manifests"
 
 jobs:
-  build_wheel:
+  build_wheels:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-15 ]
-        python-version: [ "3.10"]
+        os: [ubuntu-latest, macos-15]
     env:
       VCPKG_BINARY_SOURCES: "x-gha,readwrite"
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
@@ -39,48 +38,38 @@ jobs:
         with:
           submodules: recursive
 
-          # Required on macOS to build gmp package
+      # Required on macOS to build gmp package
       - name: Install autoconf
         run: brew install autoconf-archive libtool automake pkgconf pkg-config
         if: ${{ runner.os == 'macOS' }}
 
-      - uses: friendlyanon/setup-vcpkg@v1
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: pypa/cibuildwheel@v2.16.2  # Use latest version
         with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Compile & install build dependencies
-        run: |
-          pip install pip-tools
-          pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
-          pip install -r requirements-ci.txt
-
-      - name: Build wheel package
-        run: python -m build --wheel ./python --no-isolation
-
-      - name: Install package
-        run: pip install ./python/dist/*.whl
-
-      - name: Compile & install test dependencies
-        run: |
-          pip install pip-tools
-          pip-compile --extra=test -o requirements-test.txt ./python/pyproject.toml
-          pip install -r requirements-test.txt
-
-      - name: Run unit tests
-        run: pytest ./python -vv --import-mode=importlib
+          package-dir: ./python
+          output-dir: wheelhouse
+        env:
+          CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_I686_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_BEFORE_ALL_LINUX: |
+            dnf update -y
+            dnf install -y gmp-devel cmake
+          CIBW_BEFORE_BUILD: |
+            pip install pip-tools
+            pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
+            pip install -r requirements-ci.txt
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-${{ matrix.os }}-${{ matrix.python-version }}
-          path: python/dist/*.whl
+          name: cibw-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
 
   upload_all:
     name: Upload if release
-    needs: [ build_wheel ]
+    needs: [build_wheels]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
@@ -91,7 +80,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: wheel-*
+          pattern: cibw-*
           path: dist
           merge-multiple: true
 
