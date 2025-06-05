@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import shlex
+import sysconfig
 import uuid
 
 import pybind11
@@ -111,9 +112,12 @@ class CMakeBuild(build_ext):
         vcpkg_toolchain = os.path.join(
             ext.vcpkg_root, "scripts", "buildsystems", "vcpkg.cmake"
         )
+        include_dir = sysconfig.get_path("include")
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPython3_EXECUTABLE={sys.executable}",
+            f"-DPython3_INCLUDE_DIR={include_dir}",
+            f"-DPython3_LIBRARY={sysconfig.get_config_var('LIBDIR')}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DBUILD_TESTS={'ON' if ext.build_tests else 'OFF'}",
             f"-DBUILD_BENCHMARKS={'ON' if ext.build_benchmarks else 'OFF'}",
