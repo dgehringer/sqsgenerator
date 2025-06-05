@@ -43,17 +43,19 @@ jobs:
         run: brew install autoconf-archive libtool automake pkgconf pkg-config
         if: ${{ runner.os == 'macOS' }}
 
-      - uses: pypa/cibuildwheel@v3.0.0rc1
+      - uses: pypa/cibuildwheel@v2.17
         with:
           package-dir: ./python
           output-dir: wheelhouse
         env:
+          CIBW_SKIP: "*i686*"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
-          CIBW_MANYLINUX_I686_IMAGE: manylinux_2_34
-          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_BEFORE_ALL_LINUX: |
             cp vcpkg.cibuildwheel.json vcpkg.json
+            # Enable GCC 14 (AlmaLinux uses Software Collections)
+            source /opt/rh/gcc-toolset-14/enable
           CIBW_BEFORE_TEST: |
             echo "Contents of wheelhouse:"
             ls -la /tmp/cibuildwheel/built_wheel
