@@ -56,7 +56,7 @@ jobs:
             cp vcpkg.cibuildwheel.json vcpkg.json
           CIBW_BEFORE_TEST: |
             echo "Contents of wheelhouse:"
-            ls -la /project/wheelhouse/
+            ls -la /tmp/cibuildwheel/built_wheel
             pip install /tmp/cibuildwheel/built_wheel/*.whl --verbose
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
