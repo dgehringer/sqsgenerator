@@ -53,6 +53,10 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_BEFORE_ALL_LINUX: |
+            rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux
+            dnf upgrade -y almalinux-release
+            dnf clean all
+            dnf install -y gcc-toolset-14
             cp vcpkg.cibuildwheel.json vcpkg.json
             # Ensure CMake uses GCC 14
           CIBW_BEFORE_BUILD_LINUX: |
@@ -65,8 +69,6 @@ jobs:
             export CXX=/opt/rh/gcc-toolset-14/root/usr/bin/g++
 
           CIBW_BEFORE_TEST: |
-            echo "Contents of wheelhouse:"
-            ls -la /tmp/cibuildwheel/built_wheel
             pip install /tmp/cibuildwheel/built_wheel/*.whl --verbose
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
