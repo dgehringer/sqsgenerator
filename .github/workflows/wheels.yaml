@@ -54,8 +54,10 @@ jobs:
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_BEFORE_ALL_LINUX: |
             cp vcpkg.cibuildwheel.json vcpkg.json
-            # Enable GCC 14 (AlmaLinux uses Software Collections)
-            source /opt/rh/gcc-toolset-14/enable
+            # Ensure CMake uses GCC 14
+          CIBW_ENVIRONMENT_LINUX: |
+            CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc
+            CXX=/opt/rh/gcc-toolset-14/root/usr/bin/g++
           CIBW_BEFORE_TEST: |
             echo "Contents of wheelhouse:"
             ls -la /tmp/cibuildwheel/built_wheel
