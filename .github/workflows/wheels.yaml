@@ -53,13 +53,7 @@ jobs:
           CIBW_MANYLINUX_I686_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_BEFORE_ALL_LINUX: |
-            rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux
-            dnf upgrade -y almalinux-release
-            dnf clean all
-            dnf install -y gmp-devel pkg-config gmp
-            ls -la /usr/include/gmp.h
-            ls -la /usr/lib64/libgmp*
-            pkg-config --modversion gmp
+            cp vcpkg.cibuildwheel.json vcpkg.json
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
             pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
