@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest ]
+        os: [ubuntu-latest]
     env:
       VCPKG_BINARY_SOURCES: "x-gha,readwrite"
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
@@ -43,36 +43,20 @@ jobs:
         run: brew install autoconf-archive libtool automake pkgconf pkg-config
         if: ${{ runner.os == 'macOS' }}
 
-      - uses: pypa/cibuildwheel@v2.17
+      - uses: pypa/cibuildwheel@v3.0.0rc1
         with:
           package-dir: ./python
           output-dir: wheelhouse
         env:
-          CIBW_SKIP: "*i686*"
+          CIBW_BUILD_LINUX: "cp31*-manylinux_{x86_64,aarch64}"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
-          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_BEFORE_ALL_LINUX: |
-            rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux
-            dnf upgrade -y almalinux-release
-            dnf clean all
-            dnf install -y gcc-toolset-14
             cp vcpkg.cibuildwheel.json vcpkg.json
-            # Ensure CMake uses GCC 14
-          CIBW_BEFORE_BUILD_LINUX: |
-            # Activate GCC 14 and verify
-            source /opt/rh/gcc-toolset-14/enable
-            echo "Using GCC: $(g++ --version | head -n1)"
-
-            # Ensure CMake finds the compiler
-            export CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc
-            export CXX=/opt/rh/gcc-toolset-14/root/usr/bin/g++
-
-            pip install --upgrade pip-tools
-            pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
-            pip install -r requirements-ci.txt
-
           CIBW_BEFORE_TEST: |
+            echo "Contents of wheelhouse:"
+            ls -la /tmp/cibuildwheel/built_wheel
             pip install /tmp/cibuildwheel/built_wheel/*.whl --verbose
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
@@ -93,7 +77,7 @@ jobs:
 
   upload_all:
     name: Upload if release
-    needs: [ build_wheels ]
+    needs: [build_wheels]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
