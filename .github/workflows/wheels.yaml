@@ -48,7 +48,9 @@ jobs:
           package-dir: ./python
           output-dir: wheelhouse
         env:
-          CIBW_BUILD_LINUX: "cp31*-manylinux_{x86_64,aarch64}"
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_ARCHS_WINDOWS: "x86_64"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
