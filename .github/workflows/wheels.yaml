@@ -56,7 +56,7 @@ jobs:
             rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux
             dnf upgrade -y almalinux-release
             dnf clean all
-            dnf install -y gmp-devel pkg-config gmp gmp-static
+            dnf install -y gmp-devel pkg-config gmp
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
             pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
