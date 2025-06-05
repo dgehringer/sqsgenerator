@@ -59,6 +59,8 @@ jobs:
           CIBW_BEFORE_BUILD: |
             ls -l $(pwd)
             pip install pip-tools
+            echo $(pwd)
+            cat python/pyproject.toml
             pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
             pip install -r requirements-ci.txt
 
