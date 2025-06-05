@@ -56,9 +56,7 @@ jobs:
             cp vcpkg.cibuildwheel.json vcpkg.json
             # Ensure CMake uses GCC 14
           CIBW_ENVIRONMENT_LINUX: |
-            CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc
-            CXX=/opt/rh/gcc-toolset-14/root/usr/bin/g++
-            CMAKE_ARGS="-DCMAKE_CXX_COMPILER/opt/rh/gcc-toolset-14/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/gcc-toolset-14/root/usr/bin/gcc"
+            CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/opt/rh/gcc-toolset-14/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/gcc-toolset-14/root/usr/bin/gcc"
           CIBW_BEFORE_TEST: |
             echo "Contents of wheelhouse:"
             ls -la /tmp/cibuildwheel/built_wheel
