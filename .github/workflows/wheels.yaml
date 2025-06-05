@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ ubuntu-latest ]
     env:
       VCPKG_BINARY_SOURCES: "x-gha,readwrite"
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
@@ -58,6 +58,7 @@ jobs:
           CIBW_ENVIRONMENT_LINUX: |
             CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc
             CXX=/opt/rh/gcc-toolset-14/root/usr/bin/g++
+            CMAKE_ARGS="-DCMAKE_CXX_COMPILER/opt/rh/gcc-toolset-14/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/gcc-toolset-14/root/usr/bin/gcc"
           CIBW_BEFORE_TEST: |
             echo "Contents of wheelhouse:"
             ls -la /tmp/cibuildwheel/built_wheel
@@ -81,7 +82,7 @@ jobs:
 
   upload_all:
     name: Upload if release
-    needs: [build_wheels]
+    needs: [ build_wheels ]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
