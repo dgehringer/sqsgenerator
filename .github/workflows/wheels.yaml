@@ -54,6 +54,10 @@ jobs:
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_BEFORE_ALL_LINUX: |
             cp vcpkg.cibuildwheel.json vcpkg.json
+          CIBW_BEFORE_TEST: |
+            echo "Contents of wheelhouse:"
+            ls -la /project/wheelhouse/
+            pip install /project/wheelhouse/*.whl --verbose
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
             pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
