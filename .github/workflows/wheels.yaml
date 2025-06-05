@@ -54,7 +54,7 @@ jobs:
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_BEFORE_ALL_LINUX: |
             # patch vcpkg.json to add gmp dependency for Linux
-            python -c "import json; h = open('./vcpkg.json'); d = json.loads(h.read()); h.close(); d.get('dependencies').append(dict(name='gmp', platform='linux')); print(json.dumps(d))" >> vcpkg.json
+            # python -c "import json; h = open('./vcpkg.json'); d = json.loads(h.read()); h.close(); d.get('dependencies').append(dict(name='gmp', platform='linux')); print(json.dumps(d))" >> vcpkg.json
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
             pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
