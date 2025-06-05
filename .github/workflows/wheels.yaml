@@ -55,9 +55,15 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: |
             cp vcpkg.cibuildwheel.json vcpkg.json
             # Ensure CMake uses GCC 14
-            /opt/rh/gcc-toolset-14/root/usr/bin/g++ --version
-          CIBW_ENVIRONMENT_LINUX: |
-            CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/opt/rh/gcc-toolset-14/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/gcc-toolset-14/root/usr/bin/gcc"
+          CIBW_BEFORE_BUILD_LINUX: |
+            # Activate GCC 14 and verify
+            source /opt/rh/gcc-toolset-14/enable
+            echo "Using GCC: $(g++ --version | head -n1)"
+
+            # Ensure CMake finds the compiler
+            export CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc
+            export CXX=/opt/rh/gcc-toolset-14/root/usr/bin/g++
+
           CIBW_BEFORE_TEST: |
             echo "Contents of wheelhouse:"
             ls -la /tmp/cibuildwheel/built_wheel
