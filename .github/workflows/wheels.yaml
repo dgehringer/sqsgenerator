@@ -57,7 +57,7 @@ jobs:
           CIBW_BEFORE_TEST: |
             echo "Contents of wheelhouse:"
             ls -la /project/wheelhouse/
-            pip install /project/wheelhouse/*.whl --verbose
+            pip install /tmp/cibuildwheel/built_wheel/*.whl --verbose
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
             pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
