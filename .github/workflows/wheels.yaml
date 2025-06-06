@@ -55,8 +55,6 @@ jobs:
             CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DCMAKE_CXX_FLAGS=-mmacosx-version-min=15.0"
           CIBW_BEFORE_ALL_LINUX: |
             dnf install -y gmp-devel pkg-config gmp
-          CIBW_BEFORE_TEST: |
-            pip install /tmp/cibuildwheel/built_wheel/*.whl --verbose
           CIBW_BEFORE_BUILD_WINDOWS: call scripts/install-build-deps.bat
 
           CIBW_BEFORE_BUILD: |
