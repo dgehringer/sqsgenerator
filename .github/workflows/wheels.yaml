@@ -22,9 +22,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-    env:
-      VCPKG_BINARY_SOURCES: "x-gha,readwrite"
-      VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
 
     steps:
       - name: Export GitHub Actions cache environment variables
@@ -48,10 +45,16 @@ jobs:
           package-dir: ./python
           output-dir: wheelhouse
         env:
-          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          CIBW_ARCHS_MACOS: "arm64"
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           CIBW_ARCHS_WINDOWS: "x86_64"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
+          CIBW_ENVIRONMENT: |
+            VCPKG_BINARY_SOURCES="x-gha,readwrite"
+            VCPKG_INSTALLED_DIR="/tmp/vcpkg_installed"
+            ACTIONS_CACHE_URL="${{ process.env.ACTIONS_CACHE_URL || '' }}"
+            ACTIONS_RUNTIME_TOKEN="${{ process.env.ACTIONS_RUNTIME_TOKEN || '' }}"
+            CMAKE_ARGS="-DCMAKE_CXX_FLAGS=-w"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_BEFORE_ALL_LINUX: |
