@@ -43,14 +43,12 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           CIBW_ARCHS_WINDOWS: "x86_64"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
-          CIBW_ENVIRONMENT: |
-            VCPKG_INSTALLED_DIR="/tmp/vcpkg_installed"
-            CMAKE_ARGS="-DCMAKE_CXX_FLAGS=-w"
+          CIBW_ENVIRONMENT_PASS_LINUX: "ACTIONS_RUNTIME_TOKEN ACTIONS_CACHE_URL"
 
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_BEFORE_ALL_LINUX: |
-            cp vcpkg.cibuildwheel.json vcpkg.json
+            dnf install -y gmp-devel pkg-config gmp
           CIBW_BEFORE_TEST: |
             echo "Contents of wheelhouse:"
             ls -la /tmp/cibuildwheel/built_wheel
