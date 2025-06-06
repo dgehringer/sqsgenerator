@@ -44,15 +44,15 @@ jobs:
         env:
           CIBW_ARCHS_MACOS: "arm64"
           CIBW_ARCHS_LINUX: "x86_64"
-          CIBW_ARCHS_WINDOWS: "amd64"
+          CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_ENVIRONMENT_PASS_LINUX: "ACTIONS_RUNTIME_TOKEN ACTIONS_CACHE_URL"
 
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
-          MACOSX_DEPLOYMENT_TARGET: 10.13
           CIBW_ENVIRONMENT_MACOS: |
-            CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3 -DCMAKE_CXX_FLAGS=-mmacosx-version-min=13.3"
+            MACOSX_DEPLOYMENT_TARGET=15.0
+            CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DCMAKE_CXX_FLAGS=-mmacosx-version-min=15.0"
           CIBW_BEFORE_ALL_LINUX: |
             dnf install -y gmp-devel pkg-config gmp
           CIBW_BEFORE_TEST: |
