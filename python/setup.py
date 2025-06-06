@@ -2,7 +2,6 @@ import json
 import os
 import re
 import sys
-import shlex
 import sysconfig
 import uuid
 
@@ -10,9 +9,8 @@ import pybind11
 import subprocess
 from pathlib import Path
 
-from setuptools import Extension, find_packages, setup, findall
+from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
-from setuptools.command.build_py import build_py as _build_py
 
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
@@ -67,6 +65,7 @@ class CMakeExtension(Extension):
         build_type: str = "Release",
         version_file: tuple[str, ...] = (VERSION_FILE,),
         vcpkg_root: str | None = None,
+        verbose: bool = False,
     ) -> None:
         super().__init__(name, sources=[])
         self.sourcedir = os.fspath(Path(sourcedir).resolve())
@@ -74,6 +73,7 @@ class CMakeExtension(Extension):
         self.build_benchmarks = build_benchmarks
         self.build_tests = build_tests
         self.output_dir = output_dir or []
+        self.verbose = verbose
         self.version_info = make_version_info(
             os.path.join(self.sourcedir, *version_file)
         )
@@ -130,6 +130,7 @@ class CMakeBuild(build_ext):
             f"-DSQSGEN_BUILD_NUMBER={ext.version_info['build']}",
             f"-DSQSGEN_BUILD_BRANCH={git_branch()}",
             f"-DSQSGEN_BUILD_COMMIT={git_sha1()}",
+            "-DCMAKE_VERBOSE_MAKEFILE:BOOL={}".format("ON" if self.verbose else "OFF"),
         ]
         build_args = []
         # Adding CMake arguments set as environment variable
@@ -198,15 +199,11 @@ class CMakeBuild(build_ext):
             ["cmake", ext.sourcedir, *cmake_args],
             cwd=build_temp,
             check=True,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
         )
         subprocess.run(
             ["cmake", "--build", ".", *build_args],
             cwd=build_temp,
             check=True,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
         )
 
         subprocess.run(["stubgen", "-m", "_core", "-o", "."], check=False, cwd=extdir)
