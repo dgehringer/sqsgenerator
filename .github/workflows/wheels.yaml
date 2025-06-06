@@ -44,7 +44,6 @@ jobs:
           CIBW_ARCHS_WINDOWS: "x86_64"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_ENVIRONMENT: |
-            VCPKG_BINARY_SOURCES="x-gha,readwrite"
             VCPKG_INSTALLED_DIR="/tmp/vcpkg_installed"
             CMAKE_ARGS="-DCMAKE_CXX_FLAGS=-w"
 
