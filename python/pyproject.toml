@@ -50,10 +50,7 @@ sqsgenerator = ["*.json", "*.pyi"]
 [tool.cibuildwheel]
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*"]
 test-command = "pytest {project}/python/tests --import-mode=importlib"
-before-test = "pip install -v {wheel}"
-build-verbosity = 1
 test-extras = ["test"]
-test-skip = ["*universal2:arm64"]
 
 
 [tool.ruff]
