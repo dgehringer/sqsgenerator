@@ -61,6 +61,9 @@ jobs:
             pip install /tmp/cibuildwheel/built_wheel/*.whl --verbose
 
           CIBW_BEFORE_BUILD_WINDOWS: |
+            pip install --upgrade pip-tools
+            pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
+            pip install -r requirements-ci.txt
             python -m pip install --force-reinstall pybind11
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
