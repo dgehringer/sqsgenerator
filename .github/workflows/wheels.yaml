@@ -44,7 +44,7 @@ jobs:
         env:
           CIBW_ARCHS_MACOS: "arm64"
           CIBW_ARCHS_LINUX: "x86_64"
-          CIBW_ARCHS_WINDOWS: "x86_64"
+          CIBW_ARCHS_WINDOWS: "amd64"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_ENVIRONMENT_PASS_LINUX: "ACTIONS_RUNTIME_TOKEN ACTIONS_CACHE_URL"
 
