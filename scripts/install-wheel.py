@@ -13,8 +13,10 @@ if __name__ == "__main__":
             temp_dir = PurePosixPath("/tmp/cibuildwheel")
             built_wheel_dir = temp_dir / "built_wheel"
         case "Windows":
-            tmp_dir = PureWindowsPath(tempfile.gettempdir())
-            built_wheel_dir = tmp_dir / "cibw-run-*" / "cp3*win_*" / "built_wheel"
+            tmp_dir = PureWindowsPath(r"C:\Users\runneradmin\AppData\Local\Temp")
+            built_wheel_dir = (
+                tmp_dir / "cibw-run-*" / "cp3*-win_*" / "built_wheel" / ".tmp-*"
+            )
         case _:
             raise RuntimeError(f"Unsupported platform: {platform.system()}")
 
