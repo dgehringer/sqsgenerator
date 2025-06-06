@@ -56,23 +56,14 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: |
             dnf install -y gmp-devel pkg-config gmp
           CIBW_BEFORE_TEST: |
-            echo "Contents of wheelhouse:"
-            ls -la /tmp/cibuildwheel/built_wheel
             pip install /tmp/cibuildwheel/built_wheel/*.whl --verbose
+          CIBW_BEFORE_BUILD_WINDOWS: call scripts/install-build-deps.bat
 
-          CIBW_BEFORE_BUILD_WINDOWS: |
-            pip install --upgrade pip-tools
-            pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
-            pip install -r requirements-ci.txt
-            python -m pip install --force-reinstall pybind11
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
             pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
             pip install -r requirements-ci.txt
 
-            echo "Python executable: $(which python)"
-            echo "Python prefix: $(python -c 'import sys; print(sys.prefix)')"
-            echo "Include dir: $(python -c 'import sysconfig; print(sysconfig.get_path("include"))')"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
