@@ -50,6 +50,8 @@ jobs:
 
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
+          CIBW_ENVIRONMENT_MACOS: |
+            CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3 -DCMAKE_CXX_FLAGS=-mmacosx-version-min=13.3"
           CIBW_BEFORE_ALL_LINUX: |
             dnf install -y gmp-devel pkg-config gmp
           CIBW_BEFORE_TEST: |
