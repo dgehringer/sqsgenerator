@@ -24,12 +24,6 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - name: Export GitHub Actions cache environment variables
-        uses: actions/github-script@v7
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '')
 
       - uses: actions/checkout@v4
         with:
@@ -52,9 +46,8 @@ jobs:
           CIBW_ENVIRONMENT: |
             VCPKG_BINARY_SOURCES="x-gha,readwrite"
             VCPKG_INSTALLED_DIR="/tmp/vcpkg_installed"
-            ACTIONS_CACHE_URL="${{ process.env.ACTIONS_CACHE_URL || '' }}"
-            ACTIONS_RUNTIME_TOKEN="${{ process.env.ACTIONS_RUNTIME_TOKEN || '' }}"
             CMAKE_ARGS="-DCMAKE_CXX_FLAGS=-w"
+
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_BEFORE_ALL_LINUX: |
