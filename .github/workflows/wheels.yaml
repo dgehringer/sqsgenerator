@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-15, windows-latest]
 
     steps:
 
@@ -40,7 +40,7 @@ jobs:
           output-dir: wheelhouse
         env:
           CIBW_ARCHS_MACOS: "arm64"
-          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_ARCHS_LINUX: "x86_64"
           CIBW_ARCHS_WINDOWS: "x86_64"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_ENVIRONMENT_PASS_LINUX: "ACTIONS_RUNTIME_TOKEN ACTIONS_CACHE_URL"
