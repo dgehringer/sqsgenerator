@@ -39,7 +39,8 @@ if __name__ == "__main__":
         gather_wheels_into(built_wheel_dir, Path(tmp_dir))
         command_args = [
             sys.executable,
-            "-mpip",
+            "-m",
+            "pip",
             "install",
             "-v",
             str((Path(tmp_dir) / "sqsgenerator*.whl").resolve()),
