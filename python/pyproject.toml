@@ -22,13 +22,13 @@ test = [
 
 [build-system]
 requires = [
-    "setuptools>=42",
-    "wheel",
+    "setuptools>=68.0.0",  # Required for Python 3.13 support
+    "wheel>=0.40.0",
     "ninja",
-    "cmake>=3.14",
-    "mypy",
-    "numpy",
-    "pybind11"
+    "cmake>=3.27",  # Newer CMake for better Python 3.13 support
+    "pybind11>=2.11.0",  # Minimum version with Python 3.13 support
+    "numpy>=1.26.0",  # Python 3.13 compatible version
+    "mypy"
 ]
 build-backend = "setuptools.build_meta"
 
