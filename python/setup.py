@@ -113,7 +113,10 @@ class CMakeBuild(build_ext):
             ext.vcpkg_root, "scripts", "buildsystems", "vcpkg.cmake"
         )
         include_dir = sysconfig.get_path("include")
+        python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+
         cmake_args = [
+            f"-DPython3_VERSION={python_version}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DPython3_INCLUDE_DIR={include_dir}",
