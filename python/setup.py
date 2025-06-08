@@ -140,7 +140,7 @@ class CMakeBuild(build_ext):
             sys.version_info.minor,
         ) == (3, 13):
             cmake_args.append(
-                f"-DPYTHON_MODULE_EXTENSION=.cp{python_version.replace('.', '')}-{self.plat_name}.pyd"
+                f"-DPYTHON_MODULE_EXTENSION=.cp{python_version.replace('.', '')}-{self.plat_name.replace('-', '_')}.pyd"
             )
         build_args = []
         # Adding CMake arguments set as environment variable
