@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-15, windows-latest]
+        os: [ windows-latest ]
 
     steps:
 
@@ -71,7 +71,7 @@ jobs:
 
   upload_all:
     name: Upload if release
-    needs: [build_wheels]
+    needs: [ build_wheels ]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
