@@ -9,10 +9,6 @@
     "nlohmann-json",
     "bshoshany-thread-pool",
     "gtest",
-    "argparse",
-    {
-      "name": "pkgconf",
-      "platform": "windows"
-    }
+    "argparse"
   ]
 }
