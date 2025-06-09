@@ -440,6 +440,7 @@ namespace sqsgen::core {
     [[nodiscard]] rank_t rank() const { return rank_permutation(packed_species()); }
 
     [[nodiscard]] std::string uuid() const {
+      // TODO: fix for boost::cpp_int
       std::vector<char> data(16);
       ranges::fill(data, 0);
       rank().binary_save(data);

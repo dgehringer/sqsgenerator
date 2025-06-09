@@ -160,12 +160,12 @@ namespace sqsgen::core {
 
       configuration_t configuration() { return this->species; }
 
-      std::string rank(int base = 10) {
+      std::string rank() {
         return core::rank_permutation(
                    as<std::vector>{}(this->species | views::transform([&](auto &&s) {
                                        return this->_opt_config->species_map.first.at(s);
                                      })))
-            .to_string(base);
+            .str();
       }
 
       sro_parameter<T> parameter(usize_t shell, std::string const &i, std::string const &j) {

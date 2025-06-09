@@ -37,9 +37,9 @@ namespace sqsgen::io::config {
           structure.apply_composition_and_decompose(composition).front().species);
       if (iterations > std::numeric_limits<iterations_t>::max())
         return parse_error::from_msg<key, CODE_BAD_VALUE>(
-            std::format("The number of permutations to test is {}. I'm a pretty fast programm, but "
+            std::format("The number of permutations to test is {}. I'm a pretty fast program, but "
                         "this is too much even for me ;=)",
-                        iterations.to_string()));
+                        iterations.str()));
       return std::make_optional(iterations_t{iterations});
     } else
       return get_optional<key, iterations_t>(doc)
