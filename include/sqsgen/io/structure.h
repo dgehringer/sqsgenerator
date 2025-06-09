@@ -151,7 +151,7 @@ namespace sqsgen::io {
 
       return nlohmann::json{
           {"cell", cell},
-          {"unique_id", structure.uuid()},
+          // {"unique_id", structure.uuid()},
           {"user", "sqsgen"},
           {"mtime", years_since_2000()},
           {"ctime", years_since_2000()},

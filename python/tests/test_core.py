@@ -59,7 +59,7 @@ def test_systematic_all_results(prec):
         assert collections.Counter(structure.species) == collections.Counter(
             {22: 8, 13: 8}
         )
-        ranks.discard(int(sol.rank(10)))
+        ranks.discard(int(sol.rank()))
 
         for index, coords, _ in structure:
             assert as_tuple(coords) == site_by_index[index]

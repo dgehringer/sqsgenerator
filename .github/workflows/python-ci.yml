@@ -35,11 +35,6 @@ jobs:
         with:
           submodules: recursive
 
-      # Required on macOS to build gmp package
-      - name: Install autoconf
-        run: brew install autoconf-archive libtool automake pkgconf pkg-config
-        if: ${{ runner.os == 'macOS' }}
-
       - uses: friendlyanon/setup-vcpkg@v1
 
       - name: Set up Python ${{ matrix.python-version }}

@@ -6,8 +6,8 @@
 #define SQSGEN_TYPES_H
 
 #include <Eigen/Core>
+#include <boost/multiprecision/cpp_int.hpp>
 #include <map>
-#include <mp++/integer.hpp>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <vector>
 
@@ -16,7 +16,7 @@
 namespace sqsgen {
 
   using specie_t = std::uint_fast8_t;
-  using rank_t = mppp::integer<2>;
+  using rank_t = boost::multiprecision::cpp_int;
   using configuration_t = std::vector<specie_t>;
 
   template <class T> using vset = core::helpers::sorted_vector<T>;

@@ -143,11 +143,7 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
             return as<std::vector>{}(self.species
                                      | views::transform([](auto &&z) { return atom::from_z(z); }));
           })
-      .def_property_readonly("uuid",
-                             [](structure<T> &self) {
-                               auto uuid = py::module_::import("uuid");
-                               return uuid.attr("to_string")(self.uuid());
-                             })
+
       .def_property_readonly("sites", [](structure<T> &s) { return as<std::vector>{}(s.sites()); })
       .def_property_readonly("distance_matrix", &structure<T>::distance_matrix)
       .def("shell_matrix", &structure<T>::shell_matrix, py::arg("shell_radii"),
@@ -284,7 +280,7 @@ void bind_result(py::module &m) {
         .def("sro", [](sqs_result_wrapper<T, Mode> &r) { return r.parameter(); })
         .def("shell_index", &sqs_result_wrapper<T, Mode>::shell_index, py::arg("shell"))
         .def("species_index", &sqs_result_wrapper<T, Mode>::species_index, py::arg("species"))
-        .def("rank", &sqs_result_wrapper<T, Mode>::rank, py::arg("base") = 10);
+        .def("rank", &sqs_result_wrapper<T, Mode>::rank);
   }
   if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
     py::class_<sqs_result_wrapper<T, Mode>>(

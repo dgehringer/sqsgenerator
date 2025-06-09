@@ -9,20 +9,12 @@ include(FetchContent)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(gmp REQUIRED IMPORTED_TARGET gmp)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
-set(MPPP_BUILD_STATIC_LIBRARY ON CACHE INTERNAL "Build mp++ as a static library")
-FetchContent_Declare(
-        mp++
-        GIT_REPOSITORY https://github.com/bluescarni/mppp.git
-        GIT_TAG v2.0.0
-)
-FetchContent_MakeAvailable(mp++)
-set_property(TARGET mp++ PROPERTY POSITION_INDEPENDENT_CODE ON)
+find_package(boost_multiprecision REQUIRED CONFIG)
+
 
 if (WITH_MPI)
     find_package(MPI REQUIRED)
@@ -89,7 +81,7 @@ if (BUILD_CLI)
     add_compile_options("-DSQSGEN_BUILD_COMMIT=${SQSGEN_BUILD_COMMIT}")
 
     add_executable(sqsgen "cli/main.cpp" "cli/progress.h" "cli/helpers.h" "cli/termcolor.h")
-    target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only PkgConfig::gmp Eigen3::Eigen mp++ argparse::argparse)
+    target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only Eigen3::Eigen Boost::multiprecision argparse::argparse)
     if (WITH_MPI)
         target_link_libraries(sqsgen PRIVATE ${MPI_LIBRARIES} mpl)
     endif ()

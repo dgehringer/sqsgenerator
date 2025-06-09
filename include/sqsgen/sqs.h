@@ -305,7 +305,7 @@ namespace sqsgen {
 
       if (mpi_mode && head) spdlog::info("[Rank {}] Running optimizer in MPI mode", this->rank());
       auto [start, end] = this->iteration_range();
-      spdlog::info("[Rank {}] start={}, end={}", this->rank(), start.to_string(), end.to_string());
+      spdlog::info("[Rank {}] start={}, end={}", this->rank(), start.str(), end.str());
 
       auto num_sublattices = this->opt_configs.size();
       auto pairs{this->transpose_setting([](auto&& c) { return c.pairs; })};
@@ -326,7 +326,7 @@ namespace sqsgen {
         if (stop.stop_requested()) return;
         core::tick<TIMING_TOTAL> tick_total;
         spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(),
-                      this->thread_id(), rstart.to_string(), rend.to_string());
+                      this->thread_id(), rstart.str(), rend.str());
 
         core::tick<TIMING_CHUNK_SETUP> tick_setup;
         iterations_t iterations{rend - rstart};
@@ -389,7 +389,7 @@ namespace sqsgen {
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
             spdlog::debug(std::format(
                 "[Rank {}, Thread {}] found result with objective {} at iteration {}", this->rank(),
-                this->thread_id(), objective_value, (rstart + i - start).to_string()));
+                this->thread_id(), objective_value, rank_t(rstart + i - start).str()));
             this->insert_result(std::move(current));
             // we update the search object. A new entry has been found (on the head rank we will
             // automatically update it)
@@ -410,7 +410,7 @@ namespace sqsgen {
           callback.value()(sqs_callback_context<T>{stop_source, statistics.data()});
         }
         spdlog::debug("[Rank {}, Thread {}] finished chunk start={}, end={}", this->rank(),
-                      this->thread_id(), rstart.to_string(), rend.to_string());
+                      this->thread_id(), rstart.str(), rend.str());
         statistics.tock(tick_total);
       };
 

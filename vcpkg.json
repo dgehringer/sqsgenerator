@@ -5,10 +5,7 @@
     "eigen3",
     "spdlog",
     "rapidhash",
-    {
-      "name": "gmp",
-      "platform": "windows"
-    },
+    "boost-multiprecision",
     "nlohmann-json",
     "bshoshany-thread-pool",
     "gtest",

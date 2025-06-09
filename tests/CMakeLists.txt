@@ -9,7 +9,6 @@ list(REMOVE_ITEM tests "${SQSGEN_TEST_SOURCE_DIR}/main.cpp")
 
 include_directories(${SQSGEN_INCLUDE_DIR})
 
-list(APPEND SQSGEN_TEST_LIBS "mp++")
 list(APPEND SQSGEN_TEST_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_TEST_LIBS "pybind11::embed")
 list(APPEND SQSGEN_TEST_LIBS "nlohmann_json::nlohmann_json")
