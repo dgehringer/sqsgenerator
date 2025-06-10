@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Callable
 
 if sys.platform == "win32":
     # On Windows, we need to add the directory of the current file to the DLL search path for Python 3.12+
@@ -10,6 +11,8 @@ from ._core import (
     LogLevel,
     ParseError,
     Prec,
+    SqsCallbackContextDouble,
+    SqsCallbackContextFloat,
     SqsConfigurationDouble,
     SqsConfigurationFloat,
     SqsResultInteractDouble,
@@ -46,12 +49,16 @@ __version__ = __core__version__
 
 __build__ = __core__build__
 
+
 SqsConfiguration = SqsConfigurationFloat | SqsConfigurationDouble
 Structure = StructureFloat | StructureDouble
 SqsResultSplit = SqsResultSplitFloat | SqsResultSplitDouble
 SqsResultInteract = SqsResultInteractFloat | SqsResultInteractDouble
 SqsResultPackSplit = SqsResultPackSplitFloat | SqsResultPackSplitDouble
+SqsCallbackContext = SqsCallbackContextFloat | SqsCallbackContextDouble
 SqsResultPackInteract = SqsResultPackInteractFloat | SqsResultPackInteractDouble
+
+SqsCallback = Callable[[SqsCallbackContext], None]
 
 SqsResult = SqsResultInteract | SqsResultSplit
 SqsResultPack = SqsResultPackInteract | SqsResultPackSplit
@@ -61,6 +68,9 @@ __all__ = [
     "LogLevel",
     "ParseError",
     "Prec",
+    "SqsCallbackContext",
+    "SqsCallbackContextDouble",
+    "SqsCallbackContextFloat",
     "SqsConfiguration",
     "SqsConfigurationDouble",
     "SqsConfigurationFloat",

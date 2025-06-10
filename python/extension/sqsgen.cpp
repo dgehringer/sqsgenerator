@@ -306,6 +306,12 @@ void bind_result_pack(py::module &m) {
            })
 
       .def("__len__", [](sqs_result_pack<T, Mode> &self) { return self.size(); })
+      .def("__getitem__",
+           [](sqs_result_pack<T, Mode> &self, int index) {
+             if (index < 0) index += self.size();
+             if (index < 0 || index >= self.size()) throw std::out_of_range("Index out of range");
+             return self.results.at(index);
+           })
       .def("num_objectives", &sqs_result_pack<T, Mode>::size)
       .def("num_results", &sqs_result_pack<T, Mode>::num_results)
       .def("bytes", &to_bytes<sqs_result_pack<T, Mode>>)
