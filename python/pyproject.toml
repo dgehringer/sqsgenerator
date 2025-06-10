@@ -7,7 +7,7 @@ maintainers = [
     { name = "Dominik Gehringer", email = "dgehringer@gmail.com" }
 ]
 description = "Create atomic structures for molecular simulations"
-dependencies = ["numpy", "click", "rich"]
+dependencies = ["numpy", "click"]
 dynamic = ["version"]
 
 [tool.setuptools.dynamic]
