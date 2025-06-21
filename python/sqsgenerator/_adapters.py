@@ -1,10 +1,10 @@
 import functools
 import os.path
-from typing import get_args
+from typing import Literal, cast, get_args
 
 from typing_extensions import NamedTuple
 
-from .core import Prec, Structure, StructureDouble, StructureFloat
+from .core import Prec, Structure, StructureDouble, StructureFloat, StructureFormat
 
 try:
     from pymatgen.core import Structure as PymatgenStructure
@@ -124,7 +124,6 @@ if HAVE_ASE:
 
     class AseFileFormat(NamedTuple):
         extension: str
-        capabilities: str
         code: str
 
     @functools.lru_cache(maxsize=1)
@@ -138,46 +137,39 @@ if HAVE_ASE:
         from ase.io.formats import all_formats
 
         fmts = {
-            "abinit-in": "RW",
-            "aims": "RW",
-            "cfg": "RW",
-            "cif": "RW+",
-            "crystal": "RW",
-            "cube": "RW",
-            "dftb": "RW",
-            "dlp4": "RW",
-            "dmol-car": "RW",
-            "dmol-incoor": "RW",
-            "espresso-in": "RW",
-            "gaussian-in": "RW",
-            "gen": "RW",
-            "gpumd": "RW",
-            "gromacs": "RW",
-            "gromos": "RW",
-            "json": "RW+",
-            "lammps-data": "RW",
-            "magres": "RW",
-            "mustem": "RW",
-            "nwchem-in": "RW",
-            "onetep-in": "RW",
-            "prismatic": "RW",
-            "res": "RW",
-            "rmc6f": "RW",
-            "struct": "RW",
-            "sys": "RW",
-            "traj": "RW+",
-            "turbomole": "RW",
-            "v-sim": "RW",
-            "vasp": "RW",
-            "xsd": "RW",
+            "abinit-in",
+            "aims",
+            "cfg",
+            "cif",
+            "crystal",
+            "cube",
+            "dlp4",
+            "dmol-car",
+            "dmol-incoor",
+            "gaussian-in",
+            "gen",
+            "gpumd",
+            "gromacs",
+            "gromos",
+            "json",
+            "magres",
+            "nwchem-in",
+            "onetep-in",
+            "res",
+            "rmc6f",
+            "struct",
+            "sys",
+            "traj",
+            "v-sim",
+            "vasp",
+            "xsd",
         }
         return {
             fmt: AseFileFormat(
                 fmt,
-                capabilities,
                 all_formats[fmt].code,
             )
-            for fmt, capabilities in fmts.items()
+            for fmt in fmts
         }
 
     def to_ase(structure: Structure) -> Atoms:
@@ -193,7 +185,7 @@ if HAVE_ASE:
         return Atoms(
             numbers=structure.species,
             scaled_positions=structure.frac_coords,
-            cell=structure.lattice.matrix,
+            cell=structure.lattice,
             pbc=True,
         )
 
@@ -233,7 +225,7 @@ if HAVE_ASE:
         if fmt not in ase_formats():
             raise ValueError(f"Unsupported ASE format: {fmt}")
 
-        code = ase_formats[fmt].code
+        code = ase_formats()[fmt].code
         if code.endswith("S"):
             out = read(filename, format=fmt)
         elif code.endswith("F"):
@@ -245,7 +237,7 @@ if HAVE_ASE:
         else:
             raise ValueError(f"Unsupported ASE format code: {code}")
 
-        return out[0] if code.startswith("+") else out
+        return out[0] if isinstance(out, list) else out
 
     def write_ase(atoms: Atoms, filename: str, fmt: str) -> None:
         """
@@ -261,8 +253,9 @@ if HAVE_ASE:
         if fmt not in ase_formats():
             raise ValueError(f"Unsupported ASE format: {fmt}")
 
-        code = ase_formats[fmt].code
-        out = [atoms] if code.startswith("+") else atoms
+        code = ase_formats()[fmt].code
+        # out = [atoms] if code.startswith("+") else atoms
+        out = atoms
         if code.endswith("S"):
             write(filename, out, format=fmt)
         elif code.endswith("F"):
@@ -276,10 +269,10 @@ if HAVE_ASE:
 
 
 def sqsgen_formats() -> tuple[str, ...]:
-    return "vasp", "cif", "json"
+    return "poscar", "cif", "json"
 
 
-def deduce_format(filename: str) -> str:
+def deduce_format(filename: str) -> tuple[str, str]:
     """
     Deduce the file format from the file extension.
 
@@ -322,7 +315,7 @@ def deduce_format(filename: str) -> str:
                         "ASE is not installed. Please install it to use this format."
                     )
                 if fmt in ase_formats():
-                    return "ase", fmt
+                    return "ase", cast(str, fmt)
                 else:
                     raise ValueError(
                         "ase only supports one of this formats: "
@@ -334,18 +327,21 @@ def deduce_format(filename: str) -> str:
                         "Pymatgen is not installed. Please install it to use this format."
                     )
                 if fmt in pymatgen_formats():
-                    return "pymatgen", fmt
+                    return "pymatgen", cast(str, fmt)
                 else:
                     raise ValueError(
                         "pymatgen only supports one of this formats: "
                         + ", ".join(pymatgen_formats())
                     )
+            case _:
+                raise ValueError("Cannot deduce file format from extension")
 
 
 def write(
     structure: Structure,
     filename: str,
     fmt: str | None = None,
+    backend: Literal["sqsgen", "ase", "pymatgen"] = "sqsgen",
 ) -> None:
     """
     Write a structure to a file in the specified format.
@@ -355,8 +351,19 @@ def write(
         filename (str): The file path to write to.
         fmt (str): The file format to use.
     """
+    if fmt is not None and (
+        not filename.endswith(f"{backend}.{fmt}") or not filename.endswith(fmt)
+    ):
+        raise ValueError(
+            "The filename must end with the format extension if explicitly specified."
+        )
 
-    backend, fmt = fmt or deduce_format(filename)
+    backend, fmt = (fmt, backend) if fmt is not None else deduce_format(filename)
+
+    def _write_str(s: str | bytes) -> None:
+        with open(filename, "w" if isinstance(s, str) else "wb") as f:
+            f.write(s)
+
     match backend:
         case "ase":
             write_ase(to_ase(structure), filename, fmt)
@@ -365,4 +372,66 @@ def write(
         case "sqsgen":
             match fmt:
                 case "cif":
-                    pass
+                    _write_str(structure.dump(StructureFormat.cif))
+                case "vasp" | "poscar":
+                    _write_str(structure.dump(StructureFormat.poscar))
+                case "json":
+                    _write_str(structure.dump(StructureFormat.json_sqsgen))
+                case _:
+                    raise ValueError(
+                        f"Unsupported format '{fmt}' for sqsgen backend. "
+                        "Supported formats are: cif, vasp, poscar and json."
+                    )
+
+
+def read(
+    filename: str,
+    fmt: str | None = None,
+    backend: Literal["sqsgen", "ase", "pymatgen"] = "sqsgen",
+    prec: Prec = Prec.double,
+) -> Structure:
+    """
+    Read a structure from a file in the specified format.
+
+    Args:
+        filename (str): The file path to read from.
+        fmt (str): The file format to use.
+        backend (Literal["sqsgen", "ase", "pymatgen"]): The backend to use for reading.
+        prec (Prec): The precision type.
+
+    Returns:
+        Structure: The read structure.
+    """
+    if fmt is not None and not filename.endswith(fmt):
+        raise ValueError(
+            "The filename must end with the format extension if explicitly specified."
+        )
+
+    backend, fmt = (fmt, backend) if fmt is not None else deduce_format(filename)
+
+    def _read_str() -> str:
+        with open(filename) as f:
+            return f.read()
+
+    match backend:
+        case "ase":
+            return from_ase(read_ase(filename, fmt), prec)
+        case "pymatgen":
+            return from_pymatgen(read_pymatgen(filename, fmt), prec)
+        case "sqsgen":
+            match fmt:
+                case "vasp" | "poscar":
+                    return _structure_type(prec).from_poscar(_read_str())
+                case "json":
+                    return _structure_type(prec).from_json(
+                        _read_str(), StructureFormat.json_sqsgen
+                    )
+                case _:
+                    raise ValueError(
+                        f"Unsupported format '{fmt}' for sqsgen backend. "
+                        "Supported formats are: vasp, poscar and json."
+                    )
+        case _:
+            raise ValueError(
+                f"Unsupported backend '{backend}'. Supported backends are: sqsgen, ase, pymatgen."
+            )
