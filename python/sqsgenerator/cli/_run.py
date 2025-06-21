@@ -2,7 +2,14 @@ import threading
 
 import click
 
-from ..core import LogLevel, ParseError, SqsResultPack, optimize, parse_config
+from ..core import (
+    LogLevel,
+    ParseError,
+    SqsCallbackContext,
+    SqsResultPack,
+    optimize,
+    parse_config,
+)
 from ._shared import render_error
 
 
@@ -36,7 +43,7 @@ def run_optimization(
         stop_gracefully: bool = False
         stop_event = threading.Event()
 
-        def _callback(ctx):
+        def _callback(ctx: SqsCallbackContext) -> None:
             nonlocal iterations_finished, stop_gracefully
             if stop_gracefully:
                 ctx.stop()

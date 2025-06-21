@@ -1,12 +1,14 @@
+import functools
+import io
 import os
 
 import click
 
-from ..core import LogLevel
+from ..core import LogLevel, Prec, load_result_pack
 from ..templates import load_templates
-from ._shared import render_table
-from .run import run_optimization
-from .version import print_version, version_string
+from ._run import run_optimization
+from ._shared import render_error, render_table
+from ._version import print_version, version_string
 
 
 @click.group(
@@ -126,10 +128,72 @@ def output(ctx: click.Context, output: str) -> None:
     ctx.obj = output
 
 
+@output.command(name="list")
+@click.pass_obj
+def _list(output: click.File) -> None:
+    pack = load_result_pack(output.read(), prec=Prec.double)
+    buf = io.StringIO()
+    print_ = functools.partial(print, file=buf)
+    print_(
+        click.style("Mode: ", bold=True)
+        + click.style(pack.config.iteration_mode.name, italic=True)
+    )
+    print_(click.style("min(O(σ)): ", bold=True) + f"{pack.best().objective:.5f}")
+    print_(click.style("Num. objectives:  ", bold=True) + f"{pack.num_objectives()}")
+    print_()
+    render_table(
+        [
+            (f"{index}", f"{objective:.5f}", f"{len(results)}")
+            for index, (objective, results) in enumerate(pack)
+        ],
+        "INDEX",
+        "OBJ.",
+        "N",
+        sep="  ",
+        INDEX=dict(fg="cyan", bold=True),
+        buf=buf,
+    )
+
+
 @output.command(name="structure")
 @click.pass_obj
-def structure(output: click.File) -> None:
-    print(output)
+@click.option(
+    "--objective",
+    type=click.IntRange(min=0),
+    default=[0],
+    multiple=True,
+    show_default=True,
+    help="select the n-th best objective. This is value is specified as an index. This argument can be specified multiple times to export multiple structures.",
+)
+@click.option(
+    "--index",
+    "-i",
+    type=click.IntRange(min=0),
+    default=[0],
+    multiple=True,
+    show_default=True,
+    help="the index of the structure to export,  specified by the --objective option. This argument can be specified multiple times to export multiple structures.",
+)
+def structure(
+    output: click.File, objective: tuple[int, ...], index: tuple[int, ...]
+) -> None:
+    pack = load_result_pack(output.read(), prec=Prec.double)
+    for obj in objective:
+        if not (0 <= obj < pack.num_objectives()):
+            render_error(
+                f"Invalid objective index '{obj}'",
+                info=f"objective index must be between 0 and {pack.num_objectives() - 1}",
+            )
+        else:
+            _, results = pack[obj]
+            for idx in index:
+                if not (0 <= idx < len(results)):
+                    render_error(
+                        f"Invalid structure index '{idx}' for objective {obj}",
+                        info=f"structure index must be between 0 and {len(results) - 1} for objective {obj}",
+                    )
+                else:
+                    print(obj, idx)
 
 
 if __name__ == "__main__":

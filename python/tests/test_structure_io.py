@@ -1,6 +1,18 @@
+import os.path
+import tempfile
+
 import numpy as np
 import pytest
 
+from sqsgenerator._adapters import (
+    ase_formats,
+    pymatgen_formats,
+    read,
+    sqsgen_formats,
+    to_ase,
+    to_pymatgen,
+    write,
+)
 from sqsgenerator.core import (
     StructureDouble,
     StructureFloat,
@@ -83,3 +95,27 @@ def test_structure_pymatgen(structure_type):
         Structure.from_str(structure.dump(StructureFormat.cif), fmt="cif")
         == pymatgen_structure
     )
+
+
+ALL_FORMATS = list(sqsgen_formats()) + [f"sqsgen.{fmt}" for fmt in sqsgen_formats()]
+
+if HAVE_ASE:
+    ALL_FORMATS += [f"ase.{fmt}" for fmt in ase_formats().keys()]
+if HAVE_PYMATGEN:
+    ALL_FORMATS += [f"pymatgen.{fmt}" for fmt in pymatgen_formats()]
+
+
+@pytest.mark.parametrize("fmt", ALL_FORMATS)
+@pytest.mark.parametrize("structure_type", [StructureFloat, StructureDouble])
+def test_write_read_pymatgen(structure_type, fmt):
+    structure = make_structure(structure_type) * (2, 2, 2)
+    pymatgen_structure = to_pymatgen(structure)
+
+    if fmt == "sqsgen.cif" or fmt == "cif":
+        pytest.skip(f"Skipping {fmt} sqsgen CIF")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        name = os.path.join(temp_dir, f"test.pymatgen.{fmt}")
+        write(structure, name)
+        loaded = to_pymatgen(read(name))
+        assert pymatgen_structure == loaded

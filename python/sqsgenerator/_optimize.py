@@ -5,6 +5,7 @@ from .core import (
     IterationMode,
     LogLevel,
     Prec,
+    SqsCallback,
     SqsConfiguration,
     SqsConfigurationDouble,
     SqsConfigurationFloat,
@@ -111,11 +112,24 @@ def parse_config(
 
 
 def optimize(
-    config: dict[str, Any] | SqsConfiguration, level: LogLevel = LogLevel.warn
+    config: dict[str, Any] | SqsConfiguration | str,
+    level: LogLevel = LogLevel.warn,
+    callback: SqsCallback | None = None,
 ) -> SqsResultPack:
+    """
+    Optimize the SQS configuration based on the provided parameters.
+
+    Args:
+        config (dict[str, Any] | SqsConfiguration | str): The configuration data to optimize.
+        level (LogLevel): The logging level for the optimization process. Defaults to `LogLevel.warn`.
+        callback (SqsCallback | None): A callback function to monitor the optimization progress. Defaults to `None`.
+
+    Returns:
+        SqsResultPack: The result of the optimization process.
+    """
     c = (
         config
         if isinstance(config, (SqsConfigurationFloat, SqsConfigurationDouble))
         else parse_config(config)
     )
-    return _optimize(c, level)
+    return _optimize(c, log_level=level, callback=callback)
