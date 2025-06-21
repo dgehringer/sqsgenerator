@@ -1,3 +1,4 @@
+import os.path
 import tempfile
 
 import numpy as np
@@ -96,41 +97,25 @@ def test_structure_pymatgen(structure_type):
     )
 
 
-@pytest.mark.skipif(not HAVE_PYMATGEN, reason="pymatgen not installed")
+ALL_FORMATS = list(sqsgen_formats()) + [f"sqsgen.{fmt}" for fmt in sqsgen_formats()]
+
+if HAVE_ASE:
+    ALL_FORMATS += [f"ase.{fmt}" for fmt in ase_formats().keys()]
+if HAVE_PYMATGEN:
+    ALL_FORMATS += [f"pymatgen.{fmt}" for fmt in pymatgen_formats()]
+
+
+@pytest.mark.parametrize("fmt", ALL_FORMATS)
 @pytest.mark.parametrize("structure_type", [StructureFloat, StructureDouble])
-@pytest.mark.parametrize("fmt", pymatgen_formats())
 def test_write_read_pymatgen(structure_type, fmt):
     structure = make_structure(structure_type) * (2, 2, 2)
     pymatgen_structure = to_pymatgen(structure)
 
-    with tempfile.NamedTemporaryFile(suffix=f".pymatgen.{fmt}") as f:
-        write(
-            structure,
-            f.name,
-        )
-        loaded = to_pymatgen(
-            read(
-                f.name,
-            )
-        )
+    if fmt == "sqsgen.cif" or fmt == "cif":
+        pytest.skip(f"Skipping {fmt} sqsgen CIF")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        name = os.path.join(temp_dir, f"test.pymatgen.{fmt}")
+        write(structure, name)
+        loaded = to_pymatgen(read(name))
         assert pymatgen_structure == loaded
-
-
-@pytest.mark.skipif(not HAVE_ASE, reason="ase not installed")
-@pytest.mark.parametrize("structure_type", [StructureFloat, StructureDouble])
-@pytest.mark.parametrize("fmt", ase_formats().keys())
-def test_write_read_ase(structure_type, fmt):
-    structure = make_structure(structure_type) * (2, 2, 2)
-    ase_atoms = to_pymatgen(structure)
-
-    with tempfile.NamedTemporaryFile(suffix=f".ase.{fmt}") as f:
-        write(
-            structure,
-            f.name,
-        )
-        loaded = to_pymatgen(
-            read(
-                f.name,
-            )
-        )
-        assert ase_atoms == loaded

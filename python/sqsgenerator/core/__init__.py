@@ -1,10 +1,4 @@
-import os
-import sys
 from typing import Callable
-
-if sys.platform == "win32":
-    # On Windows, we need to add the directory of the current file to the DLL search path for Python 3.12+
-    os.add_dll_directory(os.path.dirname(__file__))
 
 from ._core import (
     IterationMode,
