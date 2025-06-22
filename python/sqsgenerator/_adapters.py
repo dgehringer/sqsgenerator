@@ -435,3 +435,19 @@ def read(
             raise ValueError(
                 f"Unsupported backend '{backend}'. Supported backends are: sqsgen, ase, pymatgen."
             )
+
+
+@functools.lru_cache(maxsize=1)
+def available_formats() -> tuple[str, ...]:
+    """
+    Return all available formats for reading and writing structures.
+
+    Returns:
+        tuple[str, ...]: A tuple of available formats.
+    """
+    fmts = list(sqsgen_formats()) + [f"sqsgen.{fmt}" for fmt in sqsgen_formats()]
+    if HAVE_ASE:
+        fmts += list(f"ase.{fmt}" for fmt in ase_formats().keys())
+    if HAVE_PYMATGEN:
+        fmts += list(f"pymatgen.{fmt}" for fmt in pymatgen_formats())
+    return tuple(fmts)

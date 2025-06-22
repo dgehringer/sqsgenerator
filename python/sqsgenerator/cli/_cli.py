@@ -4,6 +4,7 @@ import os
 
 import click
 
+from .._adapters import available_formats, read, write
 from ..core import LogLevel, Prec, load_result_pack
 from ..templates import load_templates
 from ._run import run_optimization
@@ -174,8 +175,17 @@ def _list(output: click.File) -> None:
     show_default=True,
     help="the index of the structure to export,  specified by the --objective option. This argument can be specified multiple times to export multiple structures.",
 )
+@click.option(
+    "--format",
+    "-f",
+    "fmt",
+    type=click.Choice(available_formats()),
+    default="cif",
+    show_default=True,
+    help="the output format of the structure",
+)
 def structure(
-    output: click.File, objective: tuple[int, ...], index: tuple[int, ...]
+    output: click.File, objective: tuple[int, ...], index: tuple[int, ...], fmt: str
 ) -> None:
     pack = load_result_pack(output.read(), prec=Prec.double)
     for obj in objective:
@@ -193,7 +203,7 @@ def structure(
                         info=f"structure index must be between 0 and {len(results) - 1} for objective {obj}",
                     )
                 else:
-                    print(obj, idx)
+                    write(results[idx].structure(), f"sqs-{obj}-{idx}.{fmt}")
 
 
 if __name__ == "__main__":
