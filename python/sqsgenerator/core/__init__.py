@@ -1,6 +1,7 @@
 from typing import Callable
 
 from ._core import (
+    Atom,
     IterationMode,
     LogLevel,
     ParseError,

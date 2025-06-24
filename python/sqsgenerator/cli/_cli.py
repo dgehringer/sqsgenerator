@@ -1,11 +1,12 @@
 import functools
 import io
+import json
 import os
 
 import click
 
 from .._adapters import available_formats, read, write
-from ..core import LogLevel, Prec, load_result_pack
+from ..core import Atom, LogLevel, Prec, load_result_pack
 from ..templates import load_templates
 from ._run import run_optimization
 from ._shared import render_error, render_table
@@ -204,6 +205,28 @@ def structure(
                     )
                 else:
                     write(results[idx].structure(), f"sqs-{obj}-{idx}.{fmt}")
+
+
+@output.command(name="config")
+@click.pass_obj
+def config(output: click.File) -> None:
+    pack = load_result_pack(output.read(), prec=Prec.double)
+
+    parsed = json.loads(pack.config.json())
+    # fixup composition
+    for composition in parsed["composition"]:
+        composition["composition"] = {
+            Atom.from_z(z).symbol: count for z, count in composition["composition"]
+        }
+    parsed["shell_weights"] = [
+        {f"{num}": weight for num, weight in shell_weights}
+        for shell_weights in parsed["shell_weights"]
+    ]
+
+    stem, ext = os.path.splitext(output.name)
+
+    with open(f"{stem}.config.json", "w") as config_file:
+        json.dump(parsed, config_file, indent=2)
 
 
 if __name__ == "__main__":
