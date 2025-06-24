@@ -1,6 +1,19 @@
+import os.path
+import tempfile
+
 import numpy as np
 import pytest
 
+from sqsgenerator._adapters import (
+    ase_formats,
+    available_formats,
+    pymatgen_formats,
+    read,
+    sqsgen_formats,
+    to_ase,
+    to_pymatgen,
+    write,
+)
 from sqsgenerator.core import (
     StructureDouble,
     StructureFloat,
@@ -83,3 +96,19 @@ def test_structure_pymatgen(structure_type):
         Structure.from_str(structure.dump(StructureFormat.cif), fmt="cif")
         == pymatgen_structure
     )
+
+
+@pytest.mark.parametrize("fmt", available_formats())
+@pytest.mark.parametrize("structure_type", [StructureFloat, StructureDouble])
+def test_write_read(structure_type, fmt):
+    structure = make_structure(structure_type) * (2, 2, 2)
+    pymatgen_structure = to_pymatgen(structure)
+
+    if fmt == "sqsgen.cif" or fmt == "cif":
+        pytest.skip(f"Skipping {fmt} sqsgen CIF")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        name = os.path.join(temp_dir, f"test.{fmt}")
+        write(structure, name)
+        loaded = to_pymatgen(read(name))
+        assert pymatgen_structure == loaded
