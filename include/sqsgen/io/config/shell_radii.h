@@ -124,11 +124,11 @@ namespace sqsgen::io::config {
                                std::vector<sublattice> const& composition) {
     return parse_for_mode<key>(
         [&] {
-          return detail::shell_radii_parser<key, SUBLATTICE_MODE_INTERACT, T>::template parse(
+          return detail::shell_radii_parser<key, SUBLATTICE_MODE_INTERACT, T>::parse(
               doc, std::forward<core::structure<T>>(structure));
         },
         [&] {
-          return detail::shell_radii_parser<key, SUBLATTICE_MODE_SPLIT, T>::template parse(
+          return detail::shell_radii_parser<key, SUBLATTICE_MODE_SPLIT, T>::parse(
               doc, std::forward<core::structure<T>>(structure), composition);
         },
         mode);

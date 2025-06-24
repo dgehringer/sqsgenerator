@@ -216,6 +216,11 @@ template <string_literal Name, class T> void bind_configuration(py::module &m) {
       .def_readwrite("thread_config", &configuration<T>::thread_config)
       .def_readwrite("composition", &configuration<T>::composition)
       .def("bytes", &to_bytes<configuration<T>>)
+      .def("json",
+           [](configuration<T> const &config) {
+             nlohmann::json j = config;
+             return j.dump();
+           })
       .def_static("from_bytes", &from_bytes<configuration<T>>);
 }
 
