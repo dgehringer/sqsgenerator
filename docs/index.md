@@ -1,0 +1,38 @@
+
+# Welcome to *sqsgenerator*'s documentation!
+
+## Highlights
+- 🚀 Blazingly fast short-range-order calculations
+- 🔌 Easy integration with popular frameworks such as [*ase*](https://wiki.fysik.dtu.dk/ase/),
+  [*pymatgen*](https://pymatgen.org/) and [*pyiron*](https://pyiron.org/)
+- ➰ Monte-Carlo and systematic approach to compute optimal atomic configuration
+- 🧵multi-threaded by default (optional MPI support)
+- 📦️Light dependency footprint
+- 🍼easy to use
+  -  🐍 Python CLI included
+  -  💻 native application for HPC environments (no 🐍 Python required)
+  - 🔍 simple yet powerful Python API automation and analysis
+
+
+````{admonition} Appreciation
+:class: tip
+
+I would highly, appreciate, if you cite our [article](https://doi.org/10.1016/j.cpc.2023.108664) in case you use the
+software in your research. Here is the {download}`BibTeX entry <citation.bib>`. Many thanks in advance 🙏.
+
+````
+
+
+## Table of contents
+
+```{toctree}
+---
+maxdepth: 1
+---
+
+
+```
+
+## API Reference
+* {ref}`genindex`
+* {ref}`search`
