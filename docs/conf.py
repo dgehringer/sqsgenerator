@@ -28,7 +28,12 @@ author = "Dominik Gehringer"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx_inline_tabs", "myst_parser"]
+extensions = [
+    "sphinx_inline_tabs",
+    "myst_parser",
+    "sphinx.ext.mathjax",
+    "sphinx_math_dollar",
+]
 
 
 templates_path = ["_templates"]
