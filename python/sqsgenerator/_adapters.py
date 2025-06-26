@@ -1,8 +1,6 @@
 import functools
 import os.path
-from typing import Literal, cast, get_args
-
-from typing_extensions import NamedTuple
+from typing import Literal, NamedTuple, cast, get_args
 
 from .core import Prec, Structure, StructureDouble, StructureFloat, StructureFormat
 
