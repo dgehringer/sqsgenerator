@@ -31,10 +31,23 @@ author = "Dominik Gehringer"
 extensions = [
     "sphinx_inline_tabs",
     "myst_parser",
-    "sphinx.ext.mathjax",
-    "sphinx_math_dollar",
 ]
 
+myst_enable_extensions = [
+    "amsmath",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "html_admonition",
+    "html_image",
+    "replacements",
+    "smartquotes",
+    "substitution",
+    "tasklist",
+]
+
+myst_dmath_allow_labels = True
+html_show_sourcelink = True
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
@@ -46,7 +59,5 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "furo"
 html_static_path = ["_static"]
 html_logo = "logo_large.svg"
-
 html_short_title = "sqsgenerator"
-
 html_favicon = "favicon.ico"

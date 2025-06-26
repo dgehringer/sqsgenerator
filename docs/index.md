@@ -31,7 +31,8 @@ software in your research. Here is the {download}`BibTeX entry <citation.bib>`. 
 maxdepth: 1
 ---
 
-sqsgen_under_the_hood
+parameters
+under_the_hood
 
 ```
 
