@@ -6,9 +6,16 @@ authors = [
 maintainers = [
     {name = "Dominik Gehringer", email = "dgehringer@gmail.com"}
 ]
-description="Create atomic structures for molecular simulations"
+license = "MIT"
+description="Create atomic structures for solid solutions for molecular simulations"
 dependencies = ["numpy", "click", "rich"]
 dynamic = ["version"]
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://github.com/dgehringer/sqsgenerator"
+Issues = "https://github.com/dgehringer/sqsgenerator/issues"
+
 
 [tool.setuptools.dynamic]
 version = {file = "version"}
@@ -34,13 +41,6 @@ build-backend = "setuptools.build_meta"
 
 
 [tool.pytest.ini_options]
-minversion = "6.0"
-addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
-xfail_strict = true
-filterwarnings = [
-    "error",
-    "ignore:(ast.Str|Attribute s|ast.NameConstant|ast.Num) is deprecated:DeprecationWarning:_pytest",
-]
 testpaths = ["tests"]
 
 [tool.setuptools.package-data]
