@@ -1,6 +1,6 @@
 {
   "name": "sqsgenerator",
-  "version-string": "0.4.5",
+  "version-string": "0.4.6",
   "dependencies": [
     "eigen3",
     "spdlog",
