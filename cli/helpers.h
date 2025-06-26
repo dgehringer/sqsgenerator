@@ -39,7 +39,7 @@ namespace sqsgen::cli {
     return result;
   }
 
-  inline auto fixup_compositon(sublattice const& sl) {
+  inline auto fixup_composition(sublattice const& sl) {
     nlohmann::json result;
     result["sites"] = sl.sites;
     for (auto&& [k, v] : sl.composition) result[core::atom::from_z(k).symbol] = v;
@@ -55,7 +55,7 @@ namespace sqsgen::cli {
   template <class T> nlohmann::json fixup_config_json(core::configuration<T> const& config) {
     nlohmann::json j = config;
 
-    j["composition"] = fmap_to_json(fixup_compositon, config.composition);
+    j["composition"] = fmap_to_json(fixup_composition, config.composition);
     j["shell_weights"] = fmap_to_json(fixup_shell_weights<T>, config.shell_weights);
     if (config.sublattice_mode == SUBLATTICE_MODE_INTERACT) {
       j["shell_radii"] = config.shell_radii.front();

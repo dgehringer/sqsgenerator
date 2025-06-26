@@ -1,14 +1,13 @@
 [project]
 name = "sqsgenerator"
 authors = [
-    {name = "Dominik Gehringer", email = "dgehringer@gmail.com"}
+    { name = "Dominik Gehringer", email = "dgehringer@gmail.com" }
 ]
 maintainers = [
-    {name = "Dominik Gehringer", email = "dgehringer@gmail.com"}
+    { name = "Dominik Gehringer", email = "dgehringer@gmail.com" }
 ]
-license = "MIT"
-description="Create atomic structures for solid solutions for molecular simulations"
-dependencies = ["numpy", "click", "rich"]
+description = "Create atomic structures for solid solutions for molecular simulations"
+dependencies = ["numpy", "click"]
 dynamic = ["version"]
 readme = "README.md"
 
@@ -18,7 +17,7 @@ Issues = "https://github.com/dgehringer/sqsgenerator/issues"
 
 
 [tool.setuptools.dynamic]
-version = {file = "version"}
+version = { file = "version" }
 
 [project.optional-dependencies]
 test = [
@@ -29,12 +28,12 @@ test = [
 
 [build-system]
 requires = [
-    "setuptools>=68.0.0",  # Required for Python 3.13 support
+    "setuptools>=68.0.0", # Required for Python 3.13 support
     "wheel>=0.40.0",
     "ninja",
-    "cmake>=3.27",  # Newer CMake for better Python 3.13 support
-    "pybind11>=2.11.0",  # Minimum version with Python 3.13 support
-    "numpy>=1.26.0",  # Python 3.13 compatible version
+    "cmake>=3.27", # Newer CMake for better Python 3.13 support
+    "pybind11>=2.11.0", # Minimum version with Python 3.13 support
+    "numpy>=1.26.0", # Python 3.13 compatible version
     "mypy"
 ]
 build-backend = "setuptools.build_meta"
@@ -59,10 +58,10 @@ extend-exclude = ["sqsgenerator/core/_core.pyi", "setup.py"]
 
 [tool.ruff.lint]
 extend-select = [
-    "B",    # flake8-bugbear
-    "I",    # isort
-    "PGH",  # pygrep-hooks
-    "RUF",  # Ruff-specific
-    "UP",   # pyupgrade
+    "B", # flake8-bugbear
+    "I", # isort
+    "PGH", # pygrep-hooks
+    "RUF", # Ruff-specific
+    "UP", # pyupgrade
 ]
-ignore = ["F401"]
+ignore = ["F401", "RUF001"]

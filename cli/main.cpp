@@ -297,10 +297,6 @@ int main(int argc, char** argv) {
   argparse::ArgumentParser output_structure_command("structure", version_string,
                                                     argparse::default_arguments::help);
   output_structure_command.add_description("export the structure of a result file");
-  output_structure_command.add_argument("-v", "--version")
-      .help("Display version info")
-      .default_value(false)
-      .implicit_value(true);
 
   output_structure_command.add_argument("-f", "--format")
       .help("The output format to use (vasp, poscar, ase, pymatgen, cif, sqsgen)")
@@ -314,12 +310,16 @@ int main(int argc, char** argv) {
       .implicit_value(true);
 
   output_structure_command.add_argument("--objective")
-      .help("select the n-th best objective")
+      .help(
+          "select the n-th best objective. This is value is specified as an index. This argument "
+          "can be specified multiple times to export multiple structures.")
       .default_value(std::vector<std::string>{"0"})
       .append();
 
   output_structure_command.add_argument("-i", "--index")
-      .help("the index of the structure to export,  specified by the --objective option")
+      .help(
+          "the index of the structure to export,  specified by the --objective option. This "
+          "argument can be specified multiple times to export multiple structures.")
       .default_value(std::vector<std::string>{"0"})
       .append();
   output_structure_command.add_argument("--all").default_value(false).implicit_value(true).help(

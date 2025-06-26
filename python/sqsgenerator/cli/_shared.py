@@ -9,10 +9,19 @@ def format_hyperlink(text, link: str) -> str:
     return f"\033]8;;{link}\007{text}\033]8;;\007"
 
 
-def render_error(message: str, parameter: str | None = None) -> None:
+def render_error(
+    message: str, parameter: str | None = None, info: str | None = None
+) -> None:
     click.echo(
         click.style("Error:", fg="red", bold=True, underline=True) + " " + message
     )
+    if info is not None:
+        click.echo(
+            "       ("
+            + click.style("info: ", italic=True, fg="blue")
+            + click.style(info, italic=True)
+            + ")"
+        )
     if parameter is not None:
         link = f"https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#{parameter}"
         click.echo(
@@ -26,14 +35,14 @@ def render_table(
     *columns: str,
     sep: str = " ",
     header_style: dict[str, str | bool] | None = None,
+    buf: io.StringIO | None = None,
     **styles: dict[str, bool | str],
 ) -> None:
     header_style = header_style or dict(underline=True, bold=True)
     max_widths = [
         max(map(len, (title, *col))) for col, title in zip(zip(*rows), columns)
     ]
-
-    buf = io.StringIO()
+    buf = buf or io.StringIO()
     buf.write(
         sep.join(
             click.style(title.ljust(w), **header_style)
@@ -44,10 +53,10 @@ def render_table(
     for row in rows:
         buf.write(
             sep.join(
-                click.style(value, **styles.get(title, {}))
+                click.style(value.ljust(w), **styles.get(title, {}))
                 for value, title, w in zip(row, columns, max_widths)
             )
             + "\n"
         )
 
-    click.echo(buf.getvalue())
+    click.echo_via_pager(buf.getvalue())
