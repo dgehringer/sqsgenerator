@@ -23,6 +23,19 @@ PLAT_TO_CMAKE = {
 
 VERSION_FILE = "vcpkg.json"
 
+COPY_TEMPLATES: bool = True
+
+if COPY_TEMPLATES:
+    import shutil
+
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    template_dir = os.path.abspath(os.path.join(this_dir, "..", "templates"))
+    python_package_template_dir = os.path.join(this_dir, "sqsgenerator", "templates")
+    for filename in os.listdir(template_dir):
+        filepath = os.path.join(template_dir, filename)
+        if os.path.isfile(filepath) and filename.endswith(".json"):
+            shutil.copy(filepath, python_package_template_dir)
+
 
 def make_version_info(path: str) -> dict[str, int]:
     with open(path) as version_file:
