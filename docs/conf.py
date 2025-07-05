@@ -31,7 +31,9 @@ author = "Dominik Gehringer"
 extensions = [
     "sphinx_inline_tabs",
     "myst_parser",
+    "sphinx.ext.intersphinx",
 ]
+
 
 myst_enable_extensions = [
     "amsmath",
@@ -45,6 +47,13 @@ myst_enable_extensions = [
     "substitution",
     "tasklist",
 ]
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+}
 
 myst_dmath_allow_labels = True
 html_show_sourcelink = True

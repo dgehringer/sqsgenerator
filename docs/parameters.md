@@ -24,11 +24,82 @@ you have **read through** the {ref}`note on array input interpretation <input-pa
 
 ---
 
-## Parameters
+## Configuration Parameters
+
+Each parameter listed below represents a key in the input JSON file or corresponding python `dict` like configuration.
+
+### `iteration_mode`
+(input-param-iteration-mode)=
+
+The iteration mode specifies how new structures species permutations are generated. There are two modes available:
+In *random* mode the configuration will be shuffled randomly, while in *systematic* mode permutations are generated
+in lexicographical order and to scan the complete configurational space. In case *systematic* is specified the
+{ref}`iterations <input-param-iterations>` parameter will be ignored, since the number of permutations is predefined.
+The *systematic* mode is available only in combination with the *interact* *{ref}`sublattice_mode <input-param-sublattice-mode>`*.
+
+- **Required:** No
+- **Default:** *random*
+- **Accepted:** *random* or *systematic* ({py:class}`IterationMode`)
+
+  ````{tab} JSON
+  ```{code-block} json
+  {
+    "iteration_mode": "random"
+  }
+  ```
+  ````
+
+  ````{tab} Python
+  ```{code-block} python
+  from sqsgenerator import IterationMode, random, systematic
+  {
+      "iteration_mode": IterationMode.systematic
+  }
+  # or directly specify the enum value
+  {
+      "iteration_mode": systematic
+  }
+  ```
+  ````
+
+### `sublattice_mode`
+(input-param-sublattice-mode)=
+The sublattice mode indicates how sublattices are handled. In *interact* mode the
+whole structure is treated as a single set of species. In practice this results in a
+pinning of the atomic species on the sublattices. In *split* mode each sublattice is
+treated as a separate set of species. Hence, *split* mode allows to optimize multiple
+sublattices independently, in case more than one is specified. In *split* mode the only
+{ref}`sublattice_mode <input-param-sublattice-mode>` *random* is available.
+
+- **Required:** No
+- **Default:** *interact*
+- **Accepted:** *interact* or *split* ({py:class}`SublatticeMode`)
+
+  ````{tab} JSON
+  ```{code-block} json
+  {
+    "sublattice_mode": "split"
+  }
+  ```
+  ````
+
+  ````{tab} Python
+  ```{code-block} python
+  from sqsgenerator import SublatticeMode, interact, split
+  {
+      "sublattice_mode": SublatticeMode.split
+  }
+  # or directly specify the enum value
+  {
+      "sublattice_mode": split
+  }
+  ```
+  ````
 
 ### `bin_width`
 (input-param-bin-width)=
 
+This parameter is used for a histogram bassed detection algorithm to compute the coordination shells.
 Sets the real space bin width of the histogram computed from the pair distance matrix
 $r_{ij} = \left|\vec{r}_{i} - \vec{r}_j \right|$. This parameter is used in combination with
 the {ref}`peak_isolation <input-param-peak-isolation>` parameter to compute the default guess for the
@@ -36,24 +107,36 @@ the {ref}`peak_isolation <input-param-peak-isolation>` parameter to compute the 
 
 - **Required:** No
 - **Default**: `0.05`
-- **Accepted:** positive floating point number (`float`)
+- **Accepted:** positive floating point number ({py:class}`float`)
 
 ### `peak_isolation`
 (input-param-peak-isolation)=
 
 A threshold measure on how *isolated* a bin in the pair distance matrix
 $r_{ij} = \left|\vec{r}_{i} - \vec{r}_j \right|$ histogram has to be, to become a separate coordination shell.
-An isolation 0.7 means the following. If certain bin in the histogram, for which both the left and the right neighbor
-are smaller than 30% as the current bin, it will become a separate coordination shell.
+An isolation 0.7 means the following. If certain bin in the (distance) histogram, for which both the left and the right neighbor
+are smaller are less than 70% in height, that bin will become a separate coordination shell.
 
 - **Required:** No
 - **Default**: `0.25`
 - **Accepted:** positive floating point number between 0.0 and 1.0 (`float`)
 
 
+### `shell_radii`
+(input-param-shell-radii)=
+the radii of the coordination shells in $\mathrm{\mathring{A}}$. All pairs between lattice positions with a distance
+$R_n < r_{ij} <= R_{n+1}$. For must cases this parameter is automatically determined by *sqsgenerator*.
+By specifying this parameter you can customize the radii and number of shells.
+
+- **Required:** No
+- **Default:** automatically determined by *sqsgenerator*
+- **Accepted:**
+  - a list of positive floating point numbers (`list[float] | np.ndarray`)
+  - if {ref}`sublattice_mode <input-param-sublattice-mode>` is  *split*, a list for each sublattice (`list[list[float]] | list[np.ndarray]`)
+
+
 ### `composition`
 (input-param-composition)=
-
 
 The composition of the output configuration, defined as a dictionary.  Keys are symbols of chemical elements,
 whereas values are the number of atoms of the corresponding species. The number in the dict-values or the length of the
@@ -71,6 +154,11 @@ parameter. The composition parameter might be also used to pin atomic species on
  - If you explicitly pin atomic species on certain sublattices (see examples below) you have to specify it for all
    - If you do that the number of distributed atoms must match the number of lattice positions on the specified sublattice
 ```
+
+### `composition.sites`
+(input-param-composition-sites)=
+
+
 
 #### Examples
 - Ternary alloy, consisting of 54 atoms ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$)
@@ -343,46 +431,7 @@ Number of configurations to check. This parameter is ignored if *{ref}`mode <inp
 - **Default:** $10^5$ if *{ref}`mode <input-param-mode>`* is *random*
 - **Accepted:** a positive integer number (`int`)
 
-### `shell_distances`
-(input-param-shell-distances)=
-the radii of the coordination shells in Angstrom. All lattice positions will be binned into the specified coordination
-shells. The default distances are computed in the following way:
 
-```{code-block} python
----
-caption: |
-    This is just a Python implementation which demonstrates what is happening
----
-shell_distances = []
-
-# In the following atol and rtol represent the input parameters of atol and rtol
-
-def get_closest_shell(r_ij: float) -> int:
-    predicate = functools.partial(math.isclose, r_ij, abs_tol=atol, rel_tol=rtol)
-    return next(filter(predicate, shell_distances), None)
-
-# Let Rij be the distance matrix of the input structure as np.ndarray
-for r_ij in sorted(Rij.flat):
-    closest_shell = get_closest_shell(r_ij)
-    if closest_shell: # we compute a roling average, to estimate a mean value
-        shell_distances[closest_shell] = (shell_distances[closest_shell] + r_ij) / 2.0
-    else: # no value similar to r_ij exists, we create a new shell
-        shell_distances.append(r_ij)
-    shell_distances = sorted(shell_distances)
-
-```
-
-
-- **Required:** No
-- **Default:** automatically determined by *sqsgenerator*
-- **Accepted:** a list of positive floating point numbers (`list[float]`)
-
-````{hint}
-You can have a look at the the computed shell distances, and check if they are fine using:
-```{code-block} bash
-sqsgenerator params show input.yaml -p shell_distances
-```
-````
 
 ### `shell_weights`
 (input-param-shell-weights)=
