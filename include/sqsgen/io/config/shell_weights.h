@@ -8,7 +8,7 @@
 #ifdef WITH_PYTHON
 #  include <pybind11/pybind11.h>
 #endif
-
+#define NLOHMANN_JSON_ABI_TAG v3_11_3
 #include <nlohmann/json.hpp>
 
 #include "sqsgen/core/helpers.h"
