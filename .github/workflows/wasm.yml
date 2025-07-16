@@ -52,5 +52,5 @@ jobs:
 
       - uses: friendlyanon/setup-vcpkg@v1
 
-      - name: Verify Emscripten installation Version
+      - name: Verify Emscripten installation
         run: emcc -v
