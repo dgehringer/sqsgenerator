@@ -143,9 +143,12 @@ val optimize_two(val const& config, sqsgen::Prec prec, val const& cb) {
     if (!shared_cb->isUndefined())
       callback = [&](auto&& ctx) {
         thread_local ProxyingQueue proxying_queue;
-        proxying_queue.proxyAsync(emscripten_main_runtime_thread_id(), [shared_cb, &ctx]() {
-          std::visit([shared_cb](auto&& cb_ctx) { (*shared_cb)(cb_ctx); }, ctx);
-        });
+        nlohmann::json stats = std::visit(
+            [](auto&& callback_ctx) -> nlohmann::json { return to_json(callback_ctx.statistics); },
+            ctx);
+        proxying_queue.proxyAsync(
+            emscripten_main_runtime_thread_id(),
+            [shared_cb, stats = std::move(stats)]() { (*shared_cb)(to_js(stats)); });
       };
     try {
       auto result_pack_json
