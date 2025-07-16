@@ -144,8 +144,7 @@ val optimize_two(val const& config, sqsgen::Prec prec, val const& cb) {
       callback = [&](auto&& ctx) {
         thread_local ProxyingQueue proxying_queue;
         proxying_queue.proxyAsync(emscripten_main_runtime_thread_id(), [shared_cb, &ctx]() {
-          if (!shared_cb->isUndefined()) (*shared_cb)(std::string("update"));
-          // std::visit([shared_cb](auto&& cb_ctx) { (*shared_cb)(cb_ctx); }, ctx);
+          std::visit([shared_cb](auto&& cb_ctx) { (*shared_cb)(cb_ctx); }, ctx);
         });
       };
     try {
