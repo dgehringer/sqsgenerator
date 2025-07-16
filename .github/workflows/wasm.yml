@@ -1,4 +1,4 @@
-name: Python CI
+name: WebAssembly Build
 
 on:
   pull_request:
@@ -39,7 +39,7 @@ jobs:
 
       - name: Setup cache
         id: cache-system-libraries
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ${{env.EM_CACHE_FOLDER}}
           key: ${{env.EM_VERSION}}-${{ runner.os }}
