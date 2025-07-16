@@ -1,5 +1,4 @@
 name: Python CI
-
 on:
   pull_request:
     branches:
@@ -11,12 +10,14 @@ permissions:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   VCPKG_FEATURE_FLAGS: "-manifests"
-  EM_VERSION: 4.0.11
-  EM_CACHE_FOLDER: 'emsdk-cache'
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15]
+        python-version: ["3.11"]
     env:
       VCPKG_BINARY_SOURCES: "x-gha,readwrite"
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
@@ -33,16 +34,67 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup cache
-        id: cache-system-libraries
-        uses: actions/cache@v2
-        with:
-          path: ${{env.EM_CACHE_FOLDER}}
-          key: ${{env.EM_VERSION}}-${{ runner.os }}
-
-      - uses: mymindstorm/emsdk-action@v14
-        with:
-          version: ${{env.EM_VERSION}}
-          actions-cache-folder: ${{env.EM_CACHE_FOLDER}}
-
       - uses: friendlyanon/setup-vcpkg@v1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install CI dependencies
+        run: pip install ruff
+
+      - name: Compile & install build dependencies
+        run: |
+          pip install pip-tools
+          pip-compile --all-build-deps --output-file=requirements-ci.txt --strip-extras ./python/pyproject.toml
+          pip install -r requirements-ci.txt
+
+      - name: Lint
+        run: ruff check ./python/sqsgenerator --output-format=github
+
+      - name: Format
+        run: ruff format --diff ./python/sqsgenerator
+
+      - name: Build package
+        run: pip install ./python --no-build-isolation -v
+
+      - name: Compile & install test dependencies
+        run: |
+          pip install pip-tools
+          pip-compile --extra=test -o requirements-test.txt ./python/pyproject.toml
+          pip install -r requirements-test.txt
+
+      - name: Run unit tests
+        run: pytest ./python -vv --import-mode=importlib --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
+
+      - name: Upload pytest test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-${{ matrix.python-version }}-${{ matrix.os }}
+          path: junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
+          # Use always() to always run this step to publish test results when there are test failures
+        if: ${{ always() }}
+
+      - name: Build ctest executables
+        run: ${{ github.workspace }}/scripts/build-tests.sh build
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+
+      - name: Run ctest
+        run: ctest --test-dir ${{ github.workspace }}/build/tests --verbose --output-junit ${{ github.workspace }}/junit/test-results-${{ matrix.os }}.xml
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+      - name: Build CLI app
+        run: ${{ github.workspace }}/scripts/build-cli.sh build
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+
+      - name: Run sqsgen --version
+        run: ${{ github.workspace }}/build/sqsgen --version
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+
+      - name: Upload ctest test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-results-${{ matrix.os }}
+          path: junit/test-results-${{ matrix.os }}.xml
+        # Use always() to always run this step to publish test results when there are test failures
+        if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
