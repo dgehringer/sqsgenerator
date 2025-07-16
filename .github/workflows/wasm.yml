@@ -54,3 +54,6 @@ jobs:
 
       - name: Verify Emscripten installation
         run: emcc -v
+
+      - name: Build WebAssembly libraries
+        run: ${{ github.workspace }}/scripts/build-wasm.sh build
