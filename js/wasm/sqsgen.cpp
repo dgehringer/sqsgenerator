@@ -148,7 +148,13 @@ val optimize_two(val const& config, sqsgen::Prec prec, val const& cb) {
             ctx);
         proxying_queue.proxyAsync(
             emscripten_main_runtime_thread_id(),
-            [shared_cb, stats = std::move(stats)]() { (*shared_cb)(to_js(stats)); });
+            [shared_cb, stats = std::move(stats), ctx]() mutable {
+              val received = (*shared_cb)(to_js(stats));
+              if (!received.isUndefined())
+                if (received.typeOf().as<std::string>() == "boolean")
+                  if (received.as<bool>())
+                    std::visit([](auto&& callback_ctx) { callback_ctx.stop(); }, ctx);
+            });
       };
     try {
       auto result_pack_json
