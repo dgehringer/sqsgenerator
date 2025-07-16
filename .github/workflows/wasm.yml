@@ -1,0 +1,30 @@
+name: WebAssembly Build
+
+
+on:
+  release:
+    types:
+      - published
+  push:
+    branches:
+      - main
+      - wasm
+
+
+permissions:
+  contents: write
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  VCPKG_FEATURE_FLAGS: "-manifests"
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15]
+        python-version: ["3.11"]
+    env:
+      VCPKG_BINARY_SOURCES: "x-gha,readwrite"
+      VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed

@@ -53,20 +53,6 @@ val parse_result_to_js(sqsgen::io::parse_result<nlohmann::json> const& r) {
   return r.failed() ? error_to_js(r.error()) : to_js(r.result());
 }
 
-template <string_literal Name, class T> void bind_statistics_data() {
-  class_<sqsgen::sqs_statistics_data<T>>(format_prec<Name, T>().c_str())
-      .property("finished", &sqsgen::sqs_statistics_data<T>::finished)
-      .property("working", &sqsgen::sqs_statistics_data<T>::working)
-      .property("best_rank", &sqsgen::sqs_statistics_data<T>::best_rank)
-      .property("best_objective", &sqsgen::sqs_statistics_data<T>::best_objective);
-}
-
-template <string_literal Name, class T> void bind_callback_context() {
-  class_<sqsgen::sqs_callback_context<T>>(format_prec<Name, T>().c_str())
-      .function("stop", &sqsgen::sqs_callback_context<T>::stop)
-      .property("statistics", &sqsgen::sqs_callback_context<T>::statistics);
-}
-
 val parse_config(val const& v) {
   using namespace sqsgen;
   using namespace sqsgen::io;
@@ -137,12 +123,6 @@ EMSCRIPTEN_BINDINGS(m) {
   enum_<sqsgen::Prec>("Prec")
       .value("single", sqsgen::Prec::PREC_SINGLE)
       .value("double", sqsgen::Prec::PREC_DOUBLE);
-
-  bind_statistics_data<"SqsStatisticsData", float>();
-  bind_statistics_data<"SqsStatisticsData", double>();
-
-  bind_callback_context<"SqsCallbackContext", float>();
-  bind_callback_context<"SqsCallbackContext", double>();
 
   // Helper functions
   function("parseConfig", &parse_config);
