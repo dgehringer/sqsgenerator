@@ -13,12 +13,6 @@
 
 #ifdef __EMSCRIPTEN__
 namespace spdlog {
-  void error(std::string const &msg) { emscripten_console_error(msg.c_str()); };
-  void warn(std::string const &msg) { emscripten_console_warn(msg.c_str()); }
-  void info(std::string const &msg) { emscripten_console_log(msg.c_str()); }
-
-  void debug(std::string const &msg) { emscripten_console_trace(msg.c_str()); }
-  void trace(std::string const &msg) { emscripten_console_trace(msg.c_str()); }
 
   namespace level {
     enum level_enum : int {
@@ -33,7 +27,31 @@ namespace spdlog {
     };
   }
 
-  void set_level(level::level_enum level) {}
+  static std::atomic __current_level{level::info};
+
+  inline void error(std::string const &msg) {
+    /*if (__current_level.load(std::memory_order_relaxed) >= level::critical)
+      emscripten_console_error(msg.c_str());*/
+  };
+  inline void warn(std::string const &msg) {
+    /*if (__current_level.load(std::memory_order_relaxed) >= level::warn)
+      emscripten_console_warn(msg.c_str());*/
+  }
+  inline void info(std::string const &msg) {
+    /*if (__current_level.load(std::memory_order_relaxed) >= level::info)
+      emscripten_console_log(msg.c_str());*/
+  }
+
+  inline void debug(std::string const &msg) {
+    /*if (__current_level.load(std::memory_order_relaxed) >= level::debug)
+      emscripten_console_trace(msg.c_str());*/
+  }
+  inline void trace(std::string const &msg) {
+    /*if (__current_level.load(std::memory_order_relaxed) >= level::trace)
+      emscripten_console_trace(msg.c_str());*/
+  }
+
+  inline void set_level(level::level_enum level) { __current_level.store(level); }
 }  // namespace spdlog
 #endif
 
