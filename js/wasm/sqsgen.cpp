@@ -81,52 +81,6 @@ val optimize(val const& config, sqsgen::Prec prec, val const& cb) {
   using namespace sqsgen;
   using namespace sqsgen::io::config;
 
-  auto config_json = to_internal(config);
-  std::variant<configuration<float>, configuration<double>> run_config;
-  if (prec == PREC_SINGLE)
-    run_config = from_json<configuration<float>>(config_json);
-  else
-    run_config = from_json<configuration<double>>(config_json);
-
-  val::promise_type promise;
-
-  std::thread([&promise, run_config = std::move(run_config), cb]() mutable {
-    thread_local ProxyingQueue proxying_queue;
-    try {
-      val keepaliveCb = cb.isUndefined() ? val::undefined() : cb.call<val>("bind", cb);
-      std::optional<sqs_callback_t> callback;
-      if (!keepaliveCb.isUndefined())
-        callback = [&](auto&& ctx) {
-          proxying_queue.proxyAsync(emscripten_main_runtime_thread_id(), [keepaliveCb, &ctx]() {
-            std::visit([&keepaliveCb](auto&& cb_ctx) { keepaliveCb(cb_ctx); }, ctx);
-          });
-        };
-
-      val result_pack = to_js(
-          std::visit([](auto&& result_pack) -> nlohmann::json { return to_json(result_pack); },
-                     run_optimization(std::move(run_config), spdlog::level::warn, callback)));
-
-      proxying_queue.proxyAsync(emscripten_main_runtime_thread_id(),
-                                [&promise, result_pack]() { promise.return_value(result_pack); });
-    } catch (...) {
-      std::exception_ptr eptr = std::current_exception();
-      proxying_queue.proxyAsync(emscripten_main_runtime_thread_id(), [&promise, eptr]() {
-        try {
-          if (eptr) std::rethrow_exception(eptr);
-        } catch (const std::exception& e) {
-          promise.reject_with(val(e.what()));
-        }
-      });
-    }
-  }).detach();
-
-  return promise.get_return_object();
-}
-
-val optimize_two(val const& config, sqsgen::Prec prec, val const& cb) {
-  using namespace sqsgen;
-  using namespace sqsgen::io::config;
-
   val::promise_type promise;
   auto shared_cb
       = std::make_shared<val>(cb.isUndefined() ? val::undefined() : cb.call<val>("bind", cb));
@@ -192,8 +146,7 @@ EMSCRIPTEN_BINDINGS(m) {
 
   // Helper functions
   function("parseConfig", &parse_config);
-  function("optimize", &optimize, return_value_policy::take_ownership());
-  function("optimizeAsync", &optimize_two);
+  function("optimizeAsync", &optimize);
 }
 
 int main() {
