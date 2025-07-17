@@ -1,6 +1,7 @@
 
 # Welcome to *sqsgenerator*'s documentation!
 
+
 ## Highlights
 - 🚀 Blazingly fast short-range-order calculations (C++ core)
 - 🔌 Easy integration with popular frameworks such as [*ase*](https://wiki.fysik.dtu.dk/ase/),
