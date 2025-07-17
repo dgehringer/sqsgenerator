@@ -145,7 +145,7 @@ def template(name: str | None) -> None:
                 render_author(author)
         click.echo(buf.getvalue())
         with open(f"{name}.sqs.json", "w") as output_file:
-            json.dump(template, output_file, indent=2)
+            json.dump(template["config"], output_file, indent=2)
 
 
 @cli.group()
