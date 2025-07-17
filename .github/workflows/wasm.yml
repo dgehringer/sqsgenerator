@@ -58,9 +58,6 @@ jobs:
       - name: Build WebAssembly libraries
         run: ${{ github.workspace }}/scripts/build-wasm.sh build
 
-      - name: check output
-        run: ls -la build/js/wasm
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
