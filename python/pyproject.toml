@@ -48,7 +48,7 @@ sqsgenerator = ["*.json", "*.pyi"]
 
 [tool.cibuildwheel]
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*"]
-skip = ["*musllinux*", "cp313-win*"]
+skip = ["*musllinux*"]
 test-command = "pytest {project}/python/tests --import-mode=importlib"
 test-extras = ["test"]
 
