@@ -41,8 +41,15 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64"
           CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
-          CIBW_ENVIRONMENT_PASS_LINUX: "ACTIONS_RUNTIME_TOKEN ACTIONS_CACHE_URL"
-
+          CIBW_ENVIRONMENT_PASS_LINUX: "ACTIONS_RUNTIME_TOKEN ACTIONS_CACHE_URL CC CXX CMAKE_ARGS"
+          CIBW_BEFORE_ALL_LINUX: |
+            dnf -y install curl zip unzip tar
+            ./vcpkg/bootstrap-vcpkg.sh
+          CIBW_ENVIRONMENT_LINUX: |
+            CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/opt/local/bin/c++ -DCMAKE_C_COMPILER=/opt/local/bin/cc"
+            CXX=/opt/local/bin/c++
+            CC=/opt/local/bin/cc
+            VCPKG_FORCE_SYSTEM_BINARIES=1
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_ENVIRONMENT_MACOS: |
