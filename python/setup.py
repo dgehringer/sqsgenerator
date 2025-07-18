@@ -3,7 +3,7 @@ import os
 import re
 import sys
 import uuid
-
+import sysconfig
 import pybind11
 import subprocess
 from pathlib import Path
@@ -138,12 +138,16 @@ class CMakeBuild(build_ext):
         cmake_args = [
             f"-DPython3_VERSION={python_version}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
+            "-DPYBIND11_FINDPYTHON=ON",
+            "-DPython3_INCLUDE_DIR={}".format(sysconfig.get_path("include")),
+            # "-DPython3_LIBRARY={}".format(sysconfig.get_config_var("LIBDIR")),
             f"-DPython3_EXECUTABLE={python_executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DBUILD_TESTS={'ON' if ext.build_tests else 'OFF'}",
             f"-DBUILD_BENCHMARKS={'ON' if ext.build_benchmarks else 'OFF'}",
             "-DWITH_MPI=OFF",
             "-DBUILD_PYTHON=ON",
+            "-DCMAKE_POLICY_DEFAULT_CMP0148=NEW",
             f"-DCMAKE_TOOLCHAIN_FILE={vcpkg_toolchain}",
             f"-DCMAKE_PREFIX_PATH={pybind11.get_cmake_dir()}",
             f"-DSQSGEN_MAJOR_VERSION={ext.version_info['major']}",
