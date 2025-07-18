@@ -57,5 +57,9 @@
   },
   "keywords": [
     "svelte"
-  ]
+  ],
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.7.2",
+    "svelte-jsoneditor": "^3.7.0"
+  }
 }
