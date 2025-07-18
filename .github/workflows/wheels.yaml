@@ -46,7 +46,7 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_ENVIRONMENT_LINUX: |
-            CMAKE_ARGS="-CMAKE_CXX_COMPILER=/usr/local/bin/c++ -CMAKE_C_COMPILER=/usr/local/bin/cc"
+            CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/usr/local/bin/c++ -DCMAKE_C_COMPILER=/usr/local/bin/cc"
           CIBW_ENVIRONMENT_MACOS: |
             MACOSX_DEPLOYMENT_TARGET=15.0
             CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DCMAKE_CXX_FLAGS=-mmacosx-version-min=15.0"
