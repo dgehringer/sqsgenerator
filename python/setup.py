@@ -9,6 +9,7 @@ import pybind11
 import subprocess
 from pathlib import Path
 
+from piptools.scripts.options import python_executable
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
@@ -96,6 +97,18 @@ class CMakeExtension(Extension):
         )
 
 
+def get_python_info() -> tuple[str, str]:
+    if "CIBUILDWHEEL" in os.environ:
+        print("using CIBUILDWHEEL environment variable to determine Python version")
+        python_executable = os.environ["CIBW_PYTHON_EXECUTABLE"]
+        python_version = os.environ["CIBW_PYTHON_VERSION"]
+    else:
+        python_executable = sys.executable
+        python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+
+    return python_executable, python_version
+
+
 class CMakeBuild(build_ext):
     def build_extension(self, ext: CMakeExtension) -> None:
         # Must be in this form due to bug in .resolve() only fixed in Python 3.10+
@@ -125,15 +138,12 @@ class CMakeBuild(build_ext):
         vcpkg_toolchain = os.path.join(
             ext.vcpkg_root, "scripts", "buildsystems", "vcpkg.cmake"
         )
-        include_dir = sysconfig.get_path("include")
-        python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+        python_executable, python_version = get_python_info()
 
         cmake_args = [
             f"-DPython3_VERSION={python_version}",
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
-            f"-DPython3_EXECUTABLE={sys.executable}",
-            f"-DPython3_INCLUDE_DIR={include_dir}",
-            f"-DPython3_LIBRARY={sysconfig.get_config_var('LIBDIR')}",
+            f"-DPython3_EXECUTABLE={python_executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DBUILD_TESTS={'ON' if ext.build_tests else 'OFF'}",
             f"-DBUILD_BENCHMARKS={'ON' if ext.build_benchmarks else 'OFF'}",
