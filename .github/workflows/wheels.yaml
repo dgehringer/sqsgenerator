@@ -46,8 +46,9 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_BEFORE_ALL_LINUX: |
-            dnf install -y gcc-toolset-14
+            ./vcpkg/bootstrap-vcpkg.sh
           CIBW_ENVIRONMENT_LINUX: |
+            VCPKG_FORCE_SYSTEM_BINARIES=1
             CC="/usr/local/bin/cc"
             CXX="/usr/local/bin/c++"
             CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/usr/local/bin/c++ -DCMAKE_C_COMPILER=/usr/local/bin/cc"
@@ -56,6 +57,7 @@ jobs:
             CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DCMAKE_CXX_FLAGS=-mmacosx-version-min=15.0"
           CIBW_BEFORE_BUILD_WINDOWS: call scripts/install-build-deps.bat
           CIBW_BEFORE_BUILD_LINUX: |
+
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools
             pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
