@@ -11,7 +11,6 @@
 #include <iostream>
 #include <thread>
 
-#include "spdlog/spdlog.h"
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/optimization.h"
@@ -20,6 +19,7 @@
 #include "sqsgen/core/shuffle.h"
 #include "sqsgen/core/statistics.h"
 #include "sqsgen/io/mpi.h"
+#include "sqsgen/log.h"
 #include "sqsgen/types.h"
 
 #ifdef _WIN32
@@ -125,8 +125,8 @@ namespace sqsgen {
 
     template <class T>
     void log_statistics(sqs_statistics_data<T>&& d, int rank, std::string const& info = "") {
-      spdlog::info("[Rank {}] {} best_objective={}", rank, info, d.best_objective);
-      spdlog::info("[Rank {}] {} best_rank={}", rank, info, d.best_rank);
+      spdlog::info(std::format("[Rank {}] {} best_objective={}", rank, info, d.best_objective));
+      spdlog::info(std::format("[Rank {}] {} best_rank={}", rank, info, d.best_rank));
       for (auto&& [timing, label] :
            std::map<Timing, std::string>{{TIMING_TOTAL, "total"},
                                          {TIMING_CHUNK_SETUP, "chunk_setup"},
@@ -134,9 +134,10 @@ namespace sqsgen {
                                          {TIMING_COMM, "comm"}}) {
         auto time_in_ns = static_cast<double>(d.timings.at(timing));
         auto total_time_in_ns = static_cast<double>(d.timings.at(TIMING_TOTAL));
-        spdlog::info("[Rank {}] {} {} time ns={}, ns_per_iteration={:.1f}, relative={:.1f}%", rank,
-                     info, label, time_in_ns, time_in_ns / static_cast<double>(d.finished),
-                     time_in_ns / total_time_in_ns * 100);
+        spdlog::info(
+            std::format("[Rank {}] {} {} time ns={}, ns_per_iteration={:.1f}, relative={:.1f}%",
+                        rank, info, label, time_in_ns, time_in_ns / static_cast<double>(d.finished),
+                        time_in_ns / total_time_in_ns * 100));
       }
     }
 
@@ -303,9 +304,10 @@ namespace sqsgen {
       // if we are not in MPI mode we install the signal handlers
       if (!mpi_mode) signal::setup_signal_handlers();
 
-      if (mpi_mode && head) spdlog::info("[Rank {}] Running optimizer in MPI mode", this->rank());
+      if (mpi_mode && head)
+        spdlog::info(std::format("[Rank {}] Running optimizer in MPI mode", this->rank()));
       auto [start, end] = this->iteration_range();
-      spdlog::info("[Rank {}] start={}, end={}", this->rank(), start.str(), end.str());
+      spdlog::info(std::format("[Rank {}] start={}, end={}", this->rank(), start.str(), end.str()));
 
       auto num_sublattices = this->opt_configs.size();
       auto pairs{this->transpose_setting([](auto&& c) { return c.pairs; })};
@@ -325,8 +327,8 @@ namespace sqsgen {
       const auto worker = [&, stop = stop_source->get_token()](rank_t rstart, rank_t rend) {
         if (stop.stop_requested()) return;
         core::tick<TIMING_TOTAL> tick_total;
-        spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(),
-                      this->thread_id(), rstart.str(), rend.str());
+        spdlog::debug(std::format("[Rank {}, Thread {}] received chunk start={}, end={}",
+                                  this->rank(), this->thread_id(), rstart.str(), rend.str()));
 
         core::tick<TIMING_CHUNK_SETUP> tick_setup;
         iterations_t iterations{rend - rstart};
@@ -351,13 +353,13 @@ namespace sqsgen {
 
         for (auto i = rstart; i < rend; ++i) {
           if (!mpi_mode && signal::interrupted()) {
-            spdlog::info("[Rank {}, Thread {}] Process received SIGTERM or SIGINT ...",
-                         this->rank(), this->thread_id());
+            spdlog::info(std::format("[Rank {}, Thread {}] Process received SIGTERM or SIGINT ...",
+                                     this->rank(), this->thread_id()));
             break;
           }
           if (stop.stop_requested()) {
-            spdlog::info("[Rank {}, Thread {}] received stop signal ...", this->rank(),
-                         this->thread_id());
+            spdlog::info(std::format("[Rank {}, Thread {}] received stop signal ...", this->rank(),
+                                     this->thread_id()));
             break;
           }
           if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
@@ -406,11 +408,12 @@ namespace sqsgen {
         statistics.add_finished(iterations);
 
         if (callback.has_value()) {
-          spdlog::trace("[Rank {}, Thread {}] firing callback", this->rank(), this->thread_id());
+          spdlog::trace(
+              std::format("[Rank {}, Thread {}] firing callback", this->rank(), this->thread_id()));
           callback.value()(sqs_callback_context<T>{stop_source, statistics.data()});
         }
-        spdlog::debug("[Rank {}, Thread {}] finished chunk start={}, end={}", this->rank(),
-                      this->thread_id(), rstart.str(), rend.str());
+        spdlog::debug(std::format("[Rank {}, Thread {}] finished chunk start={}, end={}",
+                                  this->rank(), this->thread_id(), rstart.str(), rend.str()));
         statistics.tock(tick_total);
       };
 
@@ -501,14 +504,16 @@ namespace sqsgen {
       auto filtered_results = this->results.remove_duplicates();
 
       if (!filtered_results.empty()) {
-        spdlog::info("[Rank {}] best_objective={}", this->rank(),
-                     std::get<0>(filtered_results.front()));
-        spdlog::info("[Rank {}] num_best_solutions={}", this->rank(),
-                     std::get<1>(filtered_results.front()).size());
-        spdlog::info("[Rank {}] num_objectives={}", this->rank(), filtered_results.size());
-        spdlog::info("[Rank {}] num_solutions={}", this->rank(),
-                     sum(filtered_results
-                         | views::transform([](auto&& r) { return std::get<1>(r).size(); })));
+        spdlog::info(std::format("[Rank {}] best_objective={}", this->rank(),
+                                 std::get<0>(filtered_results.front())));
+        spdlog::info(std::format("[Rank {}] num_best_solutions={}", this->rank(),
+                                 std::get<1>(filtered_results.front()).size()));
+        spdlog::info(
+            std::format("[Rank {}] num_objectives={}", this->rank(), filtered_results.size()));
+        spdlog::info(std::format("[Rank {}] num_solutions={}", this->rank(),
+                                 sum(filtered_results | views::transform([](auto&& r) {
+                                       return std::get<1>(r).size();
+                                     }))));
       }
 
       sqsgen::detail::log_statistics(statistics.data(), this->rank());

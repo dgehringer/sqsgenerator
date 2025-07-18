@@ -9,7 +9,7 @@ from .._adapters import available_formats, read, write
 from ..core import Atom, LogLevel, Prec, load_result_pack
 from ..templates import load_templates
 from ._run import run_optimization
-from ._shared import render_error, render_table
+from ._shared import format_hyperlink, render_error, render_table
 from ._version import print_version, version_string
 
 
@@ -115,6 +115,37 @@ def template(name: str | None) -> None:
             sep=" ",
             NAME=dict(fg="cyan", bold=True),
         )
+    else:
+        buf = io.StringIO()
+        print_ = functools.partial(print, file=buf)
+        print_(
+            click.style("Template: ", bold=True)
+            + click.style(name, fg="cyan", bold=True)
+        )
+        print_()
+        print_(
+            click.style("Description: ", bold=True)
+            + (template := load_templates()[name])["description"]
+        )
+
+        def render_author(author: dict[str, str]) -> None:
+            name, surname = author["name"], author["surname"]
+            print_("  " + click.style("Name: ", italic=True) + f"{name} {surname}")
+            if (email := author.get("email")) is not None:
+                print_(
+                    "  "
+                    + click.style("Mail: ", italic=True)
+                    + format_hyperlink(email, f"mailto:{email}")
+                )
+            print_()
+
+        if authors := template.get("authors", []):
+            print_(click.style("Authors:", bold=True))
+            for author in authors:
+                render_author(author)
+        click.echo(buf.getvalue())
+        with open(f"{name}.sqs.json", "w") as output_file:
+            json.dump(template["config"], output_file, indent=2)
 
 
 @cli.group()
@@ -227,7 +258,3 @@ def config(output: click.File) -> None:
 
     with open(f"{stem}.config.json", "w") as config_file:
         json.dump(parsed, config_file, indent=2)
-
-
-if __name__ == "__main__":
-    cli()

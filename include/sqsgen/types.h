@@ -4,7 +4,6 @@
 
 #ifndef SQSGEN_TYPES_H
 #define SQSGEN_TYPES_H
-
 #include <Eigen/Core>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <map>

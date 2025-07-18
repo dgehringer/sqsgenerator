@@ -9,6 +9,12 @@ include(FetchContent)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+if (EMSCRIPTEN AND BUILD_WASM)
+    set(VCPKG_C_FLAGS "-fPIC -fno-threadsafe-statics" CACHE STRING "")
+    set(VCPKG_CXX_FLAGS "-fPIC -fno-threadsafe-statics" CACHE STRING "")
+endif ()
+
+
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -58,6 +64,14 @@ endif ()
 if (BUILD_PYTHON)
     message(STATUS "BUILD_PYTHON=${BUILD_PYTHON}")
     add_subdirectory("python/extension")
+endif ()
+
+if (BUILD_WASM)
+    if (BUILD_PYTHON OR BUILD_TESTS OR WITH_MPI)
+        message(FATAL_ERROR "WASM build is not compatible with Python, tests, or MPI")
+    endif ()
+    message(STATUS "BUILD_WASM=${BUILD_WASM}")
+    add_subdirectory("js/wasm")
 endif ()
 
 if (BUILD_TESTS)

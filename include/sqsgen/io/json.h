@@ -333,16 +333,81 @@ namespace sqsgen {
         return items;
       }
 
-      template <string_literal key = "", class Option>
+      template <class> struct type_checker {
+        static constexpr bool available = false;
+      };
+#ifdef __EMSCRIPTEN__
+      template <class Option>
+        requires detail::matches_any<Option, int, double, float, usize_t, std::size_t, long,
+                                     unsigned long, unsigned long long, long long,
+                                     iterations_t>::value
+      struct type_checker<Option> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) { return json.is_number(); }
+      };
+
+      template <> struct type_checker<std::string> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) { return json.is_string(); }
+      };
+
+      template <class T> struct type_checker<std::vector<T>> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) {
+          return json.is_array()
+                 && ranges::all_of(json, [](auto&& el) { return type_checker<T>::is(el); });
+        }
+      };
+
+      template <class T> struct type_checker<stl_matrix_t<T>> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) {
+          return json.is_array() && ranges::all_of(json, [](auto&& el) {
+                   return type_checker<std::vector<T>>::is(el);
+                 });
+        }
+      };
+
+      template <class T> struct type_checker<stl_cube_t<T>> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) {
+          return json.is_array() && ranges::all_of(json, [](auto&& el) {
+                   return type_checker<stl_matrix_t<T>>::is(el);
+                 });
+        }
+      };
+
+      template <class T, std::size_t N> struct type_checker<std::array<T, N>> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) {
+          return json.is_array()
+                 && ranges::all_of(json, [](auto&& el) { return type_checker<T>::is(el); })
+                 && json.size() == N;
+        }
+      };
+#endif
+
+      template <string_literal key = KEY_NONE, class Option>
       static parse_result<Option> get_as(nlohmann::json const& json) {
+        const auto parse_json = [](nlohmann::json const& j) -> parse_result<Option> {
+          if constexpr (type_checker<Option>::available)
+            return type_checker<Option>::is(j)
+                       ? parse_result<Option>{j.get<Option>()}
+                       : parse_error::from_msg<key, CODE_TYPE_ERROR>(
+                             std::format("type error - checked - cannot parse {} - {} ({})",
+                                         typeid(Option).name(), j.type_name(), j.dump(2)));
+          else
+            return {j.get<Option>()};
+        };
         try {
-          if constexpr (key == KEY_NONE) {
-            return json.get<Option>();
-          } else {
-            if (json.contains(key.data)) return {json.at(key.data).template get<Option>()};
-            return parse_error::from_msg<key, CODE_NOT_FOUND>(
-                std::format("could not find key {}", key.data));
-          }
+          if constexpr (key == KEY_NONE)
+            return parse_json(json);
+          else
+            return json.contains(key.data)
+                       ? parse_json(json.at(key.data))
+                       : parse_result<Option>{parse_error::from_msg<key, CODE_NOT_FOUND>(
+                             std::format("could not find key {}", key.data))};
+
         } catch (nlohmann::json::out_of_range const& e) {
           return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range - found - {}", e.what());
         } catch (nlohmann::json::type_error const& e) {

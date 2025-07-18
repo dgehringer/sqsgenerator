@@ -1,5 +1,4 @@
-name: python-ci.yml
-
+name: Python CI
 on:
   pull_request:
     branches:
