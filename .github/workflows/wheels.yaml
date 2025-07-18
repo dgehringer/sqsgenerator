@@ -40,7 +40,7 @@ jobs:
           CIBW_ARCHS_MACOS: "arm64"
           CIBW_ARCHS_LINUX: "x86_64"
           CIBW_ARCHS_WINDOWS: "AMD64"
-          CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
+          CIBW_BUILD_FRONTEND: "build"
           CIBW_ENVIRONMENT_PASS_LINUX: "ACTIONS_RUNTIME_TOKEN ACTIONS_CACHE_URL"
 
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
