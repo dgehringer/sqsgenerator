@@ -96,14 +96,11 @@ class CMakeExtension(Extension):
 
 
 def get_python_info() -> tuple[str, str]:
-    if "CIBUILDWHEEL" in os.environ:
-        print("using CIBUILDWHEEL environment variable to determine Python version")
-        python_executable = os.environ["CIBW_PYTHON_EXECUTABLE"]
-        python_version = os.environ["CIBW_PYTHON_VERSION"]
-    else:
-        python_executable = sys.executable
-        python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 
+    python_executable = sys.executable
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    print(f"Python version: {python_version}")
+    print(f"Python executable: {python_executable}")
     return python_executable, python_version
 
 
