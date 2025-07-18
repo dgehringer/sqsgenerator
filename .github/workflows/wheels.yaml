@@ -32,7 +32,7 @@ jobs:
       - uses: friendlyanon/setup-vcpkg@v1
         if: ${{ runner.os != 'Linux' }}
 
-      - uses: pypa/cibuildwheel@v3.0.0rc1
+      - uses: pypa/cibuildwheel@v3.0
         with:
           package-dir: ./python
           output-dir: wheelhouse
