@@ -2,14 +2,12 @@ import json
 import os
 import re
 import sys
-import sysconfig
 import uuid
 
 import pybind11
 import subprocess
 from pathlib import Path
 
-from piptools.scripts.options import python_executable
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
