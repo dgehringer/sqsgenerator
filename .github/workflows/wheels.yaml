@@ -48,8 +48,8 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: |
             dnf install -y gcc-toolset-14
           CIBW_ENVIRONMENT_LINUX: |
-            CC: /usr/local/bin/cc
-            CXX: /usr/local/bin/c++
+            CC="/usr/local/bin/cc"
+            CXX="/usr/local/bin/c++"
             CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/usr/local/bin/c++ -DCMAKE_C_COMPILER=/usr/local/bin/cc"
           CIBW_ENVIRONMENT_MACOS: |
             MACOSX_DEPLOYMENT_TARGET=15.0
