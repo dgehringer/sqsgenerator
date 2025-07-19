@@ -20,7 +20,6 @@ if (DEFINED SQSGEN_BUILD_COMMIT)
     add_compile_options("-DSQSGEN_BUILD_COMMIT=${SQSGEN_BUILD_COMMIT}")
 endif ()
 
-find_path(RAPIDHASH_INCLUDE_DIRS "rapidhash.h")
 find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
 
 

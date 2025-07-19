@@ -95,13 +95,12 @@ class CMakeExtension(Extension):
         )
 
 
-def get_python_info() -> tuple[str, str]:
+def get_python_info() -> None:
 
     python_executable = sys.executable
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
     print(f"Python version: {python_version}")
     print(f"Python executable: {python_executable}")
-    return python_executable, python_version
 
 
 class CMakeBuild(build_ext):
@@ -133,10 +132,8 @@ class CMakeBuild(build_ext):
         vcpkg_toolchain = os.path.join(
             ext.vcpkg_root, "scripts", "buildsystems", "vcpkg.cmake"
         )
-        python_executable, python_version = get_python_info()
-
+        get_python_info()
         cmake_args = [
-            f"-DPython_ROOT_DIR={sys.base_prefix}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DBUILD_TESTS=OFF",
@@ -151,7 +148,7 @@ class CMakeBuild(build_ext):
             f"-DSQSGEN_BUILD_NUMBER={ext.version_info['build']}",
             f"-DSQSGEN_BUILD_BRANCH={git_branch()}",
             f"-DSQSGEN_BUILD_COMMIT={git_sha1()}",
-            "-DCMAKE_VERBOSE_MAKEFILE:BOOL={}".format("ON" if self.verbose else "OFF"),
+            "-DCMAKE_VERBOSE_MAKEFILE={}".format("ON" if self.verbose else "OFF"),
         ]
         if sys.platform == "win32" and (
             sys.version_info.major,
@@ -241,6 +238,11 @@ class CMakeBuild(build_ext):
         )
 
         subprocess.run(["stubgen", "-m", "_core", "-o", "."], check=False, cwd=extdir)
+
+        # try to import the module to ensure it was built correctly
+        subprocess.run(
+            [sys.executable, "-c", "import sqsgenerator.core._core"], check=True
+        )
 
 
 # The information here can also be placed in setup.cfg - better separation of
