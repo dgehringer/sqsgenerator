@@ -4,7 +4,6 @@
   "dependencies": [
     "eigen3",
     "spdlog",
-    "rapidhash",
     "boost-multiprecision",
     "nlohmann-json",
     "bshoshany-thread-pool",
