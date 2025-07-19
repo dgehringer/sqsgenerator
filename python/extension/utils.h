@@ -18,17 +18,17 @@ namespace sqsgen::python::helpers {
 
   inline std::string read_file(const std::string &filePath) {
     std::ifstream fileStream(filePath);
-    if (!fileStream) throw std::runtime_error(std::format("Could not open file '{}'", filePath));
+    if (!fileStream) throw std::runtime_error(fmt::format("Could not open file '{}'", filePath));
 
     std::stringstream buffer;
     buffer << fileStream.rdbuf();
     return buffer.str();
   }
 
-  template <bool Subscript = true> inline auto format_ordinal(auto z) -> std::wstring {
-    std::wstring_view subscript = Subscript ? L"₀₁₂₃₄₅₆₇₈₉" : L"⁰¹²³⁴⁵⁶⁷⁸⁹";
+  auto format_ordinal(auto z) -> std::string {
+    std::string_view subscript = "0123456789";
     auto r{z};
-    std::wstring out;
+    std::string out;
     out.reserve(3);
     while (r > 9) {
       out.push_back(subscript[r % 10]);

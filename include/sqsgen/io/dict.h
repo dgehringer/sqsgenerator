@@ -65,11 +65,11 @@ namespace sqsgen::io {
         } else {
           if (d.contains(key.data)) return {get(d, key.data).template cast<Option>()};
           return parse_error::from_msg<key, CODE_NOT_FOUND>(
-              std::format("could not find key {}", key.data));
+              fmt::format("could not find key {}", key.data));
         }
       } catch (py::cast_error const& e) {
         return parse_error::from_msg<key, CODE_TYPE_ERROR>(
-            std::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
+            fmt::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
       } catch (std::out_of_range const& e) {
         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
       }

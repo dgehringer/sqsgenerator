@@ -142,11 +142,11 @@ namespace sqsgen::core {
       for (const auto &[shell, count] : neighbors) {
         auto atoms_per_shell{static_cast<T>(count) / static_cast<T>(configuration.size())};
         if (atoms_per_shell < 1)
-          spdlog::warn(std::format(
+          spdlog::warn(fmt::format(
               R"(The coordination shell {} contains no or only one lattice position(s). Increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
               shell));
         if (!is_close(atoms_per_shell, static_cast<T>(static_cast<usize_t>(atoms_per_shell))))
-          spdlog::warn(std::format(
+          spdlog::warn(fmt::format(
               "The coordination shell {} does not contain an integer number of sites. I hope you "
               "know what you are doing",
               count));
@@ -407,7 +407,7 @@ namespace sqsgen::core {
       auto sites = std::vector<sqsgen::core::detail::site<T>>{};
       for (auto index : r) {
         if (index >= size() || index < 0)
-          throw std::out_of_range(std::format("index out of range 0 <= {} < {}", index, size()));
+          throw std::out_of_range(fmt::format("index out of range 0 <= {} < {}", index, size()));
         sites.push_back(sqsgen::core::detail::site<T>{static_cast<usize_t>(index), species[index],
                                                       Eigen::Vector3<T>(frac_coords.row(index))});
       }

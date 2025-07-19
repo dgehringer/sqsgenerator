@@ -82,7 +82,7 @@ namespace sqsgen::cli {
   }
 
   inline std::string format_hyperlink(std::string_view text, std::string_view link) {
-    return std::format("\033]8;;{}\007{}\033]8;;\007", link, text);
+    return fmt::format("\033]8;;{}\007{}\033]8;;\007", link, text);
   }
 
   inline std::size_t print_width(const std::string& str) {
@@ -150,13 +150,13 @@ namespace sqsgen::cli {
     if (parameter.has_value())
       std::cout
           << bold << blue << "Help: " << reset
-          << std::format(
+          << fmt::format(
                  "the documentation for parameter \"{}\" is available at: {}", parameter.value(),
                  format_hyperlink(
-                     std::format(
+                     fmt::format(
                          "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#{}",
                          parameter.value()),
-                     std::format(
+                     fmt::format(
                          "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#{}",
                          parameter.value())))
           << std::endl;
@@ -167,7 +167,7 @@ namespace sqsgen::cli {
 
   inline std::string read_file(std::string const& filename) {
     std::ifstream ifs(filename);
-    if (!ifs) throw std::runtime_error(std::format("Could not open file: {}", filename));
+    if (!ifs) throw std::runtime_error(fmt::format("Could not open file: {}", filename));
     std::ostringstream oss;
     oss << ifs.rdbuf();
     return oss.str();
@@ -175,13 +175,13 @@ namespace sqsgen::cli {
 
   nlohmann::json read_msgpack(std::string const& filename) {
     if (!std::filesystem::exists(filename))
-      render_error(std::format("File '{}' does not exist", filename), true);
+      render_error(fmt::format("File '{}' does not exist", filename), true);
     std::ifstream ifs(filename, std::ios::in | std::ios::binary);
     nlohmann::json config_json;
     try {
       config_json = nlohmann::json::from_msgpack(ifs);
     } catch (nlohmann::json::parse_error& e) {
-      render_error(std::format("'{}' is not a valid msgpack file", filename), true, std::nullopt,
+      render_error(fmt::format("'{}' is not a valid msgpack file", filename), true, std::nullopt,
                    e.what());
     }
     return config_json;
@@ -193,14 +193,14 @@ namespace sqsgen::cli {
     try {
       data = read_file(filename);
     } catch (const std::exception& e) {
-      render_error(std::format("Error reading file '{}'", filename), true, std::nullopt, e.what());
+      render_error(fmt::format("Error reading file '{}'", filename), true, std::nullopt, e.what());
     }
 
     nlohmann::json config_json;
     try {
       config_json = nlohmann::json::parse(data);
     } catch (nlohmann::json::parse_error& e) {
-      render_error(std::format("'{}' is not a valid JSON file", filename), true, std::nullopt,
+      render_error(fmt::format("'{}' is not a valid JSON file", filename), true, std::nullopt,
                    e.what());
     }
     return config_json;
@@ -211,11 +211,11 @@ namespace sqsgen::cli {
     try {
       index = std::stoi(raw);
     } catch (const std::invalid_argument& e) {
-      render_error(std::format("Invalid index '{}'", raw), true, std::nullopt, e.what());
+      render_error(fmt::format("Invalid index '{}'", raw), true, std::nullopt, e.what());
     }
     if (index < 0 || index >= size)
-      render_error(std::format("Invalid index '{}'", raw), true, std::nullopt,
-                   std::format("index must be between 0 and {}", size - 1));
+      render_error(fmt::format("Invalid index '{}'", raw), true, std::nullopt,
+                   fmt::format("index must be between 0 and {}", size - 1));
     return index;
   }
 

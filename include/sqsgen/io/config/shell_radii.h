@@ -64,7 +64,7 @@ namespace sqsgen::io::config {
             for (auto&& r : radii)
               if (r < 0)
                 return parse_error::from_msg<key, CODE_BAD_VALUE>(
-                    std::format("You cannot specify a shell radius that is less than 0 ({})", r));
+                    fmt::format("You cannot specify a shell radius that is less than 0 ({})", r));
             if (radii.front() != 0.0 && !core::helpers::is_close<T>(radii.front(), 0.0))
               radii.insert(radii.begin(), 0.0);
             return radii;

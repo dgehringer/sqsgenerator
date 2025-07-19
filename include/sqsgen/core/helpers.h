@@ -59,7 +59,7 @@ namespace sqsgen::core::helpers {
 
     if ((Rows != Eigen::Dynamic && Rows != v.size())
         || (Cols != Eigen::Dynamic && Cols != first_size))
-      throw std::out_of_range(std::format("invalid matrix size: {}x{} compared to {}x{}", Rows,
+      throw std::out_of_range(fmt::format("invalid matrix size: {}x{} compared to {}x{}", Rows,
                                           Cols, v.size(), first_size));
 
     Matrix result(v.size(), first_size);

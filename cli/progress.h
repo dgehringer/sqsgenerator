@@ -40,8 +40,8 @@ namespace sqsgen::cli {
 
     const auto format_unit = [](int era, std::string_view unit, int seconds) -> std::string {
       auto remaining = seconds % era;
-      return std::format("{}{}{}", seconds / era, unit,
-                         remaining > 0 ? std::format(" {}", format_time(remaining * 1000)) : "");
+      return fmt::format("{}{}{}", seconds / era, unit,
+                         remaining > 0 ? fmt::format(" {}", format_time(remaining * 1000)) : "");
     };
 
     if (seconds >= YEAR) return format_unit(YEAR, "y", seconds);
@@ -50,7 +50,7 @@ namespace sqsgen::cli {
     if (seconds >= HOUR) return format_unit(HOUR, "h", seconds);
     if (seconds >= MIN) return format_unit(MIN, "m", seconds);
     assert(seconds < MIN);
-    return std::format("{}s", seconds);
+    return fmt::format("{}s", seconds);
   }
 
   class Progress {
@@ -117,7 +117,7 @@ namespace sqsgen::cli {
       auto last_block_index
           = static_cast<int>(std::round(std::fmod(percent, _block_percent) / _block_percent * 8))
             - 1;
-      os << bold << std::format(" {:.2f}%", percent) << reset << ": [";
+      os << bold << fmt::format(" {:.2f}%", percent) << reset << ": [";
       for (int i = 0; i < blocks_to_fill; i++) std::cout << _INDICATORS.back();
       auto remaining_blocks = _width - blocks_to_fill;
       if (last_block_index >= 0)
@@ -149,7 +149,7 @@ namespace sqsgen::cli {
         _etc = std::abs(_total - _current) / _average_speed.value();
       }
 
-      std::cout << bold << " min(O(σ)): " << reset << std::format("{:.5f}", _best_objective)
+      std::cout << bold << " min(O(σ)): " << reset << fmt::format("{:.5f}", _best_objective)
                 << italic << " (" << format_time(millis_since(_last_best_objective_time)) << " ago)"
                 << reset;
       if (_etc.has_value())
@@ -157,7 +157,7 @@ namespace sqsgen::cli {
                   << format_time(static_cast<int>(_etc.value() * 1000));
       if (_current_speed.has_value())
         std::cout << " | " << bold << "Speed: " << reset
-                  << std::format("{} [1/s]", std::format("{:.0f}", _current_speed.value()));
+                  << fmt::format("{} [1/s]", fmt::format("{:.0f}", _current_speed.value()));
       std::cout << std::endl;
 
       _last_render_time = now;

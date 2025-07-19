@@ -225,15 +225,16 @@ template <string_literal Name, class T> void bind_configuration(py::module &m) {
 }
 
 template <string_literal Name, class T> void bind_sro_parameter(py::module &m) {
+  using namespace sqsgen;
   using namespace sqsgen::python::helpers;
-  py::class_<sqsgen::sro_parameter<T>>(m, format_prec<Name, T>().c_str())
-      .def_readonly("shell", &sqsgen::sro_parameter<T>::shell)
-      .def_readonly("i", &sqsgen::sro_parameter<T>::i)
-      .def_readonly("j", &sqsgen::sro_parameter<T>::j)
-      .def_readonly("value", &sqsgen::sro_parameter<T>::value)
-      .def("__float__", [](sqsgen::sro_parameter<T> &p) { return p.value; })
-      .def("__repr__", [](sqsgen::sro_parameter<T> &p) -> std::wstring {
-        return std::format(L"α{}{}₋{}({})", format_ordinal<false>(p.shell), format_ordinal(p.i),
+  py::class_<sro_parameter<T>>(m, format_prec<Name, T>().c_str())
+      .def_readonly("shell", &sro_parameter<T>::shell)
+      .def_readonly("i", &sro_parameter<T>::i)
+      .def_readonly("j", &sro_parameter<T>::j)
+      .def_readonly("value", &sro_parameter<T>::value)
+      .def("__float__", [](sro_parameter<T> &p) { return p.value; })
+      .def("__repr__", [](sro_parameter<T> &p) -> std::string {
+        return fmt::format("α{}-{}-{}({})", format_ordinal(p.shell), format_ordinal(p.i),
                            format_ordinal(p.j), p.value);
       });
 }
@@ -415,7 +416,7 @@ PYBIND11_MODULE(_core, m) {
       .def(
           "__eq__", [](core::atom &a, core::atom &b) { return a.Z == b.Z; }, py::is_operator())
       .def("__repr__", [](core::atom &a) -> std::string {
-        return std::format("Atom(symbol=\"{}\", Z={}, mass={})", a.symbol, a.Z, a.mass);
+        return fmt::format("Atom(symbol=\"{}\", Z={}, mass={})", a.symbol, a.Z, a.mass);
       });
 
   py::class_<vset<usize_t>>(m, "Indices")
