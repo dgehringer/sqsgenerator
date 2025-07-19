@@ -150,13 +150,7 @@ class CMakeBuild(build_ext):
             f"-DSQSGEN_BUILD_COMMIT={git_sha1()}",
             "-DCMAKE_VERBOSE_MAKEFILE={}".format("ON" if self.verbose else "OFF"),
         ]
-        if sys.platform == "win32" and (
-            sys.version_info.major,
-            sys.version_info.minor,
-        ) == (3, 13):
-            cmake_args.append(
-                f"-DPYTHON_MODULE_EXTENSION=.cp{python_version.replace('.', '')}-{self.plat_name.replace('-', '_')}.pyd"
-            )
+
         build_args = []
         # Adding CMake arguments set as environment variable
         # (needed e.g. to build for ARM OSx on conda-forge)
