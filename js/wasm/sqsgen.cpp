@@ -2,6 +2,7 @@
 #include <emscripten/emscripten.h>
 #include <emscripten/proxying.h>
 #include <emscripten/threading.h>
+#include <fmt/format.h>
 
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/results.h"

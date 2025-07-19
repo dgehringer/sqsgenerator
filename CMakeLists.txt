@@ -45,7 +45,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID
 endif ()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-    add_compile_options(-w)  # Disables all warnings
+    # add_compile_options(-w)  # Disables all warnings
     # OR for specific warnings:
     # add_compile_options(-Wno-unused-variable -Wno-deprecated-declarations)
 endif ()
