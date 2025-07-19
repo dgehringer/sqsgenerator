@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FetchContent)
 
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 if (EMSCRIPTEN AND BUILD_WASM)
@@ -14,35 +15,6 @@ if (EMSCRIPTEN AND BUILD_WASM)
     set(VCPKG_CXX_FLAGS "-fPIC -fno-threadsafe-statics" CACHE STRING "")
 endif ()
 
-
-find_package(Eigen3 CONFIG REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
-
-find_package(boost_multiprecision REQUIRED CONFIG)
-
-
-if (WITH_MPI)
-    find_package(MPI REQUIRED)
-    FetchContent_Declare(
-            mpl
-            GIT_REPOSITORY https://github.com/rabauke/mpl.git
-            GIT_TAG v0.3.0
-    )
-    FetchContent_MakeAvailable(mpl)
-    add_compile_options(-DWITH_MPI)
-endif ()
-
-if (MSVC)
-    add_definitions(-DUNICODE)
-    add_definitions(-D_UNICODE)
-    add_compile_options(/Zc:twoPhase- /Zc:__cplusplus /MT /permissive-)
-endif ()
-
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    message(STATUS "Detected clang: adding -fexperimental-library")
-    add_compile_options(-fexperimental-library)
-endif ()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
     add_compile_options(-w)  # Disables all warnings
@@ -55,20 +27,9 @@ if (WITH_MPI AND BUILD_PYTHON)
     message(FATAL_ERROR "MPI and Python bindings are not supported together")
 endif ()
 
-if (BUILD_PYTHON OR BUILD_TESTS)
-    if (BUILD_TESTS)
-        find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-    else ()
-        find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
-    endif ()
-    set(BUILD_PYTHON ON)
-    find_package(pybind11 CONFIG REQUIRED)
-    add_compile_options(-DWITH_PYTHON)
-endif ()
 
 if (BUILD_PYTHON)
     message(STATUS "BUILD_PYTHON=${BUILD_PYTHON}")
-    add_subdirectory("python/extension")
 endif ()
 
 if (BUILD_WASM)
