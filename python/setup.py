@@ -1,16 +1,16 @@
 import json
 import os
+import pprint
 import re
+import shlex
 import sys
 import uuid
-import sysconfig
 import pybind11
 import subprocess
 from pathlib import Path
 
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
-
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
 PLAT_TO_CMAKE = {
@@ -136,12 +136,8 @@ class CMakeBuild(build_ext):
         python_executable, python_version = get_python_info()
 
         cmake_args = [
-            f"-DPython3_VERSION={python_version}",
-            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
-            "-DPYBIND11_FINDPYTHON=ON",
-            "-DPython3_INCLUDE_DIR={}".format(sysconfig.get_path("include")),
-            # "-DPython3_LIBRARY={}".format(sysconfig.get_config_var("LIBDIR")),
-            f"-DPython3_EXECUTABLE={python_executable}",
+            f"-DPython_ROOT_DIR={sys.base_prefix}",
+            f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DBUILD_TESTS={'ON' if ext.build_tests else 'OFF'}",
             f"-DBUILD_BENCHMARKS={'ON' if ext.build_benchmarks else 'OFF'}",
@@ -226,6 +222,12 @@ class CMakeBuild(build_ext):
         build_temp = Path(self.build_temp) / ext.name
         if not build_temp.exists():
             build_temp.mkdir(parents=True)
+
+        print("CMake commands:")
+        print("    configure:", shlex.join(["cmake", ext.sourcedir, *cmake_args]))
+        print("    build:", shlex.join(["cmake", "--build", ".", *build_args]))
+        print("environment:")
+        pprint.pprint(os.environ)
 
         subprocess.run(
             ["cmake", ext.sourcedir, *cmake_args],
