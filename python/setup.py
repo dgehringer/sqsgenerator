@@ -139,8 +139,8 @@ class CMakeBuild(build_ext):
             f"-DPython_ROOT_DIR={sys.base_prefix}",
             f"-DPython3_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
-            f"-DBUILD_TESTS={'ON' if ext.build_tests else 'OFF'}",
-            f"-DBUILD_BENCHMARKS={'ON' if ext.build_benchmarks else 'OFF'}",
+            f"-DBUILD_TESTS=OFF",
+            f"-DBUILD_BENCHMARKS=OFF",
             "-DWITH_MPI=OFF",
             "-DBUILD_PYTHON=ON",
             "-DCMAKE_POLICY_DEFAULT_CMP0148=NEW",
