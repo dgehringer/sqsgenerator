@@ -37,7 +37,7 @@ jobs:
           package-dir: ./python
           output-dir: wheelhouse
         env:
-          CIBW_ARCHS_MACOS: "universal2"
+          CIBW_ARCHS_MACOS: "arm64"
           CIBW_ARCHS_LINUX: "x86_64"
           CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
