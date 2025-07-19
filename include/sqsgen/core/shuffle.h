@@ -7,7 +7,7 @@
 
 #include <random>
 
-#include "rapidhash.h"
+#include "sqsgen/core/helpers/rapidhash.h"
 #include "sqsgen/core/permutation.h"
 #include "sqsgen/types.h"
 

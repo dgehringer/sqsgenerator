@@ -36,7 +36,7 @@ endif ()
 if (MSVC)
     add_definitions(-DUNICODE)
     add_definitions(-D_UNICODE)
-    add_compile_options(/Zc:twoPhase- /Zc:__cplusplus /MT /Zc:constexpr-)
+    add_compile_options(/Zc:twoPhase- /Zc:__cplusplus /MT /permissive-)
 endif ()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
