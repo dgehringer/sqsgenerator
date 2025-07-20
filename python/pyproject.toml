@@ -38,8 +38,9 @@ cmake.args = [
     "-DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake",
     "-DVCPKG_MANIFEST_DIR=..",
     "-DVCPKG_INSTALLED_DIR=../vcpkg/installed",
-    "-DVCPKG_LIBRARY_LINKAGE=static",
 ]
+wheel.packages = ["sqsgenerator"]
+
 
 [tool.scikit-build.metadata.version]
 provider = "scikit_build_core.metadata.regex"
@@ -53,7 +54,7 @@ result = "{major}.{minor}.{patch}"
 testpaths = ["tests"]
 
 [tool.setuptools.package-data]
-sqsgenerator = ["*.json", "*.pyi"]
+sqsgenerator = ["*.json", "*.pyi", "*.dll"]
 
 
 [tool.cibuildwheel]
