@@ -42,7 +42,7 @@ jobs:
 
       - name: Install vcpkg
         run: |
-          ${{ github.workspace }}/vcpkg/bootstrap-vcpkg.sh
+          ${{ github.workspace }}/vcpkg/bootstrap-vcpkg.$([[ "$RUNNER_OS" == "Windows" ]] && echo "bat" || echo "sh")
           ${{ github.workspace }}/vcpkg/vcpkg install --binarycaching
         shell: bash
 
