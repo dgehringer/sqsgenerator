@@ -50,8 +50,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Build package
-        run:  pip install . -v
-        working-directory: ./python
+        run:  pip install ./python -v
 
       - name: Compile & install test dependencies
         run: |
