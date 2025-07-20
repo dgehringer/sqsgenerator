@@ -1,6 +1,30 @@
+cmake_minimum_required(VERSION 3.27)
+
+project(sqsgenerator-tests LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    message(STATUS "Detected clang: adding -fexperimental-library")
+    add_compile_options(-fexperimental-library)
+endif ()
+
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+find_package(boost_multiprecision REQUIRED CONFIG)
+find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
+
+
+set(PROJECT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(SQSGEN_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
-set(SQSGEN_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/sqsgen)
-set(SQSGEN_TEST_SOURCE_DIR ${PROJECT_SOURCE_DIR}/tests)
+set(SQSGEN_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
+set(SQSGEN_TEST_SOURCE_DIR ${CMAKE_SOURCE_DIR})
+include_directories(${SQSGEN_INCLUDE_DIR} ${BS_THREAD_POOL_INCLUDE_DIRS})
 
 find_package(GTest CONFIG REQUIRED)
 file(GLOB tests "${SQSGEN_TEST_SOURCE_DIR}/*.cpp")
@@ -14,6 +38,7 @@ list(APPEND SQSGEN_TEST_LIBS "pybind11::embed")
 list(APPEND SQSGEN_TEST_LIBS "nlohmann_json::nlohmann_json")
 list(APPEND SQSGEN_TEST_LIBS "spdlog::spdlog_header_only")
 list(APPEND SQSGEN_TEST_LIBS "GTest::gtest_main")
+list(APPEND SQSGEN_TEST_LIBS "fmt::fmt")
 list(APPEND SQSGEN_TEST_LIBS "${Python3_LIBRARIES}")
 
 message(STATUS "SQSGEN_TEST_LIBS=${SQSGEN_TEST_LIBS}")
@@ -26,6 +51,10 @@ if (MSVC)
     add_compile_options(/permissive-)
 endif ()
 
+add_compile_options(-fsanitize=address)
+add_compile_options(-g)
+add_compile_options(-O0)
+add_link_options(-fsanitize=address)
 
 enable_testing()
 
@@ -41,6 +70,7 @@ add_executable(test_structure
         "${SQSGEN_TEST_SOURCE_DIR}/test_structure.cpp"
         helpers.h
 )
+
 target_link_libraries(test_structure ${SQSGEN_TEST_LIBS})
 add_test(NAME test_structure COMMAND test_structure)
 add_custom_command(TARGET test_structure POST_BUILD
@@ -61,6 +91,5 @@ add_executable(test_parser
         "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
         "${SQSGEN_TEST_SOURCE_DIR}/test_parser.cpp"
 )
-target_include_directories(test_parser PRIVATE ${RAPIDHASH_INCLUDE_DIRS})
 target_link_libraries(test_parser ${SQSGEN_TEST_LIBS} "${Python3_LIBRARIES}")
 add_test(NAME test_parser COMMAND test_parser)

@@ -27,7 +27,7 @@ namespace sqsgen::io::config {
         return stl_to_eigen<matrix_t<T>>(m);
       } catch (std::invalid_argument const& e) {
         return parse_error::from_msg<key, CODE_BAD_VALUE>(
-            fmt::format("Could not convert to 2D array - {}", e.what()));
+            format_("Could not convert to 2D array - {}", e.what()));
       }
     }
 
@@ -37,7 +37,7 @@ namespace sqsgen::io::config {
         return stl_to_eigen<cube_t<T>>(c);
       } catch (std::invalid_argument const& e) {
         return parse_error::from_msg<key, CODE_BAD_VALUE>(
-            fmt::format("Could not convert to 3D array - {}", e.what()));
+            format_("Could not convert to 3D array - {}", e.what()));
       }
     }
 
@@ -58,8 +58,8 @@ namespace sqsgen::io::config {
     parse_result<cube_t<T>> parse_matrix(matrix_t<T>&& m, auto num_shells, auto num_species) {
       if (m.rows() != num_species || m.cols() != num_species)
         return parse_error::from_msg<key, CODE_BAD_VALUE>(
-            fmt::format("matrix has invalid size {}x{} but expected {}x{}", m.rows(), m.cols(),
-                        num_species, num_species));
+            format_("matrix has invalid size {}x{} but expected {}x{}", m.rows(), m.cols(),
+                    num_species, num_species));
       return stack_matrix(std::forward<matrix_t<T>>(m), num_shells);
     }
 
@@ -68,8 +68,8 @@ namespace sqsgen::io::config {
       const typename cube_t<T>::Dimensions& d = c.dimensions();
       if (d[0] != num_shells || d[1] != num_species || d[2] != num_species)
         return parse_error::from_msg<key, CODE_BAD_VALUE>(
-            fmt::format("array has invalid size {}x{}x{} but expected {}x{}x{}", d[0], d[1], d[2],
-                        num_shells, num_species, num_species));
+            format_("array has invalid size {}x{}x{} but expected {}x{}x{}", d[0], d[1], d[2],
+                    num_shells, num_species, num_species));
       return c;
     }
 

@@ -394,8 +394,8 @@ namespace sqsgen {
             return type_checker<Option>::is(j)
                        ? parse_result<Option>{j.get<Option>()}
                        : parse_error::from_msg<key, CODE_TYPE_ERROR>(
-                             fmt::format("type error - checked - cannot parse {} - {} ({})",
-                                         typeid(Option).name(), j.type_name(), j.dump(2)));
+                             format_("type error - checked - cannot parse {} - {} ({})",
+                                     typeid(Option).name(), j.type_name(), j.dump(2)));
           else
             return {j.get<Option>()};
         };
@@ -406,13 +406,13 @@ namespace sqsgen {
             return json.contains(key.data)
                        ? parse_json(json.at(key.data))
                        : parse_result<Option>{parse_error::from_msg<key, CODE_NOT_FOUND>(
-                             fmt::format("could not find key {}", key.data))};
+                             format_("could not find key {}", key.data))};
 
         } catch (nlohmann::json::out_of_range const& e) {
           return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range - found - {}", e.what());
         } catch (nlohmann::json::type_error const& e) {
           return parse_error::from_msg<key, CODE_TYPE_ERROR>(
-              fmt::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
+              format_("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
         } catch (std::out_of_range const& e) {
           return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
         }

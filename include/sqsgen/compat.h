@@ -12,6 +12,14 @@
 #endif
 
 #ifdef __EMSCRIPTEN__
+#  include <format>
+#  define format_ std::format
+#else
+#  include <fmt/format.h>
+#  define format_ fmt::format
+#endif
+
+#ifdef __EMSCRIPTEN__
 namespace spdlog {
 
   namespace level {
@@ -53,6 +61,7 @@ namespace spdlog {
 
   inline void set_level(level::level_enum level) { __current_level.store(level); }
 }  // namespace spdlog
+
 #endif
 
 #endif  // SQSGEN_LOG_H

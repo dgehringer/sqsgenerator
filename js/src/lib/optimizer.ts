@@ -62,8 +62,7 @@ export class SqsgenOptimizer {
         try {
             const result = this.module.parseConfig(config);
             return {ok: !this.isError(result), value: result}
-        } catch (e) {
-            console.error(JSON.stringify(e));
+        } catch (e: any) {
             return {
                 ok: false, value: {
                     key: "unknown",

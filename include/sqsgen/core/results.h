@@ -170,9 +170,9 @@ namespace sqsgen::core {
 
       sro_parameter<T> parameter(usize_t shell, std::string const &i, std::string const &j) {
         if (!SYMBOL_MAP.contains(i))
-          throw std::domain_error(fmt::format("Unknown atomic species {}", i));
+          throw std::domain_error(format_("Unknown atomic species {}", i));
         if (!SYMBOL_MAP.contains(j))
-          throw std::domain_error(fmt::format("Unknown atomic species {}", j));
+          throw std::domain_error(format_("Unknown atomic species {}", j));
         return parameter(shell, SYMBOL_MAP.at(i), SYMBOL_MAP.at(j));
       }
 
@@ -185,11 +185,11 @@ namespace sqsgen::core {
             if (jj.has_value()) {
               return {shell, i, j, this->sro(shell_index.value(), ii.value(), jj.value())};
             }
-            throw std::domain_error(fmt::format("This result does not contain species Z={}", j));
+            throw std::domain_error(format_("This result does not contain species Z={}", j));
           } else
-            throw std::domain_error(fmt::format("This result does not contain Z={}", i));
+            throw std::domain_error(format_("This result does not contain Z={}", i));
         } else
-          throw std::domain_error(fmt::format("This result does not contain a shell {}", shell));
+          throw std::domain_error(format_("This result does not contain a shell {}", shell));
       }
 
       std::vector<sro_parameter<T>> parameter(usize_t shell) {

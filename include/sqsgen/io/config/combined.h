@@ -37,9 +37,9 @@ namespace sqsgen::io::config {
           structure.apply_composition_and_decompose(composition).front().species);
       if (iterations > std::numeric_limits<iterations_t>::max())
         return parse_error::from_msg<key, CODE_BAD_VALUE>(
-            fmt::format("The number of permutations to test is {}. I'm a pretty fast program, but "
-                        "this is too much even for me ;=)",
-                        iterations.str()));
+            format_("The number of permutations to test is {}. I'm a pretty fast program, but "
+                    "this is too much even for me ;=)",
+                    iterations.str()));
       return std::make_optional(iterations_t{iterations});
     } else
       return get_optional<key, iterations_t>(doc)
@@ -77,7 +77,7 @@ namespace sqsgen::io::config {
                                                  : chunk_size_default})
         .and_then([&](auto&& cs) -> result_t {
           if (iterations.has_value() && cs > iterations.value())
-            return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(fmt::format(
+            return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(format_(
                 "\"chunk_size\" was set to {} and iterations set to {}", cs, iterations.value()));
           return result_t{cs};
         });

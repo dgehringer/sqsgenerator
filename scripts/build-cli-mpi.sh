@@ -11,7 +11,9 @@ cmake \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
   -DCMAKE_BUILD_TYPE=Release \
   -DVCPKG_MANIFEST_DIR="${PROJECT_DIR}" \
- # -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
+  -DWITH_MPI=ON \
+  -DCMAKE_CXX_COMPILER=${MPI_CXX} \
+  -DCMAKE_C_COMPILER=${MPI_CC} \
   -B "${BUILD_PATH}" \
   -S "${PROJECT_DIR}/cli"
 
