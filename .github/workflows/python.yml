@@ -17,6 +17,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-15]
         python-version: ["3.12"]
+    env:
+        VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
 
     steps:
 
@@ -24,15 +26,11 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Create vcpkg binary cache directory
-        run: mkdir -p ${{ github.workspace }}/vcpkg/binarycache
-        shell: bash
-
       - name: Cache vcpkg binaries
         id: cache-vcpkg
         uses: actions/cache@v4
         with:
-          path: ${{ github.workspace }}/vcpkg/binarycache
+          path: ${{ github.workspace }}/vcpkg_installed
           key: vcpkg-${{ runner.os }}-${{ github.workflow }}-${{ hashFiles('**/vcpkg.json') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-${{ github.workflow }}-

@@ -36,7 +36,8 @@ build.verbose = true
 logging.level = "DEBUG"
 cmake.args = [
     "-DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake",
-    "-DVCPKG_MANIFEST_DIR=.."
+    "-DVCPKG_MANIFEST_DIR=..",
+    "-DVCPKG_INSTALLED_DIR=../vcpkg/installed",
 ]
 
 [tool.scikit-build.metadata.version]
