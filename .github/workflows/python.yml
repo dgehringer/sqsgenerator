@@ -17,8 +17,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-15]
         python-version: ["3.12"]
-    env:
-        VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
 
     steps:
 
@@ -30,7 +28,7 @@ jobs:
         id: cache-vcpkg
         uses: actions/cache@v4
         with:
-          path: ${{ github.workspace }}/vcpkg_installed
+          path: ${{ github.workspace }}/vcpkg/packages
           key: vcpkg-${{ runner.os }}-${{ github.workflow }}-${{ hashFiles('**/vcpkg.json') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-${{ github.workflow }}-
@@ -59,4 +57,3 @@ jobs:
         with:
           name: pytest-results-${{ matrix.python-version }}-${{ matrix.os }}
           path: junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
-          # Use always() to always run this step to publish test results when there are test failures
