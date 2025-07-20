@@ -43,8 +43,6 @@ jobs:
             vcpkg-${{ runner.os }}-${{ github.workflow }}-
 
       - uses: lukka/run-vcpkg@v11
-        with:
-          runVcpkgInstall: true
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
