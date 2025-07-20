@@ -22,7 +22,7 @@ jobs:
       - name: install openmpi
         run: |
           sudo apt-get update
-          sudo apt-get install -y openmpi
+          sudo apt-get install -y openmpi-bin libopenmpi-dev
 
       - uses: actions/checkout@v4
         with:
@@ -56,6 +56,9 @@ jobs:
 
       - name: build cli app (MPI version)
         run: ${{ github.workspace }}/scripts/build-cli.sh build-cli-mpi
+        env:
+          MPI_CXX: mpicxx.openmpi
+          MPI_CC: mpicc.openmpi"
 
       - name: run ctest
         run: ctest --test-dir ${{ github.workspace }}/build-tests --verbose --output-junit ${{ github.workspace }}/junit/test-results.xml
