@@ -21,8 +21,8 @@ jobs:
     steps:
       - name: install openmpi
         run: |
-          apt-get update
-          apt-get install -y openmpi
+          sudo apt-get update
+          sudo apt-get install -y openmpi
 
       - uses: actions/checkout@v4
         with:
