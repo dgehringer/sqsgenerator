@@ -5,6 +5,8 @@
 #ifndef SQSGEN_CORE_HELPERS_H
 #define SQSGEN_CORE_HELPERS_H
 
+#include <fmt/format.h>
+
 #include <ranges>
 
 #include "helpers/as.h"

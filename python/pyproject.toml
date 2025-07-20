@@ -15,10 +15,6 @@ readme = "README.md"
 Homepage = "https://github.com/dgehringer/sqsgenerator"
 Issues = "https://github.com/dgehringer/sqsgenerator/issues"
 
-
-[tool.setuptools.dynamic]
-version = { file = "version" }
-
 [project.optional-dependencies]
 test = [
     "pytest",
@@ -28,16 +24,28 @@ test = [
 
 [build-system]
 requires = [
-    "setuptools>=68.0.0", # Required for Python 3.13 support
-    "wheel>=0.40.0",
-    "ninja",
-    "cmake>=3.27", # Newer CMake for better Python 3.13 support
+    "scikit-build-core",
     "pybind11>=2.11.0", # Minimum version with Python 3.13 support
     "numpy>=1.26.0", # Python 3.13 compatible version
     "mypy"
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "scikit_build_core.build"
 
+[tool.scikit-build]
+build.verbose = true
+logging.level = "DEBUG"
+cmake.args = [
+    "-DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake",
+    "-DVCPKG_INSTALLED_DIR=../vcpkg_installed",
+]
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "../vcpkg.json"
+regex = '''(?sx)
+"version-string"\s*:\s*"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)",
+'''
+result = "{major}.{minor}.{patch}"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -54,12 +62,12 @@ test-extras = ["test"]
 
 
 [tool.ruff]
-extend-exclude = ["sqsgenerator/core/_core.pyi", "setup.py"]
+extend-exclude = ["sqsgenerator/core/_core.pyi"]
 
 [tool.ruff.lint]
 extend-select = [
     "B", # flake8-bugbear
-    "I", # isort
+    "I", # isortp
     "PGH", # pygrep-hooks
     "RUF", # Ruff-specific
     "UP", # pyupgrade

@@ -1,10 +1,19 @@
 cmake_minimum_required(VERSION 3.27)
 
+include(FetchContent)
 include(${CMAKE_SOURCE_DIR}/../cmake/RepoInfo.cmake)
 repo_info("${CMAKE_SOURCE_DIR}/..")
 
+project(sqsgenerator-cli)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# format tepmlates
+execute_process(
+        COMMAND "python ${CMAKE_SOURCE_DIR}/../scripts/templates.py ${CMAKE_SOURCE_DIR}/../templates ${CMAKE_SOURCE_DIR}"
+        COMMAND_ECHO STDOUT
+)
 
 if (WITH_MPI)
     find_package(MPI REQUIRED)
@@ -36,8 +45,15 @@ find_package(boost_multiprecision REQUIRED CONFIG)
 find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
 include_directories("${CMAKE_SOURCE_DIR}/../include" ${BS_THREAD_POOL_INCLUDE_DIRS})
 
-add_executable(sqsgen main.cpp progress.h helpers.h cli/termcolor.h)
+add_executable(sqsgen main.cpp progress.h helpers.h termcolor.h)
 target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only Eigen3::Eigen Boost::multiprecision argparse::argparse)
 if (WITH_MPI)
     target_link_libraries(sqsgen PRIVATE ${MPI_LIBRARIES} mpl)
 endif ()
+target_compile_definitions(sqsgen PRIVATE
+        SQSGEN_BUILD_COMMIT=${GIT_COMMIT_HASH}
+        SQSGEN_BUILD_BRANCH=${GIT_BRANCH}
+        SQSGEN_BUILD_NUMBER=${VERSION_PATCH}
+        SQSGEN_MINOR_VERSION=${VERSION_MINOR}
+        SQSGEN_MAJOR_VERSION=${VERSION_MAJOR}
+)

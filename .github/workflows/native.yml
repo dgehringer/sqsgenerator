@@ -1,0 +1,31 @@
+name: Native CI Build
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - wasm
+
+permissions:
+  contents: write
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  VCPKG_FEATURE_FLAGS: "-manifests"
+  EM_VERSION: 4.0.11
+  EM_CACHE_FOLDER: 'emsdk-cache'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      VCPKG_BINARY_SOURCES: "x-gha,readwrite"
+      VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
