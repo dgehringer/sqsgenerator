@@ -2,15 +2,14 @@
 #include <emscripten/emscripten.h>
 #include <emscripten/proxying.h>
 #include <emscripten/threading.h>
-#include <fmt/format.h>
 
+#include "sqsgen/compat.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/results.h"
 #include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/json.h"
 #include "sqsgen/io/parsing.h"
 #include "sqsgen/io/structure.h"
-#include "sqsgen/log.h"
 #include "sqsgen/sqs.h"
 #include "sqsgen/types.h"
 

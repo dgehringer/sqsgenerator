@@ -50,7 +50,6 @@ jobs:
             CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/usr/local/bin/c++ -DCMAKE_C_COMPILER=/usr/local/bin/cc"
             CXX=/usr/local/bin/c++
             CC=/usr/local/bin/cc
-            VCPKG_FORCE_SYSTEM_BINARIES=1
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_ENVIRONMENT_MACOS: |

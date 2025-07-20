@@ -5,8 +5,6 @@
 #ifndef SQSGEN_CORE_HELPERS_H
 #define SQSGEN_CORE_HELPERS_H
 
-#include <fmt/format.h>
-
 #include <ranges>
 
 #include "helpers/as.h"
@@ -17,6 +15,7 @@
 #include "helpers/sorted_vector.h"
 #include "helpers/static_string.h"
 #include "helpers/templates.h"
+#include "sqsgen/compat.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core::helpers {
@@ -61,8 +60,8 @@ namespace sqsgen::core::helpers {
 
     if ((Rows != Eigen::Dynamic && Rows != v.size())
         || (Cols != Eigen::Dynamic && Cols != first_size))
-      throw std::out_of_range(fmt::format("invalid matrix size: {}x{} compared to {}x{}", Rows,
-                                          Cols, v.size(), first_size));
+      throw std::out_of_range(format_("invalid matrix size: {}x{} compared to {}x{}", Rows, Cols,
+                                      v.size(), first_size));
 
     Matrix result(v.size(), first_size);
     helpers::for_each([&](auto i, auto j) { result(i, j) = v[i][j]; },

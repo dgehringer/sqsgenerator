@@ -190,7 +190,7 @@ namespace sqsgen::io {
 
     if (accessor<Doc>::contains(doc, key.data) || key == KEY_NONE) {
       result_t result = {parse_error::from_msg<key, CODE_UNKNOWN>(
-          fmt::format("unknown error failed to load {}", key.data))};
+          format_("unknown error failed to load {}", key.data))};
       ((result = result.failed() ? detail::forward_superset<Options...>(
                                        accessor<Doc>::template get_as<key, Options>(doc))
                                  : result),

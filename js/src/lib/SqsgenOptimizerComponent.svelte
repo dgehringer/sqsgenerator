@@ -72,10 +72,13 @@
     const content = $derived(state.content);
     const config = $derived(content.json);
     const runConfig = $derived(
-        state.optimizer && config ? state.optimizer.parseConfig(config) : undefined
+        state.optimizer && config !== undefined ? state.optimizer.parseConfig(config) : undefined
     );
-    const runConfigContent = $derived(
-        runConfig ? {json: runConfig.value} : undefined
+    const runConfigJson = $derived(
+        runConfig ? {json: runConfig.value} : undefined,
+    )
+    const triggerOptimizationDisabled = $derived(
+        runConfigJson === undefined
     );
 
     function handleChange(updatedContent: TextContent) {
@@ -103,7 +106,7 @@
             icon: faCopy,
             title: 'Copy document to clipboard',
             className: 'custom-copy-button',
-            disabled: runConfig ? !runConfig.ok : true,
+            disabled: triggerOptimizationDisabled,
         }
 
         const head = items.slice(0, items.length - 1)
@@ -117,15 +120,14 @@
 {#if loaded}
     <div class="editor">
         <JSONEditor mode={Mode.text} {content} onChange={handleChange}
-                    validator={() => state.optimizer?.validate(config)}
-        onRenderMenu={handleRenderMenu}
+                    onRenderMenu={handleRenderMenu}
         />
     </div>
 {/if}
 
-{#if runConfig}
+{#if runConfig && runConfig.ok}
     <div class="editor">
-        <JSONEditor mode={Mode.text} content={runConfigContent}/>
+        <JSONEditor mode={Mode.text} content={runConfigJson}/>
     </div>
 {/if}
 
