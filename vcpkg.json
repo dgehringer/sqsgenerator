@@ -8,6 +8,7 @@
     "nlohmann-json",
     "bshoshany-thread-pool",
     "gtest",
-    "argparse"
+    "argparse",
+    "fmt"
   ]
 }
