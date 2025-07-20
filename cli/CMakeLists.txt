@@ -9,11 +9,6 @@ project(sqsgenerator-cli)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# format tepmlates
-execute_process(
-        COMMAND "python ${CMAKE_SOURCE_DIR}/../scripts/templates.py ${CMAKE_SOURCE_DIR}/../templates ${CMAKE_SOURCE_DIR}"
-        COMMAND_ECHO STDOUT
-)
 
 if (WITH_MPI)
     find_package(MPI REQUIRED)
