@@ -58,7 +58,7 @@ target_compile_definitions(_core PRIVATE
 )
 target_include_directories(_core PRIVATE ${BS_THREAD_POOL_INCLUDE_DIRS})
 target_include_directories(_core PRIVATE ${RAPIDHASH_INCLUDE_DIRS})
-target_link_libraries(_core PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only Boost::multiprecision Eigen3::Eigen ${Python3_LIBRARIES})
+target_link_libraries(_core PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only fmt::fmt-header-only Boost::multiprecision Eigen3::Eigen ${Python3_LIBRARIES})
 install(TARGETS _core DESTINATION sqsgenerator/core)
 
 if (WIN32)
