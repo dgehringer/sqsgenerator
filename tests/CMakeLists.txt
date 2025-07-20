@@ -51,6 +51,10 @@ if (MSVC)
     add_compile_options(/permissive-)
 endif ()
 
+add_compile_options(-fsanitize=address)
+add_compile_options(-g)
+add_compile_options(-O0)
+add_link_options(-fsanitize=address)
 
 enable_testing()
 
@@ -66,6 +70,7 @@ add_executable(test_structure
         "${SQSGEN_TEST_SOURCE_DIR}/test_structure.cpp"
         helpers.h
 )
+
 target_link_libraries(test_structure ${SQSGEN_TEST_LIBS})
 add_test(NAME test_structure COMMAND test_structure)
 add_custom_command(TARGET test_structure POST_BUILD
