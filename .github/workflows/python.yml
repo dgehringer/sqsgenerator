@@ -18,10 +18,8 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-15]
         python-version: ["3.12"]
     env:
-      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg/binarycache,readwrite"
-      VCPKG_TOOLCHAIN_PATH: ${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
-      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg/binarycache
-      VCPKG_MANIFEST_DIR: ${{ github.workspace }}
+      #VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg/binarycache,readwrite"
+
 
     steps:
 
