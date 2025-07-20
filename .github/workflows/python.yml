@@ -34,13 +34,17 @@ jobs:
         id: cache-vcpkg
         uses: actions/cache@v4
         with:
-          path: ${{ env.VCPKG_ROOT }}/installed
-          key: vcpkg-${{ runner.os }}-python-${{ hashFiles('**/vcpkg.json') }}
+          path: ${{ github.workspace }}/vcpkg/binarycache
+          key: vcpkg-${{ runner.os }}-${{ github.workflow }}-${{ hashFiles('**/vcpkg.json') }}
           restore-keys: |
-            vcpkg-${{ runner.os }}-python-
+            vcpkg-${{ runner.os }}-${{ github.workflow }}-
 
 
-      - uses: friendlyanon/setup-vcpkg@v1
+      - name: Install vcpkg
+        run: |
+          ${{ github.workspace }}/vcpkg/bootstrap-vcpkg.sh
+          ${{ github.workspace }}/vcpkg/vcpkg install --binarycaching
+        shell: bash
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
