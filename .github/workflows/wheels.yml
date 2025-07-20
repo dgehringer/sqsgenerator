@@ -38,10 +38,10 @@ jobs:
           output-dir: wheelhouse
         env:
           CIBW_ARCHS_WINDOWS: "AMD64"
-          CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
+          CIBW_BUILD_FRONTEND: "build"
           CIBW_ENVIRONMENT_PASS_LINUX: "CC CXX CMAKE_ARGS"
           CIBW_BEFORE_ALL_LINUX: |
-            dnf -y install curl zip unzip tar
+            dnf -y install curl zip unzip tar git
             ./vcpkg/bootstrap-vcpkg.sh
           CIBW_ENVIRONMENT_LINUX: |
             CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/usr/local/bin/c++ -DCMAKE_C_COMPILER=/usr/local/bin/cc"
