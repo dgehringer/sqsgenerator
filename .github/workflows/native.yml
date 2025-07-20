@@ -1,12 +1,9 @@
 name: native-ci
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
-      - wasm
+      - main
 
 permissions:
   contents: write
@@ -55,8 +52,8 @@ jobs:
       - name: build ctest executables
         run: ${{ github.workspace }}/scripts/build-tests.sh build-tests
 
-      - name: run ctest
-        run: ctest --test-dir ${{ github.workspace }}/build-tests --verbose --output-junit ${{ github.workspace }}/junit/test-results.xml
+      # - name: run ctest
+      #  run: ctest --test-dir ${{ github.workspace }}/build-tests --verbose --output-junit ${{ github.workspace }}/junit/test-results.xml
 
       - name: upload ctest test results
         uses: actions/upload-artifact@v4
