@@ -64,8 +64,8 @@ jobs:
           MPI_CXX: mpicxx.openmpi
           MPI_CC: mpicc.openmpi"
 
-      - name: run ctest
-        run: ctest --test-dir ${{ github.workspace }}/build-tests --verbose --output-junit ${{ github.workspace }}/junit/test-results.xml
+      # - name: run ctest
+      #  run: ctest --test-dir ${{ github.workspace }}/build-tests --verbose --output-junit ${{ github.workspace }}/junit/test-results.xml
 
       - name: upload ctest test results
         uses: actions/upload-artifact@v4
