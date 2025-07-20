@@ -64,4 +64,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wasm-artifacts
-          path: build/js/wasm/core.*
+          path: build/core.*

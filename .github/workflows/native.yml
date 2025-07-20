@@ -1,4 +1,4 @@
-name: Native CI Build
+name: native-ci
 
 on:
   pull_request:
@@ -6,7 +6,6 @@ on:
       - main
   push:
     branches:
-      - main
       - wasm
 
 permissions:
@@ -14,18 +13,61 @@ permissions:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  VCPKG_FEATURE_FLAGS: "-manifests"
-  EM_VERSION: 4.0.11
-  EM_CACHE_FOLDER: 'emsdk-cache'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      VCPKG_BINARY_SOURCES: "x-gha,readwrite"
-      VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
 
     steps:
+      - name: install openmpi
+        run: |
+          apt-get update
+          apt-get install -y openmpi
+
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Cache vcpkg binaries
+        id: cache-vcpkg
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/vcpkg/buildtrees
+            ${{ github.workspace }}/vcpkg/packages
+            ${{ github.workspace }}/vcpkg/downloads
+            ${{ github.workspace }}/vcpkg/installed
+          key: vcpkg-${{ runner.os }}-${{ github.workflow }}-${{ hashFiles('**/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ github.workflow }}-
+
+      - uses: lukka/run-vcpkg@v11
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: build ctest executables
+        run: ${{ github.workspace }}/scripts/build-tests.sh build-tests
+
+      - name: build cli app
+        run: ${{ github.workspace }}/scripts/build-cli.sh build-cli
+
+      - name: build cli app (MPI version)
+        run: ${{ github.workspace }}/scripts/build-cli.sh build-cli-mpi
+
+      - name: run ctest
+        run: ctest --test-dir ${{ github.workspace }}/build-tests --verbose --output-junit ${{ github.workspace }}/junit/test-results.xml
+
+      - name: upload ctest test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-results-${{ matrix.os }}
+          path: junit/test-results.xml
+
+      - name: run sqsgen --version
+        run: ${{ github.workspace }}/build-cli/sqsgen --version
+
+      - name: run sqsgen --version (MPI)
+        run: ${{ github.workspace }}/build-cli-mpi/sqsgen --version
