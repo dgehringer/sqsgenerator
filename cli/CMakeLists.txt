@@ -32,14 +32,9 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID
     add_compile_options(-fexperimental-library)
 endif ()
 
-add_compile_options(-fsanitize=thread)
-add_compile_options(-g)
-#add_compile_options(-O0)
-add_link_options(-fsanitize=thread)
-
 find_package(argparse CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
+find_package(absl CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(boost_multiprecision REQUIRED CONFIG)
 find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
@@ -48,7 +43,12 @@ include_directories("${CMAKE_SOURCE_DIR}/../include" ${BS_THREAD_POOL_INCLUDE_DI
 add_executable(sqsgen main.cpp progress.h helpers.h termcolor.h)
 target_link_libraries(sqsgen PRIVATE
         nlohmann_json::nlohmann_json
-        absl
+        absl::synchronization
+        absl::log
+        absl::log_globals
+        absl::hash
+        absl::flat_hash_map
+        absl::flat_hash_set
         Eigen3::Eigen
         Boost::multiprecision
         argparse::argparse
