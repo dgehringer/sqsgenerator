@@ -255,7 +255,7 @@ template <class T, SublatticeMode Mode> struct adl_serializer<core::sqs_result_p
     for (auto&& r : j.at("results").get<std::vector<sqs_result<T, Mode>>>())
       results.insert(std::move(r));
     auto config = j.at("config").get<core::configuration<T>>();
-    p = core::sqs_result_pack<T, Mode>{core::configuration<T>(config), std::move(results),
+    p = core::sqs_result_pack<T, Mode>{core::configuration<T>(config), std::move(results.results()),
                                        sqs_statistics_data<T>{}};
     p.config = config;
     j.at("statistics").get_to<sqs_statistics_data<T>>(p.statistics);
@@ -391,10 +391,11 @@ namespace sqsgen {
       static parse_result<Option> get_as(nlohmann::json const& json) {
         const auto parse_json = [](nlohmann::json const& j) -> parse_result<Option> {
           if constexpr (type_checker<Option>::available)
-            return type_checker<Option>::is(j) ? parse_result<Option>{j.get<Option>()}
-                                               : parse_error::from_msg<key, CODE_TYPE_ERROR>(format(
-                                                     "type error - checked - cannot parse %s - %s",
-                                                     typeid(Option).name(), j.type_name()));
+            return type_checker<Option>::is(j)
+                       ? parse_result<Option>{j.get<Option>()}
+                       : parse_error::from_msg<key, CODE_TYPE_ERROR>(
+                             format_string("type error - checked - cannot parse %s - %s",
+                                           typeid(Option).name(), j.type_name()));
           else
             return {j.get<Option>()};
         };
@@ -405,13 +406,13 @@ namespace sqsgen {
             return json.contains(key.data)
                        ? parse_json(json.at(key.data))
                        : parse_result<Option>{parse_error::from_msg<key, CODE_NOT_FOUND>(
-                             format("could not find key %s", key.data))};
+                             format_string("could not find key %s", key.data))};
 
         } catch (nlohmann::json::out_of_range const& e) {
           return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range - found - {}", e.what());
         } catch (nlohmann::json::type_error const& e) {
           return parse_error::from_msg<key, CODE_TYPE_ERROR>(
-              format("type error - cannot parse %s - %s", typeid(Option).name(), e.what()));
+              format_string("type error - cannot parse %s - %s", typeid(Option).name(), e.what()));
         } catch (std::out_of_range const& e) {
           return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
         }

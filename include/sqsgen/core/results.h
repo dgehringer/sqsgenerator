@@ -169,9 +169,9 @@ namespace sqsgen::core {
 
       sro_parameter<T> parameter(usize_t shell, std::string const &i, std::string const &j) {
         if (!SYMBOL_MAP.contains(i))
-          throw std::domain_error(format("Unknown atomic species \"%s\"", i));
+          throw std::domain_error(format_string("Unknown atomic species \"%s\"", i));
         if (!SYMBOL_MAP.contains(j))
-          throw std::domain_error(format("Unknown atomic species \"%s\"", j));
+          throw std::domain_error(format_string("Unknown atomic species \"%s\"", j));
         return parameter(shell, SYMBOL_MAP.at(i), SYMBOL_MAP.at(j));
       }
 
@@ -184,11 +184,11 @@ namespace sqsgen::core {
             if (jj.has_value()) {
               return {shell, i, j, this->sro(shell_index.value(), ii.value(), jj.value())};
             }
-            throw std::domain_error(format("This result does not contain species Z=%i", j));
+            throw std::domain_error(format_string("This result does not contain species Z=%i", j));
           } else
-            throw std::domain_error(format("This result does not contain Z=%i", i));
+            throw std::domain_error(format_string("This result does not contain Z=%i", i));
         } else
-          throw std::domain_error(format("This result does not contain a shell %i", shell));
+          throw std::domain_error(format_string("This result does not contain a shell %i", shell));
       }
 
       std::vector<sro_parameter<T>> parameter(usize_t shell) {
@@ -333,6 +333,7 @@ namespace sqsgen::core {
   }  // namespace detail
 
   template <class T, SublatticeMode SMode> class sqs_result_pack {
+    using pack_raw_data_t = sqs_result_pack_data_t<T, SMode>;
     using pack_data_t = core::detail::sqs_result_pack_wrapper_data_t<T, SMode>;
 
   public:
@@ -364,8 +365,8 @@ namespace sqsgen::core {
     sqs_result_pack() = default;
 
     sqs_result_pack(configuration<T> &&configuration,
-                    core::detail::opt_config_arg_t<T, SMode> &&opt_config, pack_data_t &&results,
-                    sqs_statistics_data<T> &&stats)
+                    core::detail::opt_config_arg_t<T, SMode> &&opt_config,
+                    pack_raw_data_t &&results, sqs_statistics_data<T> &&stats)
         : statistics(stats),
           config(std::forward<core::configuration<T>>(configuration)),
           _optimization_config(core::detail::from_opt_config<T, SMode>(
@@ -374,7 +375,7 @@ namespace sqsgen::core {
           results(core::detail::from_result_collection(std::forward<decltype(results)>(results),
                                                        _structure, _optimization_config)) {}
 
-    sqs_result_pack(configuration<T> &&configuration, pack_data_t &&results,
+    sqs_result_pack(configuration<T> &&configuration, pack_raw_data_t &&results,
                     sqs_statistics_data<T> &&stats)
         : statistics(stats),
           config(std::forward<core::configuration<T>>(configuration)),

@@ -46,7 +46,13 @@ find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
 include_directories("${CMAKE_SOURCE_DIR}/../include" ${BS_THREAD_POOL_INCLUDE_DIRS})
 
 add_executable(sqsgen main.cpp progress.h helpers.h termcolor.h)
-target_link_libraries(sqsgen PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only Eigen3::Eigen Boost::multiprecision argparse::argparse)
+target_link_libraries(sqsgen PRIVATE
+        nlohmann_json::nlohmann_json
+        absl
+        Eigen3::Eigen
+        Boost::multiprecision
+        argparse::argparse
+)
 if (WITH_MPI)
     target_link_libraries(sqsgen PRIVATE ${MPI_LIBRARIES} mpl)
 endif ()

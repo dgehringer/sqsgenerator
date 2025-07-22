@@ -29,10 +29,10 @@ namespace sqsgen::io::config {
           return static_cast<usize_t>(std::stoul(value));
         } catch (std::invalid_argument const& e) {
           return parse_error::from_msg<key, CODE_BAD_VALUE>(
-              format("Could not parse shell index: %s", e.what()));
+              format_string("Could not parse shell index: %s", e.what()));
         } catch (std::out_of_range const& e) {
           return parse_error::from_msg<key, CODE_BAD_VALUE>(
-              format("Could not parse shell index: %s", e.what()));
+              format_string("Could not parse shell index: %s", e.what()));
         }
       }
 #ifdef WITH_PYTHON
@@ -58,9 +58,9 @@ namespace sqsgen::io::config {
                          return parse_error::from_msg<key, CODE_BAD_VALUE>(
                              "There is no point in including self-interactions");
                        if (shell_index >= num_shells)
-                         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-                             format("There are %i shells but you specified a shell index of %i",
-                                    num_shells, shell_index));
+                         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(format_string(
+                             "There are %i shells but you specified a shell index of %i",
+                             num_shells, shell_index));
                        return i_and_w;
                      });
         if (r.failed()) return r.error().with_key(key.data);

@@ -31,7 +31,7 @@ namespace sqsgen::io::config {
         if (0 <= index && index < conf.size())
           parsed.insert(static_cast<size_t>(index));
         else
-          return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(format(
+          return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(format_string(
               "Invalid index %i, the specified structure contains %i sites", index, conf.size()));
 
       if (parsed.empty())
@@ -47,11 +47,11 @@ namespace sqsgen::io::config {
       for (auto s : species) {
         if (!core::SYMBOL_MAP.contains(s))
           return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-              format("An atomic element with name \"%s\" is not known to me", s));
+              format_string("An atomic element with name \"%s\" is not known to me", s));
         auto ordinal = core::atom::from_symbol(s).Z;
         if (!distinct_species.contains(ordinal))
-          return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-              format("The specified structure does not contain a site with species \"%s\"", s));
+          return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(format_string(
+              "The specified structure does not contain a site with species \"%s\"", s));
         unique_species.insert(ordinal);
       }
       vset<usize_t> indices;
@@ -108,7 +108,7 @@ namespace sqsgen::io::config {
                      .and_then([&](auto s_and_a) -> parse_result<pair_t> {
                        auto [specie, amount] = s_and_a;
                        if (amount > sites.size() || amount < 0)
-                         return parse_error::from_msg<key, CODE_BAD_VALUE>(format(
+                         return parse_error::from_msg<key, CODE_BAD_VALUE>(format_string(
                              "You want to distribute %i \"%s\" atoms on a sublattice with %i sites",
                              amount, specie, sites.size()));
                        return pair_t{specie, amount};
@@ -142,11 +142,11 @@ namespace sqsgen::io::config {
           .and_then([&](auto&& sites) -> parse_result<index_set_t> {
             for (auto&& site : sites)
               if (occupied_sites.contains(site))
-                return parse_error::from_msg<"sites", CODE_BAD_VALUE>(
-                    format("The site with index %i is contained in more than one sublattice. "
-                           "Make sure that the "
-                           "\"sites\" argument does not contain overlapping index ranges",
-                           site));
+                return parse_error::from_msg<"sites", CODE_BAD_VALUE>(format_string(
+                    "The site with index %i is contained in more than one sublattice. "
+                    "Make sure that the "
+                    "\"sites\" argument does not contain overlapping index ranges",
+                    site));
             return sites;
           })
           .and_then([&](auto&& sites) -> parse_result<sublattice> {
@@ -157,9 +157,9 @@ namespace sqsgen::io::config {
                 = fold_left(composition.result() | views::elements<1>, 0UL, std::plus<>{});
             if (num_sites != sites.size())
               return parse_error::from_msg<sitesKey, CODE_OUT_OF_RANGE>(
-                  format("The total number of distributed atoms is %i but the sublattice "
-                         "contains %i sites",
-                         num_sites, sites.size()));
+                  format_string("The total number of distributed atoms is %i but the sublattice "
+                                "contains %i sites",
+                                num_sites, sites.size()));
             return sublattice{sites, composition.result()};
           });
     }

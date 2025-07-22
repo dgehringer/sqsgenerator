@@ -81,8 +81,8 @@ namespace sqsgen::cli {
       return str;
   }
 
-  inline std::string format_hyperlink(std::string_view text, std::string_view link) {
-    return fmt::format("\033]8;;{}\007{}\033]8;;\007", link, text);
+  inline std::string format_hyperlink(std::string const& text, std::string const& link) {
+    return "\033]8;;" + link + "\007%" + text + "\033]8;;\007";
   }
 
   inline std::size_t print_width(const std::string& str) {
@@ -150,14 +150,14 @@ namespace sqsgen::cli {
     if (parameter.has_value())
       std::cout
           << bold << blue << "Help: " << reset
-          << fmt::format(
-                 "the documentation for parameter \"{}\" is available at: {}", parameter.value(),
+          << format_string(
+                 "the documentation for parameter \"%s\" is available at: %s", parameter.value(),
                  format_hyperlink(
-                     fmt::format(
-                         "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#{}",
+                     format_string(
+                         "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#%s",
                          parameter.value()),
-                     fmt::format(
-                         "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#{}",
+                     format_string(
+                         "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#%s",
                          parameter.value())))
           << std::endl;
     if (exit) std::exit(1);
@@ -167,7 +167,7 @@ namespace sqsgen::cli {
 
   inline std::string read_file(std::string const& filename) {
     std::ifstream ifs(filename);
-    if (!ifs) throw std::runtime_error(fmt::format("Could not open file: {}", filename));
+    if (!ifs) throw std::runtime_error(format_string("Could not open file: '%s'", filename));
     std::ostringstream oss;
     oss << ifs.rdbuf();
     return oss.str();
@@ -175,13 +175,13 @@ namespace sqsgen::cli {
 
   nlohmann::json read_msgpack(std::string const& filename) {
     if (!std::filesystem::exists(filename))
-      render_error(fmt::format("File '{}' does not exist", filename), true);
+      render_error(format_string("File '%s' does not exist", filename), true);
     std::ifstream ifs(filename, std::ios::in | std::ios::binary);
     nlohmann::json config_json;
     try {
       config_json = nlohmann::json::from_msgpack(ifs);
     } catch (nlohmann::json::parse_error& e) {
-      render_error(fmt::format("'{}' is not a valid msgpack file", filename), true, std::nullopt,
+      render_error(format_string("'%s' is not a valid msgpack file", filename), true, std::nullopt,
                    e.what());
     }
     return config_json;
@@ -193,14 +193,15 @@ namespace sqsgen::cli {
     try {
       data = read_file(filename);
     } catch (const std::exception& e) {
-      render_error(fmt::format("Error reading file '{}'", filename), true, std::nullopt, e.what());
+      render_error(format_string("Error reading file '%s'", filename), true, std::nullopt,
+                   e.what());
     }
 
     nlohmann::json config_json;
     try {
       config_json = nlohmann::json::parse(data);
     } catch (nlohmann::json::parse_error& e) {
-      render_error(fmt::format("'{}' is not a valid JSON file", filename), true, std::nullopt,
+      render_error(format_string("'%s' is not a valid JSON file", filename), true, std::nullopt,
                    e.what());
     }
     return config_json;
@@ -211,11 +212,11 @@ namespace sqsgen::cli {
     try {
       index = std::stoi(raw);
     } catch (const std::invalid_argument& e) {
-      render_error(fmt::format("Invalid index '{}'", raw), true, std::nullopt, e.what());
+      render_error(format_string("Invalid index: '%s'", raw), true, std::nullopt, e.what());
     }
     if (index < 0 || index >= size)
-      render_error(fmt::format("Invalid index '{}'", raw), true, std::nullopt,
-                   fmt::format("index must be between 0 and {}", size - 1));
+      render_error(format_string("Invalid index: '%s'", raw), true, std::nullopt,
+                   format_string("index must be between 0 and %i", size - 1));
     return index;
   }
 

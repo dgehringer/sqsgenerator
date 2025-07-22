@@ -60,8 +60,8 @@ namespace sqsgen::core::helpers {
 
     if ((Rows != Eigen::Dynamic && Rows != v.size())
         || (Cols != Eigen::Dynamic && Cols != first_size))
-      throw std::out_of_range(
-          format("invalid matrix size: %ix%i compared to %ux%u", Rows, Cols, v.size(), first_size));
+      throw std::out_of_range(format_string("invalid matrix size: %ix%i compared to %ux%u", Rows,
+                                            Cols, v.size(), first_size));
 
     Matrix result(v.size(), first_size);
     helpers::for_each([&](auto i, auto j) { result(i, j) = v[i][j]; },

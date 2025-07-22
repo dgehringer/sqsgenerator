@@ -166,7 +166,7 @@ namespace sqsgen::core {
 
     static atom from_symbol(std::string const& symbol) {
       if (!SYMBOL_MAP.contains(symbol))
-        throw std::out_of_range(format("Unknown element \"%s\"", symbol));
+        throw std::out_of_range(format_string("Unknown element \"%s\"", symbol));
       return from_z(SYMBOL_MAP.at(symbol));
     }
 
