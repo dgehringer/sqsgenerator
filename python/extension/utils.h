@@ -14,11 +14,13 @@
 #include <sstream>
 #include <string>
 
+#include "sqsgen/log.h"
+
 namespace sqsgen::python::helpers {
 
   inline std::string read_file(const std::string &filePath) {
     std::ifstream fileStream(filePath);
-    if (!fileStream) throw std::runtime_error(fmt::format("Could not open file '{}'", filePath));
+    if (!fileStream) throw std::runtime_error(format_string("Could not open file '%s'", filePath));
 
     std::stringstream buffer;
     buffer << fileStream.rdbuf();

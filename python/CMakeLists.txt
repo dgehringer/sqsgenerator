@@ -38,7 +38,7 @@ endif ()
 find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
+find_package(absl CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(boost_multiprecision REQUIRED CONFIG)
 find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
@@ -58,7 +58,17 @@ target_compile_definitions(_core PRIVATE
 )
 target_include_directories(_core PRIVATE ${BS_THREAD_POOL_INCLUDE_DIRS})
 target_include_directories(_core PRIVATE ${RAPIDHASH_INCLUDE_DIRS})
-target_link_libraries(_core PRIVATE nlohmann_json::nlohmann_json spdlog::spdlog_header_only fmt::fmt-header-only Boost::multiprecision Eigen3::Eigen ${Python3_LIBRARIES})
+target_link_libraries(_core PRIVATE
+        nlohmann_json::nlohmann_json
+        absl::synchronization
+        absl::log
+        absl::log_globals
+        absl::log_initialize
+        absl::hash
+        absl::flat_hash_map
+        absl::flat_hash_set
+        Boost::multiprecision
+        Eigen3::Eigen ${Python3_LIBRARIES})
 install(TARGETS _core DESTINATION sqsgenerator/core)
 
 if (WIN32)

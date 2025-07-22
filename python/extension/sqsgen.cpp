@@ -234,8 +234,8 @@ template <string_literal Name, class T> void bind_sro_parameter(py::module &m) {
       .def_readonly("value", &sro_parameter<T>::value)
       .def("__float__", [](sro_parameter<T> &p) { return p.value; })
       .def("__repr__", [](sro_parameter<T> &p) -> std::string {
-        return fmt::format("α{}-{}-{}({})", format_ordinal(p.shell), format_ordinal(p.i),
-                           format_ordinal(p.j), p.value);
+        return format_string("α%s-%s-%s(%.7f)", format_ordinal(p.shell), format_ordinal(p.i),
+                             format_ordinal(p.j), p.value);
       });
 }
 
@@ -387,12 +387,10 @@ PYBIND11_MODULE(_core, m) {
       .value("poscar", STRUCTURE_FORMAT_POSCAR)
       .export_values();
 
-  py::enum_<spdlog::level::level_enum>(m, "LogLevel")
-      .value("debug", spdlog::level::debug)
-      .value("info", spdlog::level::info)
-      .value("warn", spdlog::level::warn)
-      .value("trace", spdlog::level::trace)
-      .value("critical", spdlog::level::critical)
+  py::enum_<log::level>(m, "LogLevel")
+      .value("info", log::level::info)
+      .value("warn", log::level::warn)
+      .value("error", log::level::error)
       .export_values();
 
   py::class_<io::parse_error>(m, "ParseError")
@@ -416,7 +414,7 @@ PYBIND11_MODULE(_core, m) {
       .def(
           "__eq__", [](core::atom &a, core::atom &b) { return a.Z == b.Z; }, py::is_operator())
       .def("__repr__", [](core::atom &a) -> std::string {
-        return fmt::format("Atom(symbol=\"{}\", Z={}, mass={})", a.symbol, a.Z, a.mass);
+        return format_string("Atom(symbol=\"%s\", Z=%i, mass=%.1f)", a.symbol, a.Z, a.mass);
       });
 
   py::class_<vset<usize_t>>(m, "Indices")
@@ -499,7 +497,7 @@ PYBIND11_MODULE(_core, m) {
   m.def(
       "optimize",
       [](std::variant<core::configuration<float>, core::configuration<double>> &&config,
-         spdlog::level::level_enum log_level, std::optional<sqs_callback_t> callback) {
+         log::level log_level, std::optional<sqs_callback_t> callback) {
         if (callback.has_value()) {
           py::gil_scoped_release nogil{};
           return sqsgen::run_optimization(std::forward<decltype(config)>(config), log_level,
@@ -509,7 +507,7 @@ PYBIND11_MODULE(_core, m) {
                                           std::nullopt);
         }
       },
-      py::arg("config"), py::arg("log_level") = spdlog::level::level_enum::warn,
+      py::arg("config"), py::arg("log_level") = log::level::warn,
       py::arg("callback") = std::nullopt);
 
   bind_configuration<"SqsConfiguration", float>(m);

@@ -99,7 +99,7 @@ val optimize(val const& config, sqsgen::Prec prec, val const& cb) {
     try {
       auto result_pack_json
           = std::visit([](auto&& result_pack) -> nlohmann::json { return to_json(result_pack); },
-                       run_optimization(std::move(run_config), spdlog::level::warn, callback));
+                       run_optimization(std::move(run_config), log::level::warn, callback));
       proxying_queue_main.proxyAsync(
           emscripten_main_runtime_thread_id(),
           [promise, result_pack_json = std::move(result_pack_json)]() mutable {

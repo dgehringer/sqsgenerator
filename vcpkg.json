@@ -3,7 +3,6 @@
   "version-string": "0.4.8",
   "dependencies": [
     "eigen3",
-    "spdlog",
     "boost-multiprecision",
     "nlohmann-json",
     "bshoshany-thread-pool",
