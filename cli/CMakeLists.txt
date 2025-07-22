@@ -46,6 +46,7 @@ target_link_libraries(sqsgen PRIVATE
         absl::synchronization
         absl::log
         absl::log_globals
+        absl::log_initialize
         absl::hash
         absl::flat_hash_map
         absl::flat_hash_set

@@ -6,6 +6,7 @@
 #define SQSGEN_CLI_PROGRESS
 
 #include <chrono>
+#include <mutex>
 #include <string>
 
 #include "sqsgen/log.h"
@@ -52,7 +53,7 @@ namespace sqsgen::cli {
     if (seconds >= HOUR) return format_unit(HOUR, "h", seconds);
     if (seconds >= MIN) return format_unit(MIN, "m", seconds);
     assert(seconds < MIN);
-    return format_string("%fs", seconds);
+    return format_string("%.0f s", seconds);
   }
 
   class Progress {
@@ -119,7 +120,7 @@ namespace sqsgen::cli {
       auto last_block_index
           = static_cast<int>(std::round(std::fmod(percent, _block_percent) / _block_percent * 8))
             - 1;
-      os << bold << format_string(" %.2f", percent) << reset << ": [";
+      os << bold << format_string(" %.2f %%", percent) << reset << ": [";
       for (int i = 0; i < blocks_to_fill; i++) std::cout << _INDICATORS.back();
       auto remaining_blocks = _width - blocks_to_fill;
       if (last_block_index >= 0)

@@ -82,7 +82,7 @@ namespace sqsgen::cli {
   }
 
   inline std::string format_hyperlink(std::string const& text, std::string const& link) {
-    return "\033]8;;" + link + "\007%" + text + "\033]8;;\007";
+    return "\033]8;;" + link + "\007" + text + "\033]8;;\007";
   }
 
   inline std::size_t print_width(const std::string& str) {

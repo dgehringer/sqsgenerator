@@ -124,7 +124,7 @@ namespace sqsgen {
     template <class T>
     void log_statistics(sqs_statistics_data<T>&& d, int rank, std::string const& info = "") {
       log::info(format_string("[Rank %i] %s best_objective=%.5f", rank, info, d.best_objective));
-      log::info(format_string("[Rank %i] %s best_rank=%.5f", rank, info, d.best_rank));
+      log::info(format_string("[Rank %i] %s best_rank=%i", rank, info, d.best_rank));
       for (auto&& [timing, label] :
            std::map<Timing, std::string>{{TIMING_TOTAL, "total"},
                                          {TIMING_CHUNK_SETUP, "chunk_setup"},
@@ -133,8 +133,8 @@ namespace sqsgen {
         auto time_in_ns = static_cast<double>(d.timings.at(timing));
         auto total_time_in_ns = static_cast<double>(d.timings.at(TIMING_TOTAL));
         log::info(format_string(
-            "[Rank %i] %s %s time ns=%.3f, ns_per_iteration=%.1f, relative=%.1f", rank, info, label,
-            time_in_ns, time_in_ns / static_cast<double>(d.finished),
+            "[Rank %i] %s %s time ns=%.0f, ns_per_iteration=%.0f, relative=%.1f %%", rank, info,
+            label, time_in_ns, time_in_ns / static_cast<double>(d.finished),
             time_in_ns / total_time_in_ns * 100));
       }
     }
