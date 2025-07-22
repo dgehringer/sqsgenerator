@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "sqsgen/compat.h"
+#include "sqsgen/log.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -166,7 +166,7 @@ namespace sqsgen::core {
 
     static atom from_symbol(std::string const& symbol) {
       if (!SYMBOL_MAP.contains(symbol))
-        throw std::out_of_range(format_("Unknown element {}", symbol));
+        throw std::out_of_range(format("Unknown element \"%s\"", symbol));
       return from_z(SYMBOL_MAP.at(symbol));
     }
 

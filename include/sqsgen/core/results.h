@@ -4,6 +4,10 @@
 
 #ifndef SQSGEN_CORE_RESULTS_H
 #define SQSGEN_CORE_RESULTS_H
+#include "absl/base/thread_annotations.h"
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
+#include "absl/synchronization/mutex.h"
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/optimization_config.h"
@@ -30,72 +34,67 @@ namespace sqsgen::core {
 
   }  // namespace detail
 
-  template <class T, SublatticeMode Mode> using sqs_result_collection_base_t
+  template <class T, SublatticeMode Mode> using sqs_result_pack_data_t
       = helpers::sorted_vector<sqs_result_entry_t<T, Mode>, decltype(core::detail::by_objective)>;
 
-  template <class T, SublatticeMode Mode> class sqs_result_collection
-      : public sqs_result_collection_base_t<T, Mode> {
-    using base = sqs_result_collection_base_t<T, Mode>;
-    std::mutex _mutex_insert;
-
-  private:
-    typename base::iterator where(sqs_result<T, Mode> const &result) {
-      sqs_result_entry_t<T, Mode> entry
-          = sqs_result_entry_t<T, Mode>{result.objective, std::vector<sqs_result<T, Mode>>{}};
-      typename base::iterator i = std::lower_bound(this->begin(), this->end(), entry, this->cmp);
-      return i == this->end() || this->cmp(entry, *i) ? this->end() : i;
-    }
+  template <class T, SublatticeMode Mode> class sqs_result_collection {
+    using pack_data_t = sqs_result_pack_data_t<T, Mode>;
 
   public:
-    typename base::iterator insert_result(sqs_result<T, Mode> &&result) {
-      // this method migh be called from more threads simultaneously
-      sqs_result_entry_t<T, Mode> entry
-          = {result.objective, std::vector<sqs_result<T, Mode>>{result}};
-      std::scoped_lock lock{_mutex_insert};
-      typename base::iterator location = where(result);
-      if (location != this->end()) {
-        assert(std::get<0>(*location) == result.objective);
-        std::get<1>(*location).push_back(result);
-        return location;
-      }
-
-      return this->insert(entry);
+    bool insert(sqs_result<T, Mode> &&result) ABSL_LOCKS_EXCLUDED(mutex_) {
+      absl::MutexLock lock(&mutex_);
+      if (auto it = data_.find(result.objective); it != data_.end())
+        return it->second.insert(std::move(result)).second;
+      data_.emplace(result.objective, absl::flat_hash_set<sqs_result<T, Mode>>{std::move(result)});
+      objectives_.insert(result.objective);
+      return true;  // new objective
     }
 
-    auto front() const { return this->_values.front(); }
-
-    base results() { return *this; }
-
-    base remove_duplicates() {
-      sqs_result_collection filtered;
-      for (auto &&[_, collection] : this->_values) {
-        helpers::sorted_vector<configuration_t> unique_species;
-        for (auto &result : collection) {
-          configuration_t conf;
-          if constexpr (Mode == SUBLATTICE_MODE_INTERACT)
-            conf = result.species;
-          else
-            for (auto &&sublattice : result.sublattices)
-              conf.insert(conf.end(), sublattice.species.begin(), sublattice.species.end());
-          if (!unique_species.contains(conf)) {
-            unique_species.insert(conf);
-            filtered.insert_result(std::forward<sqs_result<T, Mode>>(result));
-          }
-        }
-      }
-      return filtered.results();
+    auto front() const {
+      mutex_.ReaderLock();
+      if (objectives_.empty()) {
+        mutex_.ReaderUnlock();
+        throw std::out_of_range("No results available");
+      } else
+        return *data_.at(objectives_.front()).begin();
     }
 
     [[nodiscard]] std::size_t num_results() const {
-      std::size_t size{0};
-      for (auto &&[_, collection] : this->_values) size += collection.size();
+      std::size_t size = 0;
+      {
+        mutex_.ReaderLock();
+        for (auto const &pair : this->data_) size += pair.second.size();
+        mutex_.ReaderUnlock();
+      }
       return size;
     }
 
-    [[nodiscard]] auto nth_best(std::size_t n) {
-      if (n >= this->size()) return std::numeric_limits<T>::infinity();
-      return std::get<0>(this->at(n));
+    [[nodiscard]] T nth_best(std::size_t n) {
+      T result = std::numeric_limits<T>::infinity();
+      {
+        mutex_.ReaderLock();
+        if (n < objectives_.size()) result = objectives_.at(n);
+        mutex_.ReaderUnlock();
+      }
+      return result;
     }
+
+    pack_data_t results() {
+      pack_data_t results(std::vector<sqs_result_entry_t<T, Mode>>{});
+      mutex_.ReaderLock();
+      results.reserve(data_.size());
+      for (auto const &[objective, collection] : data_)
+        results.insert(
+            {objective, std::vector<sqs_result<T, Mode>>(collection.begin(), collection.end())});
+      mutex_.ReaderUnlock();
+      return results;
+    }
+    pack_data_t remove_duplicates() { return results(); }
+
+  private:
+    mutable absl::Mutex mutex_;
+    helpers::sorted_vector<T> objectives_;
+    absl::flat_hash_map<T, absl::flat_hash_set<sqs_result<T, Mode>>> data_;
   };
 
   template <class, SublatticeMode> struct sqs_result_factory;
@@ -170,9 +169,9 @@ namespace sqsgen::core {
 
       sro_parameter<T> parameter(usize_t shell, std::string const &i, std::string const &j) {
         if (!SYMBOL_MAP.contains(i))
-          throw std::domain_error(format_("Unknown atomic species {}", i));
+          throw std::domain_error(format("Unknown atomic species \"%s\"", i));
         if (!SYMBOL_MAP.contains(j))
-          throw std::domain_error(format_("Unknown atomic species {}", j));
+          throw std::domain_error(format("Unknown atomic species \"%s\"", j));
         return parameter(shell, SYMBOL_MAP.at(i), SYMBOL_MAP.at(j));
       }
 
@@ -185,11 +184,11 @@ namespace sqsgen::core {
             if (jj.has_value()) {
               return {shell, i, j, this->sro(shell_index.value(), ii.value(), jj.value())};
             }
-            throw std::domain_error(format_("This result does not contain species Z={}", j));
+            throw std::domain_error(format("This result does not contain species Z=%i", j));
           } else
-            throw std::domain_error(format_("This result does not contain Z={}", i));
+            throw std::domain_error(format("This result does not contain Z=%i", i));
         } else
-          throw std::domain_error(format_("This result does not contain a shell {}", shell));
+          throw std::domain_error(format("This result does not contain a shell %i", shell));
       }
 
       std::vector<sro_parameter<T>> parameter(usize_t shell) {
@@ -282,17 +281,18 @@ namespace sqsgen::core {
       }
     };
 
-    template <class T, SublatticeMode Mode> using sqs_result_pack_entry_t
+    template <class T, SublatticeMode Mode> using sqs_result_pack_wrapper_entry_t
         = std::tuple<T, std::vector<sqs_result_wrapper<T, Mode>>>;
 
-    template <class T, SublatticeMode Mode> using sqs_result_pack_collection_t
-        = sorted_vector<sqs_result_pack_entry_t<T, Mode>, decltype(by_objective)>;
+    template <class T, SublatticeMode Mode> using sqs_result_pack_wrapper_data_t
+        = sorted_vector<sqs_result_pack_wrapper_entry_t<T, Mode>,
+                        decltype(core::detail::by_objective)>;
 
     template <class T, SublatticeMode Mode>
-    sqs_result_pack_collection_t<T, Mode> from_result_collection(
-        sqs_result_collection_base_t<T, Mode> &&results, std::shared_ptr<structure<T>> structure,
+    sqs_result_pack_wrapper_data_t<T, Mode> from_result_collection(
+        sqs_result_pack_data_t<T, Mode> &&results, std::shared_ptr<structure<T>> structure,
         opt_config_t<T, Mode> const &opt_config) {
-      sqs_result_pack_collection_t<T, Mode> converted;
+      sqs_result_pack_wrapper_data_t<T, Mode> converted;
       converted.reserve(results.size());
       for (auto &&[objective, collection] : results) {
         std::vector<sqs_result_wrapper<T, Mode>> converted_collection;
@@ -302,7 +302,7 @@ namespace sqsgen::core {
               sqs_result_wrapper<T, Mode>{std::move(collection.back()), structure, opt_config});
           collection.pop_back();
         }
-        converted.insert(sqs_result_pack_entry_t<T, Mode>{objective, converted_collection});
+        converted.insert(sqs_result_pack_wrapper_entry_t<T, Mode>{objective, converted_collection});
       }
       return converted;
     }
@@ -333,7 +333,7 @@ namespace sqsgen::core {
   }  // namespace detail
 
   template <class T, SublatticeMode SMode> class sqs_result_pack {
-    using sqs_result_collection_t = sqs_result_collection_base_t<T, SMode>;
+    using pack_data_t = core::detail::sqs_result_pack_wrapper_data_t<T, SMode>;
 
   public:
     configuration<T> config;
@@ -344,12 +344,11 @@ namespace sqsgen::core {
 
   public:
     sqs_statistics_data<T> statistics;
-    core::detail::sqs_result_pack_collection_t<T, SMode> results;
+    pack_data_t results;
 
   public:
-    typedef typename core::detail::sqs_result_pack_collection_t<T, SMode>::iterator iterator;
-    typedef typename core::detail::sqs_result_pack_collection_t<T, SMode>::const_iterator
-        const_iterator;
+    typedef typename pack_data_t::iterator iterator;
+    typedef typename pack_data_t::const_iterator const_iterator;
     iterator begin() { return results.begin(); }
     iterator end() { return results.end(); }
     const_iterator begin() const { return results.begin(); }
@@ -365,8 +364,8 @@ namespace sqsgen::core {
     sqs_result_pack() = default;
 
     sqs_result_pack(configuration<T> &&configuration,
-                    core::detail::opt_config_arg_t<T, SMode> &&opt_config,
-                    sqs_result_collection_t &&results, sqs_statistics_data<T> &&stats)
+                    core::detail::opt_config_arg_t<T, SMode> &&opt_config, pack_data_t &&results,
+                    sqs_statistics_data<T> &&stats)
         : statistics(stats),
           config(std::forward<core::configuration<T>>(configuration)),
           _optimization_config(core::detail::from_opt_config<T, SMode>(
@@ -375,7 +374,7 @@ namespace sqsgen::core {
           results(core::detail::from_result_collection(std::forward<decltype(results)>(results),
                                                        _structure, _optimization_config)) {}
 
-    sqs_result_pack(configuration<T> &&configuration, sqs_result_collection_t &&results,
+    sqs_result_pack(configuration<T> &&configuration, pack_data_t &&results,
                     sqs_statistics_data<T> &&stats)
         : statistics(stats),
           config(std::forward<core::configuration<T>>(configuration)),

@@ -9,6 +9,6 @@
     "bshoshany-thread-pool",
     "gtest",
     "argparse",
-    "fmt"
+    "abseil"
   ]
 }

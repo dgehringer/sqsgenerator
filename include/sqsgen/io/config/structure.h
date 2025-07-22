@@ -13,6 +13,7 @@
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/parsing.h"
 #include "sqsgen/io/structure.h"
+#include "sqsgen/log.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::io {
@@ -24,15 +25,15 @@ namespace sqsgen::io {
     parse_result<configuration_t> validate_ordinals(std::vector<int>&& ordinals, auto num_sites) {
       if (ordinals.size() != num_sites)
         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-            format_("Number of coordinates ({}) does not match number of species {}", num_sites,
-                    ordinals.size()));
+            format("Number of coordinates (%i) does not match number of species %i", num_sites,
+                   ordinals.size()));
       configuration_t conf;
       for (auto o : ordinals) {
         if (0 <= o && o < core::KNOWN_ELEMENTS.size())
           conf.push_back(o);
         else
           return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-              format_("An atomic element with ordinal number {} is not known to me", o));
+              format("An atomic element with ordinal number %u is not known to me", o));
       }
       return conf;
     }
@@ -42,15 +43,15 @@ namespace sqsgen::io {
                                                    auto num_sites) {
       if (symbols.size() != num_sites)
         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-            format_("Number of coordinates ({}) does not match number of species {}", num_sites,
-                    symbols.size()));
+            format("Number of coordinates (%u) does not match number of species %u specified",
+                   num_sites, symbols.size()));
       configuration_t conf;
       for (const auto& element : symbols)
         if (core::SYMBOL_MAP.contains(element))
           conf.push_back(core::atom::from_symbol(element).Z);
         else
           return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-              format_("An atomic element with name {} is not known to me", element));
+              format("An atomic element with name \"%s\" is not known to me", element));
       return conf;
     }
 
@@ -88,10 +89,10 @@ namespace sqsgen::io {
     inline parse_result<std::string> read_file(std::string const& filename) {
       if (!std::filesystem::exists(filename))
         return parse_error::from_msg<key, CODE_NOT_FOUND>(
-            format_("The file {} does not exist", filename));
+            format("The file \"%s\" does not exist", filename));
       std::ifstream ifs(filename);
       if (!ifs)
-        parse_error::from_msg<key, CODE_BAD_ARGUMENT>(format_("Could not open file: {}", filename));
+        parse_error::from_msg<key, CODE_BAD_ARGUMENT>(format("Could not open file: %s", filename));
       std::ostringstream oss;
       oss << ifs.rdbuf();
       return oss.str();
@@ -118,9 +119,9 @@ namespace sqsgen::io {
         });
 
       return parse_error::from_msg<key, CODE_BAD_ARGUMENT>(
-          format_("Unsupported file extension \"{}\". Currently only .pymatgen.json, "
-                  ".sqs.json, .vasp and .poscar are supported",
-                  path));
+          format("Unsupported file extension \"%s\". Currently only .pymatgen.json, "
+                 ".sqs.json, .vasp and .poscar are supported",
+                 path));
     }
 
     template <string_literal key, class T, class Document>

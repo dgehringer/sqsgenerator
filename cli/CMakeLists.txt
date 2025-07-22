@@ -32,6 +32,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID
     add_compile_options(-fexperimental-library)
 endif ()
 
+add_compile_options(-fsanitize=thread)
+add_compile_options(-g)
+#add_compile_options(-O0)
+add_link_options(-fsanitize=thread)
+
 find_package(argparse CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
