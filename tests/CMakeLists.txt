@@ -14,7 +14,7 @@ endif ()
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
+find_package(absl CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(boost_multiprecision REQUIRED CONFIG)
 find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
@@ -36,9 +36,14 @@ include_directories(${SQSGEN_INCLUDE_DIR})
 list(APPEND SQSGEN_TEST_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_TEST_LIBS "pybind11::embed")
 list(APPEND SQSGEN_TEST_LIBS "nlohmann_json::nlohmann_json")
-list(APPEND SQSGEN_TEST_LIBS "spdlog::spdlog_header_only")
 list(APPEND SQSGEN_TEST_LIBS "GTest::gtest_main")
-list(APPEND SQSGEN_TEST_LIBS "fmt::fmt")
+list(APPEND SQSGEN_TEST_LIBS
+        absl::log
+        absl::str_format
+        absl::log_initialize
+        absl::hash
+        absl::flat_hash_map
+        absl::flat_hash_set)
 list(APPEND SQSGEN_TEST_LIBS "${Python3_LIBRARIES}")
 
 message(STATUS "SQSGEN_TEST_LIBS=${SQSGEN_TEST_LIBS}")
@@ -50,11 +55,6 @@ endif ()
 if (MSVC)
     add_compile_options(/permissive-)
 endif ()
-
-add_compile_options(-fsanitize=address)
-add_compile_options(-g)
-add_compile_options(-O0)
-add_link_options(-fsanitize=address)
 
 enable_testing()
 

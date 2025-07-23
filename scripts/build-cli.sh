@@ -11,9 +11,8 @@ cmake \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
   -DCMAKE_BUILD_TYPE=Release \
   -DVCPKG_MANIFEST_DIR="${PROJECT_DIR}" \
-  -DCMAKE_MAKE_PROGRAM="/usr/bin/make" \
-  -DCMAKE_C_COMPILER="/usr/bin/gcc" \
-  -DCMAKE_CXX_COMPILER="/usr/bin/g++" \
+  -DVCPKG_INSTALLED_DIR="${PROJECT_DIR}/vcpkg_installed" \
+  -DVCPKG_MANIFEST_FEATURES="cli" \
   -B "${BUILD_PATH}" \
   -S "${PROJECT_DIR}/cli"
 

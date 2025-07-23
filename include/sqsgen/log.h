@@ -20,6 +20,7 @@ namespace sqsgen {
   }
 
   namespace log {
+
     enum class level : int {
       info = static_cast<int>(absl::LogSeverity::kInfo),
       warn = static_cast<int>(absl::LogSeverity::kWarning),

@@ -60,11 +60,10 @@ target_include_directories(_core PRIVATE ${BS_THREAD_POOL_INCLUDE_DIRS})
 target_include_directories(_core PRIVATE ${RAPIDHASH_INCLUDE_DIRS})
 target_link_libraries(_core PRIVATE
         nlohmann_json::nlohmann_json
-        absl::synchronization
-        absl::log
-        absl::log_globals
-        absl::log_initialize
         absl::hash
+        absl::log
+        absl::str_format
+        absl::log_initialize
         absl::flat_hash_map
         absl::flat_hash_set
         Boost::multiprecision

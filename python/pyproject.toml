@@ -38,6 +38,7 @@ cmake.args = [
     "-DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake",
     "-DVCPKG_MANIFEST_DIR=..",
     "-DVCPKG_INSTALLED_DIR=../vcpkg/installed",
+    "-DVCPKG_MANIFEST_FEATURES=python"
 ]
 wheel.packages = ["sqsgenerator"]
 

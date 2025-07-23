@@ -13,7 +13,9 @@ cmake \
   -DVCPKG_MANIFEST_DIR="${PROJECT_DIR}" \
   -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
   -DVCPKG_TARGET_TRIPLET=wasm32-emscripten \
+  -DVCPKG_MANIFEST_FEATURES="wasm" \
+  -DVCPKG_INSTALLED_DIR="${PROJECT_DIR}/vcpkg_installed" \
   -B "${BUILD_PATH}" \
   -S "${PROJECT_DIR}/js/wasm"
 
-cmake --build ${BUILD_PATH} --target core
+cmake --build ${BUILD_PATH} --target core -j 6

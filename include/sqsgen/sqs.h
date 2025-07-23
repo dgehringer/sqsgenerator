@@ -151,7 +151,7 @@ namespace sqsgen {
     std::atomic<T> _search_objective;
     thread_config_t _thread_config;
     std::map<std::thread::id, int> _thread_map;
-    absl::Mutex _thread_map_mutex;
+    std::mutex _thread_map_mutex;
 
   protected:
     core::configuration<T> config;
@@ -159,15 +159,11 @@ namespace sqsgen {
     std::vector<core::optimization_config<T, Mode>> opt_configs;
 
     int thread_id() {
+      std::unique_lock lock(_thread_map_mutex);
       auto this_thread_id = std::this_thread::get_id();
-      int thread_id = -1;
-      {
-        absl::MutexLock lock(&_thread_map_mutex);
-        if (!_thread_map.contains(this_thread_id))
-          _thread_map.emplace(this_thread_id, _thread_map.size());
-        thread_id = _thread_map[this_thread_id];
-      }
-      return thread_id;
+      if (!_thread_map.contains(this_thread_id))
+        _thread_map.emplace(this_thread_id, _thread_map.size());
+      return _thread_map[this_thread_id];
     }
 
     auto rank() {

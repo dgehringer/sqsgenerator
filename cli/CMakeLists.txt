@@ -43,9 +43,8 @@ include_directories("${CMAKE_SOURCE_DIR}/../include" ${BS_THREAD_POOL_INCLUDE_DI
 add_executable(sqsgen main.cpp progress.h helpers.h termcolor.h)
 target_link_libraries(sqsgen PRIVATE
         nlohmann_json::nlohmann_json
-        absl::synchronization
         absl::log
-        absl::log_globals
+        absl::str_format
         absl::log_initialize
         absl::hash
         absl::flat_hash_map

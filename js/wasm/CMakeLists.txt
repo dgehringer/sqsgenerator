@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.27)
 
 include(${CMAKE_SOURCE_DIR}/../../cmake/RepoInfo.cmake)
+include(FetchContent)
 
 repo_info("${CMAKE_SOURCE_DIR}/../..")
 
@@ -8,14 +9,25 @@ project(sqsgenerator-wasm
         VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
         LANGUAGES CXX)
 
+set(VCPKG_EXCLUDED_PACKAGES "abseil")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -fno-threadsafe-statics -fPIC -pthread -mbulk-memory -matomics -fwasm-exceptions")
-set(VCPKG_C_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "")
-set(VCPKG_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -mbulk-memory -matomics")
+set(VCPKG_C_FLAGS "-Os -fno-threadsafe-statics -fPIC" CACHE STRING "")
+set(VCPKG_CXX_FLAGS "-Os -fno-threadsafe-statics -fPIC" CACHE STRING "")
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+FetchContent_Declare(
+        abseil
+        GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+        GIT_TAG 20250512.1
+        CMAKE_ARGS
+        "-DCMAKE_VERBOSE_MAKEFILE=ON"
+)
+FetchContent_MakeAvailable(abseil)
+
+
 find_package(Eigen3 CONFIG REQUIRED)
-find_package(absl CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(boost_multiprecision REQUIRED CONFIG)
 find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
@@ -40,13 +52,13 @@ set_target_properties(core PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS}")
 set_target_properties(core PROPERTIES LINK_FLAGS "-O3 --emit-tsd core.d.ts -sUSE_PTHREADS -s EXPORT_ES6=1 -WASM=2  -sPROXY_TO_PTHREAD -sEXIT_RUNTIME=0 -sASSERTIONS=2 -s MODULARIZE=1 --bind -fPIC -pthread --closure 1 -EXPORT_NAME=core")
 target_link_libraries(core PRIVATE
         nlohmann_json::nlohmann_json
-        absl::synchronization
-        absl::log
-        absl::log_globals
-        absl::log_initialize
         absl::hash
+        absl::log
+        absl::str_format
+        absl::log_initialize
         absl::flat_hash_map
         absl::flat_hash_set
         Eigen3::Eigen
         Boost::multiprecision
-        embind)
+        embind
+)

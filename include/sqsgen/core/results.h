@@ -4,10 +4,11 @@
 
 #ifndef SQSGEN_CORE_RESULTS_H
 #define SQSGEN_CORE_RESULTS_H
-#include "absl/base/thread_annotations.h"
+
+#include <shared_mutex>
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
-#include "absl/synchronization/mutex.h"
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/optimization_config.h"
@@ -42,7 +43,7 @@ namespace sqsgen::core {
 
   public:
     bool insert(sqs_result<T, Mode> &&result) ABSL_LOCKS_EXCLUDED(mutex_) {
-      absl::MutexLock lock(&mutex_);
+      std::unique_lock lock(mutex_);
       if (auto it = data_.find(result.objective); it != data_.end())
         return it->second.insert(std::move(result)).second;
       data_.emplace(result.objective, absl::flat_hash_set<sqs_result<T, Mode>>{std::move(result)});
@@ -51,48 +52,39 @@ namespace sqsgen::core {
     }
 
     auto front() const {
-      mutex_.ReaderLock();
-      if (objectives_.empty()) {
-        mutex_.ReaderUnlock();
+      std::shared_lock lock(mutex_);
+      if (objectives_.empty())
         throw std::out_of_range("No results available");
-      } else
+      else
         return *data_.at(objectives_.front()).begin();
     }
 
     [[nodiscard]] std::size_t num_results() const {
+      std::shared_lock lock(mutex_);
       std::size_t size = 0;
-      {
-        mutex_.ReaderLock();
-        for (auto const &pair : this->data_) size += pair.second.size();
-        mutex_.ReaderUnlock();
-      }
+      for (auto const &pair : this->data_) size += pair.second.size();
       return size;
     }
 
     [[nodiscard]] T nth_best(std::size_t n) {
-      T result = std::numeric_limits<T>::infinity();
-      {
-        mutex_.ReaderLock();
-        if (n < objectives_.size()) result = objectives_.at(n);
-        mutex_.ReaderUnlock();
-      }
-      return result;
+      std::shared_lock lock(mutex_);
+      if (n >= objectives_.size()) return std::numeric_limits<T>::infinity();
+      return objectives_.at(n);
     }
 
     pack_data_t results() {
       pack_data_t results(std::vector<sqs_result_entry_t<T, Mode>>{});
-      mutex_.ReaderLock();
+      std::shared_lock lock(mutex_);
       results.reserve(data_.size());
       for (auto const &[objective, collection] : data_)
         results.insert(
             {objective, std::vector<sqs_result<T, Mode>>(collection.begin(), collection.end())});
-      mutex_.ReaderUnlock();
       return results;
     }
     pack_data_t remove_duplicates() { return results(); }
 
   private:
-    mutable absl::Mutex mutex_;
+    mutable std::shared_mutex mutex_;
     helpers::sorted_vector<T> objectives_;
     absl::flat_hash_map<T, absl::flat_hash_set<sqs_result<T, Mode>>> data_;
   };
