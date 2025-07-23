@@ -35,6 +35,7 @@ jobs:
             ${{ github.workspace }}/vcpkg/packages
             ${{ github.workspace }}/vcpkg/downloads
             ${{ github.workspace }}/vcpkg/installed
+            ${{ github.workspace }}/vcpkg/.cache
           key: vcpkg-${{ runner.os }}-${{ github.workflow }}-${{ hashFiles('**/vcpkg.json') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-${{ github.workflow }}-

@@ -18,6 +18,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg/.cache
 
     steps:
       - name: install openmpi
@@ -38,6 +40,7 @@ jobs:
             ${{ github.workspace }}/vcpkg/packages
             ${{ github.workspace }}/vcpkg/downloads
             ${{ github.workspace }}/vcpkg/installed
+            ${{ github.workspace }}/vcpkg/.cache
           key: vcpkg-${{ runner.os }}-${{ github.workflow }}-${{ hashFiles('**/vcpkg.json') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-${{ github.workflow }}-

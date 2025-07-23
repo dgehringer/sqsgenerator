@@ -405,7 +405,7 @@ def read(
             "The filename must end with the format extension if explicitly specified."
         )
 
-    backend, fmt = (fmt, backend) if fmt is not None else deduce_format(filename)
+    backend, fmt = (backend, fmt) if fmt is not None else deduce_format(filename)
 
     def _read_str() -> str:
         with open(filename) as f:

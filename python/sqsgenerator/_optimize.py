@@ -1,6 +1,8 @@
 import json
+import warnings
 from typing import Any, Callable
 
+from ._adapters import read as _read
 from .core import (
     IterationMode,
     LogLevel,
@@ -10,6 +12,7 @@ from .core import (
     SqsConfigurationDouble,
     SqsConfigurationFloat,
     SqsResultPack,
+    Structure,
     SublatticeMode,
 )
 from .core import (
@@ -99,6 +102,23 @@ def parse_config(
     if isinstance(config, str):
         config = json.loads(config)
     config = config.copy() if not inplace else config
+
+    if structure_config := config.get("structure"):
+        if structure_file_path := structure_config.get("file"):
+            if (
+                "lattice" in structure_config
+                and "coords" in structure_config
+                and "species" in structure_config
+            ):
+                warnings.warn(
+                    f"Structure data provided in both file and inline format. Using file data from {structure_file_path}.",
+                    UserWarning,
+                    stacklevel=1,
+                )
+            structure: Structure = _read(structure_file_path)
+            structure_config["lattice"] = structure.lattice.tolist()
+            structure_config["coords"] = structure.frac_coords.tolist()
+            structure_config["species"] = structure.species.tolist()
 
     def apply(key: str, f: Callable[[str], Any]) -> None:
         if key in config:

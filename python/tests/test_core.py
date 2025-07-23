@@ -13,6 +13,7 @@ from sqsgenerator.core import (
     Prec,
     SqsConfiguration,
     SqsResult,
+    SqsResultPack,
     Structure,
     double,
     load_result_pack,
@@ -139,20 +140,41 @@ def test_structure_pack_io(prec):
 
     assert type(results) is type(load_result_pack(results.bytes(), prec))
 
+    def by_hash(pack: SqsResultPack) -> dict[str, SqsResult]:
+        by_configuration = {
+            "".join(map(str, r.species)): r
+            for _, result_set in pack
+            for r in result_set
+        }
+        return by_configuration
+
     with tempfile.NamedTemporaryFile(mode="wb") as f:
         f.write(results.bytes())
         f.flush()
         loaded = load_result_pack(f.name, prec)
         assert type(results) is type(loaded)
-        for a, b in zip(loaded, results):
-            (aobj, ares), (bobj, bres) = a, b
-            assert math.isclose(aobj, bobj)
-            assert len(ares) == len(bres)
-            for ar, br in zip(ares, bres):
-                assert math.isclose(ar.objective, br.objective)
-                assert np.allclose(ar.sro(), br.sro())
-                sa, sb = ar.structure(), br.structure()
-                assert np.allclose(sa.frac_coords, sb.frac_coords)
+        rloaded, rresults = by_hash(loaded), by_hash(results)
+        assert (
+            len(rresults)
+            == len(rloaded)
+            == loaded.num_results()
+            == results.num_results()
+        )
+        assert not (set(rloaded.keys()) ^ set(rresults.keys())), (
+            "There are no keys in either set only"
+        )
+
+        assert len(rloaded.keys()) == 12870
+        assert len(rresults.keys()) == 12870
+        for k in rresults.keys():
+            assert k in rloaded
+        for key, ar in rresults.items():
+            br = rloaded[key]
+            assert math.isclose(ar.objective, br.objective)
+            assert np.allclose(ar.sro(), br.sro())
+            sa, sb = ar.structure(), br.structure()
+            assert np.allclose(sa.frac_coords, sb.frac_coords)
+            assert np.allclose(ar.sro(), br.sro())
 
 
 K = TypeVar("K")
