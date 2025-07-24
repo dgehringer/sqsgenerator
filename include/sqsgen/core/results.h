@@ -5,6 +5,7 @@
 #ifndef SQSGEN_CORE_RESULTS_H
 #define SQSGEN_CORE_RESULTS_H
 
+#include <mutex>
 #include <shared_mutex>
 
 #include "absl/container/flat_hash_map.h"

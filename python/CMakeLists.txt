@@ -17,6 +17,21 @@ project(
         VERSION ${SKBUILD_PROJECT_VERSION}
         LANGUAGES CXX)
 
+set(VCPKG_CRT_LINKAGE "dynamic")
+set(VCPKG_LIBRARY_LINKAGE "static")
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+set(BUILD_SHARED_LIBS OFF)
+if (WIN32)
+    include(FetchContent)
+    FetchContent_Declare(
+            abseil
+            GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+            GIT_TAG 20250512.1
+            CMAKE_ARGS
+            "-DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_SHARED_LIBS=OFF"
+    )
+    FetchContent_MakeAvailable(abseil)
+endif ()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -35,10 +50,13 @@ if (CMAKE_COMPILER_IS_GNUCXX)
     add_compile_options(-w)
 endif ()
 
+if (NOT WIN32)
+    find_package(absl CONFIG REQUIRED)
+endif ()
 find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
-find_package(absl CONFIG REQUIRED)
+
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(boost_multiprecision REQUIRED CONFIG)
 find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")

@@ -20,7 +20,10 @@
         "boost-multiprecision",
         "nlohmann-json",
         "bshoshany-thread-pool",
-        "abseil"
+        {
+          "name": "abseil",
+          "platform": "!windows"
+        }
       ]
     },
     "tests": {
