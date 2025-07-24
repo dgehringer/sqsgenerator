@@ -1,6 +1,6 @@
 {
   "name": "sqsgenerator",
-  "version-string": "0.4.8",
+  "version-string": "0.4.9",
   "features": {
     "cli": {
       "description": "Command line interface for SQS generator",
