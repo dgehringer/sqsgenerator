@@ -8,7 +8,6 @@ on:
     branches:
       - main
 
-
 permissions:
   contents: write
 
@@ -60,7 +59,7 @@ jobs:
         run: ${{ github.workspace }}/scripts/build-tests.sh build-tests
 
       - name: run ctest
-        run: ctest --test-dir ${{ github.workspace }}/build-tests -E test_parse_structure.required_fields_success --verbose --output-junit ${{ github.workspace }}/junit/test-results.xml
+        run: ctest --test-dir ${{ github.workspace }}/build-tests -E required_fields_success --verbose --output-junit ${{ github.workspace }}/junit/test-results.xml
 
       - name: upload ctest test results
         uses: actions/upload-artifact@v4
