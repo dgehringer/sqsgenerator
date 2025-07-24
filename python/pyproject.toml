@@ -28,7 +28,7 @@ test = [
 requires = [
     "scikit-build-core",
     "pybind11>=2.11.0", # Minimum version with Python 3.13 support
-    "numpy>=1.26.0", # Python 3.13 compatible version
+    "oldest-supported-numpy", # Python 3.13 compatible version
     "mypy"
 ]
 build-backend = "scikit_build_core.build"
