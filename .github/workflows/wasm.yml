@@ -1,7 +1,7 @@
 name: wasm-ci
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 

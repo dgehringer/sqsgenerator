@@ -46,7 +46,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Build package
-        run:  python -m build --wheel ./python
+        run: |
+          pip install build
+          python -m build --wheel ./python
 
       - name: Upload pytest test results
         uses: actions/upload-artifact@v4
