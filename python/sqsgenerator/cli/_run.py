@@ -1,4 +1,5 @@
 import threading
+from typing import Optional
 
 import click
 
@@ -51,7 +52,7 @@ def run_optimization(
                 bar.update(actual - iterations_finished)
                 iterations_finished = actual
 
-        optimization_result: SqsResultPack | None = None
+        optimization_result: Optional[SqsResultPack] = None
 
         def _optimize():
             result_local = optimize(config, log_level=log_level, callback=_callback)

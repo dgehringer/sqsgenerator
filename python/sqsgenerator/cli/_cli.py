@@ -2,6 +2,7 @@ import functools
 import io
 import json
 import os
+from typing import Optional
 
 import click
 
@@ -11,6 +12,18 @@ from ..templates import load_templates
 from ._run import run_optimization
 from ._shared import format_hyperlink, render_error, render_table
 from ._version import print_version, version_string
+
+from types import MappingProxyType
+
+_LOG_LEVELS: MappingProxyType[str, LogLevel] = MappingProxyType(
+    {
+        "trace": LogLevel.trace,
+        "debug": LogLevel.debug,
+        "info": LogLevel.info,
+        "warn": LogLevel.warn,
+        "error": LogLevel.error,
+    }
+)
 
 
 @click.group(
@@ -27,7 +40,7 @@ def cli():
 @click.option(
     "-l",
     "--log",
-    type=click.Choice(["error", "warn", "info", "debug", "trace"]),
+    type=click.Choice(list(_LOG_LEVELS.keys())),
     help="set the log value",
     default="warn",
     show_default=True,
@@ -49,19 +62,9 @@ def cli():
     help="Suppress progress bar and optimization info",
 )
 def run(_input, log: str, quiet: bool) -> None:
-    match log:
-        case "critical":
-            log_level = LogLevel.critical
-        case "warn":
-            log_level = LogLevel.warn
-        case "info":
-            log_level = LogLevel.info
-        case "debug":
-            log_level = LogLevel.debug
-        case "trace":
-            log_level = LogLevel.trace
-        case _:
-            raise click.UsageError(f"Invalid log level: {log!r}")
+    log_level = _LOG_LEVELS.get(log)
+    if log_level is None:
+        raise click.UsageError(f"Invalid log level: {log!r}")
 
     if (
         result := run_optimization(_input.read(), log_level=log_level, quiet=quiet)
@@ -81,7 +84,7 @@ def run(_input, log: str, quiet: bool) -> None:
     type=click.Choice(list(load_templates().keys())),
     metavar="NAME",
 )
-def template(name: str | None) -> None:
+def template(name: Optional[str]) -> None:
     if name is None:
 
         def format_author(authors: list[dict[str, str]]) -> str:

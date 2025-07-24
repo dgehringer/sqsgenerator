@@ -148,18 +148,18 @@ namespace sqsgen::cli {
       std::cout << "       (" << blue << italic << "info: " << reset << italic << info.value()
                 << reset << ")" << std::endl;
     if (parameter.has_value())
-      std::cout
-          << bold << blue << "Help: " << reset
-          << format_string(
-                 "the documentation for parameter \"%s\" is available at: %s", parameter.value(),
-                 format_hyperlink(
-                     format_string(
-                         "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#%s",
-                         parameter.value()),
-                     format_string(
-                         "https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#%s",
-                         parameter.value())))
-          << std::endl;
+      std::cout << bold << blue << "Help: " << reset
+                << format_string(
+                       "the documentation for parameter \"%s\" is available at: %s",
+                       parameter.value(),
+                       format_hyperlink(
+                           format_string(
+                               "https://sqsgenerator.readthedocs.io/en/latest/parameters.html#%s",
+                               parameter.value()),
+                           format_string(
+                               "https://sqsgenerator.readthedocs.io/en/latest/parameters.html#%s",
+                               parameter.value())))
+                << std::endl;
     if (exit) std::exit(1);
   }
 

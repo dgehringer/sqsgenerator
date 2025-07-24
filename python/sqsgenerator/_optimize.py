@@ -1,6 +1,6 @@
 import json
 import warnings
-from typing import Any, Callable
+from typing import Any, Callable, Union, Optional
 
 from ._adapters import read as _read
 from .core import (
@@ -35,13 +35,12 @@ def _parse_prec(string: str) -> Prec:
     Returns:
         Prec: The corresponding Prec enum value.
     """
-    match string.lower():
-        case "double":
-            return Prec.double
-        case "single":
-            return Prec.single
-        case _:
-            raise ValueError(f"Invalid precision: {string}. Use 'double' or 'single'.")
+    if (prec := string.lower()) == "double":
+        return Prec.double
+    elif prec == "single":
+        return Prec.single
+    else:
+        raise ValueError(f"Invalid precision: {string}. Use 'double' or 'single'.")
 
 
 def _parse_iteration_mode(string: str) -> IterationMode:
@@ -54,15 +53,14 @@ def _parse_iteration_mode(string: str) -> IterationMode:
     Returns:
         IterationMode: The corresponding IterationMode enum value.
     """
-    match string.lower():
-        case "random":
-            return IterationMode.random
-        case "systematic":
-            return IterationMode.systematic
-        case _:
-            raise ValueError(
-                f"Invalid iteration mode: {string}. Use 'random' or 'systematic'."
-            )
+    if (mode := string.lower()) == "random":
+        return IterationMode.random
+    elif mode == "systematic":
+        return IterationMode.systematic
+    else:
+        raise ValueError(
+            f"Invalid iteration mode: {string}. Use 'random' or 'systematic'."
+        )
 
 
 def _parse_sublattice_mode(string: str) -> SublatticeMode:
@@ -75,19 +73,18 @@ def _parse_sublattice_mode(string: str) -> SublatticeMode:
     Returns:
         SublatticeMode: The corresponding SublatticeMode enum value.
     """
-    match string.lower():
-        case "split":
-            return SublatticeMode.split
-        case "interact":
-            return SublatticeMode.interact
-        case _:
-            raise ValueError(
-                f"Invalid sublattice mode: {string}. Use 'split' or 'interact'."
-            )
+    if (mode := string.lower()) == "split":
+        return SublatticeMode.split
+    elif mode == "interact":
+        return SublatticeMode.interact
+    else:
+        raise ValueError(
+            f"Invalid sublattice mode: {string}. Use 'split' or 'interact'."
+        )
 
 
 def parse_config(
-    config: dict[str, Any] | str, inplace: bool = False
+    config: Union[dict[str, Any], str], inplace: bool = False
 ) -> SqsConfiguration:
     """
     Parse the configuration dictionary into a SqsConfiguration object.
@@ -132,9 +129,9 @@ def parse_config(
 
 
 def optimize(
-    config: dict[str, Any] | SqsConfiguration | str,
+    config: Union[dict[str, Any], SqsConfiguration, str],
     level: LogLevel = LogLevel.warn,
-    callback: SqsCallback | None = None,
+    callback:  Optional[SqsCallback] = None,
 ) -> SqsResultPack:
     """
     Optimize the SQS configuration based on the provided parameters.

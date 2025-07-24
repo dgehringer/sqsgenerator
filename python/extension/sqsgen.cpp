@@ -391,6 +391,8 @@ PYBIND11_MODULE(_core, m) {
       .value("info", log::level::info)
       .value("warn", log::level::warn)
       .value("error", log::level::error)
+      .value("debug", log::level::debug)
+      .value("trace", log::level::trace)
       .export_values();
 
   py::class_<io::parse_error>(m, "ParseError")

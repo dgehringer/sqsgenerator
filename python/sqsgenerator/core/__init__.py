@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Union
 
 from ._core import (
     Atom,
@@ -45,20 +45,21 @@ __version__ = __core__version__
 __build__ = __core__build__
 
 
-SqsConfiguration = SqsConfigurationFloat | SqsConfigurationDouble
-Structure = StructureFloat | StructureDouble
-SqsResultSplit = SqsResultSplitFloat | SqsResultSplitDouble
-SqsResultInteract = SqsResultInteractFloat | SqsResultInteractDouble
-SqsResultPackSplit = SqsResultPackSplitFloat | SqsResultPackSplitDouble
-SqsCallbackContext = SqsCallbackContextFloat | SqsCallbackContextDouble
-SqsResultPackInteract = SqsResultPackInteractFloat | SqsResultPackInteractDouble
+SqsConfiguration = Union[SqsConfigurationFloat, SqsConfigurationDouble]
+Structure = Union[StructureFloat, StructureDouble]
+SqsResultSplit = Union[SqsResultSplitFloat, SqsResultSplitDouble]
+SqsResultInteract = Union[SqsResultInteractFloat, SqsResultInteractDouble]
+SqsResultPackSplit = Union[SqsResultPackSplitFloat, SqsResultPackSplitDouble]
+SqsCallbackContext = Union[SqsCallbackContextFloat, SqsCallbackContextDouble]
+SqsResultPackInteract = Union[SqsResultPackInteractFloat, SqsResultPackInteractDouble]
 
 SqsCallback = Callable[[SqsCallbackContext], None]
 
-SqsResult = SqsResultInteract | SqsResultSplit
-SqsResultPack = SqsResultPackInteract | SqsResultPackSplit
+SqsResult = Union[SqsResultInteract, SqsResultSplit]
+SqsResultPack = Union[SqsResultPackInteract, SqsResultPackSplit]
 
 __all__ = [
+    "Atom",
     "IterationMode",
     "LogLevel",
     "ParseError",

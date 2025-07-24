@@ -1,6 +1,6 @@
 import functools
 import os.path
-from typing import Literal, NamedTuple, cast, get_args
+from typing import Literal, NamedTuple, cast, get_args, Union, Optional
 
 from .core import Prec, Structure, StructureDouble, StructureFloat, StructureFormat
 
@@ -20,7 +20,7 @@ else:
 
 
 @functools.lru_cache(maxsize=2)
-def _structure_type(prec: Prec) -> type[StructureFloat] | type[StructureDouble]:
+def _structure_type(prec: Prec) -> Union[type[StructureFloat], type[StructureDouble]]:
     """
     Return the Structure class based on the precision.
 
@@ -33,13 +33,12 @@ def _structure_type(prec: Prec) -> type[StructureFloat] | type[StructureDouble]:
     Raises:
         ValueError: If the precision type is invalid.
     """
-    match prec:
-        case Prec.double:
-            return StructureDouble
-        case Prec.single:
-            return StructureFloat
-        case _:
-            raise ValueError("Invalid prec")
+    if prec == Prec.double:
+        return StructureDouble
+    elif prec == Prec.single:
+        return StructureFloat
+    else:
+        raise ValueError("Invalid prec")
 
 
 if HAVE_PYMATGEN:
@@ -290,7 +289,8 @@ def deduce_format(filename: str) -> tuple[str, str]:
         raise ValueError("filename must have a valid extension.")
     elif len(parts) == 2:
         # there is no reader defined we use "sqsgen"
-        if (fmt := parts[-1]) in sqsgen_formats():
+        _, fmt = parts
+        if fmt in sqsgen_formats():
             return "sqsgen", fmt
         else:
             raise ValueError(
@@ -298,47 +298,47 @@ def deduce_format(filename: str) -> tuple[str, str]:
                 + ", ".join(sqsgen_formats())
             )
     else:
-        match parts:
-            case [*_, "sqsgen", fmt]:
-                if fmt in sqsgen_formats():
-                    return "sqsgen", fmt
-                else:
-                    raise ValueError(
-                        "sqsgen only supports one of this formats: "
-                        + ", ".join(sqsgen_formats())
-                    )
-            case [*_, "ase", fmt]:
-                if not HAVE_ASE:
-                    raise ImportError(
-                        "ASE is not installed. Please install it to use this format."
-                    )
-                if fmt in ase_formats():
-                    return "ase", cast(str, fmt)
-                else:
-                    raise ValueError(
-                        "ase only supports one of this formats: "
-                        + ", ".join(ase_formats().keys())
-                    )
-            case [*_, "pymatgen", fmt]:
-                if not HAVE_PYMATGEN:
-                    raise ImportError(
-                        "Pymatgen is not installed. Please install it to use this format."
-                    )
-                if fmt in pymatgen_formats():
-                    return "pymatgen", cast(str, fmt)
-                else:
-                    raise ValueError(
-                        "pymatgen only supports one of this formats: "
-                        + ", ".join(pymatgen_formats())
-                    )
-            case _:
-                raise ValueError("Cannot deduce file format from extension")
+        *_, backend, fmt = parts
+        if backend == "sqsgen":
+            if fmt in sqsgen_formats():
+                return "sqsgen", fmt
+            else:
+                raise ValueError(
+                    "sqsgen only supports one of this formats: "
+                    + ", ".join(sqsgen_formats())
+                )
+        elif backend == "ase":
+            if not HAVE_ASE:
+                raise ImportError(
+                    "ASE is not installed. Please install it to use this format."
+                )
+            if fmt in ase_formats():
+                return "ase", cast(str, fmt)
+            else:
+                raise ValueError(
+                    "ase only supports one of this formats: "
+                    + ", ".join(ase_formats().keys())
+                )
+        elif backend == "pymatgen":
+            if not HAVE_PYMATGEN:
+                raise ImportError(
+                    "Pymatgen is not installed. Please install it to use this format."
+                )
+            if fmt in pymatgen_formats():
+                return "pymatgen", cast(str, fmt)
+            else:
+                raise ValueError(
+                    "pymatgen only supports one of this formats: "
+                    + ", ".join(pymatgen_formats())
+                )
+        else:
+            raise ValueError("Cannot deduce file format from extension")
 
 
 def write(
     structure: Structure,
     filename: str,
-    fmt: str | None = None,
+    fmt: Optional[str] = None,
     backend: Literal["sqsgen", "ase", "pymatgen"] = "sqsgen",
 ) -> None:
     """
@@ -358,33 +358,33 @@ def write(
 
     backend, fmt = (fmt, backend) if fmt is not None else deduce_format(filename)
 
-    def _write_str(s: str | bytes) -> None:
+    def _write_str(s: Union[str, bytes]) -> None:
         with open(filename, "w" if isinstance(s, str) else "wb") as f:
             f.write(s)
 
-    match backend:
-        case "ase":
-            write_ase(to_ase(structure), filename, fmt)
-        case "pymatgen":
-            write_pymatgen(to_pymatgen(structure), filename, fmt)
-        case "sqsgen":
-            match fmt:
-                case "cif":
-                    _write_str(structure.dump(StructureFormat.cif))
-                case "vasp" | "poscar":
-                    _write_str(structure.dump(StructureFormat.poscar))
-                case "json":
-                    _write_str(structure.dump(StructureFormat.json_sqsgen))
-                case _:
-                    raise ValueError(
-                        f"Unsupported format '{fmt}' for sqsgen backend. "
-                        "Supported formats are: cif, vasp, poscar and json."
-                    )
+    if backend == "ase":
+        write_ase(to_ase(structure), filename, fmt)
+    elif backend == "pymatgen":
+        write_pymatgen(to_pymatgen(structure), filename, fmt)
+    elif backend == "sqsgen":
+        if fmt == "cif":
+            _write_str(structure.dump(StructureFormat.cif))
+        elif fmt in {"vasp", "poscar"}:
+            _write_str(structure.dump(StructureFormat.poscar))
+        elif fmt == "json":
+            _write_str(structure.dump(StructureFormat.json_sqsgen))
+        else:
+            raise ValueError(
+                f"Unsupported format '{fmt}' for sqsgen backend. "
+                "Supported formats are: cif, vasp, poscar and json."
+            )
+    else:
+        raise ValueError(f"Unsupported backend {backend}")
 
 
 def read(
     filename: str,
-    fmt: str | None = None,
+    fmt: Optional[str] = None,
     backend: Literal["sqsgen", "ase", "pymatgen"] = "sqsgen",
     prec: Prec = Prec.double,
 ) -> Structure:
@@ -411,28 +411,26 @@ def read(
         with open(filename) as f:
             return f.read()
 
-    match backend:
-        case "ase":
-            return from_ase(read_ase(filename, fmt), prec)
-        case "pymatgen":
-            return from_pymatgen(read_pymatgen(filename, fmt), prec)
-        case "sqsgen":
-            match fmt:
-                case "vasp" | "poscar":
-                    return _structure_type(prec).from_poscar(_read_str())
-                case "json":
-                    return _structure_type(prec).from_json(
-                        _read_str(), StructureFormat.json_sqsgen
-                    )
-                case _:
-                    raise ValueError(
-                        f"Unsupported format '{fmt}' for sqsgen backend. "
-                        "Supported formats are: vasp, poscar and json."
-                    )
-        case _:
-            raise ValueError(
-                f"Unsupported backend '{backend}'. Supported backends are: sqsgen, ase, pymatgen."
+    if backend == "ase":
+        return from_ase(read_ase(filename, fmt), prec)
+    elif backend == "pymatgen":
+        return from_pymatgen(read_pymatgen(filename, fmt), prec)
+    elif backend == "sqsgen":
+        if fmt in ("vasp", "poscar"):
+            return _structure_type(prec).from_poscar(_read_str())
+        elif fmt == "json":
+            return _structure_type(prec).from_json(
+                _read_str(), StructureFormat.json_sqsgen
             )
+        else:
+            raise ValueError(
+                f"Unsupported format '{fmt}' for sqsgen backend. "
+                "Supported formats are: vasp, poscar and json."
+            )
+    else:
+        raise ValueError(
+            f"Unsupported backend '{backend}'. Supported backends are: sqsgen, ase, pymatgen."
+        )
 
 
 @functools.lru_cache(maxsize=1)

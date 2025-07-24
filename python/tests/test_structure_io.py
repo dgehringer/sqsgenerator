@@ -4,21 +4,16 @@ import tempfile
 import numpy as np
 import pytest
 
-from sqsgenerator._adapters import (
-    ase_formats,
-    available_formats,
-    pymatgen_formats,
-    read,
-    sqsgen_formats,
-    to_ase,
-    to_pymatgen,
-    write,
-)
+
 from sqsgenerator.core import (
     StructureDouble,
     StructureFloat,
     StructureFormat,
 )
+
+from sqsgenerator._adapters import available_formats, to_pymatgen, read, write
+
+from typing import Union
 
 try:
     from pymatgen.core import Structure
@@ -37,8 +32,8 @@ else:
 
 
 def make_structure(
-    structure_type: type[StructureFloat] | type[StructureDouble],
-) -> StructureFloat | StructureDouble:
+    structure_type: Union[type[StructureFloat], type[StructureDouble]],
+) -> Union[StructureFloat, StructureDouble]:
     return structure_type(
         np.diag([1, 2, 3]),
         np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5]]),
@@ -73,7 +68,7 @@ def test_structure_binary(structure_type):
 def test_structure_pymatgen(structure_type):
     structure = make_structure(structure_type) * (2, 2, 2)
 
-    def to_pymatgen(s: StructureFloat | StructureDouble) -> Structure:
+    def to_pymatgen(s: Union[StructureFloat, StructureDouble]) -> Structure:
         return Structure(
             s.lattice,
             s.symbols,

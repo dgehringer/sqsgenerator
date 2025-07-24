@@ -1,15 +1,17 @@
 [project]
 name = "sqsgenerator"
 authors = [
-    { name = "Dominik Gehringer", email = "dgehringer@gmail.com" }
+    { name = "Dominik Gehringer", email = "dgehringer@protonmail.com" }
 ]
 maintainers = [
-    { name = "Dominik Gehringer", email = "dgehringer@gmail.com" }
+    { name = "Dominik Gehringer", email = "dgehringer@protonmail.com" },
+    { name = "David Holec", email = "david.holec@unileoben.ac.at" }
 ]
 description = "Create atomic structures for solid solutions for molecular simulations"
 dependencies = ["numpy", "click"]
 dynamic = ["version"]
 readme = "README.md"
+requires-python = ">=3.9"
 
 [project.urls]
 Homepage = "https://github.com/dgehringer/sqsgenerator"
@@ -59,7 +61,7 @@ sqsgenerator = ["*.json", "*.pyi", "*.dll"]
 
 
 [tool.cibuildwheel]
-build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*"]
+build = ["cp39-*", "cp310-*", "cp311-*", "cp312-*", "cp313-*"]
 skip = ["*musllinux*"]
 test-command = "pytest {project}/python/tests --import-mode=importlib"
 test-extras = ["test"]

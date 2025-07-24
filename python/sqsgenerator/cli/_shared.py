@@ -1,6 +1,6 @@
 import io
-from collections.abc import Iterable, Iterator
-from typing import Any
+from collections.abc import Iterable
+from typing import Any, Optional
 
 import click
 
@@ -10,7 +10,7 @@ def format_hyperlink(text, link: str) -> str:
 
 
 def render_error(
-    message: str, parameter: str | None = None, info: str | None = None
+    message: str, parameter: Optional[str] = None, info: Optional[str] = None
 ) -> None:
     click.echo(
         click.style("Error:", fg="red", bold=True, underline=True) + " " + message
@@ -23,7 +23,9 @@ def render_error(
             + ")"
         )
     if parameter is not None:
-        link = f"https://sqsgenerator.readthedocs.io/en/latest/input_parameters.html#{parameter}"
+        link = (
+            f"https://sqsgenerator.readthedocs.io/en/latest/parameters.html#{parameter}"
+        )
         click.echo(
             click.style("Help:", fg="blue", bold=True)
             + f' the documentation for parameter "{parameter}" is available at: {format_hyperlink(link, link)}'
@@ -34,9 +36,9 @@ def render_table(
     rows: Iterable[tuple[Any, ...]],
     *columns: str,
     sep: str = " ",
-    header_style: dict[str, str | bool] | None = None,
-    buf: io.StringIO | None = None,
-    **styles: dict[str, bool | str],
+    header_style: Optional[dict[str, Optional[bool]]] = None,
+    buf: Optional[io.StringIO] = None,
+    **styles: dict[str, Optional[bool]],
 ) -> None:
     header_style = header_style or dict(underline=True, bold=True)
     max_widths = [
