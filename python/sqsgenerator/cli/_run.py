@@ -1,8 +1,16 @@
 import threading
+from typing import Optional
 
 import click
 
-from ..core import LogLevel, ParseError, SqsResultPack, optimize, parse_config
+from ..core import (
+    LogLevel,
+    ParseError,
+    SqsCallbackContext,
+    SqsResultPack,
+    optimize,
+    parse_config,
+)
 from ._shared import render_error
 
 
@@ -36,7 +44,7 @@ def run_optimization(
         stop_gracefully: bool = False
         stop_event = threading.Event()
 
-        def _callback(ctx):
+        def _callback(ctx: SqsCallbackContext) -> None:
             nonlocal iterations_finished, stop_gracefully
             if stop_gracefully:
                 ctx.stop()
@@ -44,7 +52,7 @@ def run_optimization(
                 bar.update(actual - iterations_finished)
                 iterations_finished = actual
 
-        optimization_result: SqsResultPack | None = None
+        optimization_result: Optional[SqsResultPack] = None
 
         def _optimize():
             result_local = optimize(config, log_level=log_level, callback=_callback)

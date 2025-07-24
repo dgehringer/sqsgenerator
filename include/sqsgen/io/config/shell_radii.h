@@ -64,7 +64,7 @@ namespace sqsgen::io::config {
             for (auto&& r : radii)
               if (r < 0)
                 return parse_error::from_msg<key, CODE_BAD_VALUE>(
-                    std::format("You cannot specify a shell radius that is less than 0 ({})", r));
+                    format_string("You cannot specify a shell radius that is less than 0 (%f)", r));
             if (radii.front() != 0.0 && !core::helpers::is_close<T>(radii.front(), 0.0))
               radii.insert(radii.begin(), 0.0);
             return radii;
@@ -124,11 +124,11 @@ namespace sqsgen::io::config {
                                std::vector<sublattice> const& composition) {
     return parse_for_mode<key>(
         [&] {
-          return detail::shell_radii_parser<key, SUBLATTICE_MODE_INTERACT, T>::template parse(
+          return detail::shell_radii_parser<key, SUBLATTICE_MODE_INTERACT, T>::parse(
               doc, std::forward<core::structure<T>>(structure));
         },
         [&] {
-          return detail::shell_radii_parser<key, SUBLATTICE_MODE_SPLIT, T>::template parse(
+          return detail::shell_radii_parser<key, SUBLATTICE_MODE_SPLIT, T>::parse(
               doc, std::forward<core::structure<T>>(structure), composition);
         },
         mode);

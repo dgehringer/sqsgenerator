@@ -4,8 +4,10 @@
 
 #ifndef ATOM_H
 #define ATOM_H
+
 #include <string>
 
+#include "sqsgen/log.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -164,7 +166,7 @@ namespace sqsgen::core {
 
     static atom from_symbol(std::string const& symbol) {
       if (!SYMBOL_MAP.contains(symbol))
-        throw std::out_of_range(std::format("Unknown element {}", symbol));
+        throw std::out_of_range(format_string("Unknown element \"%s\"", symbol));
       return from_z(SYMBOL_MAP.at(symbol));
     }
 

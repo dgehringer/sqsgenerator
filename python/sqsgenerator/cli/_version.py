@@ -1,5 +1,5 @@
 import io
-from typing import Any
+from typing import Any, Optional
 
 import click
 
@@ -26,7 +26,7 @@ def print_version() -> str:
     )
     write("\n")
 
-    def print_row(name: str, value: str, hyperlink: str | None = None) -> None:
+    def print_row(name: str, value: str, hyperlink: Optional[str] = None) -> None:
         write(f"{name}:", bold=True, fg="green")
         write(
             f" {value if hyperlink is None else format_hyperlink(value, hyperlink)}\n"

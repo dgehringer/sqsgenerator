@@ -1,15 +1,13 @@
-import os
-import sys
-
-if sys.platform == "win32":
-    # On Windows, we need to add the directory of the current file to the DLL search path for Python 3.12+
-    os.add_dll_directory(os.path.dirname(__file__))
+from typing import Callable, Union
 
 from ._core import (
+    Atom,
     IterationMode,
     LogLevel,
     ParseError,
     Prec,
+    SqsCallbackContextDouble,
+    SqsCallbackContextFloat,
     SqsConfigurationDouble,
     SqsConfigurationFloat,
     SqsResultInteractDouble,
@@ -46,21 +44,29 @@ __version__ = __core__version__
 
 __build__ = __core__build__
 
-SqsConfiguration = SqsConfigurationFloat | SqsConfigurationDouble
-Structure = StructureFloat | StructureDouble
-SqsResultSplit = SqsResultSplitFloat | SqsResultSplitDouble
-SqsResultInteract = SqsResultInteractFloat | SqsResultInteractDouble
-SqsResultPackSplit = SqsResultPackSplitFloat | SqsResultPackSplitDouble
-SqsResultPackInteract = SqsResultPackInteractFloat | SqsResultPackInteractDouble
 
-SqsResult = SqsResultInteract | SqsResultSplit
-SqsResultPack = SqsResultPackInteract | SqsResultPackSplit
+SqsConfiguration = Union[SqsConfigurationFloat, SqsConfigurationDouble]
+Structure = Union[StructureFloat, StructureDouble]
+SqsResultSplit = Union[SqsResultSplitFloat, SqsResultSplitDouble]
+SqsResultInteract = Union[SqsResultInteractFloat, SqsResultInteractDouble]
+SqsResultPackSplit = Union[SqsResultPackSplitFloat, SqsResultPackSplitDouble]
+SqsCallbackContext = Union[SqsCallbackContextFloat, SqsCallbackContextDouble]
+SqsResultPackInteract = Union[SqsResultPackInteractFloat, SqsResultPackInteractDouble]
+
+SqsCallback = Callable[[SqsCallbackContext], None]
+
+SqsResult = Union[SqsResultInteract, SqsResultSplit]
+SqsResultPack = Union[SqsResultPackInteract, SqsResultPackSplit]
 
 __all__ = [
+    "Atom",
     "IterationMode",
     "LogLevel",
     "ParseError",
     "Prec",
+    "SqsCallbackContext",
+    "SqsCallbackContextDouble",
+    "SqsCallbackContextFloat",
     "SqsConfiguration",
     "SqsConfigurationDouble",
     "SqsConfigurationFloat",

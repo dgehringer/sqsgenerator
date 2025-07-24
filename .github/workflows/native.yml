@@ -1,0 +1,83 @@
+name: native-ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg/.cache
+
+    steps:
+      - name: install openmpi
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openmpi-bin libopenmpi-dev
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache vcpkg binaries
+        id: cache-vcpkg
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/vcpkg/buildtrees
+            ${{ github.workspace }}/vcpkg/packages
+            ${{ github.workspace }}/vcpkg/downloads
+            ${{ github.workspace }}/vcpkg/installed
+            ${{ github.workspace }}/vcpkg/.cache
+          key: vcpkg-${{ runner.os }}-${{ github.workflow }}-${{ hashFiles('**/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ github.workflow }}-
+
+      - uses: lukka/run-vcpkg@v11
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: install pybind11
+        run: |
+          python -m pip install pybind11
+
+      - name: build ctest executables
+        run: ${{ github.workspace }}/scripts/build-tests.sh build-tests
+
+      - name: run ctest
+        run: ctest --test-dir ${{ github.workspace }}/build-tests -E test_parser --verbose --output-junit ${{ github.workspace }}/junit/test-results.xml
+
+      - name: upload ctest test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-results-${{ matrix.os }}
+          path: junit/test-results.xml
+
+      - name: build cli app
+        run: ${{ github.workspace }}/scripts/build-cli.sh build-cli
+
+      - name: build cli app (MPI version)
+        run: ${{ github.workspace }}/scripts/build-cli.sh build-cli-mpi
+        env:
+          MPI_CXX: mpicxx.openmpi
+          MPI_CC: mpicc.openmpi"
+
+      - name: run sqsgen --version
+        run: ${{ github.workspace }}/build-cli/sqsgen --version
+
+      - name: run sqsgen --version (MPI)
+        run: ${{ github.workspace }}/build-cli-mpi/sqsgen --version

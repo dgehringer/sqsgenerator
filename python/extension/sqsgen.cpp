@@ -216,20 +216,26 @@ template <string_literal Name, class T> void bind_configuration(py::module &m) {
       .def_readwrite("thread_config", &configuration<T>::thread_config)
       .def_readwrite("composition", &configuration<T>::composition)
       .def("bytes", &to_bytes<configuration<T>>)
+      .def("json",
+           [](configuration<T> const &config) {
+             nlohmann::json j = config;
+             return j.dump();
+           })
       .def_static("from_bytes", &from_bytes<configuration<T>>);
 }
 
 template <string_literal Name, class T> void bind_sro_parameter(py::module &m) {
+  using namespace sqsgen;
   using namespace sqsgen::python::helpers;
-  py::class_<sqsgen::sro_parameter<T>>(m, format_prec<Name, T>().c_str())
-      .def_readonly("shell", &sqsgen::sro_parameter<T>::shell)
-      .def_readonly("i", &sqsgen::sro_parameter<T>::i)
-      .def_readonly("j", &sqsgen::sro_parameter<T>::j)
-      .def_readonly("value", &sqsgen::sro_parameter<T>::value)
-      .def("__float__", [](sqsgen::sro_parameter<T> &p) { return p.value; })
-      .def("__repr__", [](sqsgen::sro_parameter<T> &p) -> std::wstring {
-        return std::format(L"α{}{}₋{}({})", format_ordinal<false>(p.shell), format_ordinal(p.i),
-                           format_ordinal(p.j), p.value);
+  py::class_<sro_parameter<T>>(m, format_prec<Name, T>().c_str())
+      .def_readonly("shell", &sro_parameter<T>::shell)
+      .def_readonly("i", &sro_parameter<T>::i)
+      .def_readonly("j", &sro_parameter<T>::j)
+      .def_readonly("value", &sro_parameter<T>::value)
+      .def("__float__", [](sro_parameter<T> &p) { return p.value; })
+      .def("__repr__", [](sro_parameter<T> &p) -> std::string {
+        return format_string("α%s-%s-%s(%.7f)", format_ordinal(p.shell), format_ordinal(p.i),
+                             format_ordinal(p.j), p.value);
       });
 }
 
@@ -306,6 +312,12 @@ void bind_result_pack(py::module &m) {
            })
 
       .def("__len__", [](sqs_result_pack<T, Mode> &self) { return self.size(); })
+      .def("__getitem__",
+           [](sqs_result_pack<T, Mode> &self, int index) {
+             if (index < 0) index += self.size();
+             if (index < 0 || index >= self.size()) throw std::out_of_range("Index out of range");
+             return self.results.at(index);
+           })
       .def("num_objectives", &sqs_result_pack<T, Mode>::size)
       .def("num_results", &sqs_result_pack<T, Mode>::num_results)
       .def("bytes", &to_bytes<sqs_result_pack<T, Mode>>)
@@ -375,12 +387,12 @@ PYBIND11_MODULE(_core, m) {
       .value("poscar", STRUCTURE_FORMAT_POSCAR)
       .export_values();
 
-  py::enum_<spdlog::level::level_enum>(m, "LogLevel")
-      .value("debug", spdlog::level::debug)
-      .value("info", spdlog::level::info)
-      .value("warn", spdlog::level::warn)
-      .value("trace", spdlog::level::trace)
-      .value("critical", spdlog::level::critical)
+  py::enum_<log::level>(m, "LogLevel")
+      .value("info", log::level::info)
+      .value("warn", log::level::warn)
+      .value("error", log::level::error)
+      .value("debug", log::level::debug)
+      .value("trace", log::level::trace)
       .export_values();
 
   py::class_<io::parse_error>(m, "ParseError")
@@ -404,7 +416,7 @@ PYBIND11_MODULE(_core, m) {
       .def(
           "__eq__", [](core::atom &a, core::atom &b) { return a.Z == b.Z; }, py::is_operator())
       .def("__repr__", [](core::atom &a) -> std::string {
-        return std::format("Atom(symbol=\"{}\", Z={}, mass={})", a.symbol, a.Z, a.mass);
+        return format_string("Atom(symbol=\"%s\", Z=%i, mass=%.1f)", a.symbol, a.Z, a.mass);
       });
 
   py::class_<vset<usize_t>>(m, "Indices")
@@ -487,7 +499,7 @@ PYBIND11_MODULE(_core, m) {
   m.def(
       "optimize",
       [](std::variant<core::configuration<float>, core::configuration<double>> &&config,
-         spdlog::level::level_enum log_level, std::optional<sqs_callback_t> callback) {
+         log::level log_level, std::optional<sqs_callback_t> callback) {
         if (callback.has_value()) {
           py::gil_scoped_release nogil{};
           return sqsgen::run_optimization(std::forward<decltype(config)>(config), log_level,
@@ -497,7 +509,7 @@ PYBIND11_MODULE(_core, m) {
                                           std::nullopt);
         }
       },
-      py::arg("config"), py::arg("log_level") = spdlog::level::level_enum::warn,
+      py::arg("config"), py::arg("log_level") = log::level::warn,
       py::arg("callback") = std::nullopt);
 
   bind_configuration<"SqsConfiguration", float>(m);

@@ -1,14 +1,14 @@
 {
   "name": "ti-al-b-n",
   "description":
-      "Cubic B2 structure with Ti and N. Optimization is carried out on each sublattice. Ti is populated (TiAl) and optimized towards ordering. The non-metal sublattice (N) is populated with N and B and optimized towards clustering.",
+      "Cubic B2 structure with Ti and N. Optimization is carried out on each sublattice independently. Ti is populated (TiAl) and optimized towards ordering. The non-metal sublattice (N) is populated with N and B and optimized towards clustering.",
   "tags": [
     "Cubic",
-    "B2",
+    "B1",
     "Ti",
     "N",
     "split",
-    "64 at."
+    "216 at."
   ],
   "authors": [
     {

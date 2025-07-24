@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import pytest
 
@@ -12,8 +14,8 @@ except ImportError:
 
 
 def make_structure(
-    structure_type: type[StructureFloat] | type[StructureDouble],
-) -> StructureFloat | StructureDouble:
+    structure_type: Union[type[StructureFloat], type[StructureDouble]],
+) -> Union[StructureFloat, StructureDouble]:
     return structure_type(
         np.diag([1, 2, 3]),
         np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5]]),
@@ -49,7 +51,7 @@ def test_structure_supercell(structure_type):
 def test_structure_supercell_pymatgen(structure_type):
     structure = make_structure(structure_type)
 
-    def to_pymatgen(s: StructureFloat | StructureDouble) -> Structure:
+    def to_pymatgen(s: Union[StructureFloat, StructureDouble]) -> Structure:
         return Structure(
             s.lattice,
             s.symbols,

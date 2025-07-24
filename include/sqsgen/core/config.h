@@ -40,6 +40,7 @@ namespace sqsgen::core {
     iterations_t chunk_size{};
     thread_config_t thread_config;
     std::size_t keep;
+    std::optional<std::size_t> max_results_per_objective;
   };
 
 }  // namespace sqsgen::core

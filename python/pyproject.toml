@@ -1,17 +1,21 @@
 [project]
 name = "sqsgenerator"
 authors = [
-    {name = "Dominik Gehringer", email = "dgehringer@gmail.com"}
+    { name = "Dominik Gehringer", email = "dgehringer@protonmail.com" }
 ]
 maintainers = [
-    {name = "Dominik Gehringer", email = "dgehringer@gmail.com"}
+    { name = "Dominik Gehringer", email = "dgehringer@protonmail.com" },
+    { name = "David Holec", email = "david.holec@unileoben.ac.at" }
 ]
-description="Create atomic structures for molecular simulations"
-dependencies = ["numpy", "click", "rich"]
+description = "Create atomic structures for solid solutions for molecular simulations"
+dependencies = ["numpy", "click"]
 dynamic = ["version"]
+readme = "README.md"
+requires-python = ">=3.9"
 
-[tool.setuptools.dynamic]
-version = {file = "version"}
+[project.urls]
+Homepage = "https://github.com/dgehringer/sqsgenerator"
+Issues = "https://github.com/dgehringer/sqsgenerator/issues"
 
 [project.optional-dependencies]
 test = [
@@ -22,47 +26,58 @@ test = [
 
 [build-system]
 requires = [
-    "setuptools>=68.0.0",  # Required for Python 3.13 support
-    "wheel>=0.40.0",
-    "ninja",
-    "cmake>=3.27",  # Newer CMake for better Python 3.13 support
-    "pybind11>=2.11.0",  # Minimum version with Python 3.13 support
-    "numpy>=1.26.0",  # Python 3.13 compatible version
+    "scikit-build-core",
+    "pybind11>=2.11.0", # Minimum version with Python 3.13 support
+    "oldest-supported-numpy", # Python 3.13 compatible version
     "mypy"
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "scikit_build_core.build"
 
+[tool.scikit-build]
+build.verbose = true
+logging.level = "DEBUG"
+cmake.args = [
+    "-DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake",
+    "-DVCPKG_MANIFEST_DIR=..",
+    "-DVCPKG_INSTALLED_DIR=../vcpkg_installed",
+    "-DVCPKG_MANIFEST_FEATURES=python"
+]
+wheel.packages = ["sqsgenerator"]
+
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "../vcpkg.json"
+regex = '''(?sx)
+"version-string"\s*:\s*"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)",
+'''
+result = "{major}.{minor}.{patch}"
 
 [tool.pytest.ini_options]
-minversion = "6.0"
-addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
-xfail_strict = true
-filterwarnings = [
-    "error",
-    "ignore:(ast.Str|Attribute s|ast.NameConstant|ast.Num) is deprecated:DeprecationWarning:_pytest",
-]
 testpaths = ["tests"]
 
 [tool.setuptools.package-data]
-sqsgenerator = ["*.json", "*.pyi"]
+sqsgenerator = ["*.json", "*.pyi", "*.dll"]
 
 
 [tool.cibuildwheel]
-build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*"]
-skip = ["*musllinux*", "cp313-win*"]
+build = ["cp39-*", "cp310-*", "cp311-*", "cp312-*", "cp313-*"]
+skip = ["*musllinux*"]
 test-command = "pytest {project}/python/tests --import-mode=importlib"
 test-extras = ["test"]
 
+[project.scripts]
+sqsgen = "sqsgenerator.cli:cli"
 
 [tool.ruff]
-extend-exclude = ["sqsgenerator/core/_core.pyi", "setup.py"]
+extend-exclude = ["sqsgenerator/core/_core.pyi"]
 
 [tool.ruff.lint]
 extend-select = [
-    "B",    # flake8-bugbear
-    "I",    # isort
-    "PGH",  # pygrep-hooks
-    "RUF",  # Ruff-specific
-    "UP",   # pyupgrade
+    "B", # flake8-bugbear
+    "I", # isortp
+    "PGH", # pygrep-hooks
+    "RUF", # Ruff-specific
+    "UP", # pyupgrade
 ]
-ignore = ["F401"]
+ignore = ["F401", "RUF001"]
