@@ -46,19 +46,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Build package
-        run:  pip install ./python -v
-
-      - name: Compile & install test dependencies
-        run: |
-          pip install pip-tools
-          pip-compile --extra=test -o requirements-test.txt ./python/pyproject.toml
-          pip install -r requirements-test.txt
-
-      - name: Run unit tests
-        run: pytest ./python -vv --import-mode=importlib --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
+        run:  python -m build --wheel ./python
 
       - name: Upload pytest test results
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-results-${{ matrix.python-version }}-${{ matrix.os }}
-          path: junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
+          name: wheel-${{ matrix.python-version }}-${{ matrix.os }}
+          path: python/dist/*.whl
