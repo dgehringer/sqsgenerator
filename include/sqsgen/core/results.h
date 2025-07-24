@@ -60,6 +60,14 @@ namespace sqsgen::core {
         return *data_.at(objectives_.front()).begin();
     }
 
+    auto results_for_objective(T objective) {
+      std::shared_lock lock(mutex_);
+      if (auto it = data_.find(objective); it != data_.end())
+        return it->second.size();
+      else
+        return std::size_t{0};
+    }
+
     [[nodiscard]] std::size_t num_results() const {
       std::shared_lock lock(mutex_);
       std::size_t size = 0;

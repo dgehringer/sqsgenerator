@@ -181,8 +181,11 @@ void run_main(std::string const& input, std::string const& output, std::string c
   using namespace sqsgen::core;
   using namespace sqsgen::core::helpers;
 
-  auto log_levels = std::map<std::string_view, log::level>{
-      {"error", log::level::error}, {"warn", log::level::warn}, {"info", log::level::info}};
+  auto log_levels = std::map<std::string_view, log::level>{{"error", log::level::error},
+                                                           {"warn", log::level::warn},
+                                                           {"info", log::level::info},
+                                                           {"debug", log::level::debug},
+                                                           {"trace", log::level::trace}};
 
   if (!log_levels.contains(log_level))
     cli::render_error(format_string("Invalid log level '%s'", log_level));
@@ -203,7 +206,7 @@ void run_main(std::string const& input, std::string const& output, std::string c
         auto finished = std::visit([](auto&& c) { return c.statistics.finished; }, ctx);
         progress.render(std::cout, finished >= total);
       };
-
+    log::set_level(log_levels[log_level]);
     auto result = run_optimization(conf.result(), log_levels[log_level], callback);
 
 #ifdef WITH_MPI

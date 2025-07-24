@@ -1,4 +1,4 @@
-name: Wheels
+name: wheels
 
 on:
   release:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ windows-latest, macos-15, ubuntu-latest ]
+        os: [ windows-latest, macos-15, ubuntu-latest, ubuntu-22.04-arm ]
 
     steps:
 

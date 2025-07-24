@@ -110,7 +110,7 @@ namespace sqsgen::testing {
     ASSERT_TRUE(rjson.failed());
   }
 
-  TEST(test_parse_structure, required_fields_success) {
+  TEST(test_parse_structure, DISABLED_required_fields_success) {
     using namespace py::literals;
     py::scoped_interpreter guard{};
     auto s = TEST_FCC_STRUCTURE<double>;

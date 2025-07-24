@@ -64,6 +64,8 @@ skip = ["*musllinux*"]
 test-command = "pytest {project}/python/tests --import-mode=importlib"
 test-extras = ["test"]
 
+[project.scripts]
+sqsgen = "sqsgenerator.cli:cli"
 
 [tool.ruff]
 extend-exclude = ["sqsgenerator/core/_core.pyi"]

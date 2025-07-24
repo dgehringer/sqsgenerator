@@ -268,6 +268,11 @@ namespace sqsgen {
 
     void insert_result(sqs_result<T, Mode>&& result) { results.insert(std::move(result)); }
 
+    auto results_for_objective(T objective) {
+      return results.results_for_objective(objective);
+      ;
+    }
+
     auto nth_best_objective(auto n) { return results.nth_best(n); }
 
     sqs_result<T, Mode> make_empty_result() {
@@ -327,13 +332,31 @@ namespace sqsgen {
 
       std::mutex setup_mutex;
       auto stop = stop_source->get_token();
+
+      BS::thread_pool<BS::tp::pause> pool(this->num_threads());
+
+      std::atomic<bool> thread_pool_purged{false};
+      const auto purge = [&pool, &thread_pool_purged, this](auto thread_id) {
+        if (!pool.is_paused()) pool.pause();
+        if (pool.is_paused() && !thread_pool_purged) {
+          log::info(
+              format_string("[Rank %i, Thread %i] purged task queue", this->rank(), thread_id));
+          thread_pool_purged.store(true);
+          pool.purge();
+        }
+      };
       const auto worker = [this, &shuffler, &species_packed, &pairs, &prefactors, &target_objective,
-                           &pair_weights, &statistics, start, num_shells, num_species, stop_source,
-                           num_sublattices, keep, mpi_mode, callback_ptr,
-                           stop](rank_t rstart, rank_t rend) {
-        if (stop.stop_requested()) return;
-        core::tick<TIMING_TOTAL> tick_total;
+                           &pair_weights, &statistics, &purge, start, num_shells, num_species,
+                           stop_source, num_sublattices, keep, mpi_mode, callback_ptr, stop,
+                           max_results_per_objective = this->config.max_results_per_objective](
+                              rank_t rstart, rank_t rend) {
         auto thread_id = this->thread_id();
+        if (stop.stop_requested()) {
+          purge(thread_id);
+          return;
+        }
+        core::tick<TIMING_TOTAL> tick_total;
+
         log::debug(format_string("[Rank %i, Thread %i] received chunk start=%s, end=%s",
                                  this->rank(), thread_id, rstart.str(), rend.str()));
 
@@ -362,11 +385,13 @@ namespace sqsgen {
           if (!mpi_mode && signal::interrupted()) {
             log::info(format_string("[Rank %i, Thread %i] Process received SIGTERM or SIGINT ...",
                                     this->rank(), thread_id));
+            stop_source->request_stop();
             break;
           }
           if (stop.stop_requested()) {
             log::info(format_string("[Rank %i, Thread %i] received stop signal ...", this->rank(),
                                     thread_id));
+            purge(thread_id);
             break;
           }
           if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
@@ -394,6 +419,11 @@ namespace sqsgen {
           }
           // symmetrize bonds for each shell and compute objective function
           if (objective_value <= this->search_objective()) {
+            // if the user limits the number of results found per objective we still might go on
+            if (max_results_per_objective.has_value()
+                && (this->results_for_objective(objective_value)
+                    > max_results_per_objective.value()))
+              continue;
             // pull in changes from other ranks. Has another rank found a better
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
             log::debug(format_string(
@@ -427,7 +457,6 @@ namespace sqsgen {
       log::debug(
           format_string("[Rank %i] spawning thread pool with %i threads (cores available %i)",
                         this->rank(), this->num_threads(), std::thread::hardware_concurrency()));
-      BS::thread_pool pool(this->num_threads());
 
       const auto schedule_main_loop = [&] {
         iterations_t chunk_size = this->config.chunk_size;

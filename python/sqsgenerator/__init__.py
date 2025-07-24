@@ -1,6 +1,15 @@
+import warnings
+
 from ._adapters import HAVE_ASE, HAVE_PYMATGEN, available_formats, read, write
 from ._optimize import optimize, parse_config
-from .core import IterationMode, Prec, StructureFormat, SublatticeMode, load_result_pack
+from .core import (
+    IterationMode,
+    Prec,
+    StructureFormat,
+    SublatticeMode,
+    __version__,
+    load_result_pack,
+)
 
 __all__ = [
     "HAVE_ASE",
@@ -16,6 +25,13 @@ __all__ = [
     "read",
     "write",
 ]
+
+warnings.warn(
+    "The current version of sqsgenerator is a pre-release. We have introduced breaking changes in versions >= 0.4.*. We are still working on updating the version. The last stable version is 0.3 and can be obtained via conda",
+    ImportWarning,
+    stacklevel=2,
+)
+
 
 if HAVE_PYMATGEN:
     from ._adapters import (
