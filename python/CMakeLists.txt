@@ -22,6 +22,7 @@ set(VCPKG_LIBRARY_LINKAGE "static")
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 set(BUILD_SHARED_LIBS OFF)
 if (WIN32)
+    include(FetchContent)
     FetchContent_Declare(
             abseil
             GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
