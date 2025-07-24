@@ -27,8 +27,8 @@ __all__ = [
 ]
 
 warnings.warn(
-    "The current version of sqsgenerator is a pre-release. We have introduced breaking changes in versions >= 0.4.*. We are still working on updating the version. The last stable version is 0.3 and can be obtained via conda",
-    ImportWarning,
+    "The current version of sqsgenerator is a pre-release. We have introduced breaking changes in versions >= 0.4.*. We are still working on updating the documentation. The last stable version is 0.3 and can be obtained via conda",
+    UserWarning,
     stacklevel=2,
 )
 
