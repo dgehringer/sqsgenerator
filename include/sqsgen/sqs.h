@@ -11,7 +11,6 @@
 #include <iostream>
 #include <thread>
 
-#include "spdlog/spdlog.h"
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/optimization.h"
@@ -39,7 +38,7 @@ namespace sqsgen {
 #ifdef _WIN32
     // Windows handler
     BOOL WINAPI console_handler(DWORD ctrl_type) {
-      spdlog::warn(std::format("Interrupt oder termination signal received: {}", ctrl_type));
+      log::warn(format_string("Interrupt oder termination signal received: %s", ctrl_type));
       switch (ctrl_type) {
         case CTRL_C_EVENT:
           _interrupted.store(true);
@@ -57,8 +56,7 @@ namespace sqsgen {
 #else
     // Unix-like handler
     static void signal_handler(int signal) {
-      spdlog::warn(
-          std::format("Interrupt oder termination signal received: {}", strsignal(signal)));
+      log::warn(format_string("Interrupt oder termination signal received: %s", strsignal(signal)));
       _interrupted.store(true);
     }
 #endif
@@ -125,8 +123,8 @@ namespace sqsgen {
 
     template <class T>
     void log_statistics(sqs_statistics_data<T>&& d, int rank, std::string const& info = "") {
-      spdlog::info("[Rank {}] {} best_objective={}", rank, info, d.best_objective);
-      spdlog::info("[Rank {}] {} best_rank={}", rank, info, d.best_rank);
+      log::info(format_string("[Rank %i] %s best_objective=%.5f", rank, info, d.best_objective));
+      log::info(format_string("[Rank %i] %s best_rank=%i", rank, info, d.best_rank));
       for (auto&& [timing, label] :
            std::map<Timing, std::string>{{TIMING_TOTAL, "total"},
                                          {TIMING_CHUNK_SETUP, "chunk_setup"},
@@ -134,9 +132,10 @@ namespace sqsgen {
                                          {TIMING_COMM, "comm"}}) {
         auto time_in_ns = static_cast<double>(d.timings.at(timing));
         auto total_time_in_ns = static_cast<double>(d.timings.at(TIMING_TOTAL));
-        spdlog::info("[Rank {}] {} {} time ns={}, ns_per_iteration={:.1f}, relative={:.1f}%", rank,
-                     info, label, time_in_ns, time_in_ns / static_cast<double>(d.finished),
-                     time_in_ns / total_time_in_ns * 100);
+        log::info(format_string(
+            "[Rank %i] %s %s time ns=%.0f, ns_per_iteration=%.0f, relative=%.1f %%", rank, info,
+            label, time_in_ns, time_in_ns / static_cast<double>(d.finished),
+            time_in_ns / total_time_in_ns * 100));
       }
     }
 
@@ -152,6 +151,7 @@ namespace sqsgen {
     std::atomic<T> _search_objective;
     thread_config_t _thread_config;
     std::map<std::thread::id, int> _thread_map;
+    std::mutex _thread_map_mutex;
 
   protected:
     core::configuration<T> config;
@@ -159,6 +159,7 @@ namespace sqsgen {
     std::vector<core::optimization_config<T, Mode>> opt_configs;
 
     int thread_id() {
+      std::unique_lock lock(_thread_map_mutex);
       auto this_thread_id = std::this_thread::get_id();
       if (!_thread_map.contains(this_thread_id))
         _thread_map.emplace(this_thread_id, _thread_map.size());
@@ -215,8 +216,8 @@ namespace sqsgen {
     [[nodiscard]] usize_t num_threads() {
       if (_thread_config.size() == 1) return _thread_config.front();
       if (_thread_config.size() != num_ranks())
-        throw std::invalid_argument(std::format(
-            "The communicator has {} ranks, but the thread configuration contains {} entries",
+        throw std::invalid_argument(format_string(
+            "The communicator has %u ranks, but the thread configuration contains %i entries",
             num_ranks(), _thread_config.size()));
       return _thread_config[rank()] > 0 ? _thread_config[rank()]
                                         : std::thread::hardware_concurrency();
@@ -265,8 +266,11 @@ namespace sqsgen {
           opt_configs(core::optimization_config<T, Mode>::from_config(config)) {
     }
 
-    void insert_result(sqs_result<T, Mode>&& result) {
-      results.insert_result(std::forward<sqs_result<T, Mode>>(result));
+    void insert_result(sqs_result<T, Mode>&& result) { results.insert(std::move(result)); }
+
+    auto results_for_objective(T objective) {
+      return results.results_for_objective(objective);
+      ;
     }
 
     auto nth_best_objective(auto n) { return results.nth_best(n); }
@@ -292,10 +296,10 @@ namespace sqsgen {
   public:
     explicit optimizer(core::configuration<T>&& config)
         : optimizer_base<T, SMode>(std::forward<core::configuration<T>>(config)) {}
-    auto run(spdlog::level::level_enum level = spdlog::level::info,
+    auto run(log::level level = log::level::info,
              std::optional<sqs_callback_t> callback = std::nullopt) {
       using namespace sqsgen::core::helpers;
-      spdlog::set_level(level);
+      log::set_level(level);
 
       auto head = this->is_head();
       auto mpi_mode = this->num_ranks() > 1;
@@ -303,9 +307,10 @@ namespace sqsgen {
       // if we are not in MPI mode we install the signal handlers
       if (!mpi_mode) signal::setup_signal_handlers();
 
-      if (mpi_mode && head) spdlog::info("[Rank {}] Running optimizer in MPI mode", this->rank());
+      if (mpi_mode && head)
+        log::info(format_string("[Rank %i] Running optimizer in MPI mode", this->rank()));
       auto [start, end] = this->iteration_range();
-      spdlog::info("[Rank {}] start={}, end={}", this->rank(), start.str(), end.str());
+      log::info(format_string("[Rank %i] start=%s, end=%s", this->rank(), start.str(), end.str()));
 
       auto num_sublattices = this->opt_configs.size();
       auto pairs{this->transpose_setting([](auto&& c) { return c.pairs; })};
@@ -322,11 +327,38 @@ namespace sqsgen {
       core::sqs_statistics<T> statistics;
       auto stop_source = std::make_shared<std::stop_source>();
 
-      const auto worker = [&, stop = stop_source->get_token()](rank_t rstart, rank_t rend) {
-        if (stop.stop_requested()) return;
+      std::shared_ptr<sqs_callback_t> callback_ptr;
+      if (callback.has_value()) callback_ptr = std::make_shared<sqs_callback_t>(callback.value());
+
+      std::mutex setup_mutex;
+      auto stop = stop_source->get_token();
+
+      BS::thread_pool<BS::tp::pause> pool(this->num_threads());
+
+      std::atomic<bool> thread_pool_purged{false};
+      const auto purge = [&pool, &thread_pool_purged, this](auto thread_id) {
+        if (!pool.is_paused()) pool.pause();
+        if (pool.is_paused() && !thread_pool_purged) {
+          log::info(
+              format_string("[Rank %i, Thread %i] purged task queue", this->rank(), thread_id));
+          thread_pool_purged.store(true);
+          pool.purge();
+        }
+      };
+      const auto worker = [this, &shuffler, &species_packed, &pairs, &prefactors, &target_objective,
+                           &pair_weights, &statistics, &purge, start, num_shells, num_species,
+                           stop_source, num_sublattices, keep, mpi_mode, callback_ptr, stop,
+                           max_results_per_objective = this->config.max_results_per_objective](
+                              rank_t rstart, rank_t rend) {
+        auto thread_id = this->thread_id();
+        if (stop.stop_requested()) {
+          purge(thread_id);
+          return;
+        }
         core::tick<TIMING_TOTAL> tick_total;
-        spdlog::debug("[Rank {}, Thread {}] received chunk start={}, end={}", this->rank(),
-                      this->thread_id(), rstart.str(), rend.str());
+
+        log::debug(format_string("[Rank %i, Thread %i] received chunk start=%s, end=%s",
+                                 this->rank(), thread_id, rstart.str(), rend.str()));
 
         core::tick<TIMING_CHUNK_SETUP> tick_setup;
         iterations_t iterations{rend - rstart};
@@ -351,13 +383,15 @@ namespace sqsgen {
 
         for (auto i = rstart; i < rend; ++i) {
           if (!mpi_mode && signal::interrupted()) {
-            spdlog::info("[Rank {}, Thread {}] Process received SIGTERM or SIGINT ...",
-                         this->rank(), this->thread_id());
+            log::info(format_string("[Rank %i, Thread %i] Process received SIGTERM or SIGINT ...",
+                                    this->rank(), thread_id));
+            stop_source->request_stop();
             break;
           }
           if (stop.stop_requested()) {
-            spdlog::info("[Rank {}, Thread {}] received stop signal ...", this->rank(),
-                         this->thread_id());
+            log::info(format_string("[Rank %i, Thread %i] received stop signal ...", this->rank(),
+                                    thread_id));
+            purge(thread_id);
             break;
           }
           if constexpr (SMode == SUBLATTICE_MODE_INTERACT) {
@@ -385,11 +419,16 @@ namespace sqsgen {
           }
           // symmetrize bonds for each shell and compute objective function
           if (objective_value <= this->search_objective()) {
+            // if the user limits the number of results found per objective we still might go on
+            if (max_results_per_objective.has_value()
+                && (this->results_for_objective(objective_value)
+                    > max_results_per_objective.value()))
+              continue;
             // pull in changes from other ranks. Has another rank found a better
             sqs_result<T, SMode> current(objective_value, objective, species, sro);
-            spdlog::debug(std::format(
-                "[Rank {}, Thread {}] found result with objective {} at iteration {}", this->rank(),
-                this->thread_id(), objective_value, rank_t(rstart + i - start).str()));
+            log::debug(format_string(
+                "[Rank %i, Thread %i] found result with objective %.7f at iteration %s",
+                this->rank(), thread_id, objective_value, rank_t(rstart + i - start).str()));
             this->insert_result(std::move(current));
             // we update the search object. A new entry has been found (on the head rank we will
             // automatically update it)
@@ -405,19 +444,19 @@ namespace sqsgen {
         statistics.add_working(-iterations);
         statistics.add_finished(iterations);
 
-        if (callback.has_value()) {
-          spdlog::trace("[Rank {}, Thread {}] firing callback", this->rank(), this->thread_id());
-          callback.value()(sqs_callback_context<T>{stop_source, statistics.data()});
+        if (callback_ptr) {
+          log::trace(
+              format_string("[Rank %i, Thread %i] firing callback", this->rank(), thread_id));
+          (*callback_ptr)(sqs_callback_context<T>{stop_source, statistics.data()});
         }
-        spdlog::debug("[Rank {}, Thread {}] finished chunk start={}, end={}", this->rank(),
-                      this->thread_id(), rstart.str(), rend.str());
+        log::debug(format_string("[Rank %i, Thread %i] finished chunk start=%s, end=%s",
+                                 this->rank(), thread_id, rstart.str(), rend.str()));
         statistics.tock(tick_total);
       };
 
-      spdlog::debug(
-          std::format("[Rank {}] spawning thread pool with {} threads (cores available {})",
-                      this->rank(), this->num_threads(), std::thread::hardware_concurrency()));
-      BS::thread_pool pool(this->num_threads());
+      log::debug(
+          format_string("[Rank %i] spawning thread pool with %i threads (cores available %i)",
+                        this->rank(), this->num_threads(), std::thread::hardware_concurrency()));
 
       const auto schedule_main_loop = [&] {
         iterations_t chunk_size = this->config.chunk_size;
@@ -442,7 +481,7 @@ namespace sqsgen {
 
           for (auto i : core::helpers::range(num_ranks))
             if (i > 0)
-              spdlog::info(std::format("Expecting {} results from rank {}", remaining[i], i));
+              log::info(format_string("Expecting %i results from rank %i", remaining[i], i));
           remaining[io::mpi::RANK_HEAD] = 0;
           auto buffer = this->make_empty_result();
           while (sum(remaining) > 0)
@@ -450,9 +489,10 @@ namespace sqsgen {
                 this->comm, std::forward<decltype(buffer)>(buffer),
                 [&](auto&& result, auto&& rank) {
                   --remaining[rank];
-                  spdlog::trace(
-                      "[Rank {}, HEAD] received result from rank {} (objective={}, remaining {}) ",
-                      io::mpi::RANK_HEAD, rank, result.objective, remaining[rank]);
+                  log::trace(
+                      format_string("[Rank %i, HEAD] received result from rank %i (objective=%.7f, "
+                                    "remaining %i) ",
+                                    io::mpi::RANK_HEAD, rank, result.objective, remaining[rank]));
                   if (result.objective <= this->search_objective()) {
                     this->insert_result(std::move(result));
                     this->update_objectives({result.objective, this->nth_best_objective(keep)});
@@ -486,8 +526,8 @@ namespace sqsgen {
           for (auto [_, results] : sqs_results)
             for (auto&& sqs_result : results) {
               io::mpi::send(this->comm, std::move(sqs_result), io::mpi::RANK_HEAD);
-              spdlog::trace(std::format("[Rank {}] sent result {} / {} to head", this->rank(),
-                                        ++results_sent, num_results));
+              log::trace(format_string("[Rank %i] sent result %i / %i to head", this->rank(),
+                                       ++results_sent, num_results));
             }
           statistics.tock(tick_comm);
           io::mpi::send(this->comm, statistics.data(), io::mpi::RANK_HEAD);
@@ -501,14 +541,16 @@ namespace sqsgen {
       auto filtered_results = this->results.remove_duplicates();
 
       if (!filtered_results.empty()) {
-        spdlog::info("[Rank {}] best_objective={}", this->rank(),
-                     std::get<0>(filtered_results.front()));
-        spdlog::info("[Rank {}] num_best_solutions={}", this->rank(),
-                     std::get<1>(filtered_results.front()).size());
-        spdlog::info("[Rank {}] num_objectives={}", this->rank(), filtered_results.size());
-        spdlog::info("[Rank {}] num_solutions={}", this->rank(),
-                     sum(filtered_results
-                         | views::transform([](auto&& r) { return std::get<1>(r).size(); })));
+        log::info(format_string("[Rank %i] best_objective=%.5f", this->rank(),
+                                std::get<0>(filtered_results.front())));
+        log::info(format_string("[Rank %i] num_best_solutions=%i", this->rank(),
+                                std::get<1>(filtered_results.front()).size()));
+        log::info(
+            format_string("[Rank %i] num_objectives=%i", this->rank(), filtered_results.size()));
+        log::info(format_string("[Rank %i] num_solutions=%i", this->rank(),
+                                sum(filtered_results | views::transform([](auto&& r) {
+                                      return std::get<1>(r).size();
+                                    }))));
       }
 
       sqsgen::detail::log_statistics(statistics.data(), this->rank());
@@ -556,7 +598,7 @@ namespace sqsgen {
 
     template <class T>
     optimizer_output_t run_optimization(core::configuration<T>&& conf,
-                                        spdlog::level::level_enum log_level = spdlog::level::warn,
+                                        log::level log_level = log::level::warn,
                                         std::optional<sqs_callback_t> callback = std::nullopt) {
       if (conf.iteration_mode == ITERATION_MODE_RANDOM
           && conf.sublattice_mode == SUBLATTICE_MODE_INTERACT)
@@ -582,8 +624,7 @@ namespace sqsgen {
 
   inline detail::optimizer_output_t run_optimization(
       std::variant<core::configuration<float>, core::configuration<double>>&& conf,
-      spdlog::level::level_enum level = spdlog::level::warn,
-      std::optional<sqs_callback_t> callback = std::nullopt) {
+      log::level level = log::level::warn, std::optional<sqs_callback_t> callback = std::nullopt) {
     return std::visit(
         [&]<class T>(core::configuration<T>&& c) {
           return detail::optimizer_output_t{detail::run_optimization<T>(

@@ -1,14 +1,50 @@
 {
   "name": "sqsgenerator",
-  "version-string": "0.4.5",
-  "dependencies": [
-    "eigen3",
-    "spdlog",
-    "rapidhash",
-    "boost-multiprecision",
-    "nlohmann-json",
-    "bshoshany-thread-pool",
-    "gtest",
-    "argparse"
-  ]
+  "version-string": "0.4.9",
+  "features": {
+    "cli": {
+      "description": "Command line interface for SQS generator",
+      "dependencies": [
+        "eigen3",
+        "boost-multiprecision",
+        "nlohmann-json",
+        "bshoshany-thread-pool",
+        "argparse",
+        "abseil"
+      ]
+    },
+    "python": {
+      "description": "Python bindings for SQS generator",
+      "dependencies": [
+        "eigen3",
+        "boost-multiprecision",
+        "nlohmann-json",
+        "bshoshany-thread-pool",
+        {
+          "name": "abseil",
+          "platform": "!windows"
+        }
+      ]
+    },
+    "tests": {
+      "description": "Unit tests for SQS generator",
+      "dependencies": [
+        "eigen3",
+        "boost-multiprecision",
+        "nlohmann-json",
+        "bshoshany-thread-pool",
+        "gtest",
+        "abseil"
+      ]
+    },
+    "wasm": {
+      "description": "WebAssembly support for SQS generator",
+      "dependencies": [
+        "eigen3",
+        "boost-multiprecision",
+        "nlohmann-json",
+        "bshoshany-thread-pool"
+      ]
+    }
+  }
 }

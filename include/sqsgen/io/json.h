@@ -168,7 +168,8 @@ template <class T> struct adl_serializer<core::configuration<T>> {
              {"iterations", data.iterations},
              {"chunk_size", data.chunk_size},
              {"thread_config", data.thread_config},
-             {"keep", data.keep}};
+             {"keep", data.keep},
+             {"max_results_per_objective", data.max_results_per_objective}};
   }
 
   static void from_json(const json& j, core::configuration<T>& c) {
@@ -185,6 +186,8 @@ template <class T> struct adl_serializer<core::configuration<T>> {
     j.at("chunk_size").get_to<iterations_t>(c.chunk_size);
     j.at("thread_config").get_to<thread_config_t>(c.thread_config);
     j.at("keep").get_to<std::size_t>(c.keep);
+    j.at("max_results_per_objective")
+        .get_to<std::optional<std::size_t>>(c.max_results_per_objective);
   }
 };
 
@@ -253,9 +256,9 @@ template <class T, SublatticeMode Mode> struct adl_serializer<core::sqs_result_p
   static void from_json(const json& j, core::sqs_result_pack<T, Mode>& p) {
     core::sqs_result_collection<T, Mode> results;
     for (auto&& r : j.at("results").get<std::vector<sqs_result<T, Mode>>>())
-      results.insert_result(std::move(r));
+      results.insert(std::move(r));
     auto config = j.at("config").get<core::configuration<T>>();
-    p = core::sqs_result_pack<T, Mode>{core::configuration<T>(config), std::move(results),
+    p = core::sqs_result_pack<T, Mode>{core::configuration<T>(config), std::move(results.results()),
                                        sqs_statistics_data<T>{}};
     p.config = config;
     j.at("statistics").get_to<sqs_statistics_data<T>>(p.statistics);
@@ -333,21 +336,86 @@ namespace sqsgen {
         return items;
       }
 
-      template <string_literal key = "", class Option>
+      template <class> struct type_checker {
+        static constexpr bool available = false;
+      };
+#ifdef __EMSCRIPTEN__
+      template <class Option>
+        requires detail::matches_any<Option, int, double, float, usize_t, std::size_t, long,
+                                     unsigned long, unsigned long long, long long,
+                                     iterations_t>::value
+      struct type_checker<Option> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) { return json.is_number(); }
+      };
+
+      template <> struct type_checker<std::string> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) { return json.is_string(); }
+      };
+
+      template <class T> struct type_checker<std::vector<T>> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) {
+          return json.is_array()
+                 && ranges::all_of(json, [](auto&& el) { return type_checker<T>::is(el); });
+        }
+      };
+
+      template <class T> struct type_checker<stl_matrix_t<T>> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) {
+          return json.is_array() && ranges::all_of(json, [](auto&& el) {
+                   return type_checker<std::vector<T>>::is(el);
+                 });
+        }
+      };
+
+      template <class T> struct type_checker<stl_cube_t<T>> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) {
+          return json.is_array() && ranges::all_of(json, [](auto&& el) {
+                   return type_checker<stl_matrix_t<T>>::is(el);
+                 });
+        }
+      };
+
+      template <class T, std::size_t N> struct type_checker<std::array<T, N>> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) {
+          return json.is_array()
+                 && ranges::all_of(json, [](auto&& el) { return type_checker<T>::is(el); })
+                 && json.size() == N;
+        }
+      };
+#endif
+
+      template <string_literal key = KEY_NONE, class Option>
       static parse_result<Option> get_as(nlohmann::json const& json) {
+        const auto parse_json = [](nlohmann::json const& j) -> parse_result<Option> {
+          if constexpr (type_checker<Option>::available)
+            return type_checker<Option>::is(j)
+                       ? parse_result<Option>{j.get<Option>()}
+                       : parse_error::from_msg<key, CODE_TYPE_ERROR>(
+                             format_string("type error - checked - cannot parse %s - %s",
+                                           typeid(Option).name(), j.type_name()));
+          else
+            return {j.get<Option>()};
+        };
         try {
-          if constexpr (key == KEY_NONE) {
-            return json.get<Option>();
-          } else {
-            if (json.contains(key.data)) return {json.at(key.data).template get<Option>()};
-            return parse_error::from_msg<key, CODE_NOT_FOUND>(
-                std::format("could not find key {}", key.data));
-          }
+          if constexpr (key == KEY_NONE)
+            return parse_json(json);
+          else
+            return json.contains(key.data)
+                       ? parse_json(json.at(key.data))
+                       : parse_result<Option>{parse_error::from_msg<key, CODE_NOT_FOUND>(
+                             format_string("could not find key %s", key.data))};
+
         } catch (nlohmann::json::out_of_range const& e) {
           return parse_error::from_msg<key, CODE_TYPE_ERROR>("out of range - found - {}", e.what());
         } catch (nlohmann::json::type_error const& e) {
           return parse_error::from_msg<key, CODE_TYPE_ERROR>(
-              std::format("type error - cannot parse {} - {}", typeid(Option).name(), e.what()));
+              format_string("type error - cannot parse %s - %s", typeid(Option).name(), e.what()));
         } catch (std::out_of_range const& e) {
           return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(e.what());
         }

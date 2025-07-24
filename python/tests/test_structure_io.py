@@ -1,6 +1,11 @@
+import os.path
+import tempfile
+from typing import Union
+
 import numpy as np
 import pytest
 
+from sqsgenerator._adapters import available_formats, read, to_pymatgen, write
 from sqsgenerator.core import (
     StructureDouble,
     StructureFloat,
@@ -24,8 +29,8 @@ else:
 
 
 def make_structure(
-    structure_type: type[StructureFloat] | type[StructureDouble],
-) -> StructureFloat | StructureDouble:
+    structure_type: Union[type[StructureFloat], type[StructureDouble]],
+) -> Union[StructureFloat, StructureDouble]:
     return structure_type(
         np.diag([1, 2, 3]),
         np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5]]),
@@ -60,7 +65,7 @@ def test_structure_binary(structure_type):
 def test_structure_pymatgen(structure_type):
     structure = make_structure(structure_type) * (2, 2, 2)
 
-    def to_pymatgen(s: StructureFloat | StructureDouble) -> Structure:
+    def to_pymatgen(s: Union[StructureFloat, StructureDouble]) -> Structure:
         return Structure(
             s.lattice,
             s.symbols,
@@ -83,3 +88,19 @@ def test_structure_pymatgen(structure_type):
         Structure.from_str(structure.dump(StructureFormat.cif), fmt="cif")
         == pymatgen_structure
     )
+
+
+@pytest.mark.parametrize("fmt", available_formats())
+@pytest.mark.parametrize("structure_type", [StructureFloat, StructureDouble])
+def test_write_read(structure_type, fmt):
+    structure = make_structure(structure_type) * (2, 2, 2)
+    pymatgen_structure = to_pymatgen(structure)
+
+    if fmt == "sqsgen.cif" or fmt == "cif":
+        pytest.skip(f"Skipping {fmt} sqsgen CIF")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        name = os.path.join(temp_dir, f"test.{fmt}")
+        write(structure, name)
+        loaded = to_pymatgen(read(name))
+        assert pymatgen_structure == loaded

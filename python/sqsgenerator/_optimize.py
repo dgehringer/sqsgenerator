@@ -1,14 +1,18 @@
 import json
-from typing import Any, Callable
+import warnings
+from typing import Any, Callable, Optional, Union
 
+from ._adapters import read as _read
 from .core import (
     IterationMode,
     LogLevel,
     Prec,
+    SqsCallback,
     SqsConfiguration,
     SqsConfigurationDouble,
     SqsConfigurationFloat,
     SqsResultPack,
+    Structure,
     SublatticeMode,
 )
 from .core import (
@@ -31,13 +35,12 @@ def _parse_prec(string: str) -> Prec:
     Returns:
         Prec: The corresponding Prec enum value.
     """
-    match string.lower():
-        case "double":
-            return Prec.double
-        case "single":
-            return Prec.single
-        case _:
-            raise ValueError(f"Invalid precision: {string}. Use 'double' or 'single'.")
+    if (prec := string.lower()) == "double":
+        return Prec.double
+    elif prec == "single":
+        return Prec.single
+    else:
+        raise ValueError(f"Invalid precision: {string}. Use 'double' or 'single'.")
 
 
 def _parse_iteration_mode(string: str) -> IterationMode:
@@ -50,15 +53,14 @@ def _parse_iteration_mode(string: str) -> IterationMode:
     Returns:
         IterationMode: The corresponding IterationMode enum value.
     """
-    match string.lower():
-        case "random":
-            return IterationMode.random
-        case "systematic":
-            return IterationMode.systematic
-        case _:
-            raise ValueError(
-                f"Invalid iteration mode: {string}. Use 'random' or 'systematic'."
-            )
+    if (mode := string.lower()) == "random":
+        return IterationMode.random
+    elif mode == "systematic":
+        return IterationMode.systematic
+    else:
+        raise ValueError(
+            f"Invalid iteration mode: {string}. Use 'random' or 'systematic'."
+        )
 
 
 def _parse_sublattice_mode(string: str) -> SublatticeMode:
@@ -71,19 +73,18 @@ def _parse_sublattice_mode(string: str) -> SublatticeMode:
     Returns:
         SublatticeMode: The corresponding SublatticeMode enum value.
     """
-    match string.lower():
-        case "split":
-            return SublatticeMode.split
-        case "interact":
-            return SublatticeMode.interact
-        case _:
-            raise ValueError(
-                f"Invalid sublattice mode: {string}. Use 'split' or 'interact'."
-            )
+    if (mode := string.lower()) == "split":
+        return SublatticeMode.split
+    elif mode == "interact":
+        return SublatticeMode.interact
+    else:
+        raise ValueError(
+            f"Invalid sublattice mode: {string}. Use 'split' or 'interact'."
+        )
 
 
 def parse_config(
-    config: dict[str, Any] | str, inplace: bool = False
+    config: Union[dict[str, Any], str], inplace: bool = False
 ) -> SqsConfiguration:
     """
     Parse the configuration dictionary into a SqsConfiguration object.
@@ -99,6 +100,23 @@ def parse_config(
         config = json.loads(config)
     config = config.copy() if not inplace else config
 
+    if structure_config := config.get("structure"):
+        if structure_file_path := structure_config.get("file"):
+            if (
+                "lattice" in structure_config
+                and "coords" in structure_config
+                and "species" in structure_config
+            ):
+                warnings.warn(
+                    f"Structure data provided in both file and inline format. Using file data from {structure_file_path}.",
+                    UserWarning,
+                    stacklevel=1,
+                )
+            structure: Structure = _read(structure_file_path)
+            structure_config["lattice"] = structure.lattice.tolist()
+            structure_config["coords"] = structure.frac_coords.tolist()
+            structure_config["species"] = structure.species.tolist()
+
     def apply(key: str, f: Callable[[str], Any]) -> None:
         if key in config:
             config[key] = f(config[key])
@@ -111,11 +129,24 @@ def parse_config(
 
 
 def optimize(
-    config: dict[str, Any] | SqsConfiguration, level: LogLevel = LogLevel.warn
+    config: Union[dict[str, Any], SqsConfiguration, str],
+    level: LogLevel = LogLevel.warn,
+    callback: Optional[SqsCallback] = None,
 ) -> SqsResultPack:
+    """
+    Optimize the SQS configuration based on the provided parameters.
+
+    Args:
+        config (dict[str, Any] | SqsConfiguration | str): The configuration data to optimize.
+        level (LogLevel): The logging level for the optimization process. Defaults to `LogLevel.warn`.
+        callback (SqsCallback | None): A callback function to monitor the optimization progress. Defaults to `None`.
+
+    Returns:
+        SqsResultPack: The result of the optimization process.
+    """
     c = (
         config
         if isinstance(config, (SqsConfigurationFloat, SqsConfigurationDouble))
         else parse_config(config)
     )
-    return _optimize(c, level)
+    return _optimize(c, log_level=level, callback=callback)

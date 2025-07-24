@@ -189,7 +189,7 @@ namespace sqsgen::io {
     using tokens_t = std::vector<std::string_view>;
     static std::string format(core::structure<T> const& structure) {
       // one coordinate line holds about 72 characters, to be safe we multiply by two
-      constexpr std::string_view row_format = "{:22.16f} {:22.16f} {:22.16f}";
+      constexpr absl::string_view row_format = "%23.16f %23.16f %23.16f";
       auto sorted = structure.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
       auto unique_species = core::helpers::sorted_vector<specie_t>{sorted.species};
       auto num_species = core::count_species(sorted.species);
@@ -198,15 +198,15 @@ namespace sqsgen::io {
       result.reserve(structure.size() * 144);
 
       const auto println
-          = [&result](std::string const& line) { result.append(std::format("{}\n", line)); };
+          = [&result](std::string const& line) { result.append(format_string("%s\n", line)); };
       const auto format_row
-          = [&](auto&& row) { return std::format(row_format, row(0), row(1), row(2)); };
+          = [&](auto&& row) { return format_string(row_format, row(0), row(1), row(2)); };
 
       const auto z_to_symbol = [](auto&& z) { return core::atom::from_z(z).symbol; };
       // generate first line
       std::string composition_string
           = detail::join(unique_species | views::transform([&](auto&& s) {
-                           return std::format("{}{}", z_to_symbol(s), num_species[s]);
+                           return format_string("%s%i", z_to_symbol(s), num_species[s]);
                          }),
                          "");
       println(composition_string);
@@ -218,12 +218,12 @@ namespace sqsgen::io {
 
       std::string species_amount = detail::join(
           views::values(num_species)
-              | views::transform([](auto&& amount) { return std::format("{}", amount); }),
+              | views::transform([](auto&& amount) { return format_string("%i", amount); }),
           " ");
       println(species_amount);
       println("Direct");
       for (auto const& site : sorted.sites())
-        println(std::format("{} {}", format_row(site.frac_coords), z_to_symbol(site.specie)));
+        println(format_string("%s %s", format_row(site.frac_coords), z_to_symbol(site.specie)));
       result.shrink_to_fit();
       return result;
     }
@@ -251,7 +251,7 @@ namespace sqsgen::io {
       const auto get_line = [&](int l) -> parse_result<tokens_t> {
         if (lines.contains(l)) return {lines[l]};
         return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
-            std::format("Line {} not found", l));
+            format_string("Line %i not found", l));
       };
 
       const auto get_row
@@ -322,7 +322,7 @@ namespace sqsgen::io {
             auto sym = std::string{symbol};
             if (!core::SYMBOL_MAP.contains(sym))
               return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
-                  std::format("Unknown element {}", symbol));
+                  format_string("Unknown element \"%s\"", symbol));
             else {
               auto species = conf_result.result();
               species.push_back(core::atom::from_symbol(sym).Z);
@@ -370,7 +370,7 @@ namespace sqsgen::io {
             });
       else
         return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(
-            std::format("A vector row must contain three entries, but got {}", tokens.size()));
+            format_string("A vector row must contain three entries, but got %u", tokens.size()));
     }
 
     static parse_result<T, row_t> parse_scaling(tokens_t const& tokens) {
@@ -381,8 +381,8 @@ namespace sqsgen::io {
         });
       if (tokens.size() == 3)
         return parse_row(tokens).and_then([](auto&& scale) -> result_t { return scale; });
-      return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(std::format(
-          "Scaling must be a single float or a triplet of floats, but got {}", tokens.size()));
+      return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(format_string(
+          "Scaling must be a single float or a triplet of floats, but got %u", tokens.size()));
     }
   };
 
@@ -402,7 +402,7 @@ namespace sqsgen::io {
                                                                 e.what());
       } catch (nlohmann::json::type_error const& e) {
         return parse_error::from_msg<KEY_NONE, CODE_TYPE_ERROR>(
-            std::format("type error - cannot parse {}", e.what()));
+            format_string("type error - cannot parse %s", e.what()));
       } catch (std::out_of_range const& e) {
         return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(e.what());
       }
@@ -485,7 +485,7 @@ namespace sqsgen::io {
             auto [symbol, frac_coords] = s_and_frac;
             if (!core::SYMBOL_MAP.contains(symbol))
               return parse_error::from_msg<"element", CODE_BAD_VALUE>(
-                  std::format("I am not aware of the element {}", symbol));
+                  format_string("I am not aware of the element %s", symbol));
             return std::make_tuple(core::SYMBOL_MAP.at(symbol), frac_coords);
           });
     }
@@ -494,7 +494,7 @@ namespace sqsgen::io {
       return nlohmann::json{
           {"abc", site.frac_coords},
           {"xyz", lattice.transpose() * site.frac_coords},
-          {"label", std::format("{}{}", site.atom().symbol, site.index)},
+          {"label", format_string("%s%i", site.atom().symbol, site.index)},
           {"properties", nlohmann::json::object()},
           {"species", {nlohmann::json{{"element", site.atom().symbol}, {"occu", 1}}}}};
     }
@@ -510,34 +510,34 @@ namespace sqsgen::io {
       result.reserve(structure.size() * 144);
 
       const auto println
-          = [&result](std::string const& line) { result.append(std::format("{}\n", line)); };
+          = [&result](std::string const& line) { result.append(format_string("%s\n", line)); };
 
       const auto make_formula = [&](std::string const& delimiter) {
         return detail::join(unique_species | views::transform([&](auto&& s) {
-                              return std::format("{}{}", z_to_symbol(s), num_species[s]);
+                              return format_string("%s%i", z_to_symbol(s), num_species[s]);
                             }),
                             delimiter);
       };
 
       println("# generated using sqsgen");
-      println(std::format("data_{}", make_formula("")));
+      println(format_string("data_%s", make_formula("")));
       println("_symmetry_space_group_name_H-M   'P 1'");
 
       const auto [a, b, c] = detail::lengths<T>(structure.lattice);
       const auto [alpha, beta, gamma] = detail::angles<T>(structure.lattice);
 
-      println(std::format("_cell_length_a       {:.8f}", a));
-      println(std::format("_cell_length_b       {:.8f}", b));
-      println(std::format("_cell_length_c       {:.8f}", c));
-      println(std::format("_cell_angle_alpha     {:.8f}", alpha));
-      println(std::format("_cell_angle_beta     {:.8f}", beta));
-      println(std::format("_cell_angle_gamma     {:.8f}", gamma));
+      println(format_string("_cell_length_a       %.8f", a));
+      println(format_string("_cell_length_b       %.8f", b));
+      println(format_string("_cell_length_c       %.8f", c));
+      println(format_string("_cell_angle_alpha     %.8f", alpha));
+      println(format_string("_cell_angle_beta     %.8f", beta));
+      println(format_string("_cell_angle_gamma     %.8f", gamma));
 
       println("_symmetry_Int_Tables_number   1");
-      println(std::format("_chemical_formula_structural   {}", make_formula("")));
-      println(std::format("_chemical_formula_sum   '{}'", make_formula(" ")));
-      println(std::format("_cell_volume   {}", std::abs(structure.lattice.determinant())));
-      println(std::format("_cell_formula_units_Z   {}", structure.size()));
+      println(format_string("_chemical_formula_structural   %s", make_formula("")));
+      println(format_string("_chemical_formula_sum   '%s'", make_formula(" ")));
+      println(format_string("_cell_volume   %.5f", std::abs(structure.lattice.determinant())));
+      println(format_string("_cell_formula_units_Z   %u", structure.size()));
 
       println("loop_");
       println(" _symmetry_equiv_pos_site_id");
@@ -547,7 +547,7 @@ namespace sqsgen::io {
       println("loop_");
       println(" _atom_type_symbol");
       println(" _atom_type_oxidation_number");
-      for (auto z : unique_species) println(std::format("  {}0+  0.0", z_to_symbol(z)));
+      for (auto z : unique_species) println(format_string("  %s0+  0.0", z_to_symbol(z)));
 
       println("loop_");
       println(" _atom_site_type_symbol");
@@ -559,9 +559,9 @@ namespace sqsgen::io {
       println(" _atom_site_occupancy");
 
       for (auto const& site : sorted.sites())
-        println(std::format("  {}0+  {}{}  1  {:.8f}  {:.8f}  {:.8f}  1", z_to_symbol(site.specie),
-                            z_to_symbol(site.specie), num_species[site.specie]--,
-                            site.frac_coords(0), site.frac_coords(1), site.frac_coords(2)));
+        println(format_string("  %s0+  %s%i  1  %.8f  %.8f  %.8f  1", z_to_symbol(site.specie),
+                              z_to_symbol(site.specie), num_species[site.specie]--,
+                              site.frac_coords(0), site.frac_coords(1), site.frac_coords(2)));
       println("");
       result.shrink_to_fit();
       return result;

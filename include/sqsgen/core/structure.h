@@ -7,10 +7,10 @@
 
 #include <Eigen/Dense>
 
-#include "spdlog/spdlog.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/core/permutation.h"
+#include "sqsgen/log.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -142,13 +142,14 @@ namespace sqsgen::core {
       for (const auto &[shell, count] : neighbors) {
         auto atoms_per_shell{static_cast<T>(count) / static_cast<T>(configuration.size())};
         if (atoms_per_shell < 1)
-          spdlog::warn(
-              R"(The coordination shell {} contains no or only one lattice position(s). Increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
-              shell);
+          log::warn(format_string(
+              R"(The coordination shell %i contains no or only one lattice position(s). Increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
+              shell));
         if (!is_close(atoms_per_shell, static_cast<T>(static_cast<usize_t>(atoms_per_shell))))
-          spdlog::warn(
-              "The coordination shell {} does not contain an integer number of sites. I hope you "
-              "know what you are doing");
+          log::warn(format_string(
+              "The coordination shell %i does not contain an integer number of sites. I hope you "
+              "know what you are doing",
+              count));
         neighbors[shell] = atoms_per_shell;
       }
 
@@ -406,7 +407,7 @@ namespace sqsgen::core {
       auto sites = std::vector<sqsgen::core::detail::site<T>>{};
       for (auto index : r) {
         if (index >= size() || index < 0)
-          throw std::out_of_range(std::format("index out of range 0 <= {} < {}", index, size()));
+          throw std::out_of_range(format_string("index out of range 0 <= %i < %i", index, size()));
         sites.push_back(sqsgen::core::detail::site<T>{static_cast<usize_t>(index), species[index],
                                                       Eigen::Vector3<T>(frac_coords.row(index))});
       }

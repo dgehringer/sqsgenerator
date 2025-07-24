@@ -36,10 +36,10 @@ namespace sqsgen::io::config {
       auto iterations = core::num_permutations(
           structure.apply_composition_and_decompose(composition).front().species);
       if (iterations > std::numeric_limits<iterations_t>::max())
-        return parse_error::from_msg<key, CODE_BAD_VALUE>(
-            std::format("The number of permutations to test is {}. I'm a pretty fast program, but "
-                        "this is too much even for me ;=)",
-                        iterations.str()));
+        return parse_error::from_msg<key, CODE_BAD_VALUE>(format_string(
+            "The number of permutations to test is %s. I'm a pretty fast program, but "
+            "this is too much even for me ;=)",
+            iterations.str()));
       return std::make_optional(iterations_t{iterations});
     } else
       return get_optional<key, iterations_t>(doc)
@@ -77,8 +77,8 @@ namespace sqsgen::io::config {
                                                  : chunk_size_default})
         .and_then([&](auto&& cs) -> result_t {
           if (iterations.has_value() && cs > iterations.value())
-            return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(std::format(
-                "\"chunk_size\" was set to {} and iterations set to {}", cs, iterations.value()));
+            return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(format_string(
+                "\"chunk_size\" was set to %u and iterations set to %u", cs, iterations.value()));
           return result_t{cs};
         });
   }
@@ -119,6 +119,22 @@ namespace sqsgen::io::config {
                 "The number of best kept structures must be greater than 0");
           return keep;
         });
+  }
+
+  template <string_literal key, class Document>
+  parse_result<std::optional<std::size_t>> parse_max_results_per_objective(Document const& doc) {
+    if (std::optional<parse_result<std::optional<int>>> result
+        = get_optional<key, std::optional<int>>(doc)) {
+      return result.value().and_then([](auto&& num) -> parse_result<std::optional<std::size_t>> {
+        if (!num.has_value()) return {std::nullopt};
+        if (num.value() <= 0)
+          return parse_error::from_msg<key, CODE_BAD_VALUE>(
+              "The number of structures per objective must be a positive integer number");
+        else
+          return {std::make_optional(static_cast<std::size_t>(num.value()))};
+      });
+    } else
+      return {std::nullopt};
   }
 
   template <class T, class Document>
@@ -165,11 +181,14 @@ namespace sqsgen::io::config {
                                     std::forward<core::structure<T>>(structure), composition,
                                     weights))
                                 .combine(parse_chunk_size<"chunk_size">(doc, iterations))
-                                .combine(parse_threads_per_rank<"threads_per_rank">(doc))
+                                .combine(parse_threads_per_rank<"thread_config">(doc))
                                 .combine(parse_keep<"keep">(doc))
+                                .combine(
+                                    parse_max_results_per_objective<"max_results_per_objective">(
+                                        doc))
                                 .and_then([&](auto&& arrays) -> parse_result<configuration<T>> {
                                   auto [prefactors, pair_weights, target_objective, chunk_size,
-                                        thread_config, to_keep]
+                                        thread_config, to_keep, max_results_per_objective]
                                       = arrays;
                                   return configuration<T>{
                                       sublattice_mode,
@@ -184,7 +203,8 @@ namespace sqsgen::io::config {
                                       iterations,
                                       chunk_size,
                                       thread_config,
-                                      to_keep};
+                                      to_keep,
+                                      max_results_per_objective};
                                 });
                           });
                     });

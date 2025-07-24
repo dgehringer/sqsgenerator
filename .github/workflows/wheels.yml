@@ -1,4 +1,4 @@
-name: Wheels
+name: wheels
 
 on:
   release:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ windows-latest, macos-15, ubuntu-latest ]
+        os: [ windows-latest, macos-15, ubuntu-latest, ubuntu-22.04-arm ]
 
     steps:
 
@@ -32,22 +32,18 @@ jobs:
       - uses: friendlyanon/setup-vcpkg@v1
         if: ${{ runner.os != 'Linux' }}
 
-      - uses: pypa/cibuildwheel@v3.0.0rc1
+      - uses: pypa/cibuildwheel@v3.0
         with:
           package-dir: ./python
           output-dir: wheelhouse
         env:
-          CIBW_ARCHS_MACOS: "arm64"
-          CIBW_ARCHS_LINUX: "x86_64"
           CIBW_ARCHS_WINDOWS: "AMD64"
-          CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
-          CIBW_ENVIRONMENT_PASS_LINUX: "ACTIONS_RUNTIME_TOKEN ACTIONS_CACHE_URL"
-
+          CIBW_BUILD_FRONTEND: "build"
+          CIBW_BEFORE_ALL_LINUX: |
+            dnf -y install curl zip unzip tar git
+            ./vcpkg/bootstrap-vcpkg.sh
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
-          CIBW_ENVIRONMENT_MACOS: |
-            MACOSX_DEPLOYMENT_TARGET=15.0
-            CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DCMAKE_CXX_FLAGS=-mmacosx-version-min=15.0"
           CIBW_BEFORE_BUILD_WINDOWS: call scripts/install-build-deps.bat
           CIBW_BEFORE_BUILD: |
             pip install --upgrade pip-tools

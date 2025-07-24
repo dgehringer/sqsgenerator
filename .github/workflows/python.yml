@@ -1,0 +1,64 @@
+name: python-ci
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-15 ]
+        python-version: ["3.12"]
+
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache vcpkg binaries
+        id: cache-vcpkg
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/vcpkg/buildtrees
+            ${{ github.workspace }}/vcpkg/packages
+            ${{ github.workspace }}/vcpkg/downloads
+            ${{ github.workspace }}/vcpkg/installed
+            ${{ github.workspace }}/vcpkg/.cache
+          key: vcpkg-${{ runner.os }}-${{ github.workflow }}-${{ hashFiles('**/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ github.workflow }}-
+
+      - uses: lukka/run-vcpkg@v11
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build package
+        run:  pip install ./python -v
+
+      - name: Compile & install test dependencies
+        run: |
+          pip install pip-tools
+          pip-compile --extra=test -o requirements-test.txt ./python/pyproject.toml
+          pip install -r requirements-test.txt
+
+      - name: Run unit tests
+        run: pytest ./python -vv --import-mode=importlib --junitxml=junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml
+
+      - name: Upload pytest test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-${{ matrix.python-version }}-${{ matrix.os }}
+          path: junit/test-results-${{ matrix.python-version }}-${{ matrix.os }}.xml

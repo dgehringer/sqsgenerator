@@ -11,6 +11,7 @@
 #include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/mpi.h"
 #include "sqsgen/io/structure.h"
+#include "sqsgen/log.h"
 #include "sqsgen/sqs.h"
 #include "templates.h"
 #include "termcolor.h"
@@ -34,10 +35,12 @@ auto format_cyan(std::string_view str) {
 
 void display_version_info() {
   using namespace termcolor;
-  const auto print_row = [](std::string_view label, std::string_view value,
-                            std::optional<std::string_view> link = std::nullopt) {
-    std::cout << green << bold << std::format("{}: ", label) << reset
-              << (link.has_value() ? cli::format_hyperlink(value, link.value()) : value)
+  const auto print_row = [](std::string const& label, std::string const& value,
+                            std::optional<std::string> link = std::nullopt) {
+    std::cout << green << bold << (label + ": ") << reset
+              << (link.has_value()
+                      ? cli::format_hyperlink(std::string{value}, std::string{link.value()})
+                      : value)
               << std::endl;
   };
 
@@ -47,14 +50,15 @@ void display_version_info() {
             << "tructures (" << italic << "SQS" << reset << ")" << std::endl;
 
   std::cout << std::endl;
-  print_row("Version", std::format("{}.{}.{}", SQSGEN_MAJOR_VERSION, SQSGEN_MINOR_VERSION,
-                                   SQSGEN_BUILD_NUMBER));
+  print_row("Version", format_string("%i.%i.%i", SQSGEN_MAJOR_VERSION, SQSGEN_MINOR_VERSION,
+                                     SQSGEN_BUILD_NUMBER));
   print_row("Build Info",
-            std::format("{}@{}", stringify(SQSGEN_BUILD_BRANCH), stringify(SQSGEN_BUILD_COMMIT)),
-            std::format("https://github.com/dgehringer/sqsgenerator/commit/{}",
-                        stringify(SQSGEN_BUILD_COMMIT)));
-  print_row("Build Date", std::format("{} {}", __DATE__, __TIME__));
-  print_row("Build Ver.", std::format("{}", __VERSION__));
+            format_string("%s@%s", stringify(SQSGEN_BUILD_BRANCH), stringify(SQSGEN_BUILD_COMMIT)),
+            format_string("https://github.com/dgehringer/sqsgenerator/commit/%s",
+                          stringify(SQSGEN_BUILD_COMMIT)));
+  print_row("Build Date",
+            std::string{stringify(__DATE__)} + " " + std::string{stringify(__TIME__)});
+  print_row("Build Ver.", stringify(__VERSION__));
   print_row("Publication (DOI)", "10.1016/j.cpc.2023.108664",
             "https://doi.org/10.1016/j.cpc.2023.108664");
   print_row("Repository", "dgehringer/sqsgenerator", "https://github.com/dgehringer/sqsgenerator");
@@ -94,7 +98,7 @@ void show_result_pack(core::sqs_result_pack<T, Mode> const& pack) {
   std::cout << bold << "Mode: " << reset << italic
             << (Mode == SUBLATTICE_MODE_INTERACT ? "interact" : "split") << reset << std::endl;
   std::cout << bold << "min(O(σ)): " << reset
-            << std::format("{:.5f}", pack.statistics.best_objective) << std::endl;
+            << format_string("%.5f", pack.statistics.best_objective) << std::endl;
   std::cout << bold << "Num. objectives: " << reset << pack.results.size() << std::endl;
   std::cout << std::endl;
 
@@ -102,7 +106,7 @@ void show_result_pack(core::sqs_result_pack<T, Mode> const& pack) {
   cli::table<"INDEX", "OBJ.", "N">::render(pack.results | views::transform([&](auto&& pair) {
                                              auto [objective, results] = pair;
                                              return std::array{format_cyan(std::to_string(index++)),
-                                                               std::format("{:.5f} ", objective),
+                                                               format_string("%.5f", objective),
                                                                std::to_string(results.size())};
                                            }));
 }
@@ -115,9 +119,9 @@ void render_template_overview() {
 
           auto format_author = [](auto&& author) -> std::string {
             if (author.name.has_value() && author.surname.has_value())
-              return std::format(
-                  "{} {}{}", author.name.value(), author.surname.value(),
-                  author.email.has_value() ? std::format(" ({})", author.email.value()) : "");
+              return format_string(
+                  "%s %s%s", author.name.value(), author.surname.value(),
+                  author.email.has_value() ? format_string(" (%s)", author.email.value()) : "");
             return "";
           };
 
@@ -139,14 +143,15 @@ void render_template(templates::config_template const& tpl) {
     if (can_display_author(author)) {
       if (author.name.has_value() && author.surname.has_value())
         std::cout << italic << "  Name: " << reset
-                  << std::format("{} {}", author.name.value(), author.surname.value()) << std::endl;
+                  << format_string("%s %s", author.name.value(), author.surname.value())
+                  << std::endl;
       if (author.email.has_value())
         std::cout << italic << "  Mail: " << reset
                   << cli::format_hyperlink(author.email.value(),
-                                           std::format("mailto:{}", author.email.value()))
+                                           format_string("mailto:%s", author.email.value()))
                   << std::endl;
       if (author.affiliation.has_value())
-        std::cout << italic << "  Affilitation: " << reset << author.affiliation.value()
+        std::cout << italic << "  Affiliation: " << reset << author.affiliation.value()
                   << std::endl;
       std::cout << std::endl;
     }
@@ -158,16 +163,16 @@ void render_template(templates::config_template const& tpl) {
   std::cout << bold << "Description: " << reset << tpl.description << std::endl;
   if (tpl.doi.has_value())
     std::cout << bold << "DOI: " << reset
-              << cli::format_hyperlink(std::format("https://doi.org/{}", tpl.doi.value()),
+              << cli::format_hyperlink(format_string("https://doi.org/%s", tpl.doi.value()),
                                        tpl.doi.value())
               << std::endl;
   if (!tpl.authors.empty() && ranges::any_of(tpl.authors, can_display_author)) {
     std::cout << bold << "Authors: " << reset << std::endl;
     ranges::for_each(tpl.authors, format_author);
   }
-  std::ofstream out(std::format("{}.sqs.json", tpl.name));
+  std::ofstream out(format_string("%s.sqs.json", tpl.name));
   if (!out.good())
-    cli::render_error(std::format("Cannot open output file \"{}.sqs.json\"", tpl.name), true);
+    cli::render_error(format_string("Cannot open output file \"%s.sqs.json\"", tpl.name), true);
   out << tpl.config.dump(2);
 }
 void run_main(std::string const& input, std::string const& output, std::string const& log_level,
@@ -176,18 +181,17 @@ void run_main(std::string const& input, std::string const& output, std::string c
   using namespace sqsgen::core;
   using namespace sqsgen::core::helpers;
 
-  auto log_levels
-      = std::map<std::string_view, spdlog::level::level_enum>{{"error", spdlog::level::critical},
-                                                              {"warn", spdlog::level::warn},
-                                                              {"info", spdlog::level::info},
-                                                              {"debug", spdlog::level::debug},
-                                                              {"trace", spdlog::level::trace}};
+  auto log_levels = std::map<std::string_view, log::level>{{"error", log::level::error},
+                                                           {"warn", log::level::warn},
+                                                           {"info", log::level::info},
+                                                           {"debug", log::level::debug},
+                                                           {"trace", log::level::trace}};
 
   if (!log_levels.contains(log_level))
-    cli::render_error(std::format("Invalid log level '{}'", log_level));
+    cli::render_error(format_string("Invalid log level '%s'", log_level));
 
   if (!std::filesystem::exists(input))
-    cli::render_error(std::format("File '{}' does not exist", input));
+    cli::render_error(format_string("File '%s' does not exist", input));
 
   auto conf = io::config::parse_config(cli::read_json(input));
   if (conf.ok()) {
@@ -202,7 +206,7 @@ void run_main(std::string const& input, std::string const& output, std::string c
         auto finished = std::visit([](auto&& c) { return c.statistics.finished; }, ctx);
         progress.render(std::cout, finished >= total);
       };
-
+    log::set_level(log_levels[log_level]);
     auto result = run_optimization(conf.result(), log_levels[log_level], callback);
 
 #ifdef WITH_MPI
@@ -233,9 +237,10 @@ int main(int argc, char** argv) {
 
   using namespace sqsgen::core;
   using namespace sqsgen::core::helpers;
+  log::initialize();
   auto version_string
-      = std::format("{}.{}.{}", stringify(SQSGEN_MAJOR_VERSION), stringify(SQSGEN_MINOR_VERSION),
-                    stringify(SQSGEN_BUILD_NUMBER));
+      = format_string("%s.%s.%s", stringify(SQSGEN_MAJOR_VERSION), stringify(SQSGEN_MINOR_VERSION),
+                      stringify(SQSGEN_BUILD_NUMBER));
   argparse::ArgumentParser program("sqsgen", version_string, argparse::default_arguments::help);
 
   program.add_argument("-v", "--version")
@@ -297,10 +302,6 @@ int main(int argc, char** argv) {
   argparse::ArgumentParser output_structure_command("structure", version_string,
                                                     argparse::default_arguments::help);
   output_structure_command.add_description("export the structure of a result file");
-  output_structure_command.add_argument("-v", "--version")
-      .help("Display version info")
-      .default_value(false)
-      .implicit_value(true);
 
   output_structure_command.add_argument("-f", "--format")
       .help("The output format to use (vasp, poscar, ase, pymatgen, cif, sqsgen)")
@@ -314,12 +315,16 @@ int main(int argc, char** argv) {
       .implicit_value(true);
 
   output_structure_command.add_argument("--objective")
-      .help("select the n-th best objective")
+      .help(
+          "select the n-th best objective. This is value is specified as an index. This argument "
+          "can be specified multiple times to export multiple structures.")
       .default_value(std::vector<std::string>{"0"})
       .append();
 
   output_structure_command.add_argument("-i", "--index")
-      .help("the index of the structure to export,  specified by the --objective option")
+      .help(
+          "the index of the structure to export,  specified by the --objective option. This "
+          "argument can be specified multiple times to export multiple structures.")
       .default_value(std::vector<std::string>{"0"})
       .append();
   output_structure_command.add_argument("--all").default_value(false).implicit_value(true).help(
@@ -348,10 +353,10 @@ int main(int argc, char** argv) {
     if (template_command.is_used("name")) {
       auto name = template_command.get<std::string>("name");
       if (!templates::templates().contains(name))
-        cli::render_error(
-            std::format("Cannot find a template with name '{}'. Use \"sqsgen template\" to display "
-                        "all packaged templates",
-                        name));
+        cli::render_error(format_string(
+            "Cannot find a template with name '%s'. Use \"sqsgen template\" to display "
+            "all packaged templates",
+            name));
       auto tpl = templates::templates().at(name);
       render_template(tpl);
       return EXIT_SUCCESS;
@@ -372,9 +377,9 @@ int main(int argc, char** argv) {
     auto pack = load_result_pack(output_file);
     if (output_command.is_subcommand_used("config")) {
       std::string output
-          = std::format("{}.config.json", std::filesystem::path(output_file).stem().string());
+          = format_string("%s.config.json", std::filesystem::path(output_file).stem().string());
       std::ofstream out(output, std::ios::out);
-      if (!out.good()) cli::render_error(std::format("Failed to open output file '{}'", output));
+      if (!out.good()) cli::render_error(format_string("Failed to open output file '%s'", output));
       out << std::visit([](auto&& p) { return cli::fixup_config_json(p.config).dump(); }, pack);
       return EXIT_SUCCESS;
     } else if (output_command.is_subcommand_used("structure")) {
@@ -420,19 +425,19 @@ int main(int argc, char** argv) {
                 auto [format, ext] = result->second;
                 auto text = io::format(structure, format);
                 std::string filename
-                    = std::format("{}-{}-{}.{}", basename, objective_index, structure_index, ext);
+                    = format_string("%s-%i-%i.%s", basename, objective_index, structure_index, ext);
                 if (output_structure_command["--print"] == true) {
-                  if (structure_indices.size() > 1) std::cout << std::format("# {}", filename);
+                  if (structure_indices.size() > 1) std::cout << format_string("# %s", filename);
                   std::cout << text << std::endl;
                   if (structure_indices.size() > 1) std::cout << std::endl;
                 } else {
                   std::ofstream out(filename, std::ios::out);
                   if (!out.good())
-                    cli::render_error(std::format("Failed to open output file '{}'", filename));
+                    cli::render_error(format_string("Failed to open output file '%s'", filename));
                   out << text;
                 }
               } else
-                cli::render_error(std::format("Invalid format '{}'", format), true);
+                cli::render_error(format_string("Invalid format '%s'", format), true);
             },
             pack);
       });
@@ -447,8 +452,8 @@ int main(int argc, char** argv) {
   std::string output = program.get<std::string>("--output");
   if (program.is_used("--input") && !program.is_used("--output")) {
     // The user has specified a custom input file we try to split the extension
-    output = std::format(
-        "{}.mpack", std::filesystem::path(program.get<std::string>("--input")).stem().string());
+    output = format_string(
+        "%s.mpack", std::filesystem::path(program.get<std::string>("--input")).stem().string());
   }
 
   run_main(program.get<std::string>("--input"), output, program.get<std::string>("--log"),
