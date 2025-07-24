@@ -20,8 +20,16 @@ project(
 set(VCPKG_CRT_LINKAGE "dynamic")
 set(VCPKG_LIBRARY_LINKAGE "static")
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+set(BUILD_SHARED_LIBS OFF)
 if (WIN32)
-    set(VCPKG_CMAKE_OPTIONS "-DBUILD_SHARED_LIBS=OFF")
+    FetchContent_Declare(
+            abseil
+            GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+            GIT_TAG 20250512.1
+            CMAKE_ARGS
+            "-DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_SHARED_LIBS=OFF"
+    )
+    FetchContent_MakeAvailable(abseil)
 endif ()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
