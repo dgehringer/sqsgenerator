@@ -2,6 +2,7 @@ import functools
 import io
 import json
 import os
+from types import MappingProxyType
 from typing import Optional
 
 import click
@@ -12,8 +13,6 @@ from ..templates import load_templates
 from ._run import run_optimization
 from ._shared import format_hyperlink, render_error, render_table
 from ._version import print_version, version_string
-
-from types import MappingProxyType
 
 _LOG_LEVELS: MappingProxyType[str, LogLevel] = MappingProxyType(
     {

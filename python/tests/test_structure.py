@@ -1,8 +1,9 @@
+from typing import Union
+
 import numpy as np
 import pytest
 
 from sqsgenerator.core import StructureDouble, StructureFloat
-from typing import Union
 
 try:
     from pymatgen.core import Structure

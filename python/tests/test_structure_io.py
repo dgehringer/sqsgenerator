@@ -1,19 +1,16 @@
 import os.path
 import tempfile
+from typing import Union
 
 import numpy as np
 import pytest
 
-
+from sqsgenerator._adapters import available_formats, read, to_pymatgen, write
 from sqsgenerator.core import (
     StructureDouble,
     StructureFloat,
     StructureFormat,
 )
-
-from sqsgenerator._adapters import available_formats, to_pymatgen, read, write
-
-from typing import Union
 
 try:
     from pymatgen.core import Structure

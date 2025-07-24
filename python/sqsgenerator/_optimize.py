@@ -1,6 +1,6 @@
 import json
 import warnings
-from typing import Any, Callable, Union, Optional
+from typing import Any, Callable, Optional, Union
 
 from ._adapters import read as _read
 from .core import (
@@ -131,7 +131,7 @@ def parse_config(
 def optimize(
     config: Union[dict[str, Any], SqsConfiguration, str],
     level: LogLevel = LogLevel.warn,
-    callback:  Optional[SqsCallback] = None,
+    callback: Optional[SqsCallback] = None,
 ) -> SqsResultPack:
     """
     Optimize the SQS configuration based on the provided parameters.
