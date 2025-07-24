@@ -44,11 +44,6 @@ jobs:
             ./vcpkg/bootstrap-vcpkg.sh
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
-          CIBW_BEFORE_BUILD_WINDOWS: call scripts/install-build-deps.bat
-          CIBW_BEFORE_BUILD: |
-            pip install --upgrade pip-tools
-            pip-compile -v --all-build-deps --output-file=requirements-ci.txt --strip-extras python/pyproject.toml
-            pip install -r requirements-ci.txt
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
