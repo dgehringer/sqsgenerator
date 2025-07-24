@@ -39,14 +39,9 @@ jobs:
         env:
           CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_BUILD_FRONTEND: "build"
-          CIBW_ENVIRONMENT_PASS_LINUX: "CC CXX CMAKE_ARGS"
           CIBW_BEFORE_ALL_LINUX: |
             dnf -y install curl zip unzip tar git
             ./vcpkg/bootstrap-vcpkg.sh
-          CIBW_ENVIRONMENT_LINUX: |
-            CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/usr/local/bin/c++ -DCMAKE_C_COMPILER=/usr/local/bin/cc"
-            CXX=/usr/local/bin/c++
-            CC=/usr/local/bin/cc
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_34
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
           CIBW_BEFORE_BUILD_WINDOWS: call scripts/install-build-deps.bat
