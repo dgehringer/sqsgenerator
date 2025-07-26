@@ -32,5 +32,6 @@ if __name__ == "__main__":
 
     dumped = toml.dumps(pyproject)
     print("==== NEW pyproject.toml ====")
+    print(dumped)
     with open(filename, "w") as f:
         f.write(dumped)
