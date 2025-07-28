@@ -42,6 +42,8 @@ list(APPEND SQSGEN_TEST_LIBS
         absl::str_format
         absl::log_initialize
         absl::hash
+        absl::raw_hash_map
+        absl::raw_hash_set
         absl::flat_hash_map
         absl::flat_hash_set)
 list(APPEND SQSGEN_TEST_LIBS "${Python3_LIBRARIES}")

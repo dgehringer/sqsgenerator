@@ -79,6 +79,8 @@ target_include_directories(_core PRIVATE ${RAPIDHASH_INCLUDE_DIRS})
 target_link_libraries(_core PRIVATE
         nlohmann_json::nlohmann_json
         absl::hash
+        absl::raw_hash_map
+        absl::raw_hash_set
         absl::log
         absl::str_format
         absl::log_initialize
