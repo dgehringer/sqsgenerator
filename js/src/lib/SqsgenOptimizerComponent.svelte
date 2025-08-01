@@ -1,135 +1,189 @@
 <script lang="ts">
     import {
         type Content,
-        type JSONContent,
         JSONEditor,
         type TextContent,
         Mode,
-        type MenuButton, type MenuSeparator, type MenuItem, type RenderMenuContext
+        type MenuButton,
+        type MenuSeparator,
+        type MenuItem,
+        type RenderMenuContext,
+        type OnChangeStatus,
+        type ValidationError
     } from 'svelte-jsoneditor'
     import {loadOptimizer, SqsgenOptimizer} from '$lib/optimizer.js'
     import {onMount} from "svelte";
-    import {faCopy} from '@fortawesome/free-regular-svg-icons'
+    import {faCirclePlay} from '@fortawesome/free-regular-svg-icons'
 
     type ComponentState = {
+        jsonEditorRef: JSONEditor | undefined;
         optimizer: SqsgenOptimizer | undefined,
-        content: JSONContent
+        inputConfig: any | undefined
+        optimizationConfig: any | undefined
+        optimizationControlButton: MenuButton | undefined
     }
+    const initial = {
+        structure: {
+            species: ['Fe', 'Fe'],
+            supercell: [3, 3, 3],
+            lattice: [
+                [
+                    2.86,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    2.86,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    2.86
+                ]
+            ],
+            coords: [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.5,
+                    0.5,
+                    0.5
+                ]
+            ]
+        },
+        composition: [
+            {
+                Fe: 45,
+                Al: 9
+            }
+        ],
+        target_objective: 0
+    };
+
 
     let state = $state({
         optimizer: undefined,
-        content: {
-            json: {
-                structure: {
-                    species: ['Fe', 'Fe'],
-                    supercell: [3, 3, 3],
-                    lattice: [
-                        [
-                            2.86,
-                            0.0,
-                            0.0
-                        ],
-                        [
-                            0.0,
-                            2.86,
-                            0.0
-                        ],
-                        [
-                            0.0,
-                            0.0,
-                            2.86
-                        ]
+        inputConfig: undefined,
+        optimizationControlButton: undefined,
+        jsonEditorRef: undefined
+    } as ComponentState);
+    let content = {
+        json: {
+            structure: {
+                species: ['Fe', 'Fe'],
+                supercell: [3, 3, 3],
+                lattice: [
+                    [
+                        2.86,
+                        0.0,
+                        0.0
                     ],
-                    coords: [
-                        [
-                            0.0,
-                            0.0,
-                            0.0
-                        ],
-                        [
-                            0.5,
-                            0.5,
-                            0.5
-                        ]
+                    [
+                        0.0,
+                        2.86,
+                        0.0
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        2.86
                     ]
-                },
-                composition: [
-                    {
-                        Fe: 45,
-                        Al: 9
-                    }
                 ],
-                target_objective: 0
-            }
+                coords: [
+                    [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    [
+                        0.5,
+                        0.5,
+                        0.5
+                    ]
+                ]
+            },
+            composition: [
+                {
+                    Fe: 45,
+                    Al: 9
+                }
+            ],
+            target_objective: 0
         }
-    } as ComponentState)
+    } as Content;
+
 
     onMount(async () => {
         state.optimizer = await loadOptimizer();
     })
 
     const loaded = $derived(state.optimizer !== undefined);
-    const content = $derived(state.content);
-    const config = $derived(content.json);
-    const runConfig = $derived(
-        state.optimizer && config !== undefined ? state.optimizer.parseConfig(config) : undefined
-    );
-    const runConfigJson = $derived(
-        runConfig ? {json: runConfig.value} : undefined,
-    )
-    const triggerOptimizationDisabled = $derived(
-        runConfigJson === undefined
-    );
 
-    function handleChange(updatedContent: TextContent) {
-        try {
-            state.content.json = JSON.parse(updatedContent.text);
-        } catch (e) {
-            state.content.json = undefined;
-        }
-    }
-
-    function handleTriggerOptimization() {
-
-    }
 
     function handleRenderMenu(items: MenuItem[], context: RenderMenuContext): MenuItem[] | undefined {
-        console.log('handleRenderMenu', {items, context})
-
         const separator: MenuSeparator = {
             type: 'separator'
         }
 
-        const triggerOptimizationButton: MenuButton = {
+        state.optimizationControlButton = {
             type: 'button',
-            onClick: handleTriggerOptimization,
-            icon: faCopy,
+            onClick: () => {
+            },
+            icon: faCirclePlay,
             title: 'Copy document to clipboard',
             className: 'custom-copy-button',
-            disabled: triggerOptimizationDisabled,
-        }
+            disabled: state.optimizationConfig === undefined,
+        };
 
         const head = items.slice(0, items.length - 1)
         const tail = items.slice(items.length - 1) // the tail contains space
 
-        return head.concat(separator, triggerOptimizationButton, tail)
+        return head.concat(separator, state.optimizationControlButton, tail)
     }
+
+    function handleChange(c: TextContent, _: Content, status: OnChangeStatus) {
+        state.inputConfig = status.contentErrors ? undefined : JSON.parse(c.text);
+        if (state.optimizer) {
+            const parsedConfig = state.optimizer.parseConfig(state.inputConfig);
+            state.optimizationConfig = parsedConfig.ok ? parsedConfig.value : undefined;
+        }
+
+    }
+
+    function validator(json: any): ValidationError[] {
+        return state.optimizer ? state.optimizer.validate(json) : []
+    }
+
+    $inspect(state.inputConfig)
+
+
+    $effect(() => {
+        if (state.optimizationControlButton) {
+            state.optimizationControlButton.disabled = state.optimizationConfig === undefined;
+            state.jsonEditorRef?.refresh().then(()=> {
+                console.log("$effect", "refreshed", new Date());
+            })
+            console.log("$effect", state.optimizationControlButton.disabled, new Date());
+        }
+
+    })
+
 
 </script>
 
 {#if loaded}
     <div class="editor">
-        <JSONEditor mode={Mode.text} {content} onChange={handleChange}
-                    onRenderMenu={handleRenderMenu}
+        <JSONEditor bind:this={state.jsonEditorRef} mode={Mode.text} bind:content={content} onChange={handleChange}
+                    onRenderMenu={handleRenderMenu} {validator}
         />
     </div>
 {/if}
 
-{#if runConfig && runConfig.ok}
-    <div class="editor">
-        <JSONEditor mode={Mode.text} content={runConfigJson}/>
-    </div>
-{/if}
 
 <style>
     .editor {

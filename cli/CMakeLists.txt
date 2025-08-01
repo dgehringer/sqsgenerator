@@ -49,6 +49,8 @@ target_link_libraries(sqsgen PRIVATE
         absl::hash
         absl::flat_hash_map
         absl::flat_hash_set
+        absl::raw_hash_map
+        absl::raw_hash_set
         Eigen3::Eigen
         Boost::multiprecision
         argparse::argparse

@@ -12,6 +12,7 @@ dependencies = ["numpy", "click"]
 dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.9"
+license = "MIT"
 
 [project.urls]
 Homepage = "https://github.com/dgehringer/sqsgenerator"
