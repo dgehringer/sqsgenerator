@@ -15,62 +15,23 @@
     import {onMount} from "svelte";
     import {faCirclePlay} from '@fortawesome/free-regular-svg-icons'
 
+    type OptimizationState = 'idle' | 'running';
+
     type ComponentState = {
         jsonEditorRef: JSONEditor | undefined;
         optimizer: SqsgenOptimizer | undefined,
         inputConfig: any | undefined
         optimizationConfig: any | undefined
-        optimizationControlButton: MenuButton | undefined
+        menuItems: MenuButton[],
+        optimizationState: OptimizationState
     }
-    const initial = {
-        structure: {
-            species: ['Fe', 'Fe'],
-            supercell: [3, 3, 3],
-            lattice: [
-                [
-                    2.86,
-                    0.0,
-                    0.0
-                ],
-                [
-                    0.0,
-                    2.86,
-                    0.0
-                ],
-                [
-                    0.0,
-                    0.0,
-                    2.86
-                ]
-            ],
-            coords: [
-                [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                [
-                    0.5,
-                    0.5,
-                    0.5
-                ]
-            ]
-        },
-        composition: [
-            {
-                Fe: 45,
-                Al: 9
-            }
-        ],
-        target_objective: 0
-    };
-
 
     let state = $state({
         optimizer: undefined,
         inputConfig: undefined,
-        optimizationControlButton: undefined,
-        jsonEditorRef: undefined
+        menuItems: [] as MenuButton[],
+        jsonEditorRef: undefined,
+        optimizationState: 'idle',
     } as ComponentState);
     let content = {
         json: {
@@ -126,13 +87,31 @@
 
 
     function handleRenderMenu(items: MenuItem[], context: RenderMenuContext): MenuItem[] | undefined {
+
         const separator: MenuSeparator = {
             type: 'separator'
         }
 
-        state.optimizationControlButton = {
+        let optimizationControlButton = {
             type: 'button',
             onClick: () => {
+                if (state.optimizationConfig && state.optimizationState === 'idle' && state.optimizer) {
+                    state.optimizationState = 'running';
+                    state.optimizer.optimizeAsync(state.optimizationConfig, 0, (_) => {
+                        return undefined;
+                    }).then((result) => {
+                        console.log(result);
+                    }).catch((e) => {
+                        console.error("WASM Error:", e);
+                        if (e instanceof WebAssembly.CompileError) {
+                            console.error("Compile error:", e);
+                        } else if (e instanceof WebAssembly.LinkError) {
+                            console.error("Link error (missing imports):", e);
+                        } else if (e instanceof WebAssembly.RuntimeError) {
+                            console.error("Runtime error (trap):", e);
+                        }
+                    })
+                }
             },
             icon: faCirclePlay,
             title: 'Copy document to clipboard',
@@ -143,7 +122,7 @@
         const head = items.slice(0, items.length - 1)
         const tail = items.slice(items.length - 1) // the tail contains space
 
-        return head.concat(separator, state.optimizationControlButton, tail)
+        return head.concat(separator, optimizationControlButton, tail)
     }
 
     function handleChange(c: TextContent, _: Content, status: OnChangeStatus) {
@@ -153,25 +132,19 @@
             state.optimizationConfig = parsedConfig.ok ? parsedConfig.value : undefined;
         }
 
+        state.jsonEditorRef?.updateProps(
+            {
+                onRenderMenu: (items: MenuItem[], context: RenderMenuContext) => {
+                    console.log("rerendering menu");
+                    return handleRenderMenu(items, context);
+                }
+            }
+        );
     }
 
     function validator(json: any): ValidationError[] {
         return state.optimizer ? state.optimizer.validate(json) : []
     }
-
-    $inspect(state.inputConfig)
-
-
-    $effect(() => {
-        if (state.optimizationControlButton) {
-            state.optimizationControlButton.disabled = state.optimizationConfig === undefined;
-            state.jsonEditorRef?.refresh().then(()=> {
-                console.log("$effect", "refreshed", new Date());
-            })
-            console.log("$effect", state.optimizationControlButton.disabled, new Date());
-        }
-
-    })
 
 
 </script>

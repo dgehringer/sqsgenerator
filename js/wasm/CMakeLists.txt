@@ -49,7 +49,7 @@ target_compile_definitions(core PRIVATE
         SQSGEN_MAJOR_VERSION=${VERSION_MAJOR}
 )
 set_target_properties(core PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS}")
-set_target_properties(core PROPERTIES LINK_FLAGS "-O3 --emit-tsd core.d.ts -sUSE_PTHREADS -s EXPORT_ES6=1 -WASM=2  -sPROXY_TO_PTHREAD -sEXIT_RUNTIME=0 -sASSERTIONS=2 -s MODULARIZE=1 --bind -fPIC -pthread --closure 1 -EXPORT_NAME=core")
+set_target_properties(core PROPERTIES LINK_FLAGS "-O3 --emit-tsd core.d.ts -sUSE_PTHREADS -s EXPORT_ES6=1 -WASM=2 -s ALLOW_MEMORY_GROWTH=1 -sPROXY_TO_PTHREAD -sEXIT_RUNTIME=0 -sASSERTIONS=2 -s MODULARIZE=1 --bind -fPIC -pthread --closure 1 -EXPORT_NAME=core")
 target_link_libraries(core PRIVATE
         nlohmann_json::nlohmann_json
         absl::hash

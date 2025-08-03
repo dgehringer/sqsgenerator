@@ -22,6 +22,14 @@ export type Left<E> = {
 export type Right<T> = { ok: true, value: T };
 export type Result<T, E> = Left<E> | Right<T>;
 
+export interface SqsStatistics {
+    working: number;
+    finished: number;
+    best_rank: number;
+    best_objective: number;
+}
+
+
 
 export class SqsgenOptimizer {
     private module: MainModule;
@@ -30,9 +38,9 @@ export class SqsgenOptimizer {
         this.module = module;
     }
 
-    async optimizeAsync(config: any, precision: 0 | 1, options: any): Promise<any> {
+    async optimizeAsync(config: any, precision: 0 | 1, callback: (stats: SqsStatistics) => boolean | undefined): Promise<any> {
         const prec = precision === 0 ? this.module.Prec.single : this.module.Prec.double;
-        return await this.module.optimizeAsync(config, prec, options);
+        return await this.module.optimizeAsync(config, prec, callback);
     }
 
     private isError(result: any): boolean {
