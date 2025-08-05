@@ -4,37 +4,44 @@
         JSONEditor,
         type TextContent,
         Mode,
-        type MenuButton,
         type MenuSeparator,
         type MenuItem,
         type RenderMenuContext,
         type OnChangeStatus,
         type ValidationError
     } from 'svelte-jsoneditor'
+    import LinearProgress from '@smui/linear-progress';
     import {loadOptimizer, SqsgenOptimizer} from '$lib/optimizer.js'
     import {onMount} from "svelte";
-    import {faCirclePlay} from '@fortawesome/free-regular-svg-icons'
+    import {faCirclePlay, faCircleStop} from '@fortawesome/free-regular-svg-icons'
 
-    type OptimizationState = 'idle' | 'running';
+    type OptimizationState = {
+        is: 'idling' | 'running'
+        result?: any
+        finished?: number,
+        working?: number,
+        stopRequested?: boolean
+    }
 
     type ComponentState = {
         jsonEditorRef: JSONEditor | undefined;
         optimizer: SqsgenOptimizer | undefined,
         inputConfig: any | undefined
         optimizationConfig: any | undefined
-        menuItems: MenuButton[],
-        optimizationState: OptimizationState
+        optimization: OptimizationState
     }
 
     let state = $state({
         optimizer: undefined,
         inputConfig: undefined,
-        menuItems: [] as MenuButton[],
         jsonEditorRef: undefined,
-        optimizationState: 'idle',
+        optimization: {
+            is: 'idling',
+        }
     } as ComponentState);
     let content = {
         json: {
+            iterations: 1000000,
             structure: {
                 species: ['Fe', 'Fe'],
                 supercell: [3, 3, 3],
@@ -84,7 +91,18 @@
     })
 
     const loaded = $derived(state.optimizer !== undefined);
+    const running = $derived(state.optimization.is === 'running');
+    const idling = $derived(state.optimization.is === 'idling');
 
+    function refreshEditor() {
+        if (state.jsonEditorRef) {
+            state.jsonEditorRef.updateProps({
+                onRenderMenu: (items: MenuItem[], context: RenderMenuContext) => {
+                    return handleRenderMenu(items, context);
+                }
+            });
+        }
+    }
 
     function handleRenderMenu(items: MenuItem[], context: RenderMenuContext): MenuItem[] | undefined {
 
@@ -95,27 +113,40 @@
         let optimizationControlButton = {
             type: 'button',
             onClick: () => {
-                if (state.optimizationConfig && state.optimizationState === 'idle' && state.optimizer) {
-                    state.optimizationState = 'running';
-                    state.optimizer.optimizeAsync(state.optimizationConfig, 0, (_) => {
-                        return undefined;
+                if (state.optimizationConfig && idling && state.optimizer) {
+                    state.optimization = {
+                        is: 'running',
+                        finished: 0.0,
+                        working: 0.0,
+                        stopRequested: false,
+                    }
+                    const iterations = state.optimizationConfig.iterations;
+                    state.optimizer.optimizeAsync(state.optimizationConfig, 0, stats => {
+                        const finished = stats.finished / iterations;
+                        state.optimization.finished = finished > (state.optimization.finished ?? 0.0) ? finished : state.optimization.finished;
+                        state.optimization.working = stats.working / iterations;
+                        return state.optimization.stopRequested;
                     }).then((result) => {
-                        console.log(result);
+                        state.optimization = {
+                            is: 'idling',
+                            result: result
+                        };
+                        refreshEditor();
                     }).catch((e) => {
-                        console.error("WASM Error:", e);
-                        if (e instanceof WebAssembly.CompileError) {
-                            console.error("Compile error:", e);
-                        } else if (e instanceof WebAssembly.LinkError) {
-                            console.error("Link error (missing imports):", e);
-                        } else if (e instanceof WebAssembly.RuntimeError) {
-                            console.error("Runtime error (trap):", e);
-                        }
+                        console.error("Optimization failed:", e);
+                        state.optimization = {
+                            is: 'idling',
+                            result: undefined
+                        };
+                        refreshEditor();
                     })
-                }
+                } else if (running)
+                    state.optimization.stopRequested = true;
+
+                refreshEditor();
             },
-            icon: faCirclePlay,
-            title: 'Copy document to clipboard',
-            className: 'custom-copy-button',
+            icon: running ? faCircleStop : faCirclePlay,
+            title: running ? 'Stop optimization' : 'Start optimization',
             disabled: state.optimizationConfig === undefined,
         };
 
@@ -150,7 +181,12 @@
 </script>
 
 {#if loaded}
+
+
     <div class="editor">
+        {#if running}
+            <LinearProgress progress={state.optimization.finished} buffer={state.optimization.working}/>
+        {/if}
         <JSONEditor bind:this={state.jsonEditorRef} mode={Mode.text} bind:content={content} onChange={handleChange}
                     onRenderMenu={handleRenderMenu} {validator}
         />

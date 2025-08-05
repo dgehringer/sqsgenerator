@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "lint": "prettier --check . && eslint .",
     "test:unit": "vitest",
-    "test": "npm run test:unit -- --run"
+    "test": "npm run test:unit -- --run",
+    "smui-theme": "smui-theme compile static/smui.css -i src/theme"
   },
   "files": [
     "dist",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@eslint/compat": "^1.2.5",
     "@eslint/js": "^9.18.0",
+    "@smui/linear-progress": "^8.0.1",
     "@sveltejs/adapter-auto": "^6.0.0",
     "@sveltejs/kit": "^2.22.0",
     "@sveltejs/package": "^2.0.0",
@@ -48,6 +50,7 @@
     "prettier": "^3.4.2",
     "prettier-plugin-svelte": "^3.3.3",
     "publint": "^0.3.2",
+    "smui-theme": "^8.0.1",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "typescript": "^5.0.0",
@@ -60,6 +63,7 @@
   ],
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",
+    "ngl": "^2.4.0",
     "svelte-jsoneditor": "^3.7.0"
   }
 }
