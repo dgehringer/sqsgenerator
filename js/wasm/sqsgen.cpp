@@ -15,6 +15,7 @@
 
 using namespace emscripten;
 using namespace sqsgen::core::helpers;
+using namespace sqsgen::core;
 
 template <string_literal Name, class T>
   requires std::is_arithmetic_v<T>
@@ -29,6 +30,51 @@ template <class T> nlohmann::json to_json(T&& value) {
   nlohmann::json j = value;
   return j;
 }
+
+template <class T, sqsgen::SublatticeMode Mode>
+sqsgen::core::detail::sqs_result_wrapper<T, Mode> result_at(sqs_result_pack<T, Mode>& pack,
+                                                            int objective_index,
+                                                            int structure_index) {
+  if (0 <= objective_index && objective_index < pack.size()) {
+    if (0 <= structure_index && structure_index < pack.results[objective_index].size())
+      return std::make_optional(pack.results[objective_index][structure_index]);
+    else
+      return std::nullopt;
+  } else
+    return std::nullopt;
+}
+
+class sqs_results {
+  // the purpose is to reformat the result pack such that all the necessary data for the browser
+  // application is available that is the msgpack data to download the root structure per structure,
+  // the species arrangement per structure
+  sqsgen::detail::optimizer_output_t _pack;
+  std::vector<uint8_t> _msgpack;
+
+public:
+  sqs_results(sqsgen::detail::optimizer_output_t&& p) : _pack(std::move(p)) {
+    _msgpack = std::visit(
+        [](auto const& p) -> std::vector<uint8_t> {
+          nlohmann::json j = p;
+          return nlohmann::json::to_msgpack(j);
+        },
+        _pack);
+  }
+
+  template <sqsgen::StructureFormat Format> std::optional<std::string> format(int o, int i) {
+    return std::visit(
+        [o, i](auto& p) -> std::optional<std::string> {
+          if (o <= 0 && o < p.results.size()) {
+            if (i <= 0 && i < std::get<1>(p.results.at(o)).size())
+              return std::make_optional(
+                  sqsgen::io::format(std::get<1>(p.results.at(o)).at(i).structure(), Format));
+          }
+          return std::nullopt;
+        },
+        _pack);
+  }
+  val msgpack() { return val(typed_memory_view(_msgpack.size(), _msgpack.data())); }
+};
 
 template <class T> T from_json(nlohmann::json const& j) { return j.get<T>(); }
 
@@ -97,14 +143,11 @@ val optimize(val const& config, sqsgen::Prec prec, val const& cb) {
             });
       };
     try {
-      auto result_pack_json
-          = std::visit([](auto&& result_pack) -> nlohmann::json { return to_json(result_pack); },
-                       run_optimization(std::move(run_config), log::level::warn, callback));
-      proxying_queue_main.proxyAsync(
-          emscripten_main_runtime_thread_id(),
-          [promise, result_pack_json = std::move(result_pack_json)]() mutable {
-            promise.return_value(to_js(result_pack_json));
-          });
+      auto results = run_optimization(std::move(run_config), log::level::warn, callback);
+      proxying_queue_main.proxyAsync(emscripten_main_runtime_thread_id(),
+                                     [promise, results = std::move(results)]() mutable {
+                                       promise.return_value(sqs_results{std::move(results)});
+                                     });
     } catch (std::exception const& e) {
       proxying_queue_main.proxyAsync(emscripten_main_runtime_thread_id(),
                                      [promise, message = std::string(e.what())]() mutable {
@@ -119,10 +162,20 @@ val optimize(val const& config, sqsgen::Prec prec, val const& cb) {
 EMSCRIPTEN_BINDINGS(m) {
   // Core optimization function
   register_optional<val>();
+  register_optional<std::string>();
 
   enum_<sqsgen::Prec>("Prec")
       .value("single", sqsgen::Prec::PREC_SINGLE)
       .value("double", sqsgen::Prec::PREC_DOUBLE);
+
+  class_<sqs_results>("SqsResults")
+      .function("pdb", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_PDB>)
+      .function("poscar", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_POSCAR>)
+      .function("cif", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_CIF>)
+      .function("sqsgen", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_SQSGEN>)
+      .function("ase", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_ASE>)
+      .function("pymatgen", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_PYMATGEN>)
+      .function("msgpack", &sqs_results::msgpack);
 
   // Helper functions
   function("parseConfig", &parse_config);
