@@ -8,12 +8,13 @@
         type MenuItem,
         type RenderMenuContext,
         type OnChangeStatus,
-        type ValidationError
+        type ValidationError, type MenuButton
     } from 'svelte-jsoneditor'
     import LinearProgress from '@smui/linear-progress';
     import {loadOptimizer, SqsgenOptimizer} from '$lib/optimizer.js'
     import {onMount} from "svelte";
     import {faCirclePlay, faCircleStop} from '@fortawesome/free-regular-svg-icons'
+    import * as Ngl from 'ngl';
 
     type OptimizationState = {
         is: 'idling' | 'running'
@@ -29,12 +30,10 @@
         inputConfig: any | undefined
         optimizationConfig: any | undefined
         optimization: OptimizationState
+        ngl?: any
     }
 
     let state = $state({
-        optimizer: undefined,
-        inputConfig: undefined,
-        jsonEditorRef: undefined,
         optimization: {
             is: 'idling',
         }
@@ -88,11 +87,17 @@
 
     onMount(async () => {
         state.optimizer = await loadOptimizer();
+        state.ngl = await import('ngl')
     })
 
     const loaded = $derived(state.optimizer !== undefined);
     const running = $derived(state.optimization.is === 'running');
     const idling = $derived(state.optimization.is === 'idling');
+    const result = $derived(state.optimization.result);
+    const stage = $derived(result && state.ngl ? (new Ngl.Stage('viewport', {
+        backgroundColor: 'black',
+        cameraType: 'perspective',
+    })) : undefined);
 
     function refreshEditor() {
         if (state.jsonEditorRef) {
@@ -131,6 +136,7 @@
                             is: 'idling',
                             result: result
                         };
+                        console.log("Optimization finished:", result);
                         refreshEditor();
                     }).catch((e) => {
                         console.error("Optimization failed:", e);
@@ -148,12 +154,20 @@
             icon: running ? faCircleStop : faCirclePlay,
             title: running ? 'Stop optimization' : 'Start optimization',
             disabled: state.optimizationConfig === undefined,
-        };
+        } as MenuButton;
+
 
         const head = items.slice(0, items.length - 1)
         const tail = items.slice(items.length - 1) // the tail contains space
 
-        return head.concat(separator, optimizationControlButton, tail)
+
+        return [
+            ...head,
+            separator,
+            optimizationControlButton,
+            separator,
+            ...tail
+        ];
     }
 
     function handleChange(c: TextContent, _: Content, status: OnChangeStatus) {
@@ -177,6 +191,18 @@
         return state.optimizer ? state.optimizer.validate(json) : []
     }
 
+    $effect(() => {
+        if (stage && result) {
+            state.ngl.DatasourceRegistry.add(
+                "data", new state.ngl.StaticDatasource( "//cdn.rawgit.com/arose/ngl/v2.0.0-dev.32/data/" )
+            );
+            console.log("$effect: loading file into NGL stage");
+            stage.loadFile("data://1blu.mmtf").then((o) => {
+                o.addRepresentation("ball+stick", { color: "atomindex" });
+                o.autoView();
+            });
+        }
+    })
 
 </script>
 
@@ -191,6 +217,8 @@
                     onRenderMenu={handleRenderMenu} {validator}
         />
     </div>
+    <div id="viewport" class="editor"></div>
+
 {/if}
 
 

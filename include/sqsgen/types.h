@@ -214,6 +214,7 @@ namespace sqsgen {
     STRUCTURE_FORMAT_JSON_ASE = 2,
     STRUCTURE_FORMAT_CIF = 3,
     STRUCTURE_FORMAT_POSCAR = 4,
+    STRUCTURE_FORMAT_PDB = 5,
   };
 
   template <class T> class sqs_callback_context {
