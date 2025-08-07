@@ -31,17 +31,14 @@ template <class T> nlohmann::json to_json(T&& value) {
   return j;
 }
 
-template <class T, sqsgen::SublatticeMode Mode>
-sqsgen::core::detail::sqs_result_wrapper<T, Mode> result_at(sqs_result_pack<T, Mode>& pack,
-                                                            int objective_index,
-                                                            int structure_index) {
-  if (0 <= objective_index && objective_index < pack.size()) {
-    if (0 <= structure_index && structure_index < pack.results[objective_index].size())
-      return std::make_optional(pack.results[objective_index][structure_index]);
-    else
-      return std::nullopt;
-  } else
-    return std::nullopt;
+template <class T> T from_json(nlohmann::json const& j) { return j.get<T>(); }
+
+nlohmann::json to_internal(val const& v) {
+  return nlohmann::json::parse(val::global("JSON").call<std::string>("stringify", v));
+}
+
+val to_js(nlohmann::json const& j) {
+  return val::global("JSON").call<val, std::string>("parse", j.dump());
 }
 
 class sqs_results {
@@ -73,18 +70,11 @@ public:
         },
         _pack);
   }
+  val statistics() {
+    return std::visit([&](auto& p) -> val { return to_js(to_json(p.statistics)); }, _pack);
+  }
   val msgpack() { return val(typed_memory_view(_msgpack.size(), _msgpack.data())); }
 };
-
-template <class T> T from_json(nlohmann::json const& j) { return j.get<T>(); }
-
-nlohmann::json to_internal(val const& v) {
-  return nlohmann::json::parse(val::global("JSON").call<std::string>("stringify", v));
-}
-
-val to_js(nlohmann::json const& j) {
-  return val::global("JSON").call<val, std::string>("parse", j.dump());
-}
 
 val error_to_js(sqsgen::io::parse_error const& e) {
   return to_js(nlohmann::json{
