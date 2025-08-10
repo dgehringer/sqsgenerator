@@ -8,12 +8,27 @@
         type MenuItem,
         type RenderMenuContext,
         type OnChangeStatus,
-        type ValidationError, type MenuButton
+        type ValidationError
     } from 'svelte-jsoneditor'
+    import { downloadAsFile} from "$lib/utils.js";
+    import {Pane, Splitpanes} from 'svelte-splitpanes';
     import LinearProgress from '@smui/linear-progress';
     import {loadOptimizer, SqsgenOptimizer} from '$lib/optimizer.js'
     import {onMount} from "svelte";
-    import {faCirclePlay, faCircleStop} from '@fortawesome/free-regular-svg-icons'
+
+    import {
+        faCirclePlay,
+        faCircleStop,
+        faArrowAltCircleDown,
+        faSquareCaretRight,
+        faSquareCaretLeft,
+        faSquareCaretDown,
+        faSquareCaretUp, faFile
+    } from '@fortawesome/free-regular-svg-icons'
+    import Dialog, {Title, Content as DialogContent, Actions, InitialFocus} from '@smui/dialog';
+    import Button, {Label} from '@smui/button';
+    import List, {Item, Graphic, Text} from '@smui/list';
+    import Radio from '@smui/radio';
     import * as Ngl from 'ngl';
 
     type OptimizationState = {
@@ -24,13 +39,20 @@
         stopRequested?: boolean
     }
 
+    type ResultViewerState = {
+        objectiveIndex: number,
+        structureIndex: number,
+    }
+
     type ComponentState = {
         jsonEditorRef: JSONEditor | undefined;
-        optimizer: SqsgenOptimizer | undefined,
+        optimizer?: SqsgenOptimizer,
         inputConfig: any | undefined
         optimizationConfig: any | undefined
         optimization: OptimizationState
         ngl?: any
+        viewer?: ResultViewerState
+        component?: any
     }
 
     let state = $state({
@@ -90,13 +112,15 @@
         state.ngl = await import('ngl')
     })
 
+    let openDialog = $state(false);
+    let fileTypeDownload = $state('cif');
     const loaded = $derived(state.optimizer !== undefined);
     const running = $derived(state.optimization.is === 'running');
     const idling = $derived(state.optimization.is === 'idling');
     const result = $derived(state.optimization.result);
-    const stage = $derived(result && state.ngl ? (new Ngl.Stage('viewport', {
-        backgroundColor: 'black',
-        cameraType: 'perspective',
+    const stage = $derived(state.ngl ? (new Ngl.Stage('viewport', {
+        backgroundColor: 'white',
+        cameraType: 'orthographic',
     })) : undefined);
 
     function refreshEditor() {
@@ -104,10 +128,13 @@
             state.jsonEditorRef.updateProps({
                 onRenderMenu: (items: MenuItem[], context: RenderMenuContext) => {
                     return handleRenderMenu(items, context);
-                }
+                },
             });
         }
+        if (state.viewer)
+            updateStage(state.viewer);
     }
+
 
     function handleRenderMenu(items: MenuItem[], context: RenderMenuContext): MenuItem[] | undefined {
 
@@ -115,58 +142,203 @@
             type: 'separator'
         }
 
-        let optimizationControlButton = {
-            type: 'button',
-            onClick: () => {
-                if (state.optimizationConfig && idling && state.optimizer) {
-                    state.optimization = {
-                        is: 'running',
-                        finished: 0.0,
-                        working: 0.0,
-                        stopRequested: false,
-                    }
-                    const iterations = state.optimizationConfig.iterations;
-                    state.optimizer.optimizeAsync(state.optimizationConfig, 0, stats => {
-                        const finished = stats.finished / iterations;
-                        state.optimization.finished = finished > (state.optimization.finished ?? 0.0) ? finished : state.optimization.finished;
-                        state.optimization.working = stats.working / iterations;
-                        return state.optimization.stopRequested;
-                    }).then((result) => {
+
+        const buttons: MenuItem[] = [
+            {
+                type: 'button',
+                onClick: () => {
+                    if (state.optimizationConfig && idling && state.optimizer) {
                         state.optimization = {
-                            is: 'idling',
-                            result: result
-                        };
-                        console.log("Optimization finished:", result);
-                        refreshEditor();
-                    }).catch((e) => {
-                        console.error("Optimization failed:", e);
-                        state.optimization = {
-                            is: 'idling',
+                            is: 'running',
+                            finished: 0.0,
+                            working: 0.0,
+                            stopRequested: false,
                             result: undefined
-                        };
+                        }
+                        state.viewer = undefined;
+                        const iterations = state.optimizationConfig.iterations;
+                        updateStage(undefined);
+                        state.optimizer.optimizeAsync(state.optimizationConfig, 0, stats => {
+                            const finished = stats.finished / iterations;
+                            if (finished > (state.optimization.finished ?? 0.0))
+                                state.optimization.finished = finished;
+                            state.optimization.working = stats.working / iterations;
+                            return state.optimization.stopRequested;
+                        }).then((result) => {
+                            state.optimization = {
+                                is: 'idling',
+                                result: result
+                            };
+                            console.log("Optimization finished:", result);
+                            state.viewer = {
+                                objectiveIndex: 0,
+                                structureIndex: 0,
+                            };
+                            refreshEditor();
+                        }).catch((e) => {
+                            console.error("Optimization failed:", e);
+                            state.optimization = {
+                                is: 'idling',
+                                result: undefined
+                            };
+                            refreshEditor();
+
+                        })
+                    } else if (running)
+                        state.optimization.stopRequested = true;
+
+                    refreshEditor();
+                },
+                icon: running ? faCircleStop : faCirclePlay,
+                title: running ? 'Stop optimization' : 'Start optimization',
+                disabled: state.optimizationConfig === undefined,
+            }
+        ];
+        const disableNavButtons = result === undefined || state.viewer === undefined;
+        let fileTypeButtonText = undefined;
+        switch (fileTypeDownload) {
+            case 'cif':
+                fileTypeButtonText = 'CIF';
+                break;
+            case 'vasp':
+                fileTypeButtonText = 'VASP';
+                break;
+            case 'pdb':
+                fileTypeButtonText = 'PDB';
+                break;
+            case 'json-sqsgen':
+                fileTypeButtonText = 'sqsgen';
+                break;
+            case 'json-ase':
+                fileTypeButtonText = 'ase';
+                break;
+            case 'json-pymatgen':
+                fileTypeButtonText = 'pymat';
+                break;
+            default:
+                fileTypeButtonText = '???';
+        }
+        buttons.push(separator,
+            {
+                type: "button",
+                onClick: () => {
+                    if (state.viewer) {
+                        state.viewer.objectiveIndex -= 1;
+                        state.viewer.structureIndex = 0;
                         refreshEditor();
-                    })
-                } else if (running)
-                    state.optimization.stopRequested = true;
-
-                refreshEditor();
+                    }
+                },
+                icon: faSquareCaretDown,
+                title: 'Previous objective',
+                disabled: disableNavButtons || state.viewer.objectiveIndex === 0,
             },
-            icon: running ? faCircleStop : faCirclePlay,
-            title: running ? 'Stop optimization' : 'Start optimization',
-            disabled: state.optimizationConfig === undefined,
-        } as MenuButton;
+            {
+                type: "button",
+                onClick: () => {
+                },
+                title: state.viewer ? 'Current objective: ' + result.objective(state.viewer.objectiveIndex) : undefined,
+                text: state.viewer && result ? state.viewer.objectiveIndex + 1 + "/" + result.numObjectives() : undefined,
+            },
+            {
+                type: "button",
+                onClick: () => {
+                    if (state.viewer) {
+                        state.viewer.objectiveIndex += 1;
+                        state.viewer.structureIndex = 0;
+                        refreshEditor();
+                    }
+                },
+                icon: faSquareCaretUp,
+                title: 'Next objective',
+                disabled: disableNavButtons || state.viewer.objectiveIndex === result.numObjectives() - 1,
+            },
+            {
+                type: "button",
+                onClick: () => {
+                    if (state.viewer) {
+                        state.viewer.structureIndex -= 1;
+                        refreshEditor();
+                    }
+                },
+                icon: faSquareCaretLeft,
+                title: 'Previous solution',
+                disabled: disableNavButtons || state.viewer.structureIndex === 0,
+            },
+            {
+                type: "button",
+                onClick: () => {
+                },
+                text: state.viewer && result ? state.viewer.structureIndex + 1 + "/" + result.numSolutions(state.viewer.objectiveIndex) : undefined,
+            },
+            {
+                type: "button",
+                onClick: () => {
+                    if (state.viewer) {
+                        state.viewer.structureIndex += 1;
+                        refreshEditor();
+                    }
+                },
+                icon: faSquareCaretRight,
+                title: 'Previous solution',
+                disabled: result === undefined || state.viewer === undefined || state.viewer.structureIndex === result.numSolutions(state.viewer.objectiveIndex) - 1,
+            },
+            separator,
+            {
+                type: "button",
+                onClick: () => {
+                    downloadAsFile(result.msgpack(), 'sqs.msgpack', 'application/vnd.msgpack');
+                },
+                disabled: result === undefined,
+                icon: faArrowAltCircleDown,
+                title: 'Download results in msgpack format',
+            },
+            {
+                type: "button",
+                onClick: () => {
+                    if (!result || !state.viewer) return;
+                    const stem = `sqsgen-${state.viewer.objectiveIndex}-${state.viewer.structureIndex}`;
+                    if (fileTypeDownload == 'cif') {
+                        downloadAsFile(result.cif(state.viewer.objectiveIndex, state.viewer.structureIndex), `${stem}.cif`, 'chemical/x-cif');
+                    } else if (fileTypeDownload === 'vasp') {
+                        downloadAsFile(result.poscar(state.viewer.objectiveIndex, state.viewer.structureIndex), `${stem}.vasp`, 'text/plain');
+                    } else if (fileTypeDownload === 'pdb') {
+                        downloadAsFile(result.pdb(state.viewer.objectiveIndex, state.viewer.structureIndex), `${stem}.pdb`, 'text/plain');
+                    } else if (fileTypeDownload === 'json-sqsgen') {
+                        downloadAsFile(result.sqsgen(state.viewer.objectiveIndex, state.viewer.structureIndex), `${stem}.json`, 'application/json');
+                    } else if (fileTypeDownload === 'json-ase') {
+                        downloadAsFile(result.ase(state.viewer.objectiveIndex, state.viewer.structureIndex), `${stem}-ase.json`, 'application/json');
+                    } else if (fileTypeDownload === 'json-pymatgen') {
+                        downloadAsFile(result.pymatgen(state.viewer.objectiveIndex, state.viewer.structureIndex), `${stem}-pymat.json`, 'application/json');
+                    }
+                },
+                disabled: result === undefined,
+                icon: faFile,
+                title: 'Download results in msgpack format',
+            },
+            {
+                type: "space"
+            },
+            {
+                type: "button",
+                text: fileTypeButtonText,
+                onClick: () => {
+                    openDialog = true;
+                },
+                className: "filetype-label-button",
+                title: "Change file type",
 
+            },
+            {
+                type: "space"
+            }
+        )
 
         const head = items.slice(0, items.length - 1)
-        const tail = items.slice(items.length - 1) // the tail contains space
-
 
         return [
             ...head,
             separator,
-            optimizationControlButton,
-            separator,
-            ...tail
+            ...buttons
         ];
     }
 
@@ -180,7 +352,6 @@
         state.jsonEditorRef?.updateProps(
             {
                 onRenderMenu: (items: MenuItem[], context: RenderMenuContext) => {
-                    console.log("rerendering menu");
                     return handleRenderMenu(items, context);
                 }
             }
@@ -191,40 +362,101 @@
         return state.optimizer ? state.optimizer.validate(json) : []
     }
 
-    $effect(() => {
-        if (stage && result) {
-            state.ngl.DatasourceRegistry.add(
-                "data", new state.ngl.StaticDatasource( "//cdn.rawgit.com/arose/ngl/v2.0.0-dev.32/data/" )
-            );
-            console.log("$effect: loading file into NGL stage");
-            stage.loadFile("data://1blu.mmtf").then((o) => {
-                o.addRepresentation("ball+stick", { color: "atomindex" });
-                o.autoView();
-            });
-        }
-    })
+    async function updateStage(viewerState?: ResultViewerState) {
+        if (!stage || !result || !viewerState) return;
+        stage.removeAllComponents();
+        // 2. Prepare the PDB as a blob
+        const pdbText = result.pdb(
+            viewerState.objectiveIndex,
+            viewerState.structureIndex
+        );
+        const blob = new Blob([pdbText], {type: "text/plain"});
+        const c = await stage.loadFile(blob, {ext: 'pdb'});
+        c.addRepresentation("spacefill", {
+            radius_type: "vdw",
+            color_scheme: 'element',
+            radius: 0.5
+        });
+        c.addRepresentation("unitcell");
+        c.autoView();
+        c.updateRepresentations({what: {position: true, color: true}});
+        stage.viewer.requestRender();
 
+    }
+
+    function closeHandler() {
+        refreshEditor();
+    }
 </script>
 
+
+<Dialog
+        bind:open={openDialog}
+        selection
+        aria-labelledby="list-selection-title"
+        aria-describedby="list-selection-content"
+        onSMUIDialogClosed={closeHandler}
+>
+    <Title id="list-selection-title">Choose download format</Title>
+    <DialogContent id="list-selection-content">
+        <List radioList>
+            <Item use={[InitialFocus]}>
+                <Graphic>
+                    <Radio bind:group={fileTypeDownload} value="cif"/>
+                </Graphic>
+                <Text>CIF</Text>
+            </Item>
+            <Item>
+                <Graphic>
+                    <Radio bind:group={fileTypeDownload} value="vasp"/>
+                </Graphic>
+                <Text>VASP (POSCAR)</Text>
+            </Item>
+            <Item>
+                <Graphic>
+                    <Radio bind:group={fileTypeDownload} value="pdb"/>
+                </Graphic>
+                <Text>PDB</Text>
+            </Item>
+            <Item>
+                <Graphic>
+                    <Radio bind:group={fileTypeDownload} value="json-sqsgen"/>
+                </Graphic>
+                <Text>JSON (sqsgen)</Text>
+            </Item>
+            <Item>
+                <Graphic>
+                    <Radio bind:group={fileTypeDownload} value="json-ase"/>
+                </Graphic>
+                <Text>JSON (ase)</Text>
+            </Item>
+            <Item>
+                <Graphic>
+                    <Radio bind:group={fileTypeDownload} value="json-pymatgen"/>
+                </Graphic>
+                <Text>JSON (pymatgen)</Text>
+            </Item>
+        </List>
+    </DialogContent>
+    <Actions>
+        <Button action="accept">
+            <Label>OK</Label>
+        </Button>
+    </Actions>
+</Dialog>
+
 {#if loaded}
-
-
-    <div class="editor">
-        {#if running}
-            <LinearProgress progress={state.optimization.finished} buffer={state.optimization.working}/>
-        {/if}
-        <JSONEditor bind:this={state.jsonEditorRef} mode={Mode.text} bind:content={content} onChange={handleChange}
-                    onRenderMenu={handleRenderMenu} {validator}
-        />
-    </div>
-    <div id="viewport" class="editor"></div>
-
+    {#if running}
+        <LinearProgress progress={state.optimization.finished} buffer={state.optimization.working}/>
+    {/if}
+    <Splitpanes vertical={true} style="height: 500px">
+        <Pane minSize={30}>
+            <JSONEditor bind:this={state.jsonEditorRef} mode={Mode.text} bind:content={content} onChange={handleChange}
+                        onRenderMenu={handleRenderMenu} {validator}
+            />
+        </Pane>
+        <Pane size={50} hidden={result === undefined}>
+            <div id="viewport" style="height: 100%; width: 100%"></div>
+        </Pane>
+    </Splitpanes>
 {/if}
-
-
-<style>
-    .editor {
-        width: 700px;
-        height: 400px;
-    }
-</style>
