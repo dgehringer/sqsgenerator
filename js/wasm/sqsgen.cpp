@@ -61,8 +61,8 @@ public:
   template <sqsgen::StructureFormat Format> std::optional<std::string> format(int o, int i) {
     return std::visit(
         [o, i](auto& p) -> std::optional<std::string> {
-          if (o <= 0 && o < p.results.size()) {
-            if (i <= 0 && i < std::get<1>(p.results.at(o)).size())
+          if (o >= 0 && o < p.results.size()) {
+            if (i >= 0 && i < std::get<1>(p.results.at(o)).size())
               return std::make_optional(
                   sqsgen::io::format(std::get<1>(p.results.at(o)).at(i).structure(), Format));
           }
@@ -73,6 +73,31 @@ public:
   val statistics() {
     return std::visit([&](auto& p) -> val { return to_js(to_json(p.statistics)); }, _pack);
   }
+
+  auto num_objectives() {
+    return std::visit([&](auto& p) -> val { return val(p.size()); }, _pack);
+  }
+
+  std::optional<std::size_t> num_solutions(int o) {
+    return std::visit(
+        [o](auto& p) -> std::optional<std::size_t> {
+          if (o >= 0 && o < p.results.size())
+            return std::make_optional(std::get<1>(p.results.at(o)).size());
+          return std::nullopt;
+        },
+        _pack);
+  }
+
+  auto objective(int o) {
+    return std::visit(
+        [o](auto& p) -> std::optional<double> {
+          if (o >= 0 && o < p.results.size())
+            return std::make_optional(static_cast<double>(std::get<0>(p.results.at(o))));
+          return std::nullopt;
+        },
+        _pack);
+  }
+
   val msgpack() { return val(typed_memory_view(_msgpack.size(), _msgpack.data())); }
 };
 
@@ -153,6 +178,8 @@ EMSCRIPTEN_BINDINGS(m) {
   // Core optimization function
   register_optional<val>();
   register_optional<std::string>();
+  register_optional<std::size_t>();
+  register_optional<double>();
 
   enum_<sqsgen::Prec>("Prec")
       .value("single", sqsgen::Prec::PREC_SINGLE)
@@ -165,7 +192,10 @@ EMSCRIPTEN_BINDINGS(m) {
       .function("sqsgen", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_SQSGEN>)
       .function("ase", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_ASE>)
       .function("pymatgen", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_PYMATGEN>)
-      .function("msgpack", &sqs_results::msgpack);
+      .function("msgpack", &sqs_results::msgpack)
+      .function("numObjectives", &sqs_results::num_objectives)
+      .function("numSolutions", &sqs_results::num_solutions)
+      .function("objective", &sqs_results::objective);
 
   // Helper functions
   function("parseConfig", &parse_config);
