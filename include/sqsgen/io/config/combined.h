@@ -139,6 +139,32 @@ namespace sqsgen::io::config {
 
   template <class T, class Document>
   parse_result<configuration<T>> parse_config_for_prec(Document const& doc) {
+    constexpr auto known_keys = std::array{"iteration_mode",
+                                           "sublattice_mode",
+                                           "structure",
+                                           "composition",
+                                           "shell_radii",
+                                           "shell_weights",
+                                           "prefactors",
+                                           "pair_weights",
+                                           "target_objective",
+                                           "iterations",
+                                           "chunk_size",
+                                           "thread_config",
+                                           "keep",
+                                           "max_results_per_objective",
+                                           "atol",
+                                           "rtol",
+                                           "bin_width",
+                                           "peak_isolation"};
+    if (!accessor<Document>::is_document(doc))
+      return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(
+          "sqsgen configuration must be a valid JSON document");
+    for (auto& [key, value] : accessor<Document>::items(doc))
+      if (!ranges::any_of(known_keys, [&](auto const& k) { return k == key; }))
+        return parse_error::from_key_and_msg<CODE_BAD_VALUE>(
+            key, format_string("Unknown parameter \"%s\"", key));
+
     return parse_iteration_mode<"iteration_mode">(doc)
         .combine(parse_sublattice_mode<"sublattice_mode">(doc))
         .and_then([](auto&& modes) -> parse_result<std::tuple<IterationMode, SublatticeMode>> {
