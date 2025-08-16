@@ -1,4 +1,4 @@
-import type {MainModule, Prec} from "$lib/core.js";
+import MainModule from "$lib/core.mjs";
 import type {ValidationError} from "svelte-jsoneditor";
 
 export interface RunConfig {
@@ -84,6 +84,6 @@ export class SqsgenOptimizer {
 }
 
 export async function loadOptimizer() {
-    const module = await import("$lib/core.js")
+    const module = await import("$lib/core.mjs")
     return new SqsgenOptimizer(await module.default());
 }

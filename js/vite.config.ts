@@ -1,5 +1,6 @@
-import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import {sveltekit} from '@sveltejs/kit/vite';
+import {defineConfig} from 'vite';
+import wasm from 'vite-plugin-wasm';
 
 const crossOriginHeaders = {
     name: 'cross-origin-headers',
@@ -12,7 +13,20 @@ const crossOriginHeaders = {
     }
 };
 export default defineConfig({
-    plugins: [crossOriginHeaders, sveltekit()],
+    plugins: [wasm(), sveltekit(), crossOriginHeaders],
+    build: {
+        target: 'esnext' ,
+        rollupOptions: {
+            output: {
+                manualChunks: undefined, // Disable code-splitting
+                inlineDynamicImports: true, // Inline dynamic imports
+                format: 'es', // ES modules format (required for top-level await)
+            },
+        },
+    },
+    worker: {
+        format: 'es' // This is the key change needed
+    },
     test: {
         projects: [
             {

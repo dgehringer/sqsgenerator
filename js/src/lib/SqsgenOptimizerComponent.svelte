@@ -10,7 +10,7 @@
         type OnChangeStatus,
         type ValidationError
     } from 'svelte-jsoneditor'
-    import { downloadAsFile} from "$lib/utils.js";
+    import {downloadAsFile} from "$lib/utils.js";
     import {Pane, Splitpanes} from 'svelte-splitpanes';
     import LinearProgress from '@smui/linear-progress';
     import {loadOptimizer, SqsgenOptimizer} from '$lib/optimizer.js'
@@ -114,6 +114,7 @@
 
     let openDialog = $state(false);
     let fileTypeDownload = $state('cif');
+    let multiThreadingAvailable = (typeof SharedArrayBuffer !== 'undefined')
     const loaded = $derived(state.optimizer !== undefined);
     const running = $derived(state.optimization.is === 'running');
     const idling = $derived(state.optimization.is === 'idling');
@@ -316,9 +317,6 @@
                 title: 'Download results in msgpack format',
             },
             {
-                type: "space"
-            },
-            {
                 type: "button",
                 text: fileTypeButtonText,
                 onClick: () => {
@@ -328,17 +326,21 @@
                 title: "Change file type",
 
             },
-            {
-                type: "space"
-            }
         )
+        const space = {
+            type: "space"
+        };
+        const [textButton, treeButon, ...others] = items;
+        treeButon.className = "jse-group-button jse-last";
 
-        const head = items.slice(0, items.length - 1)
+        const jseHead = [textButton, treeButon, ...others.slice(7, others.length - 1).filter((i) => i.type === 'button')];
+        console.log();
 
         return [
-            ...head,
+            ...jseHead,
             separator,
-            ...buttons
+            ...buttons,
+            space
         ];
     }
 
@@ -445,7 +447,8 @@
     </Actions>
 </Dialog>
 
-{#if loaded}
+
+{#if loaded && multiThreadingAvailable}
     {#if running}
         <LinearProgress progress={state.optimization.finished} buffer={state.optimization.working}/>
     {/if}
@@ -455,7 +458,7 @@
                         onRenderMenu={handleRenderMenu} {validator}
             />
         </Pane>
-        <Pane size={50} hidden={result === undefined}>
+        <Pane size={60} hidden={result === undefined}>
             <div id="viewport" style="height: 100%; width: 100%"></div>
         </Pane>
     </Splitpanes>
