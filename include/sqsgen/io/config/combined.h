@@ -161,7 +161,7 @@ namespace sqsgen::io::config {
       return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(
           "sqsgen configuration must be a valid JSON document");
     for (auto& [key, value] : accessor<Document>::items(doc))
-      if (!ranges::any_of(known_keys, [&](auto const& k) { return k == key; }))
+      if (std::ranges::find(known_keys, key) != known_keys.end())
         return parse_error::from_key_and_msg<CODE_BAD_VALUE>(
             key, format_string("Unknown parameter \"%s\"", key));
 
