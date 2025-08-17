@@ -162,8 +162,8 @@ namespace sqsgen::io::config {
           "sqsgen configuration must be a valid JSON document");
     for (auto& [key, value] : accessor<Document>::items(doc))
       if (std::ranges::find(known_keys, key) != known_keys.end())
-        return parse_error::from_key_and_msg<CODE_BAD_VALUE>(
-            key, format_string("Unknown parameter \"%s\"", key));
+        return parse_error::from_key_and_msg<CODE_BAD_VALUE>(std::string{key},
+                                                             "Unknown parameter \"" + key + "\"");
 
     return parse_iteration_mode<"iteration_mode">(doc)
         .combine(parse_sublattice_mode<"sublattice_mode">(doc))
