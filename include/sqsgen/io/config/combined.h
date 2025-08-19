@@ -30,6 +30,7 @@ namespace sqsgen::io::config {
                                                 "max_results_per_objective",
                                                 "atol",
                                                 "rtol",
+                                                "prec",
                                                 "bin_width",
                                                 "peak_isolation"};
 
