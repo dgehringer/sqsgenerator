@@ -13,6 +13,7 @@
     import {downloadAsFile} from "$lib/utils.js";
     import {Pane, Splitpanes} from 'svelte-splitpanes';
     import LinearProgress from '@smui/linear-progress';
+    import CircularProgress from '@smui/circular-progress';
     import {loadOptimizer, SqsgenOptimizer} from '$lib/optimizer.js'
     import {onMount} from "svelte";
 
@@ -23,7 +24,9 @@
         faSquareCaretRight,
         faSquareCaretLeft,
         faSquareCaretDown,
-        faSquareCaretUp, faFile
+        faSquareCaretUp,
+        faFile,
+        faCircleQuestion
     } from '@fortawesome/free-regular-svg-icons'
     import Dialog, {Title, Content as DialogContent, Actions, InitialFocus} from '@smui/dialog';
     import Button, {Label} from '@smui/button';
@@ -110,9 +113,11 @@
     onMount(async () => {
         state.optimizer = await loadOptimizer();
         state.ngl = await import('ngl')
+        openDialogInfo = true;
     })
 
-    let openDialog = $state(false);
+    let openDialogFileType = $state(false);
+    let openDialogInfo = $state(false);
     let fileTypeDownload = $state('cif');
     let multiThreadingAvailable = (typeof SharedArrayBuffer !== 'undefined')
     const loaded = $derived(state.optimizer !== undefined);
@@ -193,6 +198,14 @@
                 icon: running ? faCircleStop : faCirclePlay,
                 title: running ? 'Stop optimization' : 'Start optimization',
                 disabled: state.optimizationConfig === undefined,
+            },
+            {
+                type: 'button',
+                onClick: () => {
+                    window.open('https://sqsgenerator.readthedocs.io/en/latest/parameters', '_blank');
+                },
+                icon: faCircleQuestion,
+                title: 'Open help',
             }
         ];
         const disableNavButtons = result === undefined || state.viewer === undefined;
@@ -320,7 +333,7 @@
                 type: "button",
                 text: fileTypeButtonText,
                 onClick: () => {
-                    openDialog = true;
+                    openDialogFileType = true;
                 },
                 className: "filetype-label-button",
                 title: "Change file type",
@@ -393,7 +406,7 @@
 
 
 <Dialog
-        bind:open={openDialog}
+        bind:open={openDialogFileType}
         selection
         aria-labelledby="list-selection-title"
         aria-describedby="list-selection-content"
@@ -448,7 +461,57 @@
 </Dialog>
 
 
+{#if !loaded}
+    <div class="loading-pane">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <img src="/logo_large.svg" style="width: 175px; height: auto" alt="sqsgen logo"/>
+            <CircularProgress style="height: 32px; width: 32px;" indeterminate/>
+        </div>
+    </div>
+{/if}
+
 {#if loaded && multiThreadingAvailable}
+    <Dialog
+            bind:open={openDialogInfo}
+            aria-labelledby="default-focus-title"
+            aria-describedby="default-focus-content"
+    >
+        <Title id="default-focus-title">Affiliation and Templates</Title>
+        <DialogContent id="default-focus-content">
+            <ul>
+                <li>leave a <a href="https://github.com/dgehringer/sqsgenerator">🌟star</a></li>
+                <li><strong>Affiliation</strong></li>
+                <ul>
+                    <li>like the package? Let's add your affiliation to our <a
+                            href="https://sqsgenerator.readthedocs.io/en/latest">docs</a></li>
+                    <li>send logo and full name via <a
+                            href="mailto:35268573+dgehringer@users.noreply.github.com">mail</a></li>
+                </ul>
+                <li>
+                    <strong>Templates</strong></li>
+                <ul>
+                    <li>want to share an input file with the community?</li>
+                    <li>send me the JSON, a name for the template, a list of authors with affiliation, a description the
+                        authors and the an eventual DOI in case you have used it in an article via
+                        <ul>
+                            <li>via <a
+                                    href="mailto:35268573+dgehringer@users.noreply.github.com">mail</a></li>
+                            <li>by opening <a href="https://github.com/dgehringer/sqsgenerator/issues/new">a new
+                                issue</a></li>
+
+                        </ul>
+                    </li>
+                    <li>it will be packaged into the next release automatically</li>
+                    <li>everyone can use it</li>
+                </ul>
+            </ul>
+        </DialogContent>
+        <Actions>
+            <Button action="accept">
+                <Label>OK</Label>
+            </Button>
+        </Actions>
+    </Dialog>
     {#if running}
         <LinearProgress progress={state.optimization.finished} buffer={state.optimization.working}/>
     {/if}
@@ -463,3 +526,14 @@
         </Pane>
     </Splitpanes>
 {/if}
+
+
+<style lang="scss">
+  .loading-pane {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+  }
+</style>
