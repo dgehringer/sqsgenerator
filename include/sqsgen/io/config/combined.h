@@ -14,6 +14,24 @@
 #include "sqsgen/io/parsing.h"
 
 namespace sqsgen::io::config {
+  static constexpr auto KNOWN_KEYS = std::array{"iteration_mode",
+                                                "sublattice_mode",
+                                                "structure",
+                                                "composition",
+                                                "shell_radii",
+                                                "shell_weights",
+                                                "prefactors",
+                                                "pair_weights",
+                                                "target_objective",
+                                                "iterations",
+                                                "chunk_size",
+                                                "thread_config",
+                                                "keep",
+                                                "max_results_per_objective",
+                                                "atol",
+                                                "rtol",
+                                                "bin_width",
+                                                "peak_isolation"};
 
   static constexpr iterations_t iterations_default = 500000;
   static constexpr iterations_t chunk_size_default = 100000;
@@ -139,32 +157,8 @@ namespace sqsgen::io::config {
 
   template <class T, class Document>
   parse_result<configuration<T>> parse_config_for_prec(Document const& doc) {
-    constexpr auto known_keys = std::array{"iteration_mode",
-                                           "sublattice_mode",
-                                           "structure",
-                                           "composition",
-                                           "shell_radii",
-                                           "shell_weights",
-                                           "prefactors",
-                                           "pair_weights",
-                                           "target_objective",
-                                           "iterations",
-                                           "chunk_size",
-                                           "thread_config",
-                                           "keep",
-                                           "max_results_per_objective",
-                                           "atol",
-                                           "rtol",
-                                           "bin_width",
-                                           "peak_isolation"};
-    if (!accessor<Document>::is_document(doc))
-      return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(
-          "sqsgen configuration must be a valid JSON document");
-    for (auto& [key, value] : accessor<Document>::items(doc))
-      if (std::ranges::find(known_keys, key) != known_keys.end())
-        return parse_error::from_key_and_msg<CODE_BAD_VALUE>(std::string{key},
-                                                             "Unknown parameter \"" + key + "\"");
-
+    auto validation_result = accessor<Document>::validate_keys(doc, KNOWN_KEYS);
+    if (validation_result.has_value()) return {*validation_result};
     return parse_iteration_mode<"iteration_mode">(doc)
         .combine(parse_sublattice_mode<"sublattice_mode">(doc))
         .and_then([](auto&& modes) -> parse_result<std::tuple<IterationMode, SublatticeMode>> {

@@ -57,6 +57,23 @@ namespace sqsgen::io {
       throw std::invalid_argument("object is not a dictionary");
     }
 
+    static std::optional<parse_error> validate_keys(py::handle const& doc, auto&& known_keys) {
+      if (!is_document(doc))
+        return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(
+            "sqsgen configuration must be a valid Python dictionary");
+      for (auto& [key_obj, value] : items(doc)) {
+        auto key_result{get_as<KEY_NONE, std::string>(key_obj)};
+        if (key_result.failed())
+          return parse_error::from_msg<KEY_NONE, CODE_TYPE_ERROR>(
+              "The configuration dictionary must only hold string keys");
+        auto key = key_result.result();
+        if (!std::ranges::any_of(known_keys, [&key](auto const& k) { return k == key; }))
+          return parse_error::from_key_and_msg<CODE_BAD_VALUE>(key,
+                                                               "Unknown parameter \"" + key + "\"");
+      }
+      return std::nullopt;
+    }
+
     template <string_literal key = "", class Option>
     static parse_result<Option> get_as(py::handle const& d) {
       try {
