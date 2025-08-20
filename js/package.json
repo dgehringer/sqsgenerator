@@ -46,6 +46,7 @@
     "@smui/list": "^8.0.1",
     "@smui/radio": "^8.0.1",
     "@sveltejs/adapter-auto": "^6.0.0",
+    "@sveltejs/adapter-static": "^3.0.9",
     "@sveltejs/kit": "^2.22.0",
     "@sveltejs/package": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^6.0.0",
