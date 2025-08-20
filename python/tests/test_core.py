@@ -38,7 +38,7 @@ def default_settings(prec: Prec):
         ),
         pair_weights=0,
         composition={"sites": "H", "Ti": 8, "Al": 8},
-        threads_per_rank=1,
+        thread_config=1,
     )
 
 
@@ -280,5 +280,9 @@ def test_bonds_correct_one_sublattice_non_exhaustive(prec):
     settings["composition"] = {"sites": "He", "Ti": 6, "Al": 5, "O": 5}
 
     config = parse_config(settings)
+    from sqsgenerator.core._core import ParseError
+
+    if isinstance(config, ParseError):
+        print(config.msg)
     results = optimize(config)
     assert_bonds_correct_interact(results, config)

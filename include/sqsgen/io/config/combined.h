@@ -14,6 +14,25 @@
 #include "sqsgen/io/parsing.h"
 
 namespace sqsgen::io::config {
+  static constexpr auto KNOWN_KEYS = std::array{"iteration_mode",
+                                                "sublattice_mode",
+                                                "structure",
+                                                "composition",
+                                                "shell_radii",
+                                                "shell_weights",
+                                                "prefactors",
+                                                "pair_weights",
+                                                "target_objective",
+                                                "iterations",
+                                                "chunk_size",
+                                                "thread_config",
+                                                "keep",
+                                                "max_results_per_objective",
+                                                "atol",
+                                                "rtol",
+                                                "prec",
+                                                "bin_width",
+                                                "peak_isolation"};
 
   static constexpr iterations_t iterations_default = 500000;
   static constexpr iterations_t chunk_size_default = 100000;
@@ -139,6 +158,8 @@ namespace sqsgen::io::config {
 
   template <class T, class Document>
   parse_result<configuration<T>> parse_config_for_prec(Document const& doc) {
+    auto validation_result = accessor<Document>::validate_keys(doc, KNOWN_KEYS);
+    if (validation_result.has_value()) return {*validation_result};
     return parse_iteration_mode<"iteration_mode">(doc)
         .combine(parse_sublattice_mode<"sublattice_mode">(doc))
         .and_then([](auto&& modes) -> parse_result<std::tuple<IterationMode, SublatticeMode>> {

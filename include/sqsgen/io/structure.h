@@ -64,6 +64,11 @@ namespace sqsgen::io {
       return {angle(0), angle(1), angle(2)};
     }
 
+    inline std::string rjust(const std::string& input, std::size_t width, char fillchar = ' ') {
+      if (input.size() >= width) return input;
+      return std::string(width - input.size(), fillchar) + input;
+    }
+
     inline std::vector<std::string_view> split(std::string_view str, std::string_view delimeters) {
       std::vector<std::string_view> res;
       res.reserve(str.length() / 2);
@@ -568,6 +573,41 @@ namespace sqsgen::io {
     }
   };
 
+  template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_PDB> {
+    static std::string format(core::structure<T> const& structure) {
+      std::string result;
+      result.reserve(structure.size() * 144);
+
+      const auto z_to_symbol = [](auto&& z) { return core::atom::from_z(z).symbol; };
+
+      const auto println
+          = [&result](std::string const& line) { result.append(format_string("%s\n", line)); };
+
+      const auto [a, b, c] = detail::lengths<T>(structure.lattice);
+      const auto [alpha, beta, gamma] = detail::angles<T>(structure.lattice);
+      println(
+          format_string("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1", a, b, c, alpha, beta, gamma));
+
+      coords_t<T> cart_coords = structure.frac_coords * structure.lattice.transpose();
+
+      std::size_t maxnum = 100000;
+      println("MODEL     0");
+      core::helpers::for_each(
+          [&, maxnum](auto&& index) {
+            auto row = cart_coords.row(index);
+            auto symbol = z_to_symbol(structure.species[index]);
+            println(format_string(
+                "ATOM  %5d %4s MOL     1    %8.3f%8.3f%8.3f  1.00  0.00          %2s  ",
+                index % maxnum, symbol, row(0), row(1), row(2), detail::rjust(symbol, 2)));
+          },
+          structure.size());
+
+      println("ENDMDL");
+      result.shrink_to_fit();
+      return result;
+    }
+  };
+
   template <class T>
   std::string format(core::structure<T> const& structure, StructureFormat format) {
     switch (format) {
@@ -581,6 +621,8 @@ namespace sqsgen::io {
         return structure_adapter<T, STRUCTURE_FORMAT_JSON_PYMATGEN>::format(structure);
       case STRUCTURE_FORMAT_JSON_SQSGEN:
         return structure_adapter<T, STRUCTURE_FORMAT_JSON_SQSGEN>::format(structure);
+      case STRUCTURE_FORMAT_PDB:
+        return structure_adapter<T, STRUCTURE_FORMAT_PDB>::format(structure);
     }
     throw std::invalid_argument("invalid structure format");
   }

@@ -172,6 +172,8 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
                  return io::structure_adapter<T, STRUCTURE_FORMAT_CIF>::format(s);
                case STRUCTURE_FORMAT_POSCAR:
                  return io::structure_adapter<T, STRUCTURE_FORMAT_POSCAR>::format(s);
+               case STRUCTURE_FORMAT_PDB:
+                 return io::structure_adapter<T, STRUCTURE_FORMAT_PDB>::format(s);
                default:
                  throw py::value_error("Unknown Structure format");
              };
