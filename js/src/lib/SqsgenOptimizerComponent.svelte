@@ -293,7 +293,7 @@
             {
                 type: 'button',
                 onClick: () => {
-                    downloadAsFile(result.msgpack(), 'sqs.msgpack', 'application/vnd.msgpack');
+                    downloadAsFile(new Uint8Array(result.msgpack()), 'sqs.msgpack', 'application/vnd.msgpack');
                 },
                 disabled: result === undefined,
                 icon: faArrowAltCircleDown,
