@@ -304,9 +304,9 @@ int main(int argc, char** argv) {
   output_structure_command.add_description("export the structure of a result file");
 
   output_structure_command.add_argument("-f", "--format")
-      .help("The output format to use (vasp, poscar, ase, pymatgen, cif, sqsgen)")
+      .help("The output format to use (vasp, poscar, ase, pymatgen, cif, sqsgen, pdb)")
       .default_value(std::string{"sqsgen"})
-      .choices("pymatgen", "ase", "vasp", "poscar", "sqsgen", "cif")
+      .choices("pymatgen", "ase", "vasp", "poscar", "sqsgen", "cif", "pdb")
       .nargs(1);
 
   output_structure_command.add_argument("-p", "--print")
@@ -417,6 +417,7 @@ int main(int argc, char** argv) {
                   {"poscar", {STRUCTURE_FORMAT_POSCAR, "vasp"}},
                   {"pymatgen", {STRUCTURE_FORMAT_JSON_PYMATGEN, "pymatgen.json"}},
                   {"sqsgen", {STRUCTURE_FORMAT_JSON_SQSGEN, "sqsgen.json"}},
+                  {"pdb", {STRUCTURE_FORMAT_PDB, "pdb"}},
                   {"cif", {STRUCTURE_FORMAT_CIF, "cif"}},
                   {"ase", {STRUCTURE_FORMAT_JSON_ASE, "ase.json"}}};
 

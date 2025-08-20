@@ -319,6 +319,19 @@ namespace sqsgen {
         return json.contains(std::forward<std::string>(key));
       }
 
+      static std::optional<parse_error> validate_keys(nlohmann::json const& json,
+                                                      auto&& known_keys) {
+        if (!is_document(json))
+          return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(
+              "sqsgen configuration must be a valid JSON document");
+        for (auto& [key, value] : json.items())
+          if (!std::ranges::any_of(known_keys, [&key](auto const& k) { return k == key; }))
+            return parse_error::from_key_and_msg<CODE_BAD_VALUE>(
+                std::string{key}, "Unknown parameter \"" + key + "\"");
+
+        return std::nullopt;
+      }
+
       static auto get(nlohmann::json const& json, std::string&& key) { return json.at(key); }
 
       static bool is_document(nlohmann::json const& json) { return json.is_object(); }
