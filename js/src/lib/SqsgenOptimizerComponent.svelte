@@ -496,7 +496,7 @@
                     </li>
                     <li>
                         send logo and full name via <a
-                            href="mailto:35268573+dgehringer@users.noreply.github.com">mail</a
+                            href="mailto:david.holec@unileoben.ac.at">mail</a
                         >
                     </li>
                 </ul>
@@ -510,7 +510,7 @@
                         description the authors and the an eventual DOI in case you have used it in an article
                         via
                         <ul>
-                            <li>via <a href="mailto:35268573+dgehringer@users.noreply.github.com">mail</a></li>
+                            <li>via <a href="mailto:david.holec@unileoben.ac.at">mail</a></li>
                             <li>
                                 by opening <a href="https://github.com/dgehringer/sqsgenerator/issues/new"
                                     >a new issue</a

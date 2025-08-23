@@ -4,7 +4,7 @@
 
 Each of the parameters below represents an entry in the **YAML** (or key in a `dict` if called directly from Python).
 
-````{admonition} Input array interpretations
+::::{admonition} Input array interpretations
 :class: note, dropdown
 
 A closer look on the indices of the symbols Eq. {eq}`eqn:objective` reveals that those quantities need to be represented
@@ -20,7 +20,7 @@ tweak the indiviual elements/coefficients (e. g. simoultaneous multi-sublattice 
 Thus, when specifiyng 2D and 3D input values for the aforementioned parameters, please make sure that
 you have **read through** the {ref}`note on array input interpretation <input-param-target-objective>`
 
-````
+::::
 
 ---
 
@@ -41,16 +41,16 @@ The *systematic* mode is available only in combination with the *interact* *{ref
 - **Default:** *random*
 - **Accepted:** *random* or *systematic* ({py:class}`IterationMode`)
 
-  ````{tab} JSON
-  ```{code-block} json
+  ::::{tab} JSON
+  :::{code-block} json
   {
     "iteration_mode": "random"
   }
-  ```
-  ````
+  :::
+  ::::
 
-  ````{tab} Python
-  ```{code-block} python
+  ::::{tab} Python
+  :::{code-block} python
   from sqsgenerator import IterationMode, random, systematic
   {
       "iteration_mode": IterationMode.systematic
@@ -59,8 +59,8 @@ The *systematic* mode is available only in combination with the *interact* *{ref
   {
       "iteration_mode": systematic
   }
-  ```
-  ````
+  :::
+  ::::
 
 ### `sublattice_mode`
 (input-param-sublattice-mode)=
@@ -75,16 +75,16 @@ sublattices independently, in case more than one is specified. In *split* mode t
 - **Default:** *interact*
 - **Accepted:** *interact* or *split* ({py:class}`SublatticeMode`)
 
-  ````{tab} JSON
-  ```{code-block} json
+  ::::{tab} JSON
+  :::{code-block} json
   {
     "sublattice_mode": "split"
   }
-  ```
-  ````
+  :::
+  ::::
 
-  ````{tab} Python
-  ```{code-block} python
+  ::::{tab} Python
+  :::{code-block} python
   from sqsgenerator import SublatticeMode, interact, split
   {
       "sublattice_mode": SublatticeMode.split
@@ -93,8 +93,8 @@ sublattices independently, in case more than one is specified. In *split* mode t
   {
       "sublattice_mode": split
   }
-  ```
-  ````
+  :::
+  ::::
 
 ### `bin_width`
 (input-param-bin-width)=
@@ -148,12 +148,12 @@ parameter. The composition parameter might be also used to pin atomic species on
     - a dictionary with chemical symbols as keys and numbers as values (`dict[str, int]`)
     - a dictionary with chemical symbols as keys and dict as values (`dict[str, dict[str, int]]`)
 
-```{note}
+:::{note}
  - The sum of the atoms distributed must **exactly** match the number of positions on the lattice
    In combination with *{ref}`which <input-param-which>`* the number must match, the amount of selected sites
  - If you explicitly pin atomic species on certain sublattices (see examples below) you have to specify it for all
    - If you do that the number of distributed atoms must match the number of lattice positions on the specified sublattice
-```
+:::
 
 ### `composition.sites`
 (input-param-composition-sites)=
@@ -163,8 +163,8 @@ parameter. The composition parameter might be also used to pin atomic species on
 #### Examples
 - Ternary alloy, consisting of 54 atoms ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$)
 
-    ````{tab} JSON
-    ```{code-block} json
+    ::::{tab} JSON
+    :::{code-block} json
     {
       "composition": {
         "Ti": 18,
@@ -172,11 +172,11 @@ parameter. The composition parameter might be also used to pin atomic species on
         "Mo": 18
       }
     }
-    ```
-    ````
+    :::
+    ::::
 
-    ````{tab} Python
-    ```{code-block} python
+    ::::{tab} Python
+    :::{code-block} python
     {
       "composition": {
         "Ti": 18,
@@ -184,32 +184,32 @@ parameter. The composition parameter might be also used to pin atomic species on
         "Mo": 18
       }
     }
-    ```
-    ````
+    :::
+    ::::
 
 - *fcc*-Aluminum cell,  64 atoms, randomly distribute  8 vacancies
 
-    ````{tab} JSON
-    ```{code-block} json
+    ::::{tab} JSON
+    :::{code-block} json
     {
       "composition": {
         "Al": 56,
         "0": 8
       }
     }
-    ```
-    ````
+    :::
+    ::::
 
-    ````{tab} Python
-    ```{code-block} python
+    ::::{tab} Python
+    :::{code-block} python
     {
       "composition": {
         "Al": 56,
         "0": 8
       }
     }
-    ```
-    ````
+    :::
+    ::::
 
 - consider a $\text{Ti}_{0.5}\text{N}_{0.5}$ supercell with 64 atoms.
   Let's $(\text{Ti}_{0.25}\text{Al}_{0.25})(\text{B}_{0.25}\text{N}_{0.25})$ create an alloy from this cell.
@@ -217,8 +217,8 @@ parameter. The composition parameter might be also used to pin atomic species on
  sites of the original nitrogen sublattice, while aluminium will most likely occupy only titanium sites. Therefore, we can constrain how
   *sqsgenerator* will distribute the atoms, by specifying two sublattices.
 
-    ````{tab} JSON
-    ```{code-block} json
+    ::::{tab} JSON
+    :::{code-block} json
     {
       "composition": [
         {
@@ -233,11 +233,11 @@ parameter. The composition parameter might be also used to pin atomic species on
         }
       ]
     }
-    ```
-   ````
+    :::
+   ::::
 
-    ````{tab} Python
-    ```{code-block} python
+    ::::{tab} Python
+    :::{code-block} python
     {
       "composition": [
         {
@@ -252,48 +252,48 @@ parameter. The composition parameter might be also used to pin atomic species on
         }
       ]
     }
-    ```
-    ````
+    :::
+    ::::
 
 #### Examples
 - Ternary alloy, 54 atoms, create ($\text{Ti}_{18}\text{Al}_{18}\text{Mo}_{18}$)
 
-    ```{code-block} yaml
+    :::{code-block} yaml
     which: all
     composition:
       Ti: 18
       Al: 18
       Mo: 18
-    ```
+    :::
 
 - *rock-salt* TiN (B1),  64 atoms, randomly distribute B and N on the N sublattice $\text{Ti}_{32}(\text{B}_{16}\text{N}_{16}) = \text{Ti}(\text{B}_{0.5}\text{N}_{0.5})$
 
-    ```{code-block} yaml
+    :::{code-block} yaml
     which: N
     composition:
       N: 16
       B: 16
-    ```
+    :::
 
 - *rock-salt* TiN (B1),  64 atoms, randomly distribute Al, V and Ti on the Ti sublattice $(\text{Ti}_{16}\text{Al}_{8}\text{V}_{8})\text{N}_{32} = (\text{Ti}_{0.5}\text{Al}_{0.25}\text{V}_{0.25})\text{N}$
 
-    ```{code-block} yaml
+    :::{code-block} yaml
     which: Ti
     composition:
       Ti: 16
       Al: 8
       V: 8
-    ```
+    :::
 
 - select all **even** sites from your structure, 16 atoms, using an index, list and distribute W, Ta and Mo on those sites
 
-    ```{code-block} yaml
+    :::{code-block} yaml
     which: [0, 2, 4, 6, 8, 10, 12, 14]
     composition:
       W: 3
       Ta: 3
       Mo: 2
-    ```
+    :::
 
 ### `structure`
 (input-param-structure)=
@@ -304,17 +304,17 @@ the structure where *sqsgenerator* will operate on *{ref}`which <input-param-whi
     - dictionary with a `file` key (`dict`)
     - dictionary with a `lattice`, `coords` and `species` key (`dict`)
 
-```{note}
+:::{note}
   - If a filename is specified, and `ase` is available *sqsgenerator* will automatically use it to load the structure using [`ase.io.read`](https://wiki.fysik.dtu.dk/ase/ase/io/io.html#ase.io.read). Alternatively it will fall back to `pymatgen` ( [`pymatgen.core.IStructure.from_file`](https://pymatgen.org/pymatgen.core.structure.html#pymatgen.core.structure.IStructure.from_file)). If both packages are not available it will raise an `FeatureError`.
   - You can explicitly instruct to use one of the packages by settings `structure.reader` to either *ase* or *pymatgen*
   - You can pass custom arguments to the reader function ( [`ase.io.read`](https://wiki.fysik.dtu.dk/ase/ase/io/io.html#ase.io.read) or [`pymatgen.core.IStructure.from_file`](https://pymatgen.org/pymatgen.core.structure.html#pymatgen.core.structure.IStructure.from_file)) by specifying `structure.args` (last example)
-```
+:::
 
 #### Examples
 
 - directly specify $\text{CsCl}$ (B2) structure in the input file
 
-    ```{code-block} yaml
+    :::{code-block} yaml
     structure:
       lattice:
         - [4.123, 0.0, 0.0]
@@ -326,33 +326,33 @@ the structure where *sqsgenerator* will operate on *{ref}`which <input-param-whi
       species:
         - Cs
         - Cl
-    ```
+    :::
   Please note that for each entry in `coords` there must be a corresponding species specified in the `species` list
 
 -  specify a file (must be readable by `ase.io.read` , fallback to `pymatgen` if `ase` is not present)
 
-    ```{code-block} yaml
+    :::{code-block} yaml
     structure:
       file: cs-cl.vasp # POSCAR/CONTCAR format
-    ```
+    :::
 
 - specify a file and explicitly set a reader for reading the structure file
 
-    ```{code-block} yaml
+    :::{code-block} yaml
     structure:
        file: cs-cl.cif
        reader: pymatgen # use pymatgen to read the CIF file
-    ```
+    :::
 
 - specify read a file and  pass arguments to the reading package. E.g. read las configuration from an MD-trajectory
 
-    ```{code-block} yaml
+    :::{code-block} yaml
     structure:
       file: md.traj
       reader: ase
       args:
         index: -1
-    ```
+    :::
   if `args` is present in will be unpacked (`**`) into `ase.io.read`
 
 
@@ -367,7 +367,7 @@ Instructs *sqsgenerator* to create a supercell of the specified *{ref}`structure
 
 - Create a $3\times3\times3$ supercell of the $\text{CsCl}$ (B2) structure
 
-    ```{code-block} yaml
+    :::{code-block} yaml
     structure:
       supercell: [3, 3, 3]
       lattice:
@@ -380,11 +380,11 @@ Instructs *sqsgenerator* to create a supercell of the specified *{ref}`structure
       species:
         - Cs
         - Cl
-    ```
+    :::
 
 - Create a  $3\times3\times3$ supercell of a structure file
 
-    ```{code-block} yaml
+    :::{code-block} yaml
     structure:
       supercell:
         - 3
@@ -400,27 +400,27 @@ The iteration mode specifies how new structures are generated.
 - *random*: the configuration will be shuffled randomly
 - *systematic*: will instruct the code generate configurations in lexicographical order and to scan the **complete configurational space**. In case *systematic* is specified the *{ref}`iterations <input-param-iterations>`* parameter will be ignored, since the number of permutations is predefined. Therefore, for a system with $N$ atoms with $M$ species, will lead to
 
-```{math}
+:::{math}
 :label: eqn:multinomial
 N^{\text{iterations}} = \dfrac{N!}{\prod_m^M N_m!} \quad \text{where} \quad \sum_m^M N_m = N
-```
+:::
 
 - **Required:** No
 - **Default:** *random*
 - **Accepted:** *random* or *systematic* (`str`)
 
-````{admonition} How long will you calculation run?
+::::{admonition} How long will you calculation run?
 :class: tip, dropdown
 
 - In case you use the *systematic* mode make sure that the total number of configurations to check is a number a computer can check in finite times. To compute the total number of iterations you can use:
-```{code-block} bash
+:::{code-block} bash
 sqsgenerator compute total-permutations
-```
+:::
 - *sqsgenerator* also allows you to guess how long it might take to check a certain number of iterations:
-```{code-block} bash
+:::{code-block} bash
 sqsgenerator compute estimated-time
-```
-````
+:::
+::::
 
 ### `iterations`
 (input-param-iterations)=
@@ -446,7 +446,7 @@ to $w^i$ {eq}`eqn:objective` in the objective function.
 - **Default**: $\frac{1}{i}$ where $i$ is the index of the coordination shell. Automatically determined by *sqsgenerator*
 - **Accepted:** a dictionary where keys are the shell indices and the values $w^i$ parameters (`dict[int, float]`)
 
-````{admonition} Further information
+::::{admonition} Further information
 :class: note, dropdown
 
 - If nothing is specified **all available** coordination shells are used
@@ -454,28 +454,28 @@ to $w^i$ {eq}`eqn:objective` in the objective function.
 - If you specify a shell index which does not exist a `BadSettings` error will be raised
 - Indices which are not specified explicitly specified are not considered in the optimization
 - You can have a look on the generated weights by checking
-```{code-block} bash
+:::{code-block} bash
 sqsgenerator params show input.yaml -p shell_weights
-```
-````
+:::
+::::
 
 #### Examples
 To consider all coordination shells, simply do not specify any value
 
 - Only use the first coordination shell
 
-  ```{code-block} yaml
+  :::{code-block} yaml
   shell_weights:
     1: 1.0
-  ```
+  :::
 
 - Use first and second coodination shell
 
-  ```{code-block} yaml
+  :::{code-block} yaml
   shell_weights:
     1: 1.0 # this are the default values anyway
     2: 0.5
-  ```
+  :::
 
 ### `pair_weights`
 (input-param-pair-weights)=
@@ -486,19 +486,19 @@ Please refer to the *{ref}`target_objective <input-param-target-objective>`* par
 
 The default value is a hollow matrix, which is multiplied with the corresponding shell weight
 
-```{math}
+:::{math}
 :label: eqn:parameter-weight-single-shell
 p_{\xi\eta} = \frac{1}{2}\left(\mathbf{J}_N - \mathbf{I}_N \right)
-```
+:::
 
 where $N=N_{\text{species}}$, $\mathbf{J}_N$ the matrix full of ones and $\mathbf{I}_N$ the identity matrix.
 Using this formalism the default value for $\tilde{p}_{\xi\eta}^i$ is calculates according to Eq. {eq}`eqn:parameter-weight-efficient` and
 {eq}`eqn:parameter-weight-single-shell` as
 
-```{math}
+:::{math}
 :label: eqn:parameter-weight-default
 \tilde{p}_{\xi\eta}^i = w^i p_{\xi\eta}  = \frac{1}{2}w_i\left(\mathbf{J}_N - \mathbf{I}_N \right)
-```
+:::
 
 where $w^i$ is the *{ref}`shell_weight <input-param-shell-weights>`* of the i$^\text{th}$ coordination shell. If a 2D input or any of the sub-array
 in case of a 3D input array is not symmetric a `BadSettings` exception is raised.
@@ -522,22 +522,22 @@ the target objective $\tilde{\alpha}^i_{\eta\xi}$ {eq}`eqn:objective`, which the
     - a 3D array of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ (`np.ndarray`)
 
 (note-on-array-input-interpretation)=
-````{admonition} A note on array input interpretation
+::::{admonition} A note on array input interpretation
 :class: note, dropdown
 
 -  because of $\tilde{\alpha}^i_{\xi\eta}= \tilde{\alpha}^i_{\eta\xi}$ the `target_objective` is a **symmetric** quantity. Thus in case an  $\tilde{\alpha}_{\eta\xi}^{i,T} \neq \tilde{\alpha}_{\xi\eta}$ an `BadSettings` error is raised
 -  the atomic species specified in `strcuture` by their ordinal number in **ascending order**
     - In case of the $\text{CsCl}$ the actual ordering is $\text{Cl}(Z=17), \text{Cs}(Z=55)$.
-    ```{math}
+    :::{math}
     \boldsymbol{\tilde{\alpha}}^i = \left[
     \begin{array}{cc}
     \tilde{\alpha}_{\text{Cl-Cl}} & \tilde{\alpha}_{\text{Cl-Cs}} \\
     \tilde{\alpha}_{\text{Cs-Cl}} & \tilde{\alpha}_{\text{Cs-Cs}}
     \end{array}
     \right]
-    ```
+    :::
     - In case of the $\text{TiAlMo}$ the actual ordering is $\text{Al}(Z=13), \text{Ti}(Z=22), \text{Mo}(Z=42)$.
-    ```{math}
+    :::{math}
     \boldsymbol{\tilde{\alpha}}^i = \left[
     \begin{array}{ccc}
     \tilde{\alpha}_{\text{Al-Al}} & \tilde{\alpha}_{\text{Al-Ti}} & \tilde{\alpha}_{\text{Al-Mo}} \\
@@ -545,32 +545,32 @@ the target objective $\tilde{\alpha}^i_{\eta\xi}$ {eq}`eqn:objective`, which the
     \tilde{\alpha}_{\text{Mo-Al}} & \tilde{\alpha}_{\text{Mo-Ti}} & \tilde{\alpha}_{\text{Mo-Mo}} \\
     \end{array}
     \right]
-    ```
-````
+    :::
+::::
 
 #### Examples
 - distribute everything randomly
 
-  ```{code-block} yaml
+  :::{code-block} yaml
   target_objective: 0 # this is the default behaviour
-  ```
+  :::
 - search for a clustered $\text{CsCl}$ structure
 
-  ```{code-block} yaml
+  :::{code-block} yaml
   target_objective: 1 # which is equivalent to
   target_objective:
     - [1, 1]
     - [1, 1]
-  ```
+  :::
 
 - custom settings for a ternary alloy (unknown use case :smile: )
 
-  ```{code-block} yaml
+  :::{code-block} yaml
   target_objective:
     - [ 1, -1, 0]
     - [-1,  1, 0]
     - [ 0,  0, 1]
-  ```
+  :::
 
 ### `prefactors`
 (input-param-prefactors)=
