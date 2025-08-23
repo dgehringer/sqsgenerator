@@ -10,12 +10,12 @@
         type OnChangeStatus,
         type ValidationError
     } from 'svelte-jsoneditor';
-    import { downloadAsFile } from '$lib/utils.js';
-    import { Pane, Splitpanes } from 'svelte-splitpanes';
+    import {downloadAsFile, decompressData, defaultConfig} from '$lib/utils.js';
+    import {Pane, Splitpanes} from 'svelte-splitpanes';
     import LinearProgress from '@smui/linear-progress';
     import CircularProgress from '@smui/circular-progress';
-    import { loadOptimizer, SqsgenOptimizer } from '$lib/optimizer.js';
-    import { onMount } from 'svelte';
+    import {loadOptimizer, SqsgenOptimizer} from '$lib/optimizer.js';
+    import {onMount} from 'svelte';
 
     import {
         faCirclePlay,
@@ -28,9 +28,9 @@
         faFile,
         faCircleQuestion
     } from '@fortawesome/free-regular-svg-icons';
-    import Dialog, { Title, Content as DialogContent, Actions, InitialFocus } from '@smui/dialog';
-    import Button, { Label } from '@smui/button';
-    import List, { Item, Graphic, Text } from '@smui/list';
+    import Dialog, {Title, Content as DialogContent, Actions, InitialFocus} from '@smui/dialog';
+    import Button, {Label} from '@smui/button';
+    import List, {Item, Graphic, Text} from '@smui/list';
     import Radio from '@smui/radio';
     import * as Ngl from 'ngl';
 
@@ -63,36 +63,24 @@
             is: 'idling'
         }
     } as ComponentState);
-    let content = {
-        json: {
-            iterations: 1000000,
-            structure: {
-                species: ['Fe', 'Fe'],
-                supercell: [3, 3, 3],
-                lattice: [
-                    [2.86, 0.0, 0.0],
-                    [0.0, 2.86, 0.0],
-                    [0.0, 0.0, 2.86]
-                ],
-                coords: [
-                    [0.0, 0.0, 0.0],
-                    [0.5, 0.5, 0.5]
-                ]
-            },
-            composition: [
-                {
-                    Fe: 45,
-                    Al: 9
-                }
-            ],
-            target_objective: 0
-        }
-    } as Content;
+    let content = $state({
+        json: defaultConfig()
+    } as Content);
 
     onMount(async () => {
         state.optimizer = await loadOptimizer();
         state.ngl = await import('ngl');
         openDialogInfo = true;
+
+        const params = new URLSearchParams(window.location.search);
+        const configData = params.get("config");
+
+        // Ask opener for config
+        if (configData) {
+            content = {
+                json: JSON.parse(await decompressData(configData))
+            };
+        }
     });
 
     let openDialogFileType = $state(false);
@@ -106,9 +94,9 @@
     const stage = $derived(
         state.ngl
             ? new Ngl.Stage('viewport', {
-                    backgroundColor: 'white',
-                    cameraType: 'orthographic'
-                })
+                backgroundColor: 'white',
+                cameraType: 'orthographic'
+            })
             : undefined
     );
 
@@ -229,7 +217,8 @@
             },
             {
                 type: 'button',
-                onClick: () => {},
+                onClick: () => {
+                },
                 title: state.viewer
                     ? 'Current objective: ' + result.objective(state.viewer.objectiveIndex)
                     : undefined,
@@ -265,13 +254,14 @@
             },
             {
                 type: 'button',
-                onClick: () => {},
+                onClick: () => {
+                },
                 text:
                     state.viewer && result
                         ? state.viewer.structureIndex +
-                            1 +
-                            '/' +
-                            result.numSolutions(state.viewer.objectiveIndex)
+                        1 +
+                        '/' +
+                        result.numSolutions(state.viewer.objectiveIndex)
                         : undefined
             },
             {
@@ -395,8 +385,8 @@
         stage.removeAllComponents();
         // 2. Prepare the PDB as a blob
         const pdbText = result.pdb(viewerState.objectiveIndex, viewerState.structureIndex);
-        const blob = new Blob([pdbText], { type: 'text/plain' });
-        const c = await stage.loadFile(blob, { ext: 'pdb' });
+        const blob = new Blob([pdbText], {type: 'text/plain'});
+        const c = await stage.loadFile(blob, {ext: 'pdb'});
         c.addRepresentation('spacefill', {
             radius_type: 'vdw',
             color_scheme: 'element',
@@ -404,7 +394,7 @@
         });
         c.addRepresentation('unitcell');
         c.autoView();
-        c.updateRepresentations({ what: { position: true, color: true } });
+        c.updateRepresentations({what: {position: true, color: true}});
         stage.viewer.requestRender();
     }
 
@@ -414,48 +404,48 @@
 </script>
 
 <Dialog
-    bind:open={openDialogFileType}
-    selection
-    aria-labelledby="list-selection-title"
-    aria-describedby="list-selection-content"
-    onSMUIDialogClosed={closeHandler}
+        bind:open={openDialogFileType}
+        selection
+        aria-labelledby="list-selection-title"
+        aria-describedby="list-selection-content"
+        onSMUIDialogClosed={closeHandler}
 >
     <Title id="list-selection-title">Choose download format</Title>
     <DialogContent id="list-selection-content">
         <List radioList>
             <Item use={[InitialFocus]}>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="cif" />
+                    <Radio bind:group={fileTypeDownload} value="cif"/>
                 </Graphic>
                 <Text>CIF</Text>
             </Item>
             <Item>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="vasp" />
+                    <Radio bind:group={fileTypeDownload} value="vasp"/>
                 </Graphic>
                 <Text>VASP (POSCAR)</Text>
             </Item>
             <Item>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="pdb" />
+                    <Radio bind:group={fileTypeDownload} value="pdb"/>
                 </Graphic>
                 <Text>PDB</Text>
             </Item>
             <Item>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="json-sqsgen" />
+                    <Radio bind:group={fileTypeDownload} value="json-sqsgen"/>
                 </Graphic>
                 <Text>JSON (sqsgen)</Text>
             </Item>
             <Item>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="json-ase" />
+                    <Radio bind:group={fileTypeDownload} value="json-ase"/>
                 </Graphic>
                 <Text>JSON (ase)</Text>
             </Item>
             <Item>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="json-pymatgen" />
+                    <Radio bind:group={fileTypeDownload} value="json-pymatgen"/>
                 </Graphic>
                 <Text>JSON (pymatgen)</Text>
             </Item>
@@ -471,17 +461,17 @@
 {#if !loaded}
     <div class="loading-pane">
         <div style="display: flex; align-items: center; gap: 16px;">
-            <img src="/logo_large.svg" style="width: 175px; height: auto" alt="sqsgen logo" />
-            <CircularProgress style="height: 32px; width: 32px;" indeterminate />
+            <img src="/logo_large.svg" style="width: 175px; height: auto" alt="sqsgen logo"/>
+            <CircularProgress style="height: 32px; width: 32px;" indeterminate/>
         </div>
     </div>
 {/if}
 
 {#if loaded && multiThreadingAvailable}
     <Dialog
-        bind:open={openDialogInfo}
-        aria-labelledby="default-focus-title"
-        aria-describedby="default-focus-content"
+            bind:open={openDialogInfo}
+            aria-labelledby="default-focus-title"
+            aria-describedby="default-focus-content"
     >
         <Title id="default-focus-title">Affiliation and Templates</Title>
         <DialogContent id="default-focus-content">
@@ -492,12 +482,12 @@
                     <li>
                         like the package? Let's add your affiliation to our <a
                             href="https://sqsgenerator.readthedocs.io/en/latest">docs</a
-                        >
+                    >
                     </li>
                     <li>
                         send logo and full name via <a
                             href="mailto:david.holec@unileoben.ac.at">mail</a
-                        >
+                    >
                     </li>
                 </ul>
                 <li>
@@ -513,8 +503,8 @@
                             <li>via <a href="mailto:david.holec@unileoben.ac.at">mail</a></li>
                             <li>
                                 by opening <a href="https://github.com/dgehringer/sqsgenerator/issues/new"
-                                    >a new issue</a
-                                >
+                            >a new issue</a
+                            >
                             </li>
                         </ul>
                     </li>
@@ -530,17 +520,17 @@
         </Actions>
     </Dialog>
     {#if running}
-        <LinearProgress progress={state.optimization.finished} buffer={state.optimization.working} />
+        <LinearProgress progress={state.optimization.finished} buffer={state.optimization.working}/>
     {/if}
     <Splitpanes vertical={true} style="height: 500px">
         <Pane minSize={30}>
             <JSONEditor
-                bind:this={state.jsonEditorRef}
-                mode={Mode.text}
-                bind:content
-                onChange={handleChange}
-                onRenderMenu={handleRenderMenu}
-                {validator}
+                    bind:this={state.jsonEditorRef}
+                    mode={Mode.text}
+                    bind:content
+                    onChange={handleChange}
+                    onRenderMenu={handleRenderMenu}
+                    {validator}
             />
         </Pane>
         <Pane size={60} hidden={result === undefined}>
@@ -550,11 +540,11 @@
 {/if}
 
 <style lang="scss">
-    .loading-pane {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        width: 100vw;
-    }
+  .loading-pane {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+  }
 </style>

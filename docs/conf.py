@@ -74,3 +74,8 @@ html_favicon = "favicon.ico"
 html_css_files = [
     "custom.css",
 ]
+
+
+def setup(app):
+    # Inject our JavaScript
+    app.add_js_file("run-button.js")
