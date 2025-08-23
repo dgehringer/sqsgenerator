@@ -4,3 +4,19 @@
     width: auto;
     padding: 8px;
 }
+
+.highlight-json.runbutton {
+    position: relative;
+}
+
+.highlight-json.runbutton .run-in-webapp-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
