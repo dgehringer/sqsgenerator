@@ -10,7 +10,7 @@ maintainers = [
 description = "Create atomic structures for solid solutions for molecular simulations"
 dependencies = ["numpy", "click"]
 dynamic = ["version"]
-readme = "README.md"
+readme = "../README.md"
 requires-python = ">=3.9"
 license = "MIT"
 

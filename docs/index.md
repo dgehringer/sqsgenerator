@@ -4,7 +4,7 @@
 ## Highlights
 - 🚀 Blazingly fast short-range-order calculations (C++ core)
 - ➰ Monte-Carlo and systematic approach to compute optimal atomic configuration
-- 🧵multithreaded by default (optional MPI support)
+- 🧵multithreaded by default (optional MPI support) also in the browser 🌐
 - 🔀 optimize multiple sublattices simultaneously in a single run
 - 🔌 easy integration with other frameworks ([*ase*](https://wiki.fysik.dtu.dk/ase/),
     [*pymatgen*](https://pymatgen.org/) and [*pyiron*](https://pyiron.org/))
