@@ -33,8 +33,9 @@ function attachRunButtons() {
       try {
         JSON.parse(code);
       } catch (e) {
-        console.error(block);
-        alert('Invalid JSON in code block!');
+        console.error(code);
+        console.error(e);
+        alert('Invalid JSON in code block!' + e);
         return;
       }
 

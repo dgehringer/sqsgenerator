@@ -1,4 +1,3 @@
-![conda](https://anaconda.org/conda-forge/sqsgenerator/badges/installer/conda.svg)
 ![plats](https://anaconda.org/conda-forge/sqsgenerator/badges/platforms.svg)
 ![downloads](
 https://anaconda.org/conda-forge/sqsgenerator/badges/downloads.svg)
@@ -8,13 +7,13 @@ https://anaconda.org/conda-forge/sqsgenerator/badges/downloads.svg)
 <p align="center">
   <img src="https://github.com/dgehringer/sqsgenerator/raw/main/docs/images/logo_large.svg" width="60%" alt="sqsgenerator-logo" />
   <br /><br />
+  <a href="https://sqsgen.gehringer.tech">  <img src="https://icon.icepanel.io/Technology/svg/WebAssembly.svg" alt="WebAssembly icon" height="32" width="32" /> Web Application</a> <br />
   <a href="https://sqsgenerator.readthedocs.io">📝 docs</a>
 </p>
 
 ---
 
-
-**sqsgenerator** is a Python package, which allows you to efficiently generate optimised *Special-Quasirandom-Structures* (SQS). Therefore the package use *Warren-Cowley Short-Range-Order* (SRO) parameters to quantify randomness. **sqsgenerator** can be also used to analyse SRO parameters in existing structures. The core routines are written in C++
+**sqsgenerator** is a Python package, which allows you to efficiently generate optimised *Special-Quasirandom-Structures* (SQS). The package uses *Warren-Cowley Short-Range-Order* (SRO) parameters to quantify randomness. The core routines are written in C++
 
 ## Highlights
 

@@ -128,8 +128,8 @@ maxdepth: 1
 ---
 
 installation
+how_to
 parameters
-
 under_the_hood
 
 :::
