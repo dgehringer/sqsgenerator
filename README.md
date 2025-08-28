@@ -7,7 +7,7 @@ https://anaconda.org/conda-forge/sqsgenerator/badges/downloads.svg)
 <p align="center">
   <img src="https://github.com/dgehringer/sqsgenerator/raw/main/docs/images/logo_large.svg" width="60%" alt="sqsgenerator-logo" />
   <br /><br />
-  <a href="https://sqsgen.gehringer.tech">  <img src="https://icon.icepanel.io/Technology/svg/WebAssembly.svg" alt="WebAssembly icon" height="32" width="32" /> Web Application</a> <br />
+  <a href="https://sqsgen.gehringer.tech">  <img src="https://icon.icepanel.io/Technology/svg/WebAssembly.svg" alt="WebAssembly icon" height="16" width="16" /> Web Application</a> <br />
   <a href="https://sqsgenerator.readthedocs.io">📝 docs</a>
 </p>
 
