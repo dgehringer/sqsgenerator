@@ -13,6 +13,12 @@ async function compressData(data) {
   return btoa(String.fromCharCode(...new Uint8Array(compressed)));
 }
 
+function cleanNumberedLines(input) {
+  input.split('\n').forEach((line) => console.log(line.replace(/^\d+/, '')));
+  return input.split('\n').map(line => line.replace(/^\s*\d+/, '')).join('\n');
+}
+
+
 function attachRunButtons() {
   // Find all JSON code blocks
   document.querySelectorAll('div.highlight-json.runbutton').forEach((block) => {
@@ -29,7 +35,7 @@ function attachRunButtons() {
 
     // Button click handler
     btn.addEventListener('click', () => {
-      const code = block.querySelector('.highlight').innerText.trim();
+      const code = cleanNumberedLines(block.querySelector('.highlight').innerText.trim());
       try {
         JSON.parse(code);
       } catch (e) {

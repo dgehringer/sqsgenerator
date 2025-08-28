@@ -13,7 +13,9 @@
 ## Get started
 
  - 🌐 [directly in your browser](https://sqsgen.gehringer.tech) (multithreaded WebAssembly, no installation required)
- - 🐍 install the Python package via {ref}`pip <pip-installation>` or {ref}`conda <conda-installation>`
+ - 🐍 install the Python package
+   - via {ref}`pip <pip-installation>`: `pip install sqsgenerator`
+   - via {ref}`conda <conda-installation>`: `conda install -c conda-forge sqsgenerator`
  - 💻 build an MPI enabled {ref}`native app <native-installation>` for HPC environments
 
 ::::{dropdown} 🎓 Cite us

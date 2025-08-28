@@ -24,21 +24,35 @@ which should plot version information about *sqsgenerator* and also its dependen
 *sqsgenerator* uses a `dict`-like configuration, to store the parameters used for the optimization process. By
 default, the program assumes the configuration to be stored in a JSON file named *sqs.json* in the current directory.
 
+::::{tab} Python CLI
+:::{code-block} bash
+sqsgen run
+:::
+::::
+::::{tab} Native CLI
+:::{code-block} bash
+sqsgen
+:::
+::::
+
 If you want to use a different file name or path you can always pass it as an argument to the command, e. g.
 
-```{code-block} bash
+::::{tab} Python  CLI
+:::{code-block} bash
 sqsgen run -i path/to/my/sqs.json
-```
+:::
+::::
+
+::::{tab} Native  CLI
+:::{code-block} bash
+sqsgen -i path/to/my/sqs.json
+:::
+::::
 
 
+### Simple SQS - an ideal $\text{Re}_{0.5}\text{W}_{0.5}$ solution
 
-
-
-### Simple SQS
-
-#### Simple SQS - an ideal $\text{Re}_{0.5}\text{W}_{0.5}$ solution
-
-In the following example we use a **Monte-Carlo** approach using by probing **one billion** different configurations.
+In the following example we use a **Monte-Carlo** approach using by probing **fify million** different configurations.
 Only **the first** coordination shell should be taken into account. We create super-cell with 54 atoms, by replicating
 a simple B2 structure
 
@@ -70,13 +84,14 @@ a simple B2 structure
     },
     "max_results_per_objective": 10
 }
-
 :::
+
+
 
 So let's go together through this configuration:
 
   - **Lines 4-6:** cubic lattice with lattice parameter of $a_{bcc} = 3.165\;\text{A}$
-  - **Lines 9-10:** lattice sites at positions $(0,0,0)$ and $(\tfrac{1}{2}, \tfrac{1}{2}, \tfrac{1}{2})$
+  - **Lines 9-10:** lattice sites at positions $(0,0,0)$ and $(\frac{1}{2}, \frac{1}{2}, \frac{1}{2})$
   - **Line 12:** occupy the first site with Tungsten and the second one with Rhenium
   - **Line 13:** create a $3 \times 3 \times 3$ supercell
   - **Line 15:** choose $5^7$ different configurations randomly
@@ -85,104 +100,162 @@ So let's go together through this configuration:
     are minimized at the same time
   - **Lines 19-22:** distribute 27 Tungsten and 27 Rhenium atoms on the lattice sites. The number of atoms to
     distribute must match the number of lattice sites to occupy.
-
-In the unit cell we do have a 50-50 composition. Replication does not change to chemistry, thus we end up with 27
-tungsten atoms and 27 rhenium atoms in the final configuration.
+  - **Line 23:** store at most 10 configurations per objective in the output file.
 
 
-
-#### Running an optimization
-
-Once you have created a YAML input file you can run an optimization
-In case you have downloaded the above example you can run it using
-
-```{code-block} bash
-sqsgen run iteration re-w.first.yaml
-```
-
-In case you have not passed a custom script the program will create an output file named `sqs.result.yaml`.
-Otherwise, it will modify the passed filename e. g. `re-w.first.yaml` $\rightarrow$ `re-w.first.result.yaml`
+### Running an optimization
 
 
-#### The `sqs.result.yaml` file
-(sqs-result-yaml)=
+:::::{dropdown} 🚀 Templates
+:color: primary
+:open: true
+Each of the examples below is packaged into *sqsgenerator* as a template.
 
-The `*.result.yaml` files are used to dump the output of the optimization process. The file contains the following
-entries:
+Read more about them in the {ref}`templates <templates>` section.
+To obtain the input file named *re-w.first* for this example file use:
 
- - `structure`: the structure read from the input file in expanded format
- - `which`: the list of selected lattice positions
- - `timings`: runtime information, saved in `dict` like format. The keys are integer numbers and identify the MPI rank.
-              In case you **do not have** MPI enabled version it contains always only one entry with key `0`. The
-              numbers represent the average time a thread needs to analyse a structure and generate the next one.
-              The times are in **µs**, while the index in the value list corresponds to the thread ID.
- - `configurations`: the computed SQS results in a dict-like manner. The keys are the [rank](https://stackoverflow.com/questions/22642151/finding-the-ranking-of-a-word-permutations-with-duplicate-letters)
-              of the permutation sequence. The values are a sequence of atomic symbols.
+::::{tab} Python CLI
+:::{code-block} bash
+sqsgen template use re-w.first # re-w.first is the template name
+:::
+::::
 
-
-##### How many structures are actually computed?
-The number of structures in `sqs.result.yaml` is basically determined by the
-{ref}`max_output_configurations <input-param-max-output-configurations>` parameters which is by default 10.
-There is however as post-processing step **after the minimization** process. The default behaviour *sqsgenerator* is
-to discard those configurations which do not exhibit the minimal values of the objective function. Furthermore, our
-definition of the objective function in Eq. {eq}`eqn:objective` may yield "*degenerate*" results, which are also
-discarded in the post-processing step. This "*degeneracy*" decreases by including more coordination shells.
-
- - To include degenerate structures you can use the ` --no-similar`/`-ns` switch
- - To include structures eventually with non-optimal objective function use  `--no-minimal`/`-nm` switch
+::::{tab} Native CLI
+:::{code-block} bash
+sqsgen template re-w.first # re-w.first is the template name
+:::
+::::
+:::::
 
 
-````{admonition} Include objective function $\mathcal{O}(\sigma)$ and SRO parameters $\alpha^i_{\xi\eta}$
-:class: tip, dropdown
+Run the current example using
 
-To dump the also the objective function $\mathcal{O}(\sigma)$ {eq}`eqn:objective` and SRO parameters
-$\alpha^i_{\xi\eta}$ {eq}`eqn:wc-sro-multi` you can use the `--dump-include`/`-di` switches. You need to explicitly
-specify each quantity.
+::::{tab} Python  CLI
+:::{code-block} bash
+sqsgen run -i re-w.first.json
+:::
+::::
 
-```{code-block} bash
-sqsgen run iteration --dump-include parameters --dump-include objective
-```
+::::{tab} Native  CLI
+:::{code-block} bash
+sqsgen -i re-w.first.json
+:::
+::::
 
-will include both quantities in `sqs.result.yaml`. This will however modify the structure of the
-`configuration` key in `sqs.result.yaml`.
+In case you have not passed a custom script the program will create an output file named `sqs.mpack`.
+Otherwise, it will modify the passed filename e.g. `re-w.first.sqs.json` $\rightarrow$ `re-w.first.sqs.mapck`.
 
-````
 
-#### Export the computed structures
+### The `sqs.mpack` file
+(sqs-mpack)=
 
-To obtain the structures stored in `sqs.result.yaml` the `export` command should be used. This command searches for a
-**sqs.result.yaml** if not specified.
+The output file `sqs.mpack` is a binary file in *MessagePack* format. It contains all the information about the
+optimization process Those are:
 
-```{code-block} bash
-sqsgen export re-w.first.result.yaml
-```
+  - input configuration
+  - performance metrics
+  - all computed structures (in a compressed format)
+  - all computed SRO parameters
 
-will export all the structures in **cif** format.
+It holds all results grouped by the value of the objective function $\mathcal{O}(\sigma)$ {eq}`eqn:objective` in ascending order.
 
-  - The filename will be the rank of the permutation.
-  - You can specify a different output format using `--format`/`-f` switch.
-  - You can explicitly specify the backend with the `--writer`/`-w` switch. If not specified otherwise the **ase**
-    backend will be used
-  - To gather the structure files in an archive use the `--compress`/`-c` switch
+#### list the output
 
-````{admonition} Directly export the structure
-:class: tip, dropdown
+To view the results of an optimization use (in case you have an `sqsgen.mpack` file in your current directory):
 
-The `export` command is optional. Structures can be exported directly using the `run iteration` command if
-a `--export`/`-e` switch is passed.
+::::{tab} Python CLI
+:::{code-block} bash
+sqsgen output list
+:::
+::::
 
-If the `--export` switch is passed, the above mentioned switches
-(`--format`/`-f`, `--writer`/`-w` and `--compress`/`-c`) can be using in combination with the `run iteration` command
+::::{tab} Native CLI
+:::{code-block} bash
+sqsgen output
+:::
+::::
 
-```{code-block} bash
-sqsgen run iteration -e -f poscar -c xz -w pymatgen
-```
-will run an iteration and export all computed structures in **POSCAR** format using **pymatgen** in an archive
-**sqs.results.tar.xz**
+Similarly, in case our output file is named differently use e.g.
 
-````
+::::{tab} Python CLI
+:::{code-block} bash
+sqsgen output -o re-w.first.sqs.mpack list
+:::
+::::
 
-#### Specifying you own compositions - $\text{Re}_{0.333}\text{W}_{0.667}$
+::::{tab} Native CLI
+:::{code-block} bash
+sqsgen output -o re-w.first.sqs.mpack
+:::
+::::
+
+You should see something like
+
+:::{code-block} text
+
+Mode: interact
+min(O(σ)): 0.00000
+Num. objectives: 5
+
+INDEX  OBJ.     N
+0      0.00000  13
+1      0.01852  12
+2      0.03704  2
+3      0.07407  1
+4      0.25926  1
+:::
+
+
+
+To export the **first** best structure use
+
+::::{tab} Python CLI
+:::{code-block} bash
+sqsgen output structure -f cif
+:::
+::::
+
+::::{tab} Native CLI
+:::{code-block} bash
+sqsgen output structure -f cif
+:::
+::::
+
+You should see a file name `sqs-0-0.cif`. The naming convention is `sqs-{objective_index}-{structure_index}.{format}
+
+In case you want to change the index and want to output the worst structure
+
+::::{tab} Python CLI
+:::{code-block} bash
+sqsgen output structure -f cif --objective 4 --index 0
+:::
+::::
+
+::::{tab} Native CLI
+:::{code-block} bash
+sqsgen output structure -f cif --objective 4 --index 0
+:::
+::::
+
+##### file formats
+
+The native CLI and can export:
+
+  - CIF
+  - POSCAR
+  - PDB
+  - JSON
+    - ase
+    - pymatgen
+    - sqsgen
+
+The python CLI will automatically detect *ase* and *pymatgen* in case one or both are installed.
+To specify a file format use `-f {backend}.{format}`. E.g. you have *pymatgen* installed and want to use
+it as write backend use `-f pymatgen.cif`. For a full list of available formats use `--help` switch.
+
+
+
+### Specifying you own compositions - $\text{Re}_{0.333}\text{W}_{0.667}$
 
 (example-two)=
 
@@ -200,7 +273,7 @@ See {ref}`optional dependencies <optional-dependencies>` for more information
 ---
 lineno-start: 1
 caption: |
-    Download the {download}`YAML file <examples/re-w.second.yaml>` and the {download}`B2 structure file <examples/b2.vasp>`
+    Download the {download}`YAML file <_static/re-w.second.yaml>` and the {download}`B2 structure file <examples/b2.vasp>`
 ---
 structure:
   file: b2.vasp
@@ -373,404 +446,7 @@ rather than to generate a new one. To analyse existing structures *sqsgenerator*
         *sqsgenerator* will ignore all parameters which are not needed.
 
 
-#### Counting pairs in coordination shells using the `analyse` command
-
-*sqsgenerator* can also compute the number of bonds in existing structures, by tweaking parameters
-for the `analyse` command properly.
-
-A closer look on Eq. {eq}`eqn:sro-modified` reveals, by setting the {ref}`prefactors <input-param-prefactors>`
-$f^i_{\xi\eta} = 1$ the SRO parameters become $\alpha^i_{\xi\eta} = 1 - N^i_{\xi\eta}$. Hence by modifying
-*settings.yaml* file to
-
-```{code-block} yaml
----
-lineno-start: 1
-emphasize-lines: 4-5
----
-shell_weights:
-  1: 1.0
-  2: 0.5
-prefactor_mode: set
-prefactors: 1
-```
-
-- **Line 4:** explicitly overrides the values of $f^{i}_{\xi\eta}$ with those provided in the file
-- **Line 5:** set $f^i_{\xi\eta}$ to 1
-
-To obtain the number of $\xi - \eta$ pair we have to compute $N^i_{\xi\eta} = 1 - \alpha^i_{\xi}$
-*sqsgenerator* support also other output formats than printing it to the console. Hence, we want to illustrate
-how *sqsgenerator*'s CLI can be used directly in combination with Python without using the Python API
-
-```{code-block} python
-import os
-import yaml
-import pprint
-import numpy as np
-
-# analyse the structure and export results in YAML format(--output-format/-of yaml)
-yaml_output = os.popen('sqsgen analyse *.cif -s settings.yaml -of yaml')
-results = yaml.safe_load(yaml_output)
-
-# loop over output results
-for analysed_file, configurations in results.items():
-    for rank, results in configurations.items():
-        # actually compute N = 1.0 - alpha
-        results['bonds'] = 1.0 - np.array(results.get('parameters'))
-
-pprint.pprint(results)
-```
-
-
 ## Using Python API
-Of course, you can also directly use sqsgenerator directly from your Python interpreter. The package is designed in such
-a way that all public function are gathered int the `sqsgenerator.public` module. Those which are needed to
-generate and analyze structure are forwarded to the *sqsgenerator* module itself and can be imported from there
 
-Basically the API is build around two functions
-
-  - {py:func}`sqsgenerator.public.sqs_optimize` - to perform SQS optimizations
-  - {py:func}`sqsgenerator.public.sqs_analyse` - to compute objective function and SRO parameters
-
-Both functions take a `dict` as their main input. The YAML inputs above are just a file-based representation of those
-settings.
-
-### Introduction
-
-To read a settings file and obtain a `dict`-like configuration use the {py:func}`sqsgenerator.public.read_settings_file`
-function. The examples shown above, can be easily executed in the following way using a Python script:
-
-```{code-block} python
-# we use the first example shown in the CLI - How to -> re-w.first.yaml
-from sqsgenerator import read_settings_file, sqs_optimize
-
-configuration = read_settings_file('re-w.first.yaml')
-results, timings = sqs_optimize(configuration)
-```
-
-(optimization-output)=
-{py:func}`sqsgenerator.public.sqs_optimize` outputs a tuple of **two** values. Where the first one are the actual
-results, and the latter one are runtime information
-
-  - `results` will contain a dictionary with integer keys. The integer key is the index of the permutation sequence.
-     As this key is in decimal representation it might be a very long one. The value behind each key is a
-     `dict` again, containing the following keys
-    - `configuration`: a list of strings
-    - `objective`: the value of the objective function
-    - `parameters`: the SRO parameters as numpy array
-
-### Again - $\text{Re}_{0.333}\text{W}_{0.667}$ - but from scratch
-We now want to show how the {ref}`second example <example-two>` would look, like if it was built with Python functions
-
-```{code-block}
-from sqsgenerator import sqs_optimize
-
-configuration = dict(
-    structure=dict(file='b2.vasp', supercell=(3,3,3)),
-    iterations=1e9,
-    shell_weights={1: 1.0},
-    composition=dict(Re=18, W=36)
-)
-
-results, timings = sqs_optimize(configuration)
-```
-
-### Exporting the generated structures
-
-#### Construct the generated structures
-By default, {py:func}`sqsgenerator.public.sqs_optimize` does not construct the {py:class}`Structure` objects from the
-generated configurations. You have to explicitly tell it using the `make_structures` keyword
-
-Therefore, the last line in the previous example becomes
-
-```{code-block} python
-results, timings = sqs_optimize(configuration, make_structures=True)
-```
-
-This switch only affects post-processing, and adds a `structure` key to the `results` dictionary, which then becomes
-
-```{code-block} python
-{
-    24002613167337: {
-        'configuration': ['W', 'W', 'W', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'W', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'Re', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'W', 'W', 'W', 'W', 'W', 'Re', 'W', 'W', 'W', 'W', 'Re', 'W', 'W', 'Re', 'W', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'W', 'Re', 'Re', 'W', 'W', 'W', 'W', 'W', 'W', 'W'],
-        'objective': 5.551115123125783e-17,
-        'parameters': array([[[5.00000000e-01, 5.55111512e-17], [5.55111512e-17, 5.00000000e-01]]]),
-        'structure': Structure(W3ReWRe2W3ReWRe2W2Re2WRe2W7ReW4ReW2ReW2ReWReWReWRe2W7, len=54)
-    }
-}
-
-```
-
-````{admonition} Specify the type of the output structure using *structure_format* keyword
-:class: tip, dropdown
-
-In case you have set the `make_structures` keyword to `True` you additionally can specify the output type of the
-structure objects using the `structure_format` keyword. Of course to use this you need
-[ase](https://wiki.fysik.dtu.dk/ase/) and/or [pymatgen](https://pymatgen.org/) installed to use this features.
-You can pass three different values to `structure_format`:
-
-  - **default** $\rightarrow$ {py:class}`sqsgenerator.public.Structure`
-  - **ase** $\rightarrow$ {py:class}`ase.atoms.Atoms`
-  - **pymatgen** $\rightarrow$ {py:class}`pymatgen.core.Structure`
-
-````
-
-#### Writing generated structures to file
-In order to export the generated structures to files and/or archives using the
-{py:func}`sqsgenerator.public.export_structures` you need to set `make_structures=True` to advise the program to
-construct the structure. Moreover, `structure_format` must be set to `default` (which is anyway the default value).
-
-Exporting the generated structures might look like that
-
-```{code-block} python
-from operator import itemgetter
-from sqsgenerator import sqs_optimize, export_structures, read_settings_file
-
-configuration = read_settings_file('sqs.yaml')
-results, timings = sqs_optimize(configuration, make_structures=True)
-export_structures(results, functor=itemgetter('structure'))
-```
-
-### Computing the SRO parameters $\alpha_{\xi\eta}^i$ and objective function $\mathcal{O}(\sigma)$ of existing structures
-
-It is also possible to compute the SRO parameters of existing structure. Thus, the API exports the
-{py:func}`sqsgenerator.public.sqs_analyse`, which computes those quantities.
-
-{py:func}`sqsgenerator.public.sqs_analyse` takes a dict-like configuration as well as an iterable of structures, which
-will be analysed. The output-format is exactly the same as for {py:func}`sqsgenerator.public.sqs_optimize`
-(see {ref}`above <optimization-output>`)
-
-```{code-block} python
-
-import numpy.testing
-from operator import itemgetter
-from sqsgenerator import sqs_optimize, read_settings_file, sqs_analyse
-
-configuration = read_settings_file('sqs.yaml')
-results, timings = sqs_optimize(configuration, make_structures=True, minimal=False, similar=True)  # same as --no-minimal --similar
-structures = map(itemgetter('structure'), results.values())  # for this we need make_structures=True
-analysed = sqs_analyse(structures, settings=configuration, append_structures=True)
-
-for rank in results:
-    # we check that we obatin the same results with sqs_analyse
-    assert rank in analysed
-    assert results[rank]['objective'] == analysed[rank]['objective']
-    assert results[rank]['structure'] == analysed[rank]['structure']
-    assert results[rank]['configuration'] == analysed[rank]['configuration']
-    numpy.testing.assert_array_almost_equal(results[rank]['parameters'], analysed[rank]['parameters'])
-
-```
-
-### Other (maybe) useful examples
-
-#### Conversion between structure types
-*sqsgenerator*'s API export function to convert internal {py:class}`sqsgenerator.public.Structure` objects to types
-employed by larger projects ([ase](https://wiki.fysik.dtu.dk/ase/) and [pymatgen](https://pymatgen.org/))
-
-```{admonition} Packages must be available
-:class: warning
-
-In order to convert structure objects back and fourth you need to have this packages installed otherwise
-sqsgenerator will raise a `FeatureError`
-```
-
-The compatibility functions are:
-
-  - **pymatgen**:
-    - {py:func}`sqsgenerator.public.to_pymatgen_structure`
-    - {py:func}`sqsgenerator.public.from_pymatgen_structure`
-  - **ase**:
-    - {py:func}`sqsgenerator.public.to_ase_atoms`
-    - {py:func}`sqsgenerator.public.from_ase_atoms`
-
-```{code-block} python
-import numpy as np
-import ase.atoms
-import pymatgen.core
-from sqsgenerator import to_pymatgen_structure, from_pymatgen_structure, to_ase_atoms, from_ase_atoms, Structure
-
-fcc_al = Structure(4.05*np.eye(3), np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5]]), ['Al']*4)
-
-fcc_al_ase = to_ase_atoms(fcc_al)
-fcc_al_pymatgen = to_pymatgen_structure(fcc_al)
-
-assert isinstance(fcc_al_ase, ase.atoms.Atoms)
-assert isinstance(fcc_al_pymatgen, pymatgen.core.Structure)
-assert fcc_al == from_ase_atoms(fcc_al_ase)
-assert fcc_al == from_pymatgen_structure(fcc_al_pymatgen)
-```
-## Graceful exits
-
-As the SQS optimization may require a large number of iterations, it is sometimes desirable to stop the process
-(e.g. because of time limits on HPC clusters). When sending a signal to *sqsgenerator* it does not crash but rather
-exit and write out the current state of the optimization.
-*sqsgenerator*'s core routine installs a temporary signal *SIGINT* handler which replaces Pythons default
-`KeyboardInterrupt`. Thus while executing the optimization you can always interrupt it by hitting **Ctrl+C**. You should
-get a warning that the program was interrupted
-
-```{code-block} bash
-[warning]:do_pair_iterations::interrupt_message = "Received SIGINT/SIGTERM results may be incomplete"
-/media/DATA/drive/projects/sqsgenerator-core/sqsgenerator/public.py:137: UserWarning: SIGINT received: SQS results may be incomplete
-  warnings.warn('SIGINT received: SQS results may be incomplete')
-```
-
-In case of MPI parallel both *SIGINT* and *SIGTERM* handlers are overwritten. Therefore, if you run *sqsgenerator*
-interactively using the `mpirun` command you can also gracefully terminate the process using **Ctrl+C**.
-
-## A note on the number of `iterations`
-
-Actually it is very hard to tell what is a "**sufficiently**" large enough number for the `iteration` parameter. As the
-configuration space is growing extremely fast (factorial), it is anyway not possible to sample it properly in case the
-structures get large enough.
-
-To get a feeling how many structures are there, set `mode` to **systematic** and hit
-
-```{code-block} bash
-sqsgen compute total-permutations
-```
-
-This will print you the number of different structures one can construct. This number might be really huge,
-however lots of the might be symmetrically equivalent.
-
-A few rules over the thumb, and what you can do if you deal with "*large*" systems
-
-  - Maybe you have knowledge about the system: E. g certain species are restricted on
-    different sub-lattices.
-
-  - Check how long it would take to compute your current settings
-
-    ```{code-block} bash
-    sqsgen compute estimated-time
-    ```
-
-    You can tune the number of permutations to a computing time you can afford. The above command gives only an estimate
-    for the current machine. The above command analyzes $10^5$ random configurations and extrapolates it to the desired
-    number of iterations. However, this value should be seen as an **upper bound**, as cycle times
-    are slightly reduced for large number of iterations
-
-  - Reduce the number of shells. This has two-fold advantage:
-    1. In contrast to old versions of *sqsgenerator*, the current implementations profit greatly from a decreased number
-       of coordination shells. The actual speedup depends on the input structure but might be up to an order of
-       magnitude when compared to the default value (all shells are considered)
-       ```{image} images/time_vs_shells.svg
-       :alt: Estimated time vs. number of coordination shells
-       :width: 67%
-       :align: center
-       ```
-    3. The image size of the objective function is drastically reduced. In other words a lot of different structures are
-       mapped onto the same value of the objective function.
-
-
-### A simple convergence-test
-
-For some general systems, which one uses often it might be useful, to know how many
-{ref}`iterations <input-param-iterations>` would be needed to get a converged result. The number of
-{ref}`iterations <input-param-iterations>` mainly depend on three factors:
-
-  1. **Cell size:** the configuration space grows very fast, see. Eq. {eq}`eqn:multinomial`
-  2. **Composition:** the size of the configuration space for a given cell size $N$, according to
-     Eq. {eq}`eqn:multinomial`, will reach its maximum for close to equi-atomic compositions
-  3. **Number of coordination shells:** The objective function (Eq. {eq}`eqn:objective`) is a sum of the SRO parameters.
-     Therefore, the more shells are considered, the larger the image domain of the objective function becomes. In other
-     words, the more shells considered, the more {ref}`iterations <input-param-iterations>` will be needed.
-
-````{admonition} Warning
-:class: warning, dropdown
-
-The following examples makes use of exhaustive enumeration, multiple times. Therefore, check if you can run an
-exhaustive enumeration in reasonable time using
-
-```{code-block} bash
-sqsgen compute estimated-time exhaustive-setup.sqs.yaml
-```
-
-and benchmarking an systematic iteration. For large cells, such an convergence test might not be possible at due to
-too large configurational space
-
-Moreover, keep in mind, that such a convergence test is computationally demanding as it invloves a lot of different
-single-point runs.
-
-````
-
-```{code-block} python
----
-lineno-start: 1
-emphasize-lines: 7,11,15-19,23,24,26,32,34
-caption: |
-    Script to perform a "*convergence test*" for the parameters $N^{\mathrm{shells}}$ and $N^{\mathrm{iterations}}$.
----
-
-from matplotlib import pyplot as plt
-from sqsgenerator import sqs_optimize
-from operator import itemgetter as item
-from math import isclose, factorial as f, log10
-
-# compute size of configurational space
-conf_space_size = f(36)/(f(24)*f(12))
-
-NSHELLS=7  # max number of shells
-MIN_MAGNITUDE=4  # minimum number of iterations
-MAX_MAGNITUDE=int(log10(conf_space_size))  # maximum number of iterations
-SAMPLES=int(10**MIN_MAGNITUDE) # maximum number of structures
-
-# 36 atoms hcp with 12 Re and 24 W atoms
-settings = dict(
-    structure=dict(file='ti-hex.vasp', supercell=[2, 2, 3]),
-    composition=dict(W=12, Re=24),
-    max_output_configurations=SAMPLES,
-)
-
-test_results = dict()
-for shells in range(1, NSHELLS+1):
-    settings['mode'] = 'systematic'  # perform exhaustive search
-    settings['shell_weights'] = {i: 1.0/i for i in range(1, shells + 1) }
-    # compute the best value of the objective function by exhaustive enumeration
-    sys_results, *_ = sqs_optimize(settings, fields=('objective',))
-    best_objective = min(sys_results.values(), key=item('objective')).get('objective')
-    test_results[shells] = []  # create a list where we store
-    for mag in range(MIN_MAGNITUDE, MAX_MAGNITUDE+1):
-        settings['mode'] = 'random'
-        settings['iterations'] = int(10**mag)
-        results, *_ = sqs_optimize(settings, minimal=False, similar=True, fields=('objective',))
-        # compute percentage of structures that exhibit minimal objective
-        percent = sum(isclose(r.get('objective'), best_objective) for r in results.values()) / len(results) * 100
-        test_results[shells].append((mag, percent))
-
-def transpose(it) -> zip:
-    return zip(*it)
-
-# visualize the data
-for shells, data in sorted(test_results.items(), key=item(0)):
-    plt.plot(*transpose(data), marker='o', label=f'$S={shells}$')
-plt.axvline(log10(conf_space_size), color='k', label='exhaustive')
-plt.xlabel(r'$\log(N^{iter})$')
-plt.ylabel(r'$\frac{N^{best}}{N^{total}} [\%]$')
-plt.legend()
-plt.savefig('convergence_test.pdf')
-```
-
-  - **Line 7:** compute the total number of iterations for the exhaustive search according to Eq.~{eq}`eqn:multinomial`.
-    In the present case $N^{\text{iterations}} = \frac{36!}{12!24!} \approx 1.25 \cdot 10^9$
-  - **Line 8:** for the Monte-Carlo approach is does not make sense to go beyond $10^9$ iterations, as otherwise
-    one could use exhaustive search anyway.
-  - **Line 15-19:** setup up the configuration for *sqsgenerator*. Create a 48 atomic cell (replicate
-    a 3 atomic [Ti](https://materialsproject.org/materials/mp-72) {download}`cell <examples/ti-hex.vasp>` by
-    $2 \times 2 \times 3$) and distribute 12 rhenium and 24 tungsten atoms. Rhenium and tungsten serve only as
-    dummy species.
-  - **Line 23-24:** at first we compute the best value of the objective function $\mathcal{O}(\sigma)$
-    (Eq. {eq}`eqn:objective`) for a defined number of `shells`. Therefore, we set the iteration {ref}`mode <input-param-mode>`
-    and {ref}`shell_weights <input-param-shell-weights>` accordingly.
-  - **Line 26:** perform exhaustive enumeration
-  - **Line 32:** perform Monte-Carlo sampling of the configuration space using for different number of iterations
-    ranging from `10**MIN_MAGNITUDE` from `10**MAX_MAGNITUDE`
-  - **Line 34:** compute the amount of structures from the Monte-Carlo approach, which exhibit the minimum objective.
-
-The bottom part of the listing above visualizes the results using [matplotlib](https://matplotlib.org/). The output
-from the above script might look something like the figure below.
-
-```{image} images/convergence_test.svg
-:alt: Convergence of the optimization as a function of number of shell and number of iterations
-:width: 60%
-:align: center
-```
-
-Please remember that the figure above might look differently for a different system (lattice).
+## Templates
+(templates)=
