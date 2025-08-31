@@ -185,7 +185,7 @@ namespace sqsgen::io::config {
       }
       if (sublattices.empty())
         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>("Could not parse a valid sublattice");
-      if (sublattices.size() < 2 && sl_mode == SUBLATTICE_MODE_SPLIT) return split_error;
+      // if (sublattices.size() < 2 && sl_mode == SUBLATTICE_MODE_SPLIT) return split_error;
       return {sublattices};
     }
     if (sl_mode == SUBLATTICE_MODE_SPLIT) return split_error;

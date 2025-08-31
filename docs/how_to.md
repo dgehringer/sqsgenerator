@@ -255,79 +255,42 @@ it as write backend use `-f pymatgen.cif`. For a full list of available formats 
 
 
 
-### Specifying you own compositions - $\text{Re}_{0.333}\text{W}_{0.667}$
 
-(example-two)=
-
-Suppose we want to move on different compositions, and want to distribute different numbers of tungsten and rhenium.
-In this case we have to explicitly specify a {ref}`composition <input-param-composition>` parameter. Using this
-directive we can exactly specify **which** and **how many** atoms should be distributed. We will slightly modify the
-example from above.
-
-```{warning} Package dependencies
-In order to run this example you need to have either `ase` or `pymatgen` installed.
-See {ref}`optional dependencies <optional-dependencies>` for more information
-```
-
-```{code-block} yaml
----
-lineno-start: 1
-caption: |
-    Download the {download}`YAML file <_static/re-w.second.yaml>` and the {download}`B2 structure file <examples/b2.vasp>`
----
-structure:
-  file: b2.vasp
-  supercell: [3, 3, 3]
-iterations: 1e9
-shell_weights:
-  1: 1.0
-composition:
-  Re: 18
-  W: 36
-```
-
-Again let's analyse the difference in the input file and what it is actually doing under the hood
-
-  - **Line 2:** read the file **b2.vasp** from the disk. By default `ase` will be used to read the structure file.
-    For more information see the {ref}`structure <input-param-structure>` parameter documentation
-  - **Lines 7-9** distribute 18 Rhenium and 36 Tungsten atoms on the lattice positions.
-    1. the B2 structure file contains 2 lattice position
-    2. in **Line 3** we replicate it three times in all directions
-    3. one needs to distribute $2 \times 3 \times 3 \times 3 = 54$ atoms on the lattice positions
-    4. the number of distributed atoms **must match** the number lattice positions to occupy
-
-The using `composition` parameter you can distribute any arbitrary sequence of atomic elements.
-Suppose we want to create cells with an even more complicated composition e. g.
-$\text{Re}_{12}\text{W}_{14}\text{Mo}_{14}\text{Ta}_{14}$ simple change `composition` section in the above example to:
-
-```{code-block} yaml
----
-lineno-start: 7
-caption: |
-    B2 structure with $\text{Re}_{12}\text{W}_{14}\text{Mo}_{14}\text{Ta}_{14}$ stochiometry
----
-composition:
-  Re: 12
-  W: 14
-  Mo: 14
-  Ta: 14
-```
-
-### Perform SQS only on selected sites
-
-#### Perform SQS on a sublattice only - $\text{Ti}\text{N} \rightarrow \text{Ti}_{0.5}(\text{B}_{0.25}\text{N}_{0.25})$
+### Perform SQS on a sublattice only - $\text{Ti}\text{N} \rightarrow \text{Ti}_{0.5}(\text{B}_{0.25}\text{N}_{0.25})$
 
 *sqsgenerator* allows you to select lattice positions, on which the SQS iteration is then carried out. This is done by
 specifying a {ref}`which <input-param-which>` input parameter. All sites which are not explicitly chosen are ignored
 during the optimization. The following example checks **all possible** configuration and will therefore an optimized
 SQS structure
 
+:::::{tab} CLI/Python API
+
+:::{code-block} json
+:lineno-start: 1
+:caption: Download the {download}`TiN structure file <_static/ti-n.vasp>`
+{
+  "iterations": 100000000,
+  "sublattice_mode": "split",
+  "structure": {
+    "file": "ti-n.vasp",
+    "supercell": [2, 2, 2]
+  },
+  "composition": [{
+    "sites": "N",
+    "B": 16,
+    "N": 16
+  }]
+}
+:::
+
+:::::
+
 ```{code-block} yaml
 ---
 lineno-start: 1
 emphasize-lines: 4, 7
 caption: |
-    Download the {download}`YAML file <examples/ti-n.yaml>` and the {download}`TiN structure file <examples/ti-n.cif>`
+
 ---
 structure:
   supercell: [2, 2, 2]
@@ -357,96 +320,9 @@ It will take me roughly 14 minutes and 23.576 seconds to compute 601080390 itera
 > sqsgen run iteration ti-n.yaml
 ```
 
-#### $\gamma$-iron (austenite) - Partial random occupancy of interstitial atoms
-
-The *sqsgenerator* also knows a fictitious atomic species "**0**", representing a vacancy. During the optimization
- vacancies will be treated as atoms. When exporting the structures the vacancies are deleted.
-
-The following example constructs a $\gamma$-iron cell, where carbon is distributed on the **octahedral interstitial**
-sites. Therefore, the {download}`structure file <examples/gamma-iron-octahedral.vasp>` contains four iron atoms and
-four hydrogen (H) atoms on the octahedral sites.
-
-```{code-block} yaml
----
-lineno-start: 1
-emphasize-lines: 7, 10
-caption: |
-    Download the {download}`YAML file <examples/gamma-iron.yaml>` and the {download}`iron structure file <examples/gamma-iron-octahedral.vasp>`
----
-structure:
-  supercell: [3, 3, 3]
-  file: gamma-iron-octahedral.vasp
-iterations: 1e8
-shell_weights:
-  1: 1.0
-which: H
-composition:
-  C: 9
-  0: 99
-```
-
-  - **Line 7:** hydrogen works here as a **dummy** species. We select those interstitial sites
-  - **Line 10:** distribute nine carbon atoms and 99 vacancies
-
-### Analyse existing structures
-Sometimes it is desirable to compute the SRO parameters ($\alpha^i_{\xi\eta}$) for an exiting arrangement of atoms
-rather than to generate a new one. To analyse existing structures *sqsgenerator* provides you with the "*analyse*" command.
-
-#### Restore $\alpha^i_{\xi\eta}$ from structure files
-
-**Note:** This example only works with `pymatgen` or `ase` installed
-
-1. We use the {ref}`example above <example-two>` to generate some randomized structures by executing
-
-   ```{code-block}  bash
-   sqsgen run iteration --similar --no-minimal --export --dump-include objective --dump-include parameters re-w.second.yaml
-   # or with shortcuts
-   sqsgen run iteration -s -nm -e -di objective -di parameters re-w.second.yaml
-   ```
-2. The above command will store the optimized configurations in a file named *re-w.second.result.yaml*. The file will,
-   in addition also contain (eventually) configurations which do not minimize (`--no-minimal/-nm`) the objective function
-   Eq. {eq}`eqn:objective-actual`. Furthermore, it will not check for duplicates in the SRO formalism (`--similar/-s`).
-   Finally *re-w.second.result.yaml* will contain the SRO parameters $\alpha^i_{\xi\eta}$
-   (`--dump-include/-di parameters`) as well as the value of the objective function $\mathcal{O}$
-   (`--dump-include/-di objective`). All the configurations will be also exported into *CIF* format (default). Listing
-   your directory, should give you ten additional cif-files.
-3. Please inspect *re-w.second.result.yaml* with a text editor
-4. Now, the task is to reconstruct the SRO parameters from the exported cif-files. Therefore use:
-
-   ```{code-block} bash
-   sqsgen analyse *.cif
-   ```
-
-   The command will print the computed SRO parameters, nicely formatted to the console.
-   **Note:** The output will show you SRO parameters for *seven* coordination shells with the default
-   {ref}`shell_weights <input-param-shell-weights>` of $w^i = \frac{1}{i}$. This happens since *sqsgenerator* does not
-   know the settings for computing the structures, hence it uses its default values.
-5. To fix this, the `analyse` command takes a `--settings/-s` parameter. It points to a file providing the input settings.
-   In this particular example we have two ways forward, to obtain the same values as in *re-w.second.result.yaml*:
-
-      - create a new file *settings.yaml* with the following lines
-
-        ```{code-block} yaml
-        shell_weights:
-          1: 1.0
-        ```
-
-        to take into account only the first coordination shell as {ref}`above <example-two>` and run
-
-        ```{code-block} bash
-        sqsgen analyse *.cif --settings settings.yaml
-        ```
-
-      - reuse the input file *re-w.second.yaml* and just execute
-
-        ```{code-block} bash
-        sqsgen analyse *.cif --settings re-w.second.yaml
-        ```
-
-        *sqsgenerator* will ignore all parameters which are not needed.
-
 
 ## Using Python API
+
 
 ## Templates
 (templates)=
