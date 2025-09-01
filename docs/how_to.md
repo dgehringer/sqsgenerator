@@ -258,13 +258,10 @@ it as write backend use `-f pymatgen.cif`. For a full list of available formats 
 
 ### Perform SQS on a sublattice only - $\text{Ti}\text{N} \rightarrow \text{Ti}_{0.5}(\text{B}_{0.25}\text{N}_{0.25})$
 
-*sqsgenerator* allows you to select lattice positions, on which the SQS iteration is then carried out. This is done by
-specifying a {ref}`which <input-param-which>` input parameter. All sites which are not explicitly chosen are ignored
-during the optimization. The following example checks **all possible** configuration and will therefore an optimized
-SQS structure
+*sqsgenerator* allows you to select lattice positions, on which the SQS iteration is then carried out. By
+specifying the *{ref}`sublattice_mode <input-param-sublattice-mode>`* you can control how the optimization works.
 
 :::::{tab} CLI/Python API
-
 :::{code-block} json
 :lineno-start: 1
 :caption: Download the {download}`TiN structure file <_static/ti-n.vasp>`
@@ -282,46 +279,90 @@ SQS structure
   }]
 }
 :::
-
 :::::
 
-```{code-block} yaml
----
-lineno-start: 1
-emphasize-lines: 4, 7
-caption: |
+:::::{tab} Web
+:::{code-block} json
+:class: runbutton
 
----
-structure:
-  supercell: [2, 2, 2]
-  file: ti-n.cif
-mode: systematic
-shell_weights:
-  1: 1.0
-which: N
-composition:
-  B: 16
-  N: 16
-```
+{
+  "iterations": 100000000,
+  "sublattice_mode": "split",
+  "structure": {
+    "lattice": [
+      [4.253534, 0.0, 0.0],
+      [0.0, 4.253534, 0.0],
+      [0.0, 0.0, 4.253534]
+    ],
+    "coords": [
+      [0.5, 0.0, 0.0],
+      [0.5, 0.5, 0.5],
+      [0.0, 0.0, 0.5],
+      [0.0, 0.5, 0.0],
+      [0.0, 0.0, 0.0],
+      [0.0, 0.5, 0.5],
+      [0.5, 0.0, 0.5],
+      [0.5, 0.5, 0.0]
+    ],
+    "species": ["Ti", "Ti", "Ti", "Ti", "N", "N", "N", "N"],
+    "supercell": [2, 2, 2]
+  },
+  "composition": [{
+    "sites": "N",
+    "B": 16,
+    "N": 16
+  }],
+  "max_results_per_objective": 10
+}
+:::
+:::::
 
-- **Line 4:** set the iteration mode to **systematic**. This will scan through all possible structures. **Note:** Check
-  the size of the configuration space before actually running the minimization process. Otherwise, the program might
-  run "*forever*"
-- **Line 7:** use only nitrogen lattice positions to perform the SQS minimization.
 
-This example generates all possible configurations ($\approx 6 \cdot 10^8$) and analyses them.
-It is recommended to use `compute estimated-time` when using **systematic** iteration mode.
+- **Line 3:** sets the *{ref}`sublattice_mode <input-param-sublattice-mode>`* to *split*. The default is *interact*.
+- **Line 5-6:** read the structure from a file named *ti-n.vasp* and create a $2 \times 2 \times 2$ supercell
+- **Lines 8-12:** distribute 16 Boron and 16 Nitrogen atoms on the sites originally occupied by Nitrogen atoms only.
+  The Titanium sublattice remains untouched. **Note:** the brackets around the composition.
 
-```{code-block} bash
-> sqsgen compute total-permutations ti-n.yaml  # check the size of the configurational space
-601080390
-> sqsgen compute estimated-time ti-n.yaml  # estimate how long it will take
-It will take me roughly 14 minutes and 23.576 seconds to compute 601080390 iterations (on 8 threads)
-> sqsgen run iteration ti-n.yaml
-```
 
+#### the `sublattice_mode` parameter
+For an in-depth discussion of the different modes please refer to the *{ref}`sublattice_mode <input-param-sublattice-mode>`* section.
+
+
+  - *split*: the input structure is **splitted** into sublattices as defined in the *{ref}`composition <input-param-composition>`*
+    The optimization is then carried out on the specified sublattices only. The use cases are:
+    - restrict the optimization to a sublattice only (this example)
+    - optimize multiple sublattices simultaneously in one run
+
+  - *interact*: all atoms interact with each other. The SQS optimization is carried out on all atoms.
+    You use this mode if you want to pin certain atoms to position.
+
+
+In this example this results in N-N, B-N and B-B pairs being optimized whereas. If we had chosen *interact* mode Ti-Ti, Ti-N and Ti-B would be subject to the optimization as well.
+
+
+#### specifying structure files
+you can read in structure files using the *file* key in the *structure* section.
+
+  - the web version does not support file uploads
+  - the native CLI supports only POSCAR and pymatgen JSON and *sqsgenerator* JSON files
+    - the extension determines the file format e.g. `ti-n.pymatgen.json` or `ti-n.sqs.json`
+  - the python CLI supports all file formats of the native CLI plus what ever *ase* or *pymatgen* supports
+    - the extension determines the file format and is `{backend}.{format}`
+    - e.g. `ti-n.ase.cif` (use *ase* as backend to read a CIF file) or `ti-n.pymatgen.cif` (use *pymatgen* as backend to read a CIF file)
+    - no backend means `sqs`
+    - to get a list of all available extensions use `sqsgen export structure --help`
 
 ## Using Python API
+
+In case you use the Python CLI, you have also might want to use the Python API. The API itself is minimalistic
+It contains three main functions which can imported from the `sqsgenerator` package
+
+:::{code-block} python
+from sqsgenerator import parse_config, optimize, load_result_pack
+:::
+
+
+
 
 
 ## Templates

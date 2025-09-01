@@ -110,12 +110,12 @@ def parse_config(
                 warnings.warn(
                     f"Structure data provided in both file and inline format. Using file data from {structure_file_path}.",
                     UserWarning,
-                    stacklevel=1,
+                    stacklevel=2,
                 )
             structure: Structure = _read(structure_file_path)
             structure_config["lattice"] = structure.lattice.tolist()
             structure_config["coords"] = structure.frac_coords.tolist()
-            structure_config["species"] = structure.species.tolist()
+            structure_config["species"] = structure.species
 
     def apply(key: str, f: Callable[[str], Any]) -> None:
         if key in config:
