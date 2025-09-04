@@ -362,8 +362,5 @@ from sqsgenerator import parse_config, optimize, load_result_pack
 :::
 
 
-
-
-
 ## Templates
 (templates)=

@@ -10,6 +10,22 @@ export function downloadAsFile(content: string | Uint8Array, filename: string, m
     URL.revokeObjectURL(url);
 }
 
+export async function compressData(data: any) {
+    const jsonString = JSON.stringify(data);
+    const encoder = new TextEncoder();
+    const encoded = encoder.encode(jsonString);
+
+    // Compression stream (modern browsers)
+    const cs = new CompressionStream('gzip');
+    const writer = cs.writable.getWriter();
+    writer.write(encoded);
+    writer.close();
+
+    const compressed = await new Response(cs.readable).arrayBuffer();
+    return btoa(String.fromCharCode(...new Uint8Array(compressed)));
+}
+
+
 export async function decompressData(compressedBase64: string) {
 
     const compressedData = Uint8Array.from(atob(compressedBase64), c => c.charCodeAt(0));

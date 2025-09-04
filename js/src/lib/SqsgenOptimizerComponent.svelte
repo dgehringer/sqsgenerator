@@ -8,9 +8,9 @@
         type MenuItem,
         type RenderMenuContext,
         type OnChangeStatus,
-        type ValidationError
+        type ValidationError,
     } from 'svelte-jsoneditor';
-    import {downloadAsFile, decompressData, defaultConfig} from '$lib/utils.js';
+    import {downloadAsFile, decompressData, defaultConfig, compressData} from '$lib/utils.js';
     import {Pane, Splitpanes} from 'svelte-splitpanes';
     import LinearProgress from '@smui/linear-progress';
     import CircularProgress from '@smui/circular-progress';
@@ -26,10 +26,14 @@
         faSquareCaretDown,
         faSquareCaretUp,
         faFile,
-        faCircleQuestion
+        faCircleQuestion, faShareSquare,
     } from '@fortawesome/free-regular-svg-icons';
+    import {
+        faGithub,
+        faLinkedinIn,
+    } from '@fortawesome/free-brands-svg-icons';
     import Dialog, {Title, Content as DialogContent, Actions, InitialFocus} from '@smui/dialog';
-    import Button, {Label} from '@smui/button';
+    import Button, {Label, Icon} from '@smui/button';
     import List, {Item, Graphic, Text} from '@smui/list';
     import Radio from '@smui/radio';
     import * as Ngl from 'ngl';
@@ -81,6 +85,7 @@
                 json: JSON.parse(await decompressData(configData))
             };
         }
+        handleChange({text: JSON.stringify(content.json)}, state.jsonEditorRef?.get(), {} as OnChangeStatus);
     });
 
     let openDialogFileType = $state(false);
@@ -165,6 +170,23 @@
                 },
                 icon: running ? faCircleStop : faCirclePlay,
                 title: running ? 'Stop optimization' : 'Start optimization',
+                disabled: state.optimizationConfig === undefined
+            },
+            {
+                type: 'button',
+                icon: faShareSquare,
+                title: 'Share current configuration',
+                onClick: () => {
+                    if (!state.inputConfig) return;
+                    const jsonString = JSON.stringify(state.inputConfig);
+                    compressData(jsonString).then(compressed => {
+                        const shareUrl = `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(compressed)}`;
+                        navigator.clipboard.writeText(shareUrl).then(() => {
+                            alert('Shareable link copied to clipboard!');
+                        });
+                    });
+
+                },
                 disabled: state.optimizationConfig === undefined
             },
             {
@@ -522,7 +544,7 @@
     {#if running}
         <LinearProgress progress={state.optimization.finished} buffer={state.optimization.working}/>
     {/if}
-    <Splitpanes vertical={true} style="height: 500px">
+    <Splitpanes vertical={true} style="height: 98vh">
         <Pane minSize={30}>
             <JSONEditor
                     bind:this={state.jsonEditorRef}
@@ -533,7 +555,7 @@
                     {validator}
             />
         </Pane>
-        <Pane size={60} hidden={result === undefined}>
+        <Pane size={55} hidden={result === undefined}>
             <div id="viewport" style="height: 100%; width: 100%"></div>
         </Pane>
     </Splitpanes>
