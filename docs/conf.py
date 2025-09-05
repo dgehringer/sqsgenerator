@@ -33,6 +33,7 @@ extensions = [
     "myst_parser",
     "sphinx.ext.intersphinx",
     "sphinx_design",
+    "sphinx_click",
 ]
 
 

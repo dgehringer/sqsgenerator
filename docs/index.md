@@ -133,6 +133,7 @@ installation
 how_to
 parameters
 under_the_hood
+cli_reference
 
 :::
 
