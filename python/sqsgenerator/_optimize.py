@@ -83,6 +83,36 @@ def _parse_sublattice_mode(string: str) -> SublatticeMode:
         )
 
 
+def _preprocess_structure(structure_config: dict[str, Any]) -> dict[str, Any]:
+    """
+    Preprocess the structure configuration dictionary inplace.
+
+    Args:
+        structure_config (dict[str, Any]): The structure configuration dictionary containing
+            information about the structure, such as lattice, coordinates, species, or a file path.
+
+    Returns:
+        dict[str, Any]: The updated structure configuration dictionary with processed structure data.
+    """
+    if structure_file_path := structure_config.get("file"):
+        if (
+            "lattice" in structure_config
+            and "coords" in structure_config
+            and "species" in structure_config
+        ):
+            warnings.warn(
+                f"Structure data provided in both file and inline format. Using file data from {structure_file_path}.",
+                UserWarning,
+                stacklevel=2,
+            )
+        structure: Structure = _read(structure_file_path)
+        structure_config["lattice"] = structure.lattice.tolist()
+        structure_config["coords"] = structure.frac_coords.tolist()
+        structure_config["species"] = structure.species
+
+    return structure_config
+
+
 def parse_config(
     config: Union[dict[str, Any], str], inplace: bool = False
 ) -> SqsConfiguration:
@@ -101,21 +131,7 @@ def parse_config(
     config = config.copy() if not inplace else config
 
     if structure_config := config.get("structure"):
-        if structure_file_path := structure_config.get("file"):
-            if (
-                "lattice" in structure_config
-                and "coords" in structure_config
-                and "species" in structure_config
-            ):
-                warnings.warn(
-                    f"Structure data provided in both file and inline format. Using file data from {structure_file_path}.",
-                    UserWarning,
-                    stacklevel=1,
-                )
-            structure: Structure = _read(structure_file_path)
-            structure_config["lattice"] = structure.lattice.tolist()
-            structure_config["coords"] = structure.frac_coords.tolist()
-            structure_config["species"] = structure.species.tolist()
+        _preprocess_structure(structure_config)
 
     def apply(key: str, f: Callable[[str], Any]) -> None:
         if key in config:

@@ -1,7 +1,8 @@
-furo==2025.7.19
-myst-parser==4.0.1
-Sphinx==8.2.3
-sphinx-autobuild==2024.10.3
-sphinx-design==0.6.1
-sphinx_inline_tabs==2023.4.21
-sqsgenerator==0.4.9
+furo
+myst-parser
+Sphinx
+sphinx-autobuild
+sphinx-click
+sphinx-design
+sphinx_inline_tabs
+sqsgenerator

@@ -1,0 +1,72 @@
+{
+  "name": "re-w.first",
+  "description":
+      "Fully miscible Re-W at 50/50 compostition in a bcc structure. Only 1st nearest neighbor interactions are considered.",
+  "tags": [
+    "Cubic",
+    "bcc",
+    "Re",
+    "W",
+    "interact",
+    "54 at."
+  ],
+  "authors": [
+    {
+      "name": "Dominik",
+      "surname": "Gehringer",
+      "email": null,
+      "affiliations": []
+    }
+  ],
+  "config": {
+    "structure": {
+      "lattice": [
+        [
+          3.165,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          3.165,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          3.165
+        ]
+      ],
+      "coords": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.5,
+          0.5,
+          0.5
+        ]
+      ],
+      "species": [
+        "W",
+        "Re"
+      ],
+      "supercell": [
+        3,
+        3,
+        3
+      ]
+    },
+    "iterations": 50000000,
+    "shell_weights": {
+      "1": 1.0
+    },
+    "composition": {
+      "W": 27,
+      "Re": 27
+    },
+    "max_results_per_objective": 10
+  }
+}

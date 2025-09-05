@@ -5,7 +5,7 @@
 ## Highlights
 - 🚀 Blazingly fast short-range-order calculations (C++ core)
 - ➰ Monte-Carlo and systematic approach to compute optimal atomic configuration
-- 🧵multithreaded by default (optional MPI support)
+- 🧵multithreaded by default (optional MPI support) also in the browser 🌐
 - 🔀 optimize multiple sublattices simultaneously in a single run
 - 🔌 easy integration with other frameworks ([*ase*](https://wiki.fysik.dtu.dk/ase/),
     [*pymatgen*](https://pymatgen.org/) and [*pyiron*](https://pyiron.org/))
@@ -14,7 +14,9 @@
 ## Get started
 
  - 🌐 [directly in your browser](https://sqsgen.gehringer.tech) (multithreaded WebAssembly, no installation required)
- - 🐍 install the Python package via {ref}`pip <pip-installation>` or {ref}`conda <conda-installation>`
+ - 🐍 install the Python package
+   - via {ref}`pip <pip-installation>`: `pip install sqsgenerator`
+   - via {ref}`conda <conda-installation>`: `conda install -c conda-forge sqsgenerator`
  - 💻 build an MPI enabled {ref}`native app <native-installation>` for HPC environments
 
 ::::{dropdown} 🎓 Cite us
@@ -129,9 +131,10 @@ maxdepth: 1
 ---
 
 installation
+how_to
 parameters
-
 under_the_hood
+cli_reference
 
 :::
 

@@ -290,6 +290,8 @@ def deduce_format(filename: str) -> tuple[str, str]:
     elif len(parts) == 2:
         # there is no reader defined we use "sqsgen"
         _, fmt = parts
+        if fmt == "vasp":
+            fmt = "poscar"
         if fmt in sqsgen_formats():
             return "sqsgen", fmt
         else:
@@ -300,6 +302,8 @@ def deduce_format(filename: str) -> tuple[str, str]:
     else:
         *_, backend, fmt = parts
         if backend == "sqsgen":
+            if fmt == "vasp":
+                fmt = "poscar"
             if fmt in sqsgen_formats():
                 return "sqsgen", fmt
             else:

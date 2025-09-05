@@ -10,6 +10,7 @@ import click
 from .._adapters import available_formats, read, write
 from ..core import Atom, LogLevel, Prec, load_result_pack
 from ..templates import load_templates
+from ._link import link as _link
 from ._run import run_optimization
 from ._shared import format_hyperlink, render_error, render_table
 from ._version import print_version, version_string
@@ -260,3 +261,27 @@ def config(output: click.File) -> None:
 
     with open(f"{stem}.config.json", "w") as config_file:
         json.dump(parsed, config_file, indent=2)
+
+
+@cli.command(
+    name="link",
+    help="create a shareable link for the configuration file on https://sqsgen.gehringer.tech",
+)
+@click.option(
+    "-i",
+    "--input",
+    "_input",
+    type=click.File(mode="r"),
+    help="The configuration file to use",
+    default="sqs.json",
+    show_default=True,
+)
+@click.option(
+    "--open",
+    "open_in_browser",
+    is_flag=True,
+    default=False,
+    help="Open the link in a web browser",
+)
+def link(_input: click.File, open_in_browser: bool) -> None:
+    _link(_input.read(), open_in_browser)
