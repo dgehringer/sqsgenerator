@@ -28,10 +28,6 @@
         faFile,
         faCircleQuestion, faShareSquare,
     } from '@fortawesome/free-regular-svg-icons';
-    import {
-        faGithub,
-        faLinkedinIn,
-    } from '@fortawesome/free-brands-svg-icons';
     import Dialog, {Title, Content as DialogContent, Actions, InitialFocus} from '@smui/dialog';
     import Button, {Label, Icon} from '@smui/button';
     import List, {Item, Graphic, Text} from '@smui/list';
@@ -82,7 +78,7 @@
         // Ask opener for config
         if (configData) {
             content = {
-                json: JSON.parse(await decompressData(configData))
+                json: await decompressData(configData)
             };
         }
         handleChange({text: JSON.stringify(content.json)}, state.jsonEditorRef?.get(), {} as OnChangeStatus);
@@ -178,8 +174,7 @@
                 title: 'Share current configuration',
                 onClick: () => {
                     if (!state.inputConfig) return;
-                    const jsonString = JSON.stringify(state.inputConfig);
-                    compressData(jsonString).then(compressed => {
+                    compressData(state.inputConfig).then(compressed => {
                         const shareUrl = `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(compressed)}`;
                         navigator.clipboard.writeText(shareUrl).then(() => {
                             alert('Shareable link copied to clipboard!');
