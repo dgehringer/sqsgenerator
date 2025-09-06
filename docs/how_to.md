@@ -1,8 +1,6 @@
 
 # How To
 
-
-
 ## Using the CLI interface
 
 This section deals with the usage of the *sqsgenerator* package. A more granular documentation for the CLI can be found
@@ -359,6 +357,63 @@ It contains three main functions which can imported from the `sqsgenerator` pack
 
 :::{code-block} python
 from sqsgenerator import parse_config, optimize, load_result_pack
+:::
+
+`parse_config` accepts both a JSON string or a `dict` configuration and returns a config object.
+
+To run an optimization use
+
+:::{code-block} python
+from sqsgenerator import parse_config, optimize
+
+with open("re-w.first.json") as f:
+    config = parse_config(f.read())
+
+pack = optimize(config)
+:::
+
+When specifying a lattice or the coords also numpy arrays are accepted
+
+### loading existing results
+
+In case you have an existing `sqs.mpack` from the webapp or the native CLI file you can load it using
+
+:::{code-block} python
+from sqsgenerator import load_result_pack
+
+with open("sqs.mpack", "rb") as f:
+    pack = load_result_pack(f.read())
+:::
+
+### analysing the results
+
+`optimize` returns the structures in a packed format. You can think of it as  `list[tuple[float, list[SqsResult]]]` where
+each entry contains the solutions with the same objective {eq}`eqn:objective-actual` value in *ascending* order.
+
+To obtain the best structure use
+
+:::{code-block} python
+best = pack.best()
+:::
+
+while is basically equivalent to `pack[0][0]`. To see a list of all objectives and the number of structures for each use
+
+:::{code-block} python
+for obj, solutions in pack:
+    print(f"Objective: {obj}, Num. solutions: {len(solutions)}")
+:::
+
+### exporting structures
+
+Each soution is of type `SqsResult` which contains the structure and the computed SRO parameters. You can access the structure
+using the `structure` method. To export all structures you could use (here we choose CIF with *pymatgen* as backend):
+
+:::{code-block} python
+from sqsgenerator import write
+
+for oi, (obj, solutions) in enumerate(pack):
+    for si, solution in enumerate(solutions):
+        write(solution.structure(), f"sqs-{oi}-{si}.pymatgen.cif")
 :::
 
 

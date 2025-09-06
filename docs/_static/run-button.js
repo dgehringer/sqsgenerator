@@ -14,7 +14,6 @@ async function compressData(data) {
 }
 
 function cleanNumberedLines(input) {
-  input.split('\n').forEach((line) => console.log(line.replace(/^\d+/, '')));
   return input.split('\n').map(line => line.replace(/^\s*\d+/, '')).join('\n');
 }
 
@@ -37,18 +36,18 @@ function attachRunButtons() {
     btn.addEventListener('click', () => {
       const code = cleanNumberedLines(block.querySelector('.highlight').innerText.trim());
       try {
-        JSON.parse(code);
+        const inputConfig = JSON.parse(code);
+        console.log(inputConfig);
+        compressData(inputConfig).then((compressedBase64) => {
+          const url
+              = `https://sqsgen.gehringer.tech/?config=${encodeURIComponent(compressedBase64)}`;
+          window.open(url, '_blank');
+        })
       } catch (e) {
         console.error(code);
         console.error(e);
         alert('Invalid JSON in code block!' + e);
-        return;
       }
-
-      compressData(code).then((compressedBase64) => {
-        const url = `https://sqsgen.gehringer.tech/?config=${encodeURIComponent(compressedBase64)}`;
-        window.open(url, '_blank');
-      })
     });
 
     // Insert button after the code block
