@@ -16,7 +16,7 @@ https://anaconda.org/conda-forge/sqsgenerator/badges/downloads.svg)
 **sqsgenerator** is a Python package, which allows you to efficiently generate optimised *Special-Quasirandom-Structures* (SQS). The package uses *Warren-Cowley Short-Range-Order* (SRO) parameters to quantify randomness. The core routines are written in C++ and directly usable with your browser
 
 > [!TIP]
-> **sqsgenerator** runs natively (multithreaded) in your browser using WebAssembly. No installation is required, just open [sqsgen.gehringer.tech](https://sqsgen.gehringer.tech) and start using it right away.
+> **sqsgenerator** runs natively (multithreaded) in your browser using WebAssembly. No installation is required, just open [🚀WebApp](https://sqsgen.gehringer.tech) and start using it right away.
 
 
 > [!IMPORTANT]
