@@ -187,7 +187,7 @@
             {
                 type: 'button',
                 onClick: () => {
-                    window.open('https://sqsgenerator.readthedocs.io/en/latest/parameters', '_blank');
+                    window.open('https://sqsgenerator.readthedocs.io/en/latest/parameters.html', '_blank');
                 },
                 icon: faCircleQuestion,
                 title: 'Open help'
@@ -503,7 +503,7 @@
                     </li>
                     <li>
                         send logo and full name via <a
-                            href="mailto:david.holec@unileoben.ac.at">mail</a
+                            href="mailto:dominik@gehringer.tech">mail</a
                     >
                     </li>
                 </ul>
@@ -517,7 +517,7 @@
                         description the authors and the an eventual DOI in case you have used it in an article
                         via
                         <ul>
-                            <li>via <a href="mailto:david.holec@unileoben.ac.at">mail</a></li>
+                            <li>via <a href="mailto:dominik@gehringer.tech">mail</a></li>
                             <li>
                                 by opening <a href="https://github.com/dgehringer/sqsgenerator/issues/new"
                             >a new issue</a
