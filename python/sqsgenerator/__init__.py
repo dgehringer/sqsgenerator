@@ -33,12 +33,6 @@ __all__ = [
     "write",
 ]
 
-warnings.warn(
-    "The current version of sqsgenerator is a pre-release. We have introduced breaking changes in versions >= 0.4.*. We are still working on updating the documentation. The last stable version is 0.3 and can be obtained via conda",
-    UserWarning,
-    stacklevel=2,
-)
-
 
 if HAVE_PYMATGEN:
     from ._adapters import (
