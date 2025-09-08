@@ -359,7 +359,7 @@ It contains three main functions which can imported from the `sqsgenerator` pack
 from sqsgenerator import parse_config, optimize, load_result_pack
 :::
 
-`parse_config` accepts both a JSON string or a `dict` configuration and returns a config object.
+[parse_config](#sqsgenerator.parse_config) accepts both a JSON string or a `dict` configuration and returns a config object.
 
 To run an optimization use
 
@@ -376,7 +376,7 @@ When specifying a lattice or the coords also numpy arrays are accepted
 
 ### loading existing results
 
-In case you have an existing `sqs.mpack` from the webapp or the native CLI file you can load it using
+In case you have an existing `sqs.mpack` from the webapp or the native CLI file you can load it using [load_result_pack](#sqsgenerator.load_result_pack):
 
 :::{code-block} python
 from sqsgenerator import load_result_pack
@@ -387,7 +387,7 @@ with open("sqs.mpack", "rb") as f:
 
 ### analysing the results
 
-`optimize` returns the structures in a packed format. You can think of it as  `list[tuple[float, list[SqsResult]]]` where
+[optimize](#sqsgenerator.optimize) returns the structures in a packed format. You can think of it as  `list[tuple[float, list[SqsResult]]]` where
 each entry contains the solutions with the same objective {eq}`eqn:objective-actual` value in *ascending* order.
 
 To obtain the best structure use
@@ -405,8 +405,9 @@ for obj, solutions in pack:
 
 ### exporting structures
 
-Each soution is of type `SqsResult` which contains the structure and the computed SRO parameters. You can access the structure
-using the `structure` method. To export all structures you could use (here we choose CIF with *pymatgen* as backend):
+Each solution is of type [SqsResult](#sqsgenerator.core.SqsResult) which contains the structure and the computed SRO parameters. You can access the structure
+[structure](#sqsgenerator.core.SqsResultInteractDouble.structure) method. To export all structures you can use (here we choose CIF with *pymatgen* as backend)
+the [write](#sqsgenerator.write) function:
 
 :::{code-block} python
 from sqsgenerator import write
@@ -415,6 +416,49 @@ for oi, (obj, solutions) in enumerate(pack):
     for si, solution in enumerate(solutions):
         write(solution.structure(), f"sqs-{oi}-{si}.pymatgen.cif")
 :::
+
+Each [SqsResult](#sqsgenerator.core.SqsResult) no matter if it is of type [SqsResultInteract](#sqsgenerator.core.SqsResultInteractDouble) or [SqsResultSplit](#sqsgenerator.core.SqsResultSplitDouble) contains
+  - [structure](#sqsgenerator.core.SqsResultInteractDouble.structure) method to obtain the structure as a [Structure](#sqsgenerator.core.StructureDouble) object
+  - [objective](#sqsgenerator.core.SqsResultInteractDouble.objective) property of the objective value {eq}`eqn:objective-actual` for this structure
+  - [rank](#sqsgenerator.core.SqsResultInteractDouble.rank) permutation number of species array as a `str`
+
+
+### analysing SRO parameters
+
+### in `interact` mode
+
+A solution of type [SqsResultInteract](#sqsgenerator.core.SqsResultInteractDouble) contains the computed SRO parameters, those can be accessed using the [sro](#sqsgenerator.core.SqsResultInteractDouble.sro) method
+
+Assuming our Re-W example from above, you can access the SRO parameters using
+
+```python
+solution = pack.best()
+
+sro_params = solution.sro()
+"numpy array of shape (num_shells, num_species, num_species) = (1, 2, 2) in this case"
+
+sro_params = solution.sro("Re", "W")
+"list containing parameter for each shell (num_shells,) = [α-0-Re-W]"
+
+sro_params = solution.sro("Re", "W")
+"same as above, since the SROs are symmetric"
+
+sro_params = solution.sro(74, 75)
+"same as above, but uses ordinal numbers of Re and W"
+
+sro_params = solution.sro(1)
+"all SRO in shell 1, [α1-74-74, α1-74-75, α1-75-75]"
+
+sro_param = solution.sro(1, "Re", "W")
+"single parameter value α1-74-75"
+
+# to convert it to a float use
+value = float(sro_param)
+```
+
+
+### in `split` mode
+A solution of type [SqsResultSplit](#sqsgenerator.core.SqsResultSplitDouble) contains multiple sublattice results. Each sublattice result is of type [SqsResultInteract](#sqsgenerator.core.SqsResultInteractDouble) and can be accessed using the [sublattices](#sqsgenerator.core.SqsResultSplitDouble.sublattices) method .
 
 
 ## Templates

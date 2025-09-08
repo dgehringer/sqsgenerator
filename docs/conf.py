@@ -32,6 +32,8 @@ extensions = [
     "sphinx_inline_tabs",
     "myst_parser",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.autodoc",
     "sphinx_design",
     "sphinx_click",
 ]

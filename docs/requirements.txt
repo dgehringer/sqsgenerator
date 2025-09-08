@@ -1,5 +1,7 @@
+ase
 furo
 myst-parser
+pymatgen
 Sphinx
 sphinx-autobuild
 sphinx-click
