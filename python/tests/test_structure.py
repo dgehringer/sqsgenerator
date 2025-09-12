@@ -63,3 +63,21 @@ def test_structure_supercell_pymatgen(structure_type):
 
     supercell = (1, 2, 3)
     assert pymatgen_structure * supercell == to_pymatgen(structure * supercell)
+
+
+@pytest.mark.skipif(not HAVE_PYMATGEN, reason="pymatgen not installed")
+@pytest.mark.parametrize("structure_type", [StructureFloat, StructureDouble])
+def test_structure_vacancies(structure_type):
+    structure = structure_type(
+        np.diag([1, 2, 3]),
+        np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5]]),
+        [4] * 2 + [0] * 2,
+    )
+
+    assert len(structure) == 4
+    assert len(structure.without_vacancies()) == 2
+    # without_vacancies is an impodent operation
+    assert len(structure.without_vacancies()) == len(
+        structure.without_vacancies().without_vacancies()
+    )
+    assert structure.without_vacancies().species == [4, 4]

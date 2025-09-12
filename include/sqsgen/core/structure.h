@@ -401,6 +401,10 @@ namespace sqsgen::core {
       return structure(lattice, sites() | views::filter(std::forward<Fn>(fn)));
     }
 
+    structure without_vacancies() const {
+      return filtered([](auto site) { return site.specie != 0; });
+    }
+
     template <ranges::input_range R, class V = ranges::range_value_t<R>>
       requires std::is_integral_v<V>
     structure sliced(R &&r) const {

@@ -76,6 +76,7 @@ html_short_title = "sqsgenerator"
 html_favicon = "favicon.ico"
 html_css_files = [
     "custom.css",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css",
 ]
 
 

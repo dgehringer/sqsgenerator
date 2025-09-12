@@ -159,6 +159,7 @@ template <string_literal Name, class T> void bind_structure(py::module &m) {
            [](structure<T> &a, structure<T> &b) {
              return as<std::vector>{}(a.sites()) == as<std::vector>{}(b.sites());
            })
+      .def("without_vacancies", &structure<T>::without_vacancies)
       .def("dump",
            [](structure<T> &s, StructureFormat format) {
              switch (format) {

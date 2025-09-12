@@ -146,13 +146,14 @@ namespace sqsgen::io {
     }
 
     static auto format_json(core::structure<T> const& structure) {
+      auto filtered = structure.without_vacancies();
       std::string dtype = "float64";
-      auto cell = _format_array("float64", std::array{3, 3}, structure.lattice);
+      auto cell = _format_array("float64", std::array{3, 3}, filtered.lattice);
       cell["__ase_objtype__"] = "cell";
 
-      matrix_t<T> positions(structure.size(), 3);
-      for (std::size_t i = 0; i < structure.size(); ++i)
-        positions.row(i) = structure.frac_coords.row(i) * structure.lattice;
+      matrix_t<T> positions(filtered.size(), 3);
+      for (std::size_t i = 0; i < filtered.size(); ++i)
+        positions.row(i) = filtered.frac_coords.row(i) * filtered.lattice;
 
       return nlohmann::json{
           {"cell", cell},
@@ -160,9 +161,9 @@ namespace sqsgen::io {
           {"user", "sqsgen"},
           {"mtime", years_since_2000()},
           {"ctime", years_since_2000()},
-          {"pbc", _format_array("bool", std::array{3}, structure.pbc)},
+          {"pbc", _format_array("bool", std::array{3}, filtered.pbc)},
           {"positions",
-           _format_array(dtype, std::array{structure.size(), std::size_t{3}}, positions)}};
+           _format_array(dtype, std::array{filtered.size(), std::size_t{3}}, positions)}};
     }
 
     static std::string format(core::structure<T> const& structure) {
@@ -193,14 +194,15 @@ namespace sqsgen::io {
     using row_t = Eigen::Vector3<T>;
     using tokens_t = std::vector<std::string_view>;
     static std::string format(core::structure<T> const& structure) {
+      auto filtered = structure.without_vacancies();
       // one coordinate line holds about 72 characters, to be safe we multiply by two
       constexpr absl::string_view row_format = "%23.16f %23.16f %23.16f";
-      auto sorted = structure.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
+      auto sorted = filtered.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
       auto unique_species = core::helpers::sorted_vector<specie_t>{sorted.species};
       auto num_species = core::count_species(sorted.species);
 
       std::string result;
-      result.reserve(structure.size() * 144);
+      result.reserve(filtered.size() * 144);
 
       const auto println
           = [&result](std::string const& line) { result.append(format_string("%s\n", line)); };
@@ -416,20 +418,21 @@ namespace sqsgen::io {
 
   template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_JSON_PYMATGEN> {
     static nlohmann::json format_json(core::structure<T> const& structure) {
-      const auto [a, b, c] = detail::lengths<T>(structure.lattice);
-      const auto [alpha, beta, gamma] = detail::angles<T>(structure.lattice);
-      nlohmann::json lattice = {{"matrix", structure.lattice},
-                                {"pbc", structure.pbc},
+      auto filtered = structure.without_vacancies();
+      const auto [a, b, c] = detail::lengths<T>(filtered.lattice);
+      const auto [alpha, beta, gamma] = detail::angles<T>(filtered.lattice);
+      nlohmann::json lattice = {{"matrix", filtered.lattice},
+                                {"pbc", filtered.pbc},
                                 {"a", a},
                                 {"b", b},
                                 {"c", c},
-                                {"volume", std::abs(structure.lattice.determinant())},
+                                {"volume", std::abs(filtered.lattice.determinant())},
                                 {"alpha", alpha},
                                 {"beta", beta},
                                 {"gamma", gamma}};
       auto sites = nlohmann::json::array();
-      ranges::for_each(structure.sites(),
-                       [&](auto&& site) { sites.push_back(format_site(site, structure.lattice)); });
+      ranges::for_each(filtered.sites(),
+                       [&](auto&& site) { sites.push_back(format_site(site, filtered.lattice)); });
       return {{"properties", nlohmann::json::object()},
               {"lattice", lattice},
               {"@module", "pymatgen.core.structure"},
@@ -507,12 +510,13 @@ namespace sqsgen::io {
 
   template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_CIF> {
     static std::string format(core::structure<T> const& structure) {
-      auto sorted = structure.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
+      auto filtered = structure.without_vacancies();
+      auto sorted = filtered.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
       auto unique_species = core::helpers::sorted_vector<specie_t>{sorted.species};
       auto num_species = core::count_species(sorted.species);
       const auto z_to_symbol = [](auto&& z) { return core::atom::from_z(z).symbol; };
       std::string result;
-      result.reserve(structure.size() * 144);
+      result.reserve(filtered.size() * 144);
 
       const auto println
           = [&result](std::string const& line) { result.append(format_string("%s\n", line)); };
@@ -528,8 +532,8 @@ namespace sqsgen::io {
       println(format_string("data_%s", make_formula("")));
       println("_symmetry_space_group_name_H-M   'P 1'");
 
-      const auto [a, b, c] = detail::lengths<T>(structure.lattice);
-      const auto [alpha, beta, gamma] = detail::angles<T>(structure.lattice);
+      const auto [a, b, c] = detail::lengths<T>(filtered.lattice);
+      const auto [alpha, beta, gamma] = detail::angles<T>(filtered.lattice);
 
       println(format_string("_cell_length_a       %.8f", a));
       println(format_string("_cell_length_b       %.8f", b));
@@ -541,8 +545,8 @@ namespace sqsgen::io {
       println("_symmetry_Int_Tables_number   1");
       println(format_string("_chemical_formula_structural   %s", make_formula("")));
       println(format_string("_chemical_formula_sum   '%s'", make_formula(" ")));
-      println(format_string("_cell_volume   %.5f", std::abs(structure.lattice.determinant())));
-      println(format_string("_cell_formula_units_Z   %u", structure.size()));
+      println(format_string("_cell_volume   %.5f", std::abs(filtered.lattice.determinant())));
+      println(format_string("_cell_formula_units_Z   %u", filtered.size()));
 
       println("loop_");
       println(" _symmetry_equiv_pos_site_id");
@@ -575,32 +579,33 @@ namespace sqsgen::io {
 
   template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_PDB> {
     static std::string format(core::structure<T> const& structure) {
+      auto filtered = structure.without_vacancies();
       std::string result;
-      result.reserve(structure.size() * 144);
+      result.reserve(filtered.size() * 144);
 
       const auto z_to_symbol = [](auto&& z) { return core::atom::from_z(z).symbol; };
 
       const auto println
           = [&result](std::string const& line) { result.append(format_string("%s\n", line)); };
 
-      const auto [a, b, c] = detail::lengths<T>(structure.lattice);
-      const auto [alpha, beta, gamma] = detail::angles<T>(structure.lattice);
+      const auto [a, b, c] = detail::lengths<T>(filtered.lattice);
+      const auto [alpha, beta, gamma] = detail::angles<T>(filtered.lattice);
       println(
           format_string("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1", a, b, c, alpha, beta, gamma));
 
-      coords_t<T> cart_coords = structure.frac_coords * structure.lattice.transpose();
+      coords_t<T> cart_coords = filtered.frac_coords * filtered.lattice.transpose();
 
       std::size_t maxnum = 100000;
       println("MODEL     0");
       core::helpers::for_each(
           [&, maxnum](auto&& index) {
             auto row = cart_coords.row(index);
-            auto symbol = z_to_symbol(structure.species[index]);
+            auto symbol = z_to_symbol(filtered.species[index]);
             println(format_string(
                 "ATOM  %5d %4s MOL     1    %8.3f%8.3f%8.3f  1.00  0.00          %2s  ",
                 index % maxnum, symbol, row(0), row(1), row(2), detail::rjust(symbol, 2)));
           },
-          structure.size());
+          filtered.size());
 
       println("ENDMDL");
       result.shrink_to_fit();
