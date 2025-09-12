@@ -353,6 +353,7 @@ def write(
         filename (str): The file path to write to.
         fmt (str): The file format to use.
     """
+    structure = structure.without_vacancies()
     if fmt is not None and (
         not filename.endswith(f"{backend}.{fmt}") or not filename.endswith(fmt)
     ):
