@@ -397,7 +397,8 @@ namespace sqsgen::io {
     static nlohmann::json format_json(core::structure<T> const& structure) { return structure; }
 
     static std::string format(core::structure<T> const& structure) {
-      return format_json(structure).dump();
+      auto filtered = structure.without_vacancies();
+      return format_json(filtered).dump();
     }
 
     static parse_result<core::structure<T>> from_json(std::string const& json) {
