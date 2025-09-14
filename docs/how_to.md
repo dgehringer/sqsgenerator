@@ -461,5 +461,144 @@ value = float(sro_param)
 A solution of type [SqsResultSplit](#sqsgenerator.core.SqsResultSplitDouble) contains multiple sublattice results. Each sublattice result is of type [SqsResultInteract](#sqsgenerator.core.SqsResultInteractDouble) and can be accessed using the [sublattices](#sqsgenerator.core.SqsResultSplitDouble.sublattices) method .
 
 
+## More examples
+
+### High entropy oxide
+
+This example shows how to create a SQS for a high entropy oxide with composition.
+
+It illustrates two different concepts:
+    - distribute vacnancies on a sublattice (here the Oxygen sublattice)
+    - using the *split* mode to optimize two sublattices ($\mathrm{Co}$ and $\mathrm{O}$) independently
+
+*sqsgenerator* has a reserved species name `0` (zero) to denote vacancies. In this example we distribute 8 vacancies and 24 Oxygen atoms on the Oxygen sublattice of the $\mathrm{Co}_3\mathrm{O}_4$ structure.
+
+The input below produces a $\mathrm{Co}_3\mathrm{O}_4 \rightarrow (\mathrm{Co}_{0.16}\mathrm{Mn}_{0.21}\mathrm{Co}_{0.21}\mathrm{Ni}_{0.21}\mathrm{Fe}_{0.21})\mathrm{O}_{0.75}$ structure.
+
+::::{tab} Native + Python CLI/Python API
+:::{code-block} json
+:lineno-start: 1
+:caption: Download the {download}`Co3O4 structure file <_static/Co3O4.pymatgen.json>`
+{
+  "iterations": 1000000,
+  "sublattice_mode": "split",
+    "structure": {
+    "file": "Co3O4.pymatgen.json",
+  },
+  "composition": [
+    {
+      "sites": "Co",
+      "Cr": 4,
+      "Mn": 5,
+      "Co": 5,
+      "Ni": 5,
+      "Fe": 5
+    },
+    {
+      "sites": "O",
+      "0": 8,
+      "O": 24
+    }
+  ]
+}
+:::
+::::
+
+
+::::{tab} Web
+:::{code-block} json
+:class: runbutton
+:lineno-start: 1
+{
+  "iterations": 1000000,
+  "sublattice_mode": "split",
+  "structure": {
+    "lattice": [
+      [8.36, 0.0, 0.0],
+      [0.0, 8.36, 0.0],
+      [0.0, 0.0, 8.36]
+    ],
+    "coords": [
+      [0.25, 0.75, 0.25],
+      [0.00, 0.50, 0.00],
+      [0.25, 0.25, 0.75],
+      [0.00, 0.00, 0.50],
+      [0.75, 0.75, 0.75],
+      [0.50, 0.50, 0.50],
+      [0.75, 0.25, 0.25],
+      [0.50, 0.00, 0.00],
+      [0.375, 0.375, 0.125],
+      [0.375, 0.125, 0.375],
+      [0.625, 0.875, 0.375],
+      [0.125, 0.125, 0.125],
+      [0.375, 0.875, 0.625],
+      [0.375, 0.625, 0.875],
+      [0.625, 0.375, 0.875],
+      [0.125, 0.625, 0.625],
+      [0.875, 0.375, 0.625],
+      [0.875, 0.125, 0.875],
+      [0.125, 0.875, 0.875],
+      [0.625, 0.125, 0.625],
+      [0.875, 0.875, 0.125],
+      [0.875, 0.625, 0.375],
+      [0.125, 0.375, 0.375],
+      [0.625, 0.625, 0.125],
+      [0.861943, 0.361943, 0.861943],
+      [0.888057, 0.111943, 0.111943],
+      [0.111943, 0.111943, 0.888057],
+      [0.111943, 0.888057, 0.111943],
+      [0.138057, 0.138057, 0.361943],
+      [0.138057, 0.361943, 0.138057],
+      [0.388057, 0.888057, 0.388057],
+      [0.361943, 0.138057, 0.138057],
+      [0.861943, 0.861943, 0.361943],
+      [0.888057, 0.611943, 0.611943],
+      [0.111943, 0.611943, 0.388057],
+      [0.111943, 0.388057, 0.611943],
+      [0.138057, 0.638057, 0.861943],
+      [0.138057, 0.861943, 0.638057],
+      [0.388057, 0.388057, 0.888057],
+      [0.361943, 0.638057, 0.638057],
+      [0.361943, 0.361943, 0.361943],
+      [0.388057, 0.111943, 0.611943],
+      [0.611943, 0.111943, 0.388057],
+      [0.611943, 0.888057, 0.611943],
+      [0.638057, 0.138057, 0.861943],
+      [0.638057, 0.361943, 0.638057],
+      [0.888057, 0.888057, 0.888057],
+      [0.861943, 0.138057, 0.638057],
+      [0.361943, 0.861943, 0.861943],
+      [0.388057, 0.611943, 0.111943],
+      [0.611943, 0.611943, 0.888057],
+      [0.611943, 0.388057, 0.111943],
+      [0.638057, 0.638057, 0.361943],
+      [0.638057, 0.861943, 0.138057],
+      [0.888057, 0.388057, 0.388057],
+      [0.861943, 0.638057, 0.138057]
+    ],
+    "species": [
+      27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27,
+      8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+    ]
+  },
+  "composition": [
+    {
+      "sites": "Co",
+      "Cr": 4,
+      "Mn": 5,
+      "Co": 5,
+      "Ni": 5,
+      "Fe": 5
+    },
+    {
+      "sites": "O",
+      "0": 8,
+      "O": 24
+    }
+  ]
+}
+:::
+::::
+
 ## Templates
 (templates)=
