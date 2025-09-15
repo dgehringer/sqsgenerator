@@ -300,7 +300,7 @@
             {
                 type: 'button',
                 onClick: () => {
-                    downloadAsFile(new Uint8Array(result.msgpack()), 'sqs.msgpack', 'application/vnd.msgpack');
+                    downloadAsFile(new Uint8Array(result.msgpack()), 'sqs.mpack', 'application/vnd.msgpack');
                 },
                 disabled: result === undefined,
                 icon: faArrowAltCircleDown,
@@ -351,7 +351,7 @@
                 },
                 disabled: result === undefined,
                 icon: faFile,
-                title: 'Download results in msgpack format'
+                title: 'Download the current file in selected format'
             },
             {
                 type: 'button',

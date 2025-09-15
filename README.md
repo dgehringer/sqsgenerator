@@ -60,7 +60,7 @@ conda install -c conda-forge sqsgenerator
 
 ### Native application (MPI)
 
-Since version 0.4 a native application is available, which can be used in HPC environments. The application is MPI enabled and can be built from source. Please refer to the [installation instructions](https://sqsgenerator.readthedocs.io/installation.html#native-application) for more details.
+Since version 0.4 a native application is available, which can be used in HPC environments. The application is MPI enabled and can be built from source. Please refer to the [installation instructions](https://sqsgenerator.readthedocs.io/en/latest/installation.html#native-application) for more details.
 
 ### Cite us
 In case you use the software in your research, please cite our [article](https://doi.org/10.1016/j.cpc.2023.108664). Here is the [BibTeX entry](citation.bib).
