@@ -1,4 +1,4 @@
-#  *sqsgen* under the hood
+# under the hood
 
 ## Pair Short-Range-Order
 
@@ -13,29 +13,41 @@
 
 Where $N_{AB}$ the number of $A-B$ bonds, $N$  the number of atoms in the cell, $x_A$ ($x_B$) the mole fraction of $A$ ($B$) and $M$ the number of neighbors on the lattice (e. g $M^{fcc}=12$). Thus it compares the number of $A-B$ bonds in a given (numerator) configuration with that of statistical ideal solid solution (denominator). Thus the following cases can occur
 
-* $\alpha_{AB} < 0$: system tends to be **ordered**
-* $\alpha_{AB} > 0$: system tends to be **clustered**
-* $\alpha_{AB} \approx 0$: system tends to be **disordered**
 
-Therefore, *sqsgenerator* tries to optimize a given system such that the SRO approaches zero.
+::::{grid} 3
+:::{grid-item-card}  $\alpha_{AB} < 0$: ordered
+:img-top: images/wc_ordered.svg
+:::
+
+:::{grid-item-card}  $\alpha_{AB} > 0$: clustered
+:img-top: images/wc_clustered.svg
+:::
+
+:::{grid-item-card}  $\alpha_{AB} \approx 0$: disordered
+:img-top: images/wc_random.svg
+:::
+
+::::
+
+Therefore, (with default settings) *sqsgenerator* tries to optimize a given system such that $\alpha_{AB} \approx 0$.
 
 ### Can *sqsgenerator* handle also second-nearest neighbors?
 
 Yes it actually can! Indeed, on a *fcc* lattice each atom exhibits $M^{fcc}_1=12$ nearest neighbors, but there are also  $M^{fcc}_2=6$ second nearest neighbors and even  $M^{fcc}_3=24$ third nearest neighbors. However, it is very easy to generalize the *Warren-Cowley* SRO to more "*coordination shells*" which, therefore becomes a vector
 
-```{math}
+:::{math}
 :label: eqn:wc-sro-shells
 \alpha^k_{AB} = 1 - \dfrac{N_{AB}^k}{NM^kx_Ax_B}.
-```
+:::
 
 ### But what about optimizing multi-component alloys?
 
 Similarly, the generalization to multi-component systems is a straight as for the coordination shells. Consider a system of $\{A,B,C\}$ atoms. Now we have to also consider $A-C$ and $B-C$ bonds, thus resulting in 6 SRO parameters for each coordination shells (also $A-A$, $B-B$ and $C-C$ bonds are considered), thus the initial parameter becomes a three dimensional object
 
-```{math}
+:::{math}
 :label: eqn:wc-sro-multi
 \alpha^i_{\xi\eta} = 1 - \dfrac{N^i_{\xi\eta}}{NM^ix_{\xi}x_{\eta}}
-```
+:::
 
 where again $M^{i}$ is the number of sites in the $i$-th coordination shell, $x_\xi$ and $x_\eta$ are the mole-fraction of the corresponding species and $N^i_{\xi\eta}$ the number of $\xi-\eta$ "*bonds*"/pairs in the coordination shell.
 

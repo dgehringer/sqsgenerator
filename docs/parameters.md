@@ -103,7 +103,7 @@ This parameter is used for a histogram bassed detection algorithm to compute the
 Sets the real space bin width of the histogram computed from the pair distance matrix
 $r_{ij} = \left|\vec{r}_{i} - \vec{r}_j \right|$. This parameter is used in combination with
 the {ref}`peak_isolation <input-param-peak-isolation>` parameter to compute the default guess for the
-{ref}`radii of the coordination shells <input-param-shell-distances>`. Unit is in $\mathrm{\mathring{A}}$.
+{ref}`radii of the coordination shells <input-param-shell-radii>`. Unit is in $\mathrm{\mathring{A}}$.
 
 - **Required:** No
 - **Default**: `0.05`
@@ -439,7 +439,7 @@ Number of configurations to check. This parameter is ignored if *{ref}`mode <inp
 accounts for the fact that coodination shells which are farther away are less important. This parameter also determines
 **which** shells should be taken into account. The `shell_weights` are a mapping (dictionary). It assigns the
 **shell index** to its corresponding shell weight $w^i$. The keys represent the indices of the calculated shell distances
-computed or specified by the *{ref}`shell_distances <input-param-shell-distances>`* parameter. Its values correspond
+computed or specified by the *{ref}`shell_radii <input-param-shell-radii>`* parameter. Its values correspond
 to $w^i$ {eq}`eqn:objective` in the objective function.
 
 - **Required**: No
@@ -576,9 +576,7 @@ the target objective $\tilde{\alpha}^i_{\eta\xi}$ {eq}`eqn:objective`, which the
 (input-param-prefactors)=
 
 The bond prefactors $f_{\xi\eta}^i$ as defined in Eq. {eq}`eqn:prefactors`. The input representation and options are the
-same as for the *{ref}`target_objective <input-param-target-objective>`* parameter. The
-{ref}`prefactor_mode <input-param-prefactor-mode>` parameter determines whether the default values are overridden or
-modified. One can think of the prefactors $f^i_{\xi\eta}$ as the reciprocal value of the expected number $\xi - \eta$
+same as for the *{ref}`target_objective <input-param-target-objective>`* parameter. One can think of the prefactors $f^i_{\xi\eta}$ as the reciprocal value of the expected number $\xi - \eta$
 pairs in the $i^{\text{th}}$ coordination shell
 
 - **Required:** No
@@ -589,28 +587,12 @@ pairs in the $i^{\text{th}}$ coordination shell
     - a 3D array of shape $\left( N_{\text{shells}}, N_{\text{species}}, N_{\text{species}} \right)$ (`np.ndarray`)
 
 
-### `prefactor_mode`
-(input-param-prefactor-mode)=
+### `thread_config`
 
-Specifies how the *{ref}`prefactors <input-param-prefactors>`* parameter is interpreted
-
-- *set*  uses the values from *{ref}`prefactors <input-param-prefactors>`* and interprets them directly as $f^i_{\xi\eta}$
-- *mul* multiplies the input array **element-wise** with the default values of *{ref}`prefactors <input-param-prefactors>`*
-  and uses the result as $f^i_{\xi\eta}$
-
-- **Required:** No
-- **Default:** *set*
-- **Accepted:** *set* or *mul* (`str`)
-
-### `threads_per_rank`
-
-number of threads should be used on each rank. The value(s) is (are) passed on to
-[*omp_set_num_threads*](https://www.openmp.org/spec-html/5.0/openmpsu110.html). If the version of *sqsgenerator*
+number of threads should be used on each rank. If the version of *sqsgenerator*
 **is not capable**  MPI parallelism, a single value is needed. If *sqsgenerator* was called within an MPI runtime,
-an entry must be present for each rank. In case OpenMP schedules a different number of threads, than specified in
-`threads_per_rank` the workload will be redistributed automatically. Negative values represent a call to
-[*omp_get_max_threads*](https://www.openmp.org/spec-html/5.0/openmpsu112.html) (as many threads as possible).
+an entry must be present for each rank.
 
 - **Required:** No
-- **Default:** `[-1]` if there is no MPI support. Otherwise `[-1]*N` where `N` is the number of MPI ranks
+- **Default:** use all available physical cores cores
 - **Accepts:** a list of integers number (`list[int]`)

@@ -65,10 +65,11 @@ if HAVE_PYMATGEN:
         Returns:
             PymatgenStructure: The converted pymatgen Structure object.
         """
+        filtered = structure.without_vacancies()
         return PymatgenStructure(
-            lattice=structure.lattice,
-            species=[atom.symbol for atom in structure.atoms],
-            coords=structure.frac_coords,
+            lattice=filtered.lattice,
+            species=[atom.symbol for atom in filtered.atoms],
+            coords=filtered.frac_coords,
             coords_are_cartesian=False,
         )
 
@@ -179,10 +180,11 @@ if HAVE_ASE:
         Returns:
             Atoms: The converted ASE Atoms object.
         """
+        filtered = structure.without_vacancies()
         return Atoms(
-            numbers=structure.species,
-            scaled_positions=structure.frac_coords,
-            cell=structure.lattice,
+            numbers=filtered.species,
+            scaled_positions=filtered.frac_coords,
+            cell=filtered.lattice,
             pbc=True,
         )
 
@@ -353,6 +355,7 @@ def write(
         filename (str): The file path to write to.
         fmt (str): The file format to use.
     """
+    structure = structure.without_vacancies()
     if fmt is not None and (
         not filename.endswith(f"{backend}.{fmt}") or not filename.endswith(fmt)
     ):

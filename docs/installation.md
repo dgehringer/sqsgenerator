@@ -1,16 +1,21 @@
 
-# Install sqsgenerator ...
+# Installation
 
 (installation)=
 
 We have rigorously designed the package to have a light dependency footprint to keep the package as portable as possible.
 *sqsgenerator* can be used in three different ways
 
+- **Web Assembly**: a multi-threaded web-assembly module of *sqsgenerator* with JS bindings.
+  browser
 - **Python package**: the python package comes with a command line interface (CLI) and a Python API
 - **Native application**: a compiled binary that can be used on high-performance computing (HPC) where Python might not
   be available at all. This is the way to go if you want to use *sqsgenerator* in large scale using MPI. You can
-- **Web Assembly**: a multi-threaded web-assembly module of *sqsgenerator* with JS bindings.
-  browser:
+
+
+## Web Assembly
+
+Just open [sqsgen.gehringer.tech](https://sqsgen.gehringer.tech) in your browser and start using *sqsgenerator* right away.
 
 
 ## Python package

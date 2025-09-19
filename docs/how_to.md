@@ -1,8 +1,6 @@
 
 # How To
 
-
-
 ## Using the CLI interface
 
 This section deals with the usage of the *sqsgenerator* package. A more granular documentation for the CLI can be found
@@ -361,6 +359,246 @@ It contains three main functions which can imported from the `sqsgenerator` pack
 from sqsgenerator import parse_config, optimize, load_result_pack
 :::
 
+[parse_config](#sqsgenerator.parse_config) accepts both a JSON string or a `dict` configuration and returns a config object.
+
+To run an optimization use
+
+:::{code-block} python
+from sqsgenerator import parse_config, optimize
+
+with open("re-w.first.json") as f:
+    config = parse_config(f.read())
+
+pack = optimize(config)
+:::
+
+When specifying a lattice or the coords also numpy arrays are accepted
+
+### loading existing results
+
+In case you have an existing `sqs.mpack` from the webapp or the native CLI file you can load it using [load_result_pack](#sqsgenerator.load_result_pack):
+
+:::{code-block} python
+from sqsgenerator import load_result_pack
+
+with open("sqs.mpack", "rb") as f:
+    pack = load_result_pack(f.read())
+:::
+
+### analysing the results
+
+[optimize](#sqsgenerator.optimize) returns the structures in a packed format. You can think of it as  `list[tuple[float, list[SqsResult]]]` where
+each entry contains the solutions with the same objective {eq}`eqn:objective-actual` value in *ascending* order.
+
+To obtain the best structure use
+
+:::{code-block} python
+best = pack.best()
+:::
+
+while is basically equivalent to `pack[0][0]`. To see a list of all objectives and the number of structures for each use
+
+:::{code-block} python
+for obj, solutions in pack:
+    print(f"Objective: {obj}, Num. solutions: {len(solutions)}")
+:::
+
+### exporting structures
+
+Each solution is of type [SqsResult](#sqsgenerator.core.SqsResult) which contains the structure and the computed SRO parameters. You can access the structure
+[structure](#sqsgenerator.core.SqsResultInteractDouble.structure) method. To export all structures you can use (here we choose CIF with *pymatgen* as backend)
+the [write](#sqsgenerator.write) function:
+
+:::{code-block} python
+from sqsgenerator import write
+
+for oi, (obj, solutions) in enumerate(pack):
+    for si, solution in enumerate(solutions):
+        write(solution.structure(), f"sqs-{oi}-{si}.pymatgen.cif")
+:::
+
+Each [SqsResult](#sqsgenerator.core.SqsResult) no matter if it is of type [SqsResultInteract](#sqsgenerator.core.SqsResultInteractDouble) or [SqsResultSplit](#sqsgenerator.core.SqsResultSplitDouble) contains
+  - [structure](#sqsgenerator.core.SqsResultInteractDouble.structure) method to obtain the structure as a [Structure](#sqsgenerator.core.StructureDouble) object
+  - [objective](#sqsgenerator.core.SqsResultInteractDouble.objective) property of the objective value {eq}`eqn:objective-actual` for this structure
+  - [rank](#sqsgenerator.core.SqsResultInteractDouble.rank) permutation number of species array as a `str`
+
+
+### analysing SRO parameters
+
+### in `interact` mode
+
+A solution of type [SqsResultInteract](#sqsgenerator.core.SqsResultInteractDouble) contains the computed SRO parameters, those can be accessed using the [sro](#sqsgenerator.core.SqsResultInteractDouble.sro) method
+
+Assuming our Re-W example from above, you can access the SRO parameters using
+
+```python
+solution = pack.best()
+
+sro_params = solution.sro()
+"numpy array of shape (num_shells, num_species, num_species) = (1, 2, 2) in this case"
+
+sro_params = solution.sro("Re", "W")
+"list containing parameter for each shell (num_shells,) = [α-0-Re-W]"
+
+sro_params = solution.sro("Re", "W")
+"same as above, since the SROs are symmetric"
+
+sro_params = solution.sro(74, 75)
+"same as above, but uses ordinal numbers of Re and W"
+
+sro_params = solution.sro(1)
+"all SRO in shell 1, [α1-74-74, α1-74-75, α1-75-75]"
+
+sro_param = solution.sro(1, "Re", "W")
+"single parameter value α1-74-75"
+
+# to convert it to a float use
+value = float(sro_param)
+```
+
+
+### in `split` mode
+A solution of type [SqsResultSplit](#sqsgenerator.core.SqsResultSplitDouble) contains multiple sublattice results. Each sublattice result is of type [SqsResultInteract](#sqsgenerator.core.SqsResultInteractDouble) and can be accessed using the [sublattices](#sqsgenerator.core.SqsResultSplitDouble.sublattices) method .
+
+
+## More examples
+
+### High entropy oxide
+
+This example shows how to create a SQS for a high entropy oxide with composition.
+
+It illustrates two different concepts:
+    - distribute vacnancies on a sublattice (here the Oxygen sublattice)
+    - using the *split* mode to optimize two sublattices ($\mathrm{Co}$ and $\mathrm{O}$) independently
+
+*sqsgenerator* has a reserved species name `0` (zero) to denote vacancies. In this example we distribute 8 vacancies and 24 Oxygen atoms on the Oxygen sublattice of the $\mathrm{Co}_3\mathrm{O}_4$ structure.
+
+The input below produces a $\mathrm{Co}_3\mathrm{O}_4 \rightarrow (\mathrm{Co}_{0.16}\mathrm{Mn}_{0.21}\mathrm{Co}_{0.21}\mathrm{Ni}_{0.21}\mathrm{Fe}_{0.21})\mathrm{O}_{0.75}$ structure.
+
+::::{tab} Native + Python CLI/Python API
+:::{code-block} json
+:lineno-start: 1
+:caption: Download the {download}`Co3O4 structure file <_static/Co3O4.pymatgen.json>`
+{
+  "iterations": 1000000,
+  "sublattice_mode": "split",
+    "structure": {
+    "file": "Co3O4.pymatgen.json",
+  },
+  "composition": [
+    {
+      "sites": "Co",
+      "Cr": 4,
+      "Mn": 5,
+      "Co": 5,
+      "Ni": 5,
+      "Fe": 5
+    },
+    {
+      "sites": "O",
+      "0": 8,
+      "O": 24
+    }
+  ]
+}
+:::
+::::
+
+
+::::{tab} Web
+:::{code-block} json
+:class: runbutton
+:lineno-start: 1
+{
+  "iterations": 1000000,
+  "sublattice_mode": "split",
+  "structure": {
+    "lattice": [
+      [8.36, 0.0, 0.0],
+      [0.0, 8.36, 0.0],
+      [0.0, 0.0, 8.36]
+    ],
+    "coords": [
+      [0.25, 0.75, 0.25],
+      [0.00, 0.50, 0.00],
+      [0.25, 0.25, 0.75],
+      [0.00, 0.00, 0.50],
+      [0.75, 0.75, 0.75],
+      [0.50, 0.50, 0.50],
+      [0.75, 0.25, 0.25],
+      [0.50, 0.00, 0.00],
+      [0.375, 0.375, 0.125],
+      [0.375, 0.125, 0.375],
+      [0.625, 0.875, 0.375],
+      [0.125, 0.125, 0.125],
+      [0.375, 0.875, 0.625],
+      [0.375, 0.625, 0.875],
+      [0.625, 0.375, 0.875],
+      [0.125, 0.625, 0.625],
+      [0.875, 0.375, 0.625],
+      [0.875, 0.125, 0.875],
+      [0.125, 0.875, 0.875],
+      [0.625, 0.125, 0.625],
+      [0.875, 0.875, 0.125],
+      [0.875, 0.625, 0.375],
+      [0.125, 0.375, 0.375],
+      [0.625, 0.625, 0.125],
+      [0.861943, 0.361943, 0.861943],
+      [0.888057, 0.111943, 0.111943],
+      [0.111943, 0.111943, 0.888057],
+      [0.111943, 0.888057, 0.111943],
+      [0.138057, 0.138057, 0.361943],
+      [0.138057, 0.361943, 0.138057],
+      [0.388057, 0.888057, 0.388057],
+      [0.361943, 0.138057, 0.138057],
+      [0.861943, 0.861943, 0.361943],
+      [0.888057, 0.611943, 0.611943],
+      [0.111943, 0.611943, 0.388057],
+      [0.111943, 0.388057, 0.611943],
+      [0.138057, 0.638057, 0.861943],
+      [0.138057, 0.861943, 0.638057],
+      [0.388057, 0.388057, 0.888057],
+      [0.361943, 0.638057, 0.638057],
+      [0.361943, 0.361943, 0.361943],
+      [0.388057, 0.111943, 0.611943],
+      [0.611943, 0.111943, 0.388057],
+      [0.611943, 0.888057, 0.611943],
+      [0.638057, 0.138057, 0.861943],
+      [0.638057, 0.361943, 0.638057],
+      [0.888057, 0.888057, 0.888057],
+      [0.861943, 0.138057, 0.638057],
+      [0.361943, 0.861943, 0.861943],
+      [0.388057, 0.611943, 0.111943],
+      [0.611943, 0.611943, 0.888057],
+      [0.611943, 0.388057, 0.111943],
+      [0.638057, 0.638057, 0.361943],
+      [0.638057, 0.861943, 0.138057],
+      [0.888057, 0.388057, 0.388057],
+      [0.861943, 0.638057, 0.138057]
+    ],
+    "species": [
+      27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27,
+      8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+    ]
+  },
+  "composition": [
+    {
+      "sites": "Co",
+      "Cr": 4,
+      "Mn": 5,
+      "Co": 5,
+      "Ni": 5,
+      "Fe": 5
+    },
+    {
+      "sites": "O",
+      "0": 8,
+      "O": 24
+    }
+  ]
+}
+:::
+::::
 
 ## Templates
 (templates)=

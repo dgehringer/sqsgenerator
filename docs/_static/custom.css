@@ -20,3 +20,25 @@
     justify-content: center;
     cursor: pointer;
 }
+
+.menu-button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 0px;
+    background-color: #3883fa;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.menu-button:hover {
+    background-color: #599bff;
+}
+
+.menu-button i {
+    color: white;
+    font-size: 24px;
+}

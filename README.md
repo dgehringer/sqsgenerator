@@ -13,7 +13,14 @@ https://anaconda.org/conda-forge/sqsgenerator/badges/downloads.svg)
 
 ---
 
-**sqsgenerator** is a Python package, which allows you to efficiently generate optimised *Special-Quasirandom-Structures* (SQS). The package uses *Warren-Cowley Short-Range-Order* (SRO) parameters to quantify randomness. The core routines are written in C++
+**sqsgenerator** is a Python package, which allows you to efficiently generate optimised *Special-Quasirandom-Structures* (SQS). The package uses *Warren-Cowley Short-Range-Order* (SRO) parameters to quantify randomness. The core routines are written in C++ and directly usable with your browser
+
+> [!TIP]
+> **sqsgenerator** runs natively (multithreaded) in your browser using WebAssembly. No installation is required, just open the [🚀WebApp](https://sqsgen.gehringer.tech) and start using it.
+
+
+> [!IMPORTANT]
+> Version 0.4 brings breaking changes. Most of the parameter remain the same, but some have been renamed or removed. Please refer to the [documentation](https://sqsgenerator.readthedocs.io/en/latest) for more details or open an issue in case you need help migrating your scripts.
 
 ## Highlights
 
@@ -53,7 +60,7 @@ conda install -c conda-forge sqsgenerator
 
 ### Native application (MPI)
 
-Since version 0.4 a native application is available, which can be used in HPC environments. The application is MPI enabled and can be built from source. Please refer to the [installation instructions](https://sqsgenerator.readthedocs.io/installation.html#native-application) for more details.
+Since version 0.4 a native application is available, which can be used in HPC environments. The application is MPI enabled and can be built from source. Please refer to the [installation instructions](https://sqsgenerator.readthedocs.io/en/latest/installation.html#native-application) for more details.
 
 ### Cite us
 In case you use the software in your research, please cite our [article](https://doi.org/10.1016/j.cpc.2023.108664). Here is the [BibTeX entry](citation.bib).
