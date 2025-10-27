@@ -62,7 +62,7 @@ jobs:
         run: ctest --test-dir ${{ github.workspace }}/build-tests -E test_parser --verbose --output-junit ${{ github.workspace }}/junit/test-results.xml
 
       - name: upload ctest test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ctest-results-${{ matrix.os }}
           path: junit/test-results.xml
