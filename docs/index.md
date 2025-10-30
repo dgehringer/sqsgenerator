@@ -18,6 +18,20 @@
    - via {ref}`conda <conda-installation>`: `conda install -c conda-forge sqsgenerator`
  - 💻 build an MPI enabled {ref}`native app <native-installation>` for HPC environments
 
+
+## WebApp Demo
+
+See here a live demo of the WebApp:
+
+```{raw} html
+<video style="align: center" width="640" controls>
+  <source src="https://github.com/dgehringer/sqsgenerator/releases/download/v0.5.3/webapp_demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+```
+
+## Citation
+
 ::::{dropdown} 🎓 Cite us
 :color: primary
 :open: true
