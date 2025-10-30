@@ -53,7 +53,9 @@ if HAVE_PYMATGEN:
             tuple[str, ...]: A tuple of available pymatgen formats.
         """
 
-        return tuple(fmt for fmt in get_args(FileFormats) if fmt)
+        return tuple(
+            fmt for fmt in get_args(FileFormats) if fmt and fmt not in ("aims,")
+        )
 
     def to_pymatgen(structure: Structure) -> PymatgenStructure:
         """
