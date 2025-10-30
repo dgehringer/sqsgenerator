@@ -46,7 +46,7 @@ jobs:
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_34
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cibw-wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
@@ -63,7 +63,7 @@ jobs:
         with:
           python-version: "3.x"
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           pattern: cibw-*
           path: dist
