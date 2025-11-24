@@ -25,14 +25,14 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
       - uses: friendlyanon/setup-vcpkg@v1
         if: ${{ runner.os != 'Linux' }}
 
-      - uses: pypa/cibuildwheel@v3.2
+      - uses: pypa/cibuildwheel@v3.3
         with:
           package-dir: ./python
           output-dir: wheelhouse
