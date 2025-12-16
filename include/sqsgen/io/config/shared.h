@@ -41,14 +41,10 @@ namespace sqsgen::io::config {
     auto ptr = std::make_tuple(std::ranges::begin(ranges)...);
     std::vector<inner_t> results;
     for (auto i = 0u; i < arglen; ++i) {
-      auto r = [&]<std::size_t... I>(std::index_sequence<I...>) {
-        return fn((*std::get<I>(ptr))...);
-      }(std::make_index_sequence<sizeof...(Ranges)>{});
+      auto r = std::apply([&](auto&... it) { return fn((*it)...); }, ptr);
       if (r.failed()) return r.error();
       results.emplace_back(std::move(r.result()));
-      [&]<std::size_t... I>(std::index_sequence<I...>) {
-        return (ranges::next(std::get<I>(ptr)), ...);
-      }(std::make_index_sequence<sizeof...(Ranges)>{});
+      std::apply([](auto&... it) { ((++it), ...); }, ptr);
     }
     return results;
   }

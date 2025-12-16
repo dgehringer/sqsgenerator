@@ -28,7 +28,7 @@ jobs:
 
       - name: Cache vcpkg binaries
         id: cache-vcpkg
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ github.workspace }}/vcpkg/buildtrees
@@ -44,7 +44,7 @@ jobs:
 
       - name: Setup EMSDK cache
         id: cache-system-libraries
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{env.EM_CACHE_FOLDER}}
           key: ${{env.EM_VERSION}}-${{ runner.os }}
@@ -61,7 +61,7 @@ jobs:
         run: ${{ github.workspace }}/scripts/build-wasm.sh build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: wasm-artifacts
           path: build/core.*
