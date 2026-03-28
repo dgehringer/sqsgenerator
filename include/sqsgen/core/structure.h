@@ -164,15 +164,28 @@ namespace sqsgen::core {
       Eigen::Tensor<T, 3> prefactors(num_shells, num_species, num_species);
 
       for (auto s = 0; s < num_shells; s++) {
-        T M_i{static_cast<T>(neighbors[shell_map[s]])};
-        for (auto a = 0; a < num_species; a++) {
-          T x_a{static_cast<T>(hist[conf_map[a]]) / static_cast<T>(num_sites)};
-          for (auto b = a; b < num_species; b++) {
-            T x_b{static_cast<T>(hist[conf_map[b]]) / static_cast<T>(num_sites)};
-            T prefactor{T(1.0) / (M_i * x_a * x_b * static_cast<T>(num_sites))};
-            prefactors(s, a, b) = prefactor;
-            prefactors(s, b, a) = prefactor;
+        const auto neighbor_count = neighbors[shell_map[s]];
+        if (neighbor_count > 0) {
+          T M_i{static_cast<T>(neighbor_count)};
+          for (auto a = 0; a < num_species; a++) {
+            T x_a{static_cast<T>(hist[conf_map[a]]) / static_cast<T>(num_sites)};
+            for (auto b = a; b < num_species; b++) {
+              T x_b{static_cast<T>(hist[conf_map[b]]) / static_cast<T>(num_sites)};
+              T prefactor{T(1.0) / (M_i * x_a * x_b * static_cast<T>(num_sites))};
+              prefactors(s, a, b) = prefactor;
+              prefactors(s, b, a) = prefactor;
+            }
           }
+        } else {
+          log::warn(format_string(
+              "The coordination shell %i contains no sites. This shell will not contribute to the "
+              "objective function and can be removed from the \"shell_weights\" parameter",
+              shell_map[s]));
+          for (auto a = 0; a < num_species; a++)
+            for (auto b = a; b < num_species; b++) {
+              prefactors(s, a, b) = 0;
+              prefactors(s, b, a) = 0;
+            }
         }
       }
       return prefactors;
