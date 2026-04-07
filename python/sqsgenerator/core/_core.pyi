@@ -222,6 +222,7 @@ class SqsConfigurationDouble:
     prefactors: Incomplete
     shell_radii: list[list[float]]
     shell_weights: list[dict[int, float]]
+    seed: int | None
     sublattice_mode: SublatticeMode
     target_objective: Incomplete
     thread_config: list[int]
@@ -241,6 +242,7 @@ class SqsConfigurationFloat:
     prefactors: Incomplete
     shell_radii: list[list[float]]
     shell_weights: list[dict[int, float]]
+    seed: int | None
     sublattice_mode: SublatticeMode
     target_objective: Incomplete
     thread_config: list[int]

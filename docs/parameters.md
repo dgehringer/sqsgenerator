@@ -96,6 +96,33 @@ sublattices independently, in case more than one is specified. In *split* mode t
   :::
   ::::
 
+### `seed`
+(input-param-seed)=
+
+Optional random seed used when `iteration_mode` is `random`. If omitted, *sqsgenerator* seeds the
+shuffle generator from the system RNG. If specified, repeated runs with the same configuration,
+seed, and thread setup will be reproducible.
+
+- **Required:** No
+- **Default:** randomly generated
+- **Accepted:** unsigned 64-bit integer (`int`)
+
+  ::::{tab} JSON
+  :::{code-block} json
+  {
+    "seed": 42
+  }
+  :::
+  ::::
+
+  ::::{tab} Python
+  :::{code-block} python
+  {
+      "seed": 42
+  }
+  :::
+  ::::
+
 ### `bin_width`
 (input-param-bin-width)=
 

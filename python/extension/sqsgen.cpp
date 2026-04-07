@@ -206,6 +206,7 @@ template <string_literal Name, class T> void bind_configuration(py::module &m) {
   py::class_<configuration<T>>(m, format_prec<Name, T>().c_str())
       .def_readwrite("sublattice_mode", &configuration<T>::sublattice_mode)
       .def_readwrite("iteration_mode", &configuration<T>::iteration_mode)
+      .def_readwrite("seed", &configuration<T>::seed)
       .def(
           "structure", [](configuration<T> &conf) { return conf.structure.structure(); },
           py::return_value_policy::move)
