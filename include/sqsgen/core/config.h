@@ -32,7 +32,7 @@ namespace sqsgen::core {
   template <class T> struct configuration {
     SublatticeMode sublattice_mode;
     IterationMode iteration_mode;
-    std::optional<std::uint64_t> seed;
+    seed_t seed;
     structure_config<T> structure;
     std::vector<sublattice> composition;
     stl_matrix_t<T> shell_radii;

@@ -138,6 +138,16 @@ val optimize(val const& config, sqsgen::Prec prec, val const& cb) {
       run_config = from_json<configuration<float>>(config_json);
     else
       run_config = from_json<configuration<double>>(config_json);
+    std::visit(
+        [](auto&& c) {
+          if (c.seed.has_value()
+              && std::any_of(c.thread_config.begin(), c.thread_config.end(),
+                             [](auto t) { return t > 1; }))
+            throw std::invalid_argument(
+                "A random seed is set but the thread configuration specifies more than 1 "
+                "thread; seeded runs require exactly 1 thread for reproducibility");
+        },
+        run_config);
     thread_local ProxyingQueue proxying_queue_main;
 
     std::optional<sqs_callback_t> callback;

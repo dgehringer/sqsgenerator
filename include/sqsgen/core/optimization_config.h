@@ -51,9 +51,15 @@ namespace sqsgen::core {
     sqsgen::core::shuffler shuffler;
 
     static std::optional<std::uint64_t> seed_for_sublattice(
-        std::optional<std::uint64_t> seed, std::size_t index) {
+        seed_t const& seed, std::size_t index) {
       if (!seed.has_value()) return std::nullopt;
-      return seed.value() + static_cast<std::uint64_t>(index);
+      auto const& seeds = seed.value();
+      if (seeds.size() == 1)
+        return seeds[0].has_value()
+                   ? std::optional{seeds[0].value() + static_cast<std::uint64_t>(index)}
+                   : std::nullopt;
+      if (index < seeds.size()) return seeds[index];
+      return std::nullopt;
     }
 
     static std::vector<optimization_config> from_config(configuration<T> config) {

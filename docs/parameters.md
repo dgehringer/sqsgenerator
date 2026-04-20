@@ -103,14 +103,29 @@ Optional random seed used when `iteration_mode` is `random`. If omitted, *sqsgen
 shuffle generator from the system RNG. If specified, repeated runs with the same configuration,
 seed, and thread setup will be reproducible.
 
+A single integer is broadcast to all sublattices (each sublattice receives `seed + sublattice_index`).
+Alternatively, a list of seeds (one per sublattice) can be provided, where each entry is either an
+integer or `null` to leave that sublattice unseeded.
+
+:::{warning}
+Seeded runs require `thread_config` to be exactly **1**. Setting a seed with multiple threads will
+raise a configuration error because the shuffler is not thread-safe and reproducibility cannot be
+guaranteed.
+:::
+
 - **Required:** No
 - **Default:** randomly generated
-- **Accepted:** unsigned 64-bit integer (`int`)
+- **Accepted:** unsigned 64-bit integer (`int`) or list of `int | null`
 
   ::::{tab} JSON
   :::{code-block} json
   {
     "seed": 42
+  }
+  :::
+  :::{code-block} json
+  {
+    "seed": [42, null, 123]
   }
   :::
   ::::
@@ -119,6 +134,11 @@ seed, and thread setup will be reproducible.
   :::{code-block} python
   {
       "seed": 42
+  }
+  :::
+  :::{code-block} python
+  {
+      "seed": [42, None, 123]
   }
   :::
   ::::

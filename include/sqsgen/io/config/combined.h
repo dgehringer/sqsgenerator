@@ -45,13 +45,15 @@ namespace sqsgen::io::config {
   }
 
   template <string_literal key, class Document>
-  parse_result<std::optional<std::uint64_t>> parse_seed(Document const& document) {
-    if (auto seed = get_optional<key, std::uint64_t>(document); seed.has_value())
-      return seed.value().and_then(
-          [](auto&& value) -> parse_result<std::optional<std::uint64_t>> {
-            return {std::optional<std::uint64_t>{value}};
-          });
-    return {std::optional<std::uint64_t>{std::nullopt}};
+  parse_result<seed_t> parse_seed(Document const& document) {
+    using result_t = parse_result<seed_t>;
+    using seed_list_t = std::vector<std::optional<std::uint64_t>>;
+    if (auto seed = get_either_optional<key, std::uint64_t, seed_list_t>(document);
+        seed.has_value())
+      return seed.value().template collapse<seed_t>(
+          [](std::uint64_t&& value) -> result_t { return {seed_t{seed_list_t{value}}}; },
+          [](seed_list_t&& values) -> result_t { return {seed_t{std::move(values)}}; });
+    return {seed_t{std::nullopt}};
   }
 
   template <string_literal key, class Document, class T>
@@ -175,7 +177,7 @@ namespace sqsgen::io::config {
         .combine(parse_seed<"seed">(doc))
         .combine(parse_sublattice_mode<"sublattice_mode">(doc))
         .and_then([](auto&& modes)
-                      -> parse_result<std::tuple<IterationMode, std::optional<std::uint64_t>,
+                      -> parse_result<std::tuple<IterationMode, seed_t,
                                                  SublatticeMode>> {
           auto [iteration_mode, seed, sublattice_mode] = modes;
           if (iteration_mode == ITERATION_MODE_SYSTEMATIC
@@ -225,6 +227,22 @@ namespace sqsgen::io::config {
                                   auto [prefactors, pair_weights, target_objective, chunk_size,
                                         thread_config, to_keep, max_results_per_objective]
                                       = arrays;
+                                  if (seed.has_value()
+                                      && std::any_of(thread_config.begin(), thread_config.end(),
+                                                     [](auto t) { return t > 1; }))
+                                    return {parse_error::from_msg<"seed", CODE_BAD_VALUE>(
+                                        "A random seed is set but the thread configuration "
+                                        "specifies more than 1 thread; seeded runs require "
+                                        "exactly 1 thread for reproducibility")};
+                                  if (seed.has_value()
+                                      && seed.value().size() != 1
+                                      && seed.value().size() != composition.size())
+                                    return {parse_error::from_msg<"seed", CODE_BAD_VALUE>(
+                                        format_string(
+                                            "The seed list has %u entries but the configuration "
+                                            "has %u sublattice(s); provide either a single seed "
+                                            "or one per sublattice",
+                                            seed.value().size(), composition.size()))};
                                   return configuration<T>{
                                       sublattice_mode,
                                       iteration_mode,
