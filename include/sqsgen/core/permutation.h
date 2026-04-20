@@ -18,11 +18,10 @@ namespace sqsgen::core {
 
   rank_t num_permutations(configuration_t const& conf);
 
-  inline rank_t rank_permutation(configuration_t const& configuration);
+  rank_t rank_permutation(configuration_t const& configuration);
 
-  inline void unrank_permutation(configuration_t& configuration, rank_t const& to_rank);
-
-  inline bool next_permutation(configuration_t::iterator start, configuration_t::iterator end);
+  void unrank_permutation(configuration_t& configuration, rank_t const& to_rank);
+  bool next_permutation(configuration_t::iterator start, configuration_t::iterator end);
 
 }  // namespace sqsgen::core
 

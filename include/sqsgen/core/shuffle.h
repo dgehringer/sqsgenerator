@@ -6,91 +6,64 @@
 #define SQSGEN_CORE_SHUFFLE_H
 
 #include <random>
+#include <thread>
+#include <utility>
 
-#include "sqsgen/core/helpers/.h"
-#include "sqsgen/core/helpers/rapidhash.h"
-#include "sqsgen/core/permutation.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
 
-  inline std::uint64_t make_random_seed() {
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dis;
-    return dis(gen);
-  }
+  class shuffler_base {
+  protected:
+    std::map<std::thread::id, std::uint64_t> thread_seeds_;
+    std::mutex thread_seeds_mutex_;
+    std::uint64_t seed_;
+    std::uint64_t seed_global_;
+    shuffler_base(std::optional<std::uint64_t> seed = std::nullopt)
+        : seed_(seed.value_or(random_seed())), seed_global_(seed_) {};
 
-  static uint64_t rapidrand(uint64_t &seed) {
-    seed += rapid_secret[0];
-    return rapid_mix(seed, seed ^ rapid_secret[1]);
-  }
+    [[nodiscard]] std::uint64_t &seed();
+    [[nodiscard]] std::uint64_t &threadsafe_seed();
 
-  static usize_t random_bounded(usize_t range, uint64_t &seed) {
-    uint32_t x = rapidrand(seed);
-    uint64_t m = static_cast<uint64_t>(x) * static_cast<uint64_t>(range);
-    return m >> 32;
-  }
+  public:
+    static std::uint64_t random_seed();
+  };
 
-  class shuffler {
+  template <IterationMode IMode, SublatticeMode SMode> class shuffler : shuffler_base {};
+
+  template <> class shuffler<ITERATION_MODE_RANDOM, SUBLATTICE_MODE_INTERACT> : shuffler_base {
+  private:
+    bounds_t<usize_t> bounds_;
+
+  public:
+    explicit shuffler(bounds_t<uint64_t> bounds, std::optional<std::uint64_t> seed = std::nullopt)
+        : shuffler_base(seed), bounds_(bounds) {}
+
+    void shuffle(configuration_t &configuration, bool thread_safe = true);
+  };
+
+  template <> class shuffler<ITERATION_MODE_RANDOM, SUBLATTICE_MODE_SPLIT> : shuffler_base {
+  private:
+    std::vector<bounds_t<usize_t>> bounds_;
+
   public:
     explicit shuffler(std::vector<bounds_t<usize_t>> bounds,
                       std::optional<std::uint64_t> seed = std::nullopt)
-        : _seed(seed.value_or(make_random_seed())), _bounds(std::move(bounds)) {}
-    template <IterationMode Mode> void shuffle(configuration_t &configuration) {
-      if constexpr (Mode == ITERATION_MODE_RANDOM) {
-        for (auto &bound : _bounds) {
-          auto [lower_bound, upper_bound] = bound;
-          assert(upper_bound > lower_bound);
-          auto window_size = upper_bound - lower_bound;
-          for (usize_t i = window_size; i > 1; i--) {
-            usize_t p = random_bounded(i, _seed);  // number in [0,i)
-            std::swap(configuration[lower_bound + i - 1],
-                      configuration[p + lower_bound]);  // swap the values at i-1 and p
-          }
-        }
-      } else if constexpr (Mode == ITERATION_MODE_SYSTEMATIC) {
-        assert(_bounds.size() == 1);
-        auto [lower_bound, upper_bound] = _bounds.front();
-        auto result = next_permutation(configuration.begin() + lower_bound,
-                                       configuration.begin() + upper_bound);
-        /*std::next_permutation(configuration.begin() + lower_bound,
-                              configuration.begin() + upper_bound);*/
-      }
-    }
+        : shuffler_base(seed), bounds_(std::move(bounds)) {}
 
-    rank_t rank_permutation(configuration_t &configuration) {
-      using namespace core::helpers;
+    void shuffle(configuration_t &configuration, bool thread_safe = true);
+  };
 
-      return core::rank_permutation(
-          as<std::vector>{}(range(std::forward<bounds_t<usize_t>>(_bounds.front()))
-                            | views::transform([&](auto &&i) { return configuration[i]; })));
-    }
-
-    template <IterationMode Mode>
-    void unrank_permutation(configuration_t &configuration, rank_t rank) {
-      static_assert(Mode == ITERATION_MODE_SYSTEMATIC);
-      assert(_bounds.size() == 1);
-      if (_bounds.empty() || _bounds.front() == bounds_t<usize_t>{0, configuration.size()})
-        core::unrank_permutation(configuration, rank);
-      else {
-        auto [start, end] = _bounds.front();
-        auto irange = helpers::range(std::forward<bounds_t<usize_t>>(_bounds.front()));
-        auto [species_map, species_rmap] = helpers::make_index_mapping<specie_t>(
-            irange | views::transform([&](auto &&i) { return configuration[i]; }));
-        configuration_t conf{helpers::as<std::vector>{}(
-            irange | views::transform([&](auto &&i) { return species_map.at(configuration[i]); }))};
-        core::unrank_permutation(conf, rank);
-        ranges::for_each(helpers::range(conf.size()), [&, start](auto &&i) {
-          configuration[start + i] = species_rmap.at(conf[i]);
-        });
-        return;
-      }
-    }
-
+  template <> class shuffler<ITERATION_MODE_SYSTEMATIC, SUBLATTICE_MODE_INTERACT> : shuffler_base {
   private:
-    std::uint64_t _seed;
-    std::vector<bounds_t<usize_t>> _bounds;
+    bounds_t<usize_t> bounds_;
+
+    explicit shuffler(bounds_t<usize_t> bounds) : bounds_(std::move(bounds)) {};
+
+  public:
+    void next_permutation(configuration_t &configuration);
+    rank_t rank_permutation(configuration_t &configuration);
+    void unrank_permutation(configuration_t &configuration, rank_t rank);
   };
 
 }  // namespace sqsgen::core

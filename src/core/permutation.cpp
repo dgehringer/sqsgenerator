@@ -30,7 +30,7 @@ namespace sqsgen::core {
     return num_permutations(helpers::count(conf));
   }
 
-  inline rank_t rank_permutation(configuration_t const& configuration) {
+  rank_t rank_permutation(configuration_t const& configuration) {
     auto num_atoms{configuration.size()}, num_species{helpers::count(configuration).size()};
     rank_t rank{1}, suffix_permutations{1};
     std::vector hist(num_species, 0);
@@ -48,7 +48,7 @@ namespace sqsgen::core {
     return rank;
   }
 
-  inline void unrank_permutation(configuration_t& configuration, rank_t const& to_rank) {
+  void unrank_permutation(configuration_t& configuration, rank_t const& to_rank) {
     using namespace core::helpers;
     auto freqs = count(configuration);
     rank_t total_permutations{num_permutations(freqs)}, rank{to_rank};
@@ -77,7 +77,7 @@ namespace sqsgen::core {
     }
   }
 
-  inline bool next_permutation(configuration_t::iterator start, configuration_t::iterator end) {
+  bool next_permutation(configuration_t::iterator start, configuration_t::iterator end) {
     auto num_atoms{std::distance(start, end)};
     if (num_atoms < 2) return false;
     auto l{num_atoms - 1}, k{num_atoms - 2};

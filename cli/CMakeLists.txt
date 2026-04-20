@@ -44,6 +44,7 @@ add_executable(sqsgen main.cpp progress.h helpers.h termcolor.h
         "${CMAKE_SOURCE_DIR}/../src/core/structure.cpp"
         "${CMAKE_SOURCE_DIR}/../src/core/structure_utils.cpp"
         "${CMAKE_SOURCE_DIR}/../src/core/permutation.cpp"
+        "${CMAKE_SOURCE_DIR}/../src/core/shuffle.cpp"
 )
 target_link_libraries(sqsgen PRIVATE
         nlohmann_json::nlohmann_json
