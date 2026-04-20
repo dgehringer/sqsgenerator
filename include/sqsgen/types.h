@@ -85,7 +85,7 @@ namespace sqsgen {
 
   using thread_config_t = std::vector<usize_t>;
 
-  using seed_t = std::optional<std::vector<std::optional<std::uint64_t>>>;
+  using seed_t = std::vector<std::optional<std::uint64_t>>;
 
   struct sublattice {
     vset<usize_t> sites;

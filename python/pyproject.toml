@@ -1,11 +1,10 @@
 [project]
 name = "sqsgenerator"
 authors = [
-    { name = "Dominik Gehringer", email = "dgehringer@protonmail.com" }
+    { name = "Dominik Gehringer", email = "dominik@gehringer.tech" }
 ]
 maintainers = [
-    { name = "Dominik Gehringer", email = "dgehringer@protonmail.com" },
-    { name = "David Holec", email = "david.holec@unileoben.ac.at" }
+    { name = "Dominik Gehringer", email = "dominik@gehringer.tech" },
 ]
 description = "Create atomic structures for solid solutions for molecular simulations"
 dependencies = ["numpy", "click"]

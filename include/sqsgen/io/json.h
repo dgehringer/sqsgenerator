@@ -195,14 +195,7 @@ template <class T> struct adl_serializer<core::configuration<T>> {
   static void from_json(const json& j, core::configuration<T>& c) {
     j.at("sublattice_mode").get_to<SublatticeMode>(c.sublattice_mode);
     j.at("iteration_mode").get_to<IterationMode>(c.iteration_mode);
-    if (j.contains("seed") && !j.at("seed").is_null()) {
-      auto const& s = j.at("seed");
-      if (s.is_number_unsigned())
-        c.seed = std::vector<std::optional<std::uint64_t>>{s.get<std::uint64_t>()};
-      else
-        c.seed = s.get<std::vector<std::optional<std::uint64_t>>>();
-    } else
-      c.seed = std::nullopt;
+    j.at("seed").get_to<seed_t>(c.seed);
     j.at("structure").get_to<core::structure_config<T>>(c.structure);
     j.at("composition").get_to<std::vector<sublattice>>(c.composition);
     j.at("shell_radii").get_to<stl_matrix_t<T>>(c.shell_radii);
