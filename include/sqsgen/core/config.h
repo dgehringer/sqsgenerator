@@ -5,6 +5,9 @@
 #ifndef SQSGEN_CONFIGURATION_H
 #define SQSGEN_CONFIGURATION_H
 
+#include <cstdint>
+#include <optional>
+
 #include "sqsgen/core/structure.h"
 
 namespace sqsgen::core {
@@ -29,6 +32,7 @@ namespace sqsgen::core {
   template <class T> struct configuration {
     SublatticeMode sublattice_mode;
     IterationMode iteration_mode;
+    seed_t seed;
     structure_config<T> structure;
     std::vector<sublattice> composition;
     stl_matrix_t<T> shell_radii;

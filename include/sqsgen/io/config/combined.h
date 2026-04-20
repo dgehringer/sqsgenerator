@@ -16,6 +16,7 @@
 namespace sqsgen::io::config {
   static constexpr auto KNOWN_KEYS = std::array{"iteration_mode",
                                                 "sublattice_mode",
+                                                "seed",
                                                 "structure",
                                                 "composition",
                                                 "shell_radii",
@@ -41,6 +42,18 @@ namespace sqsgen::io::config {
   parse_result<IterationMode> parse_iteration_mode(Document const& document) {
     return get_optional<key, IterationMode>(document).value_or(
         parse_result<IterationMode>{ITERATION_MODE_RANDOM});
+  }
+
+  template <string_literal key, class Document>
+  parse_result<seed_t> parse_seed(Document const& document) {
+    using result_t = parse_result<seed_t>;
+    using seed_list_t = std::vector<std::optional<std::uint64_t>>;
+    if (auto seed = get_either_optional<key, std::uint64_t, seed_list_t>(document);
+        seed.has_value())
+      return seed.value().template collapse<seed_t>(
+          [](std::uint64_t&& value) -> result_t { return {seed_t{seed_list_t{value}}}; },
+          [](seed_list_t&& values) -> result_t { return {seed_t{std::move(values)}}; });
+    return {seed_t{std::nullopt}};
   }
 
   template <string_literal key, class Document, class T>
@@ -161,9 +174,12 @@ namespace sqsgen::io::config {
     auto validation_result = accessor<Document>::validate_keys(doc, KNOWN_KEYS);
     if (validation_result.has_value()) return {*validation_result};
     return parse_iteration_mode<"iteration_mode">(doc)
+        .combine(parse_seed<"seed">(doc))
         .combine(parse_sublattice_mode<"sublattice_mode">(doc))
-        .and_then([](auto&& modes) -> parse_result<std::tuple<IterationMode, SublatticeMode>> {
-          auto [iteration_mode, sublattice_mode] = modes;
+        .and_then([](auto&& modes)
+                      -> parse_result<std::tuple<IterationMode, seed_t,
+                                                 SublatticeMode>> {
+          auto [iteration_mode, seed, sublattice_mode] = modes;
           if (iteration_mode == ITERATION_MODE_SYSTEMATIC
               && sublattice_mode == SUBLATTICE_MODE_SPLIT)
             return {parse_error::from_msg<"iteration_mode", CODE_BAD_VALUE>(
@@ -173,7 +189,7 @@ namespace sqsgen::io::config {
         })
         .combine(parse_structure_config<"structure", T>(doc))
         .and_then([&](auto&& sc_and_modes) {
-          auto [iteration_mode, sublattice_mode, sc] = sc_and_modes;
+          auto [iteration_mode, seed, sublattice_mode, sc] = sc_and_modes;
           auto structure = sc.structure();
           return config::parse_composition<"composition", "sites">(doc, structure.species,
                                                                    sublattice_mode)
@@ -211,9 +227,26 @@ namespace sqsgen::io::config {
                                   auto [prefactors, pair_weights, target_objective, chunk_size,
                                         thread_config, to_keep, max_results_per_objective]
                                       = arrays;
+                                  if (seed.has_value()
+                                      && std::any_of(thread_config.begin(), thread_config.end(),
+                                                     [](auto t) { return t > 1; }))
+                                    return {parse_error::from_msg<"seed", CODE_BAD_VALUE>(
+                                        "A random seed is set but the thread configuration "
+                                        "specifies more than 1 thread; seeded runs require "
+                                        "exactly 1 thread for reproducibility")};
+                                  if (seed.has_value()
+                                      && seed.value().size() != 1
+                                      && seed.value().size() != composition.size())
+                                    return {parse_error::from_msg<"seed", CODE_BAD_VALUE>(
+                                        format_string(
+                                            "The seed list has %u entries but the configuration "
+                                            "has %u sublattice(s); provide either a single seed "
+                                            "or one per sublattice",
+                                            seed.value().size(), composition.size()))};
                                   return configuration<T>{
                                       sublattice_mode,
                                       iteration_mode,
+                                      seed,
                                       std::forward<structure_config<T>>(sc),
                                       std::forward<std::vector<sublattice>>(composition),
                                       std::forward<stl_matrix_t<T>>(radii),

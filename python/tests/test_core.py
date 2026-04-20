@@ -286,3 +286,46 @@ def test_bonds_correct_one_sublattice_non_exhaustive(prec):
         print(config.msg)
     results = optimize(config)
     assert_bonds_correct_interact(results, config)
+
+
+@pytest.mark.parametrize("prec", [single, double])
+def test_random_seed_reproducible(prec):
+    settings = default_settings(prec)
+    settings["iteration_mode"] = random
+    settings["iterations"] = 500
+    settings["seed"] = 42
+
+    config_a = parse_config(settings)
+    config_b = parse_config(settings)
+
+    assert config_a.seed == config_b.seed == [42]
+
+    results_a = optimize(config_a)
+    results_b = optimize(config_b)
+
+    assert results_a.config.seed == results_b.config.seed == [42]
+    solutions_a = collections.Counter(
+        (round(float(sol.objective), 12), tuple(sol.structure().species))
+        for _, result_set in results_a
+        for sol in result_set
+    )
+    solutions_b = collections.Counter(
+        (round(float(sol.objective), 12), tuple(sol.structure().species))
+        for _, result_set in results_b
+        for sol in result_set
+    )
+    assert solutions_a == solutions_b
+
+
+@pytest.mark.parametrize("prec", [single, double])
+def test_random_seed_with_multiple_threads_fails(prec):
+    from sqsgenerator.core._core import ParseError
+
+    settings = default_settings(prec)
+    settings["iteration_mode"] = random
+    settings["iterations"] = 500
+    settings["seed"] = 42
+    settings["thread_config"] = 4
+
+    config = parse_config(settings)
+    assert isinstance(config, ParseError)

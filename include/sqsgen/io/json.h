@@ -50,6 +50,25 @@ template <class T, long Dims> struct binary_adapter {
 };
 
 using namespace sqsgen;
+
+template <class T> struct adl_serializer<std::optional<T>> {
+  static void to_json(json& j, const std::optional<T>& opt) {
+    if (opt.has_value()) {
+      j = *opt;
+    } else {
+      j = nullptr;
+    }
+  }
+
+  static void from_json(const json& j, std::optional<T>& opt) {
+    if (j.is_null()) {
+      opt = std::nullopt;
+    } else {
+      opt = j.get<T>();
+    }
+  }
+};
+
 template <class T> struct adl_serializer<matrix_t<T>> {
   static void to_json(json& j, const matrix_t<T>& m) { j = core::helpers::eigen_to_stl(m); }
 
@@ -158,6 +177,7 @@ template <class T> struct adl_serializer<core::configuration<T>> {
   static void to_json(json& j, core::configuration<T> const& data) {
     j = json{{"sublattice_mode", data.sublattice_mode},
              {"iteration_mode", data.iteration_mode},
+             {"seed", data.seed},
              {"structure", data.structure},
              {"composition", data.composition},
              {"shell_radii", data.shell_radii},
@@ -175,6 +195,14 @@ template <class T> struct adl_serializer<core::configuration<T>> {
   static void from_json(const json& j, core::configuration<T>& c) {
     j.at("sublattice_mode").get_to<SublatticeMode>(c.sublattice_mode);
     j.at("iteration_mode").get_to<IterationMode>(c.iteration_mode);
+    if (j.contains("seed") && !j.at("seed").is_null()) {
+      auto const& s = j.at("seed");
+      if (s.is_number_unsigned())
+        c.seed = std::vector<std::optional<std::uint64_t>>{s.get<std::uint64_t>()};
+      else
+        c.seed = s.get<std::vector<std::optional<std::uint64_t>>>();
+    } else
+      c.seed = std::nullopt;
     j.at("structure").get_to<core::structure_config<T>>(c.structure);
     j.at("composition").get_to<std::vector<sublattice>>(c.composition);
     j.at("shell_radii").get_to<stl_matrix_t<T>>(c.shell_radii);
@@ -262,24 +290,6 @@ template <class T, SublatticeMode Mode> struct adl_serializer<core::sqs_result_p
                                        sqs_statistics_data<T>{}};
     p.config = config;
     j.at("statistics").get_to<sqs_statistics_data<T>>(p.statistics);
-  }
-};
-
-template <class T> struct adl_serializer<std::optional<T>> {
-  static void to_json(json& j, const std::optional<T>& opt) {
-    if (opt.has_value()) {
-      j = *opt;
-    } else {
-      j = nullptr;
-    }
-  }
-
-  static void from_json(const json& j, std::optional<T>& opt) {
-    if (j.is_null()) {
-      opt = std::nullopt;
-    } else {
-      opt = j.get<T>();
-    }
   }
 };
 
