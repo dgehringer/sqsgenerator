@@ -466,7 +466,7 @@ namespace sqsgen {
       };
       schedule_main_loop();
 
-      // again we immdeiatly remove the signal handler after they have been used
+      // again we immediately remove the signal handler after they have been used
       if (!mpi_mode) signal::teardown_signal_handlers();
 
       this->barrier();

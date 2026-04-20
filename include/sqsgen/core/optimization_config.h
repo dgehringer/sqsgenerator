@@ -50,14 +50,8 @@ namespace sqsgen::core {
   template <class T, SublatticeMode Mode> struct optimization_config : optimization_config_data<T> {
     sqsgen::core::shuffler shuffler;
 
-    static std::optional<std::uint64_t> seed_for_sublattice(
-        seed_t const& seed, std::size_t index) {
-      if (!seed.has_value()) return std::nullopt;
-      auto const& seeds = seed.value();
-      if (seeds.size() == 1)
-        return seeds[0].has_value()
-                   ? std::optional{seeds[0].value() + static_cast<std::uint64_t>(index)}
-                   : std::nullopt;
+    static std::optional<std::uint64_t> seed_for_sublattice(seed_t const& seeds,
+                                                            std::size_t index) {
       if (index < seeds.size()) return seeds[index];
       return std::nullopt;
     }
@@ -98,8 +92,7 @@ namespace sqsgen::core {
                                 std::move(config.target_objective[i]),
                                 std::move(config.shell_radii[i]),
                                 std::move(config.shell_weights[i]),
-                                core::shuffler({bounds[i]},
-                                               seed_for_sublattice(config.seed, i))});
+                                core::shuffler({bounds[i]}, seed_for_sublattice(config.seed, i))});
       }
       return configs;
     }
