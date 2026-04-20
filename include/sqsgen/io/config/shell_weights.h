@@ -11,7 +11,7 @@
 #define NLOHMANN_JSON_ABI_TAG v3_11_3
 #include <nlohmann/json.hpp>
 
-#include "sqsgen/core/helpers.h"
+#include "sqsgen/core/helpers/static_string.h"
 #include "sqsgen/io/config/shared.h"
 #include "sqsgen/io/parsing.h"
 

@@ -10,8 +10,8 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "helpers/misc.h"
 #include "sqsgen/core/config.h"
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/optimization_config.h"
 #include "sqsgen/types.h"
 

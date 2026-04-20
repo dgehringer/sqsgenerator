@@ -5,8 +5,8 @@
 #ifndef SQSGEN_IO_CONFIG_SHELL_RADII_H
 #define SQSGEN_IO_CONFIG_SHELL_RADII_H
 
+#include "../../core/helpers/misc.h"
 #include "sqsgen/core/config.h"
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/io/config/shared.h"
 #include "sqsgen/io/parsing.h"
 

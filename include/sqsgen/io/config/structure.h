@@ -7,9 +7,9 @@
 
 #include <fstream>
 
+#include "../../core/helpers/misc.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/config.h"
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/parsing.h"
 #include "sqsgen/io/structure.h"

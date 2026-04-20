@@ -11,8 +11,8 @@
 #include <iostream>
 #include <thread>
 
+#include "core/helpers/misc.h"
 #include "sqsgen/core/config.h"
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/optimization.h"
 #include "sqsgen/core/optimization_config.h"
 #include "sqsgen/core/results.h"

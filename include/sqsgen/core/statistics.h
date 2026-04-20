@@ -5,7 +5,7 @@
 #ifndef SQSGEN_CORE_STATISTICS_H
 #define SQSGEN_CORE_STATISTICS_H
 
-#include "sqsgen/core/helpers.h"
+#include "helpers/misc.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {

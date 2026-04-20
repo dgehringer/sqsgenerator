@@ -2,19 +2,11 @@
 // Created by Dominik Gehringer on 21.09.24.
 //
 
-#ifndef SQSGEN_CORE_HELPERS_H
-#define SQSGEN_CORE_HELPERS_H
+#ifndef SQSGEN_CORE_HELPERS_MISC_H
+#define SQSGEN_CORE_HELPERS_MISC_H
 
 #include <ranges>
 
-#include "helpers/as.h"
-#include "helpers/fold.h"
-#include "helpers/for_each.h"
-#include "helpers/hash.h"
-#include "helpers/numeric.h"
-#include "helpers/sorted_vector.h"
-#include "helpers/static_string.h"
-#include "helpers/templates.h"
 #include "sqsgen/log.h"
 #include "sqsgen/types.h"
 
@@ -64,8 +56,8 @@ namespace sqsgen::core::helpers {
                                             Cols, v.size(), first_size));
 
     Matrix result(v.size(), first_size);
-    helpers::for_each([&](auto i, auto j) { result(i, j) = v[i][j]; },
-                      static_cast<index_t>(v.size()), first_size);
+    for (auto i = 0; i < v.size(); ++i)
+      for (auto j = 0; j < first_size; ++j) result(i, j) = v[i][j];
     return result;
   }
 
@@ -85,24 +77,26 @@ namespace sqsgen::core::helpers {
         }))
       throw std::invalid_argument("not all vector have the same size");
     Tensor result(v.size(), first_size, second_size);
-    helpers::for_each([&](auto i, auto j, auto k) { result(i, j, k) = v[i][j][k]; }, zero_size,
-                      first_size, second_size);
+    for (auto i = 0; i < zero_size; ++i)
+      for (auto j = 0; j < first_size; ++j)
+        for (auto k = 0; k < second_size; ++k) result(i, j, k) = v[i][j][k];
     return result;
   }
 
   template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
     requires std::is_integral_v<U>
   index_mapping_t<T, U> make_index_mapping(R&& r) {
-    auto elements = as<sorted_vector>{}(r);
+    auto elements = sorted_vector<T>(r);
     std::sort(elements.begin(), elements.end());
     U index = 0;
     std::map<U, T> index_map;
     std::transform(elements.begin(), elements.end(), std::inserter(index_map, index_map.begin()),
                    [&](auto const& val) { return std::make_pair(index++, val); });
-    std::map<T, U> reverse_map = as<std::map>{}(index_map | views::transform([&](auto const& item) {
-                                                  auto [k, v] = item;
-                                                  return std::make_pair(v, k);
-                                                }));
+    std::map<T, U> reverse_map;
+    std::transform(index_map.begin(), index_map.end(),
+                   std::inserter(reverse_map, reverse_map.begin()),
+                   [&](auto const& item) { return std::make_pair(item.second, item.first); });
+
     return index_mapping_t<T, U>(reverse_map, index_map);
   }
 

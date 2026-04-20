@@ -5,7 +5,9 @@
 #ifndef SQSGEN_CORE_OPTIMIZATION_H
 #define SQSGEN_CORE_OPTIMIZATION_H
 
-#include "sqsgen/core/helpers.h"
+#include "helpers/as.h"
+#include "helpers/misc.h"
+#include "helpers/numeric.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 

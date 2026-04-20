@@ -8,7 +8,7 @@
 #include <optional>
 #include <string>
 
-#include "sqsgen/core/helpers.h"
+#include "../core/helpers/misc.h"
 
 namespace sqsgen::io {
 

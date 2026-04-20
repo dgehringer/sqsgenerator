@@ -40,7 +40,11 @@ find_package(boost_multiprecision REQUIRED CONFIG)
 find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
 include_directories("${CMAKE_SOURCE_DIR}/../include" ${BS_THREAD_POOL_INCLUDE_DIRS})
 
-add_executable(sqsgen main.cpp progress.h helpers.h termcolor.h)
+add_executable(sqsgen main.cpp progress.h helpers.h termcolor.h
+        "${CMAKE_SOURCE_DIR}/../src/core/structure.cpp"
+        "${CMAKE_SOURCE_DIR}/../src/core/structure_utils.cpp"
+        "${CMAKE_SOURCE_DIR}/../src/core/permutation.cpp"
+)
 target_link_libraries(sqsgen PRIVATE
         nlohmann_json::nlohmann_json
         absl::log

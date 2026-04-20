@@ -4,9 +4,9 @@
 #include <iostream>
 #include <ranges>
 
+#include "../include/sqsgen/core/helpers/misc.h"
 #include "helpers.h"
 #include "progress.h"
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/mpi.h"

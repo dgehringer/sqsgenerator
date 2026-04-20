@@ -5,7 +5,7 @@
 #ifndef SQSGEN_IO_MPI_REQUESTS_H
 #define SQSGEN_IO_MPI_REQUESTS_H
 
-#include "sqsgen/core/helpers.h"
+#include "../../core/helpers/misc.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::io::mpi {

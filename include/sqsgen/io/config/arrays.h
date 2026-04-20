@@ -7,9 +7,9 @@
 
 #include <ranges>
 
+#include "../../core/helpers/misc.h"
 #include "arrays.h"
 #include "shared.h"
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/shared.h"
 #include "sqsgen/io/parsing.h"
