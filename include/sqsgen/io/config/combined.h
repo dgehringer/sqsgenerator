@@ -50,7 +50,8 @@ namespace sqsgen::io::config {
                                   std::vector<sublattice> const& composition) {
     using result_t = parse_result<seed_t>;
     auto num_sublattices = sublattice_mode == SUBLATTICE_MODE_INTERACT ? 1 : composition.size();
-    if (auto seed = get_either_optional<key, std::uint64_t, seed_t>(document); seed.has_value()) {
+    if (accessor<Document>::contains(document, key.data)) {
+      auto seed = get_either<key, std::uint64_t, seed_t>(document);
       if (iteration_mode == ITERATION_MODE_SYSTEMATIC)
         return parse_error::from_msg<key, CODE_BAD_ARGUMENT>(
             "You cannot specify a seed if you have set the iteration mode to \"systematic\". The "
@@ -58,7 +59,7 @@ namespace sqsgen::io::config {
             "randomness involved.");
       else
         // here we have random mode with a value
-        return seed.value().template collapse<seed_t>(
+        return seed.template collapse<seed_t>(
             [num_sublattices](std::uint64_t&& value) -> result_t {
               return seed_t(num_sublattices, std::make_optional(value));
             },

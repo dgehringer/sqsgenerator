@@ -179,6 +179,7 @@ EMSCRIPTEN_BINDINGS(m) {
   register_optional<val>();
   register_optional<std::string>();
   register_optional<std::size_t>();
+  register_optional<std::uint64_t>();
   register_optional<double>();
 
   enum_<sqsgen::Prec>("Prec")
