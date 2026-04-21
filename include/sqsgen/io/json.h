@@ -365,6 +365,16 @@ namespace sqsgen {
         static bool is(nlohmann::json const& json) { return json.is_number(); }
       };
 
+      template <> struct type_checker<std::uint64_t> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) { return json.is_number(); }
+      };
+
+      template <> struct type_checker<std::optional<std::uint64_t>> {
+        static constexpr bool available = true;
+        static bool is(nlohmann::json const& json) { return json.is_number() || json.is_null(); }
+      };
+
       template <> struct type_checker<std::string> {
         static constexpr bool available = true;
         static bool is(nlohmann::json const& json) { return json.is_string(); }
