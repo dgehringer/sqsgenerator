@@ -9,6 +9,7 @@
 #include <optional>
 
 #include "sqsgen/core/structure.h"
+#include "sqsgen/types.h"
 
 namespace sqsgen::core {
 
@@ -29,23 +30,17 @@ namespace sqsgen::core {
     }
   };
 
-  template <class T> struct configuration {
-    SublatticeMode sublattice_mode;
-    IterationMode iteration_mode;
-    seed_t seed;
-    structure_config<T> structure;
-    std::vector<sublattice> composition;
-    stl_matrix_t<T> shell_radii;
-    std::vector<shell_weights_t<T>> shell_weights;
-    std::vector<cube_t<T>> prefactors;
-    std::vector<cube_t<T>> pair_weights;
-    std::vector<cube_t<T>> target_objective;
-    std::optional<iterations_t> iterations;
-    iterations_t chunk_size{};
-    thread_config_t thread_config;
+  template <SublatticeMode smode, IterationMode imode> struct configuration_base {
+    SublatticeMode sublattice_mode{smode};
+    IterationMode iteration_mode{imode};
     std::size_t keep;
     std::optional<std::size_t> max_results_per_objective;
+    thread_config_t thread_config;
+    iterations_t chunk_size{};
   };
+
+  template <class T, SublatticeMode smode, IterationMode imode, bool mpi_mode = false>
+  struct configuration;
 
 }  // namespace sqsgen::core
 
