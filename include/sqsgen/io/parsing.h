@@ -8,7 +8,8 @@
 #include <optional>
 #include <string>
 
-#include "../core/helpers/misc.h"
+#include "sqsgen/core/helpers/misc.h"
+#include "sqsgen/core/helpers/static_string.h"
 
 namespace sqsgen::io {
 
