@@ -213,7 +213,7 @@ namespace sqsgen {
       if (objective < _search_objective.load()) _search_objective.store(objective);
     }
 
-    [[nodiscard]] usize_t num_threads() {
+    [[nodiscard]] std::size_t num_threads() {
       if (_thread_config.size() == 1) return _thread_config.front();
       if (_thread_config.size() != num_ranks())
         throw std::invalid_argument(format_string(
@@ -363,8 +363,8 @@ namespace sqsgen {
         iterations_t iterations{rend - rstart};
 
         auto bonds{this->transpose_setting([](auto&& c) {
-          return cube_t<usize_t>(c.shell_weights.size(), c.sorted.num_species,
-                                 c.sorted.num_species);
+          return cube_t<std::size_t>(c.shell_weights.size(), c.sorted.num_species,
+                                     c.sorted.num_species);
         })};
         auto sro{this->transpose_setting([](auto&& c) {
           return cube_t<T>(c.shell_weights.size(), c.sorted.num_species, c.sorted.num_species);

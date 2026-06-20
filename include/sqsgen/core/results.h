@@ -168,7 +168,7 @@ namespace sqsgen::core {
             .str();
       }
 
-      sro_parameter<T> parameter(usize_t shell, std::string const &i, std::string const &j) {
+      sro_parameter<T> parameter(std::size_t shell, std::string const &i, std::string const &j) {
         if (!SYMBOL_MAP.contains(i))
           throw std::domain_error(format_string("Unknown atomic species \"%s\"", i));
         if (!SYMBOL_MAP.contains(j))
@@ -176,7 +176,7 @@ namespace sqsgen::core {
         return parameter(shell, SYMBOL_MAP.at(i), SYMBOL_MAP.at(j));
       }
 
-      sro_parameter<T> parameter(usize_t shell, specie_t i, specie_t j) {
+      sro_parameter<T> parameter(std::size_t shell, specie_t i, specie_t j) {
         auto shell_index = this->shell_index(shell);
         if (shell_index.has_value()) {
           auto ii = species_index(i);
@@ -192,7 +192,7 @@ namespace sqsgen::core {
           throw std::domain_error(format_string("This result does not contain a shell %i", shell));
       }
 
-      std::vector<sro_parameter<T>> parameter(usize_t shell) {
+      std::vector<sro_parameter<T>> parameter(std::size_t shell) {
         const configuration_t s
             = as<std::vector>{}(views::elements<0>(this->_opt_config->species_map.first));
         std::vector<sro_parameter<T>> result;
@@ -208,7 +208,7 @@ namespace sqsgen::core {
 
       cube_t<T> parameter() { return this->sro; }
 
-      std::optional<usize_t> shell_index(usize_t shell) {
+      std::optional<std::size_t> shell_index(std::size_t shell) {
         auto result = this->_opt_config->shell_map.first.find(shell);
         if (result != this->_opt_config->shell_map.first.end()) return result->second;
         return std::nullopt;

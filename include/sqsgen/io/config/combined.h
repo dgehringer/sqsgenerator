@@ -102,11 +102,11 @@ namespace sqsgen::io::config {
   template <string_literal key, class Document>
   parse_result<thread_config_t> parse_threads_per_rank(Document const& doc) {
     using result_t = parse_result<thread_config_t>;
-    return get_either_optional<key, usize_t, std::vector<usize_t>>(doc)
-        .value_or(parse_result<usize_t, std::vector<usize_t>>{
-            usize_t(std::thread::hardware_concurrency())})
+    return get_either_optional<key, std::size_t, std::vector<std::size_t>>(doc)
+        .value_or(parse_result<std::size_t, std::vector<std::size_t>>{
+            std::size_t(std::thread::hardware_concurrency())})
         .template collapse<thread_config_t>(
-            [&](usize_t&& num_threads) -> result_t {
+            [&](std::size_t&& num_threads) -> result_t {
               if (num_threads == 0)
                 return parse_error::from_msg<key, CODE_BAD_VALUE>(
                     "The number of threads cannot be set to 0");
@@ -116,7 +116,7 @@ namespace sqsgen::io::config {
               return {std::vector{num_threads}};
 #endif
             },
-            [&](std::vector<usize_t>&& num_threads) -> result_t { return {num_threads}; });
+            [&](std::vector<std::size_t>&& num_threads) -> result_t { return {num_threads}; });
   }
 
   template <string_literal key, class Document>

@@ -43,15 +43,13 @@ namespace sqsgen {
     requires std::is_integral_v<T> && std::is_integral_v<U>
   using index_mapping_t = std::pair<std::map<T, U>, std::map<U, T>>;
 
-  using usize_t = std::uint_fast32_t;
-
-  using shell_matrix_t = matrix_t<usize_t>;
+  using shell_matrix_t = matrix_t<std::size_t>;
 
   template <class T> using bounds_t = std::pair<T, T>;
 
   template <class T>
     requires std::is_arithmetic_v<T>
-  using shell_weights_t = std::map<usize_t, T>;
+  using shell_weights_t = std::map<std::size_t, T>;
 
   enum Prec {
     PREC_INVALID = -1,
@@ -77,18 +75,18 @@ namespace sqsgen {
     SUBLATTICE_MODE_SPLIT,
   };
 
-  using composition_t = std::map<specie_t, usize_t>;
+  using composition_t = std::map<specie_t, std::size_t>;
 
   using iterations_t = unsigned long long;
 
   using nanoseconds_t = iterations_t;
 
-  using thread_config_t = std::vector<usize_t>;
+  using thread_config_t = std::vector<std::size_t>;
 
   using seed_t = std::vector<std::optional<std::uint64_t>>;
 
   struct sublattice {
-    vset<usize_t> sites;
+    vset<std::size_t> sites;
     composition_t composition;
   };
 
@@ -188,7 +186,7 @@ namespace sqsgen {
   };
 
   template <class T> struct sro_parameter {
-    usize_t shell;
+    std::size_t shell;
     specie_t i;
     specie_t j;
     T value;

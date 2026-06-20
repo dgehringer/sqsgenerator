@@ -225,7 +225,8 @@ namespace sqsgen::testing {
 
     const auto coordination_number = [&](auto&& prefactor) {
       // x_a
-      return static_cast<usize_t>((1.0 / prefactor) / static_cast<double>(fcc_one_species.size()));
+      return static_cast<std::size_t>((1.0 / prefactor)
+                                      / static_cast<double>(fcc_one_species.size()));
     };
 
     auto f = core::detail::compute_prefactors(fcc_one_species.shell_matrix(dists), w,

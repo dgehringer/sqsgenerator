@@ -87,12 +87,12 @@ namespace sqsgen::core {
         }
         return static_cast<int>(dists.size());
       };
-      shell_matrix_t shells = matrix_t<usize_t>(num_atoms, num_atoms);
+      shell_matrix_t shells = matrix_t<std::size_t>(num_atoms, num_atoms);
       for (auto i = 0; i < num_atoms; i++) {
         for (auto j = i + 1; j < num_atoms; j++) {
           auto shell{find_shell(distance_matrix(i, j))};
-          shells(i, j) = static_cast<usize_t>(shell);
-          shells(j, i) = static_cast<usize_t>(shell);
+          shells(i, j) = static_cast<std::size_t>(shell);
+          shells(j, i) = static_cast<std::size_t>(shell);
         }
       }
       helpers::for_each([&](auto i) { shells(i, i) = 0; }, num_atoms);
@@ -103,7 +103,7 @@ namespace sqsgen::core {
     public:
       friend class structure<T>;
       using row_t = Eigen::Vector3<T>;
-      usize_t index;
+      std::size_t index;
       specie_t specie;
       row_t frac_coords;
       [[nodiscard]] sqsgen::core::atom atom() const { return atom::from_z(specie); }
@@ -129,8 +129,8 @@ namespace sqsgen::core {
       };
     };
 
-    inline usize_t compute_num_species(configuration_t const &configuration) {
-      return static_cast<usize_t>(helpers::sorted_vector<specie_t>(configuration).size());
+    inline std::size_t compute_num_species(configuration_t const &configuration) {
+      return static_cast<std::size_t>(helpers::sorted_vector<specie_t>(configuration).size());
     }
 
     template <class T> cube_t<T> compute_prefactors(shell_matrix_t const &shell_matrix,
@@ -145,7 +145,7 @@ namespace sqsgen::core {
           log::warn(format_string(
               R"(The coordination shell %i contains no or only one lattice position(s). Increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
               shell));
-        if (!is_close(atoms_per_shell, static_cast<T>(static_cast<usize_t>(atoms_per_shell))))
+        if (!is_close(atoms_per_shell, static_cast<T>(static_cast<std::size_t>(atoms_per_shell))))
           log::warn(format_string(
               "The coordination shell %i does not contain an integer number of sites. I hope you "
               "know what you are doing",
@@ -153,8 +153,8 @@ namespace sqsgen::core {
         neighbors[shell] = atoms_per_shell;
       }
 
-      auto shell_map = std::get<1>(make_index_mapping<usize_t>(weights | views::elements<0>));
-      auto conf_map = std::get<1>(make_index_mapping<usize_t>(configuration));
+      auto shell_map = std::get<1>(make_index_mapping<std::size_t>(weights | views::elements<0>));
+      auto conf_map = std::get<1>(make_index_mapping<std::size_t>(configuration));
 
       auto hist = core::count_species(configuration);
       auto num_sites{configuration.size()};
@@ -223,8 +223,8 @@ namespace sqsgen::core {
     if (edges.size() < 10)
       throw std::invalid_argument(
           "Not enough edges to create a histogram, please increase the bin width");
-    auto freqs = std::map<usize_t, std::vector<T>>{{0, {}}};
-    usize_t index{0}, bin{0};
+    auto freqs = std::map<std::size_t, std::vector<T>>{{0, {}}};
+    std::size_t index{0}, bin{0};
     while (index < distances.size() && bin < num_edges - 1) {
       T lower{edges[bin]}, upper{edges[bin + 1]}, value{distances[index]};
       if (lower <= value && value < upper) {
@@ -275,7 +275,7 @@ namespace sqsgen::core {
     coords_t<T> frac_coords;
     configuration_t species;
     std::array<bool, 3> pbc = {true, true, true};
-    usize_t num_species;
+    std::size_t num_species;
 
     structure() = default;
 
@@ -368,7 +368,7 @@ namespace sqsgen::core {
     [[nodiscard]] std::size_t size() const { return species.size(); }
 
     auto sites() const {
-      return ranges::iota_view(static_cast<usize_t>(0), static_cast<usize_t>(size()))
+      return ranges::iota_view(static_cast<std::size_t>(0), static_cast<std::size_t>(size()))
              | views::transform([&](auto i) {
                  return sqsgen::core::detail::site<T>{i, species[i],
                                                       Eigen::Vector3<T>(frac_coords.row(i))};
@@ -426,13 +426,14 @@ namespace sqsgen::core {
       for (auto index : r) {
         if (index >= size() || index < 0)
           throw std::out_of_range(format_string("index out of range 0 <= %i < %i", index, size()));
-        sites.push_back(sqsgen::core::detail::site<T>{static_cast<usize_t>(index), species[index],
+        sites.push_back(sqsgen::core::detail::site<T>{static_cast<std::size_t>(index),
+                                                      species[index],
                                                       Eigen::Vector3<T>(frac_coords.row(index))});
       }
       return structure(lattice, sites);
     }
 
-    template <class Size = usize_t>
+    template <class Size = std::size_t>
       requires std::is_integral_v<Size>
     auto pairs(std::vector<T> const &radii, shell_weights_t<T> const &weights, bool pack = true,
                T atol = std::numeric_limits<T>::epsilon(), T rtol = 1.0e-9) {

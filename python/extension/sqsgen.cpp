@@ -262,17 +262,18 @@ void bind_result(py::module &m) {
         .def("structure", &sqs_result_wrapper<T, Mode>::structure, py::return_value_policy::move)
         .def(
             "sro",
-            [](sqs_result_wrapper<T, Mode> &r, usize_t shell, std::string const &i,
+            [](sqs_result_wrapper<T, Mode> &r, std::size_t shell, std::string const &i,
                std::string const &j) { return r.parameter(shell, i, j); },
             py::arg("shell"), py::arg("i"), py::arg("j"))
         .def(
             "sro",
-            [](sqs_result_wrapper<T, Mode> &r, usize_t shell, specie_t i, specie_t j) {
+            [](sqs_result_wrapper<T, Mode> &r, std::size_t shell, specie_t i, specie_t j) {
               return r.parameter(shell, i, j);
             },
             py::arg("shell"), py::arg("i"), py::arg("j"))
         .def(
-            "sro", [](sqs_result_wrapper<T, Mode> &r, usize_t shell) { return r.parameter(shell); },
+            "sro",
+            [](sqs_result_wrapper<T, Mode> &r, std::size_t shell) { return r.parameter(shell); },
             py::arg("shell"))
         .def(
             "sro",
@@ -422,48 +423,48 @@ PYBIND11_MODULE(_core, m) {
         return format_string("Atom(symbol=\"%s\", Z=%i, mass=%.1f)", a.symbol, a.Z, a.mass);
       });
 
-  py::class_<vset<usize_t>>(m, "Indices")
+  py::class_<vset<std::size_t>>(m, "Indices")
       .def(py::init<>())
       .def(
           "__or__",
-          [](vset<usize_t> &v, std::vector<usize_t> other) {
+          [](vset<std::size_t> &v, std::vector<std::size_t> other) {
             v.merge(other);
             return v;
           },
           py::arg("other"), py::is_operator())
       .def(
           "__or__",
-          [](vset<usize_t> &v, vset<usize_t> const &other) {
+          [](vset<std::size_t> &v, vset<std::size_t> const &other) {
             v.merge(other);
             return v;
           },
           py::arg("other"), py::is_operator())
       .def(
           "__or__",
-          [](vset<usize_t> &v, py::iterable const &other) {
-            for (auto item : other) v.insert(item.cast<usize_t>());
+          [](vset<std::size_t> &v, py::iterable const &other) {
+            for (auto item : other) v.insert(item.cast<std::size_t>());
             return v;
           },
           py::arg("other"), py::is_operator())
-      .def("empty", &vset<usize_t>::empty)
-      .def("size", &vset<usize_t>::size)
+      .def("empty", &vset<std::size_t>::empty)
+      .def("size", &vset<std::size_t>::size)
       .def(
-          "add", [](vset<usize_t> &v, usize_t value) { v.insert(value); }, py::arg("value"))
-      .def("contains", &vset<usize_t>::contains)
-      .def("__len__", [](const vset<usize_t> &v) { return v.size(); })
+          "add", [](vset<std::size_t> &v, std::size_t value) { v.insert(value); }, py::arg("value"))
+      .def("contains", &vset<std::size_t>::contains)
+      .def("__len__", [](const vset<std::size_t> &v) { return v.size(); })
       .def(
-          "__iter__", [](vset<usize_t> &v) { return py::make_iterator(v.begin(), v.end()); },
+          "__iter__", [](vset<std::size_t> &v) { return py::make_iterator(v.begin(), v.end()); },
           py::keep_alive<0, 1>());
 
   py::class_<sublattice>(m, "Sublattice")
-      .def(py::init<vset<usize_t>, composition_t>())
+      .def(py::init<vset<std::size_t>, composition_t>())
       .def_readwrite("sites", &sublattice::sites)
       .def_readwrite("composition", &sublattice::composition);
 
-  py::class_<core::atom_pair<usize_t>>(m, "AtomPair")
-      .def_readonly("i", &core::atom_pair<usize_t>::i)
-      .def_readonly("j", &core::atom_pair<usize_t>::j)
-      .def_readonly("shell", &core::atom_pair<usize_t>::shell);
+  py::class_<core::atom_pair<std::size_t>>(m, "AtomPair")
+      .def_readonly("i", &core::atom_pair<std::size_t>::i)
+      .def_readonly("j", &core::atom_pair<std::size_t>::j)
+      .def_readonly("shell", &core::atom_pair<std::size_t>::shell);
 
   bind_sqs_statistics_data<"SqsStatisticsData", float>(m);
   bind_sqs_statistics_data<"SqsStatisticsData", double>(m);

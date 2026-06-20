@@ -20,7 +20,7 @@ namespace sqsgen::io::config {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  using index_set_t = vset<usize_t>;
+  using index_set_t = vset<std::size_t>;
 
   namespace detail {
     template <string_literal key>
@@ -54,10 +54,10 @@ namespace sqsgen::io::config {
               "The specified structure does not contain a site with species \"%s\"", s));
         unique_species.insert(ordinal);
       }
-      vset<usize_t> indices;
+      vset<std::size_t> indices;
       core::helpers::for_each(
           [&](auto i) {
-            if (unique_species.contains(conf.at(i))) indices.insert(static_cast<usize_t>(i));
+            if (unique_species.contains(conf.at(i))) indices.insert(static_cast<std::size_t>(i));
           },
           conf.size());
       return indices;

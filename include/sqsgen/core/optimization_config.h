@@ -34,12 +34,12 @@ namespace sqsgen::core {
     std::vector<sqsgen::sublattice> sublattice;
     core::structure<T> structure;
     core::structure<T> sorted;
-    std::vector<bounds_t<usize_t>> bounds;
-    std::vector<usize_t> sort_order;
+    std::vector<bounds_t<std::size_t>> bounds;
+    std::vector<std::size_t> sort_order;
     configuration_t species_packed;
     index_mapping_t<specie_t, specie_t> species_map;
-    index_mapping_t<usize_t, usize_t> shell_map;
-    std::vector<atom_pair<usize_t>> pairs;
+    index_mapping_t<std::size_t, std::size_t> shell_map;
+    std::vector<atom_pair<std::size_t>> pairs;
     cube_t<T> pair_weights;
     cube_t<T> prefactors;
     cube_t<T> target_objective;
@@ -108,20 +108,22 @@ namespace sqsgen::core {
             = optimization::compute_shuffling_bounds(s, config.composition);
 
         return std::make_tuple(std::vector{s}, std::vector{sorted},
-                               stl_matrix_t<bounds_t<usize_t>>{bounds},
-                               stl_matrix_t<usize_t>{sort_order});
+                               stl_matrix_t<bounds_t<std::size_t>>{bounds},
+                               stl_matrix_t<std::size_t>{sort_order});
       } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
         auto structures
             = config.structure.structure().apply_composition_and_decompose(config.composition);
         return std::make_tuple(
             structures, structures,
-            helpers::as<std::vector>{}(
-                structures
-                | views::transform([](auto&& s) -> bounds_t<usize_t> { return {0, s.size()}; })),
-            helpers::as<std::vector>{}(
-                structures | views::transform([](auto&& s) -> std::vector<usize_t> {
-                  return helpers::as<std::vector>{}(helpers::range(static_cast<usize_t>(s.size())));
-                })));
+            helpers::as<std::vector>{}(structures
+                                       | views::transform([](auto&& s) -> bounds_t<std::size_t> {
+                                           return {0, s.size()};
+                                         })),
+            helpers::as<std::vector>{}(structures
+                                       | views::transform([](auto&& s) -> std::vector<std::size_t> {
+                                           return helpers::as<std::vector>{}(
+                                               helpers::range(static_cast<std::size_t>(s.size())));
+                                         })));
       }
     }
     static auto shared(structure<T> sorted, std::vector<T> const& radii,

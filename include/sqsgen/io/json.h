@@ -357,7 +357,7 @@ namespace sqsgen {
       };
 #ifdef __EMSCRIPTEN__
       template <class Option>
-        requires detail::matches_any<Option, int, double, float, usize_t, std::size_t, long,
+        requires detail::matches_any<Option, int, double, float, std::size_t, std::size_t, long,
                                      unsigned long, unsigned long long, long long,
                                      iterations_t>::value
       struct type_checker<Option> {
