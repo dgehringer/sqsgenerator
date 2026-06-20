@@ -4,6 +4,8 @@
 
 #include "sqsgen/core/permutation.h"
 
+#include "sqsgen/core/helpers/as.h"
+#include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/helpers/fold.h"
 #include "sqsgen/core/helpers/numeric.h"
 
@@ -11,16 +13,7 @@ namespace sqsgen::core {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  inline counter<specie_t> count_species(configuration_t const& c) {
-    counter<specie_t> result{};
-    for (auto e : c) {
-      if (result.contains(e))
-        ++result[e];
-      else
-        result.emplace(e, 1);
-    }
-    return result;
-  }
+  inline counter<specie_t> count_species(configuration_t const& c) { return helpers::count(c); }
 
   template <ranges::input_range R, class T = ranges::range_value_t<R>>
   rank_t num_permutations_impl(R&& freqs) {

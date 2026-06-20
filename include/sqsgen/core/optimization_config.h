@@ -39,7 +39,7 @@ namespace sqsgen::core {
     configuration_t species_packed;
     index_mapping_t<specie_t, specie_t> species_map;
     index_mapping_t<std::size_t, std::size_t> shell_map;
-    std::vector<atom_pair<std::size_t>> pairs;
+    std::vector<atom_pair> pairs;
     cube_t<T> pair_weights;
     cube_t<T> prefactors;
     cube_t<T> target_objective;

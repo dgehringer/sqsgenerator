@@ -46,7 +46,7 @@ add_executable(sqsgen
         helpers.h
         termcolor.h
         ../src/core/optimization.cpp
-        ../src/core/atom.cpp
+        ../src/core/structure.cpp
         ../src/core/permutation.cpp
 )
 target_link_libraries(sqsgen PRIVATE
