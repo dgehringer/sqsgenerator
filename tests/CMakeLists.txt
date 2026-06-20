@@ -89,4 +89,5 @@ add_executable(test_parser
         "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
         "${SQSGEN_TEST_SOURCE_DIR}/test_parser.cpp"
 )
+target_link_libraries(test_permutation ${SQSGEN_TEST_LIBS})
 add_test(NAME test_parser COMMAND test_parser)
