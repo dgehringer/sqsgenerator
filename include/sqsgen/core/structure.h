@@ -375,7 +375,8 @@ namespace sqsgen::core {
                });
     }
 
-    template <class Fn> auto sorted_with_indices(Fn &&fn) const {
+    template <class Fn>
+    std::tuple<structure<T>, std::vector<std::size_t>> sorted_with_indices(Fn &&fn) const {
       auto s = helpers::as<std::vector>{}(sites());
       std::sort(s.begin(), s.end(), std::forward<Fn>(fn));
       return std::make_tuple(

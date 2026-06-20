@@ -10,7 +10,6 @@
 
 #include "sqsgen/core/results.h"
 #include "sqsgen/io/config/combined.h"
-#include "sqsgen/io/dict.h"
 #include "sqsgen/io/json.h"
 #include "sqsgen/io/parsing.h"
 #include "sqsgen/io/structure.h"

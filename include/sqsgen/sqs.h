@@ -330,7 +330,6 @@ namespace sqsgen {
       std::shared_ptr<sqs_callback_t> callback_ptr;
       if (callback.has_value()) callback_ptr = std::make_shared<sqs_callback_t>(callback.value());
 
-      std::mutex setup_mutex;
       auto stop = stop_source->get_token();
 
       BS::thread_pool<BS::tp::pause> pool(this->num_threads());
