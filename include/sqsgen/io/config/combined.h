@@ -69,7 +69,7 @@ namespace sqsgen::io::config {
                     "The number of seeds provided (%u) does not match the number of sublattices "
                     "(%u)",
                     values.size(), num_sublattices));
-              return values;
+              return parse_result<seed_t>{values};
             });
     } else
       // Choose proper default values
