@@ -11,8 +11,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID
     add_compile_options(-fexperimental-library)
 endif ()
 
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(absl CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -34,7 +32,6 @@ list(REMOVE_ITEM tests "${SQSGEN_TEST_SOURCE_DIR}/main.cpp")
 include_directories(${SQSGEN_INCLUDE_DIR})
 
 list(APPEND SQSGEN_TEST_LIBS "Eigen3::Eigen")
-list(APPEND SQSGEN_TEST_LIBS "pybind11::embed")
 list(APPEND SQSGEN_TEST_LIBS "nlohmann_json::nlohmann_json")
 list(APPEND SQSGEN_TEST_LIBS "GTest::gtest_main")
 list(APPEND SQSGEN_TEST_LIBS
@@ -46,7 +43,6 @@ list(APPEND SQSGEN_TEST_LIBS
         absl::raw_hash_set
         absl::flat_hash_map
         absl::flat_hash_set)
-list(APPEND SQSGEN_TEST_LIBS "${Python3_LIBRARIES}")
 
 message(STATUS "SQSGEN_TEST_LIBS=${SQSGEN_TEST_LIBS}")
 
@@ -93,5 +89,4 @@ add_executable(test_parser
         "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
         "${SQSGEN_TEST_SOURCE_DIR}/test_parser.cpp"
 )
-target_link_libraries(test_parser ${SQSGEN_TEST_LIBS} "${Python3_LIBRARIES}")
 add_test(NAME test_parser COMMAND test_parser)

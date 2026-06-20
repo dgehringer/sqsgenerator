@@ -9,7 +9,6 @@
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/combined.h"
-#include "sqsgen/io/dict.h"
 #include "sqsgen/io/json.h"
 #include "sqsgen/types.h"
 
@@ -17,8 +16,6 @@ namespace sqsgen::testing {
   using json = nlohmann::json;
   using namespace sqsgen::io;
   using namespace sqsgen::io::config;
-  namespace py = pybind11;
-  using namespace py::literals;
 
   template <class T> void assert_structure_equal(core::structure<T> const& lhs,
                                                  core::structure<T> const& rhs,
@@ -35,12 +32,6 @@ namespace sqsgen::testing {
       ASSERT_NEAR(lsite.frac_coords(2), rsite.frac_coords(2), epsilon);
     }
   }
-
-  template <class... Args> py::list as_pylist(Args&&... obj) {
-    py::list list;
-    (list.append(py::handle(obj)), ...);
-    return list;
-  };
 
   template <class T> const static auto TEST_FCC_STRUCTURE = core::structure<T>{
       lattice_t<T>{{1, 0, 0}, {0, 2, 0}, {0, 0, 3}},
