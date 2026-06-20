@@ -164,11 +164,7 @@ namespace sqsgen::core {
       return atom(KNOWN_ELEMENTS[ordinal]);
     }
 
-    static atom from_symbol(std::string const& symbol) {
-      if (!SYMBOL_MAP.contains(symbol))
-        throw std::out_of_range(format_string("Unknown element \"%s\"", symbol));
-      return from_z(SYMBOL_MAP.at(symbol));
-    }
+    static atom from_symbol(std::string const& symbol);
 
   private:
     explicit atom(detail::atom_record const& record)

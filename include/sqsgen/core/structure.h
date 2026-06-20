@@ -18,12 +18,10 @@ namespace sqsgen::core {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  template <class Size>
-    requires std::is_integral_v<Size>
   struct atom_pair {
-    Size i;
-    Size j;
-    Size shell;
+    std::size_t i;
+    std::size_t j;
+    std::size_t shell;
   };
 
   template <class T>
@@ -32,72 +30,10 @@ namespace sqsgen::core {
 
   namespace detail {
     template <class T>
-    matrix_t<T> distance_matrix(const lattice_t<T> &lattice, const coords_t<T> &frac_coords) {
-      const coords_t<T> cart_coords = frac_coords * lattice;
-      assert(frac_coords.cols() == 3);
-      const auto num_atoms = frac_coords.rows();
-
-      auto a{lattice.row(0)};
-      auto b{lattice.row(1)};
-      auto c{lattice.row(2)};
-
-      std::array axis{-1, 0, 1};
-      matrix_t<T> distances
-          = matrix_t<T>::Ones(num_atoms, num_atoms) * std::numeric_limits<T>::max();
-#pragma omp parallel for schedule(static) shared(distances) \
-    firstprivate(a, b, c, axis, num_atoms, cart_coords) if (num_atoms > 100)
-      for (auto i = 0; i < num_atoms; i++) {
-        auto p1{cart_coords.row(i)};
-        for (auto j = i; j < num_atoms; j++) {
-          auto p2{cart_coords.row(j)};
-          helpers::for_each(
-              [&](auto u, auto v, auto w) {
-                auto t = u * a + v * b + w * c;
-                auto diff = p1 - (t + p2);
-                T image_norm{std::abs(diff.norm())};
-                if (image_norm < distances(i, j)) {
-                  distances(i, j) = image_norm;
-                  if (i != j) distances(j, i) = image_norm;
-                  assert(distances(i, j) == distances(j, i));
-                }
-              },
-              axis, axis, axis);
-        }
-      }
-      assert(distances.rows() == num_atoms && distances.cols() == num_atoms);
-      return distances;
-    }
+    matrix_t<T> distance_matrix(const lattice_t<T> &lattice, const coords_t<T> &frac_coords);
 
     template <class T> shell_matrix_t shell_matrix(matrix_t<T> const &distance_matrix,
-                                                   std::vector<T> const &dists, T atol, T rtol) {
-      assert(distance_matrix.rows() == distance_matrix.cols());
-      const auto num_atoms{distance_matrix.rows()};
-
-      auto is_close_tol = [=](T a, T b) { return helpers::is_close(a, b, atol, rtol); };
-
-      auto find_shell = [&](T d) {
-        if (d < 0) throw std::out_of_range("Invalid distance matrix input");
-        if (is_close_tol(d, 0.0)) return 0;
-
-        for (auto i = 0; i < dists.size() - 1; i++) {
-          T lb{dists[i]}, up{dists[i + 1]};
-          if ((is_close_tol(d, lb) or d > lb) and (is_close_tol(d, up) or up > d)) {
-            return i + 1;
-          }
-        }
-        return static_cast<int>(dists.size());
-      };
-      shell_matrix_t shells = matrix_t<std::size_t>(num_atoms, num_atoms);
-      for (auto i = 0; i < num_atoms; i++) {
-        for (auto j = i + 1; j < num_atoms; j++) {
-          auto shell{find_shell(distance_matrix(i, j))};
-          shells(i, j) = static_cast<std::size_t>(shell);
-          shells(j, i) = static_cast<std::size_t>(shell);
-        }
-      }
-      helpers::for_each([&](auto i) { shells(i, i) = 0; }, num_atoms);
-      return shells;
-    }
+                                                   std::vector<T> const &dists, T atol, T rtol);
 
     template <class T> class site {
     public:
