@@ -86,7 +86,6 @@ namespace sqsgen::testing {
   }
 
   TEST(test_parse_structure, DISABLED_required_fields_success) {
-    using namespace py::literals;
     auto s = TEST_FCC_STRUCTURE<double>;
     json json = {
         {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
@@ -267,7 +266,6 @@ namespace sqsgen::testing {
 
   TEST(test_parse_shell_radii, default_case) {
     using namespace sqsgen::io;
-    auto module = py::module::import("ShellRadiiDetection");
 
     auto json = make_test_structure_and_composition<double>(std::array{2, 2, 2});
 
@@ -282,7 +280,6 @@ namespace sqsgen::testing {
 
   TEST(test_parse_shell_radii, perfect_lattice) {
     using namespace sqsgen::io;
-    auto module = py::module::import("ShellRadiiDetection");
 
     auto json = make_test_structure_and_composition<double>(std::array{2, 2, 2});
     json["bin_width"] = 0.001;

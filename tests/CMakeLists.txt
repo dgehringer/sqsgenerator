@@ -31,7 +31,6 @@ list(REMOVE_ITEM tests "${SQSGEN_TEST_SOURCE_DIR}/main.cpp")
 
 include_directories(${SQSGEN_INCLUDE_DIR})
 
-list(APPEND SQSGEN_TEST_LIBS "Eigen3::Eigen")
 list(APPEND SQSGEN_TEST_LIBS "nlohmann_json::nlohmann_json")
 list(APPEND SQSGEN_TEST_LIBS "GTest::gtest_main")
 list(APPEND SQSGEN_TEST_LIBS
@@ -42,7 +41,9 @@ list(APPEND SQSGEN_TEST_LIBS
         absl::raw_hash_map
         absl::raw_hash_set
         absl::flat_hash_map
-        absl::flat_hash_set)
+        absl::flat_hash_set
+        Eigen3::Eigen
+)
 
 message(STATUS "SQSGEN_TEST_LIBS=${SQSGEN_TEST_LIBS}")
 
@@ -89,5 +90,5 @@ add_executable(test_parser
         "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
         "${SQSGEN_TEST_SOURCE_DIR}/test_parser.cpp"
 )
-target_link_libraries(test_permutation ${SQSGEN_TEST_LIBS})
+target_link_libraries(test_parser ${SQSGEN_TEST_LIBS})
 add_test(NAME test_parser COMMAND test_parser)
