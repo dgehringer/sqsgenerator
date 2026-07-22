@@ -166,7 +166,7 @@
 
         tour.addStep({
             id: 'download',
-            text: 'Downlaod all results in .msgpack format of offline analysis',
+            text: 'Download all results in .msgpack format of offline analysis',
             attachTo: {
                 element: '.jse-button[title="Download results in msgpack format"]',
                 on: 'bottom'
@@ -179,7 +179,7 @@
 
         tour.addStep({
             id: 'download-selected',
-            text: 'Downlaod the current structure in selected format',
+            text: 'Download the current structure in selected format',
             attachTo: {
                 element: '.jse-button[title="Download the current file in selected format"]',
                 on: 'bottom'
