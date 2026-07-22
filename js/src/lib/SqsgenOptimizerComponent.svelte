@@ -8,14 +8,16 @@
         type MenuItem,
         type RenderMenuContext,
         type OnChangeStatus,
-        type ValidationError,
+        type ValidationError
     } from 'svelte-jsoneditor';
-    import {downloadAsFile, decompressData, defaultConfig, compressData} from '$lib/utils.js';
-    import {Pane, Splitpanes} from 'svelte-splitpanes';
+    import Shepherd from 'shepherd.js';
+    import 'shepherd.js/dist/css/shepherd.css';
+    import { downloadAsFile, decompressData, defaultConfig, compressData } from '$lib/utils.js';
+    import { Pane, Splitpanes } from 'svelte-splitpanes';
     import LinearProgress from '@smui/linear-progress';
     import CircularProgress from '@smui/circular-progress';
-    import {loadOptimizer, SqsgenOptimizer} from '$lib/optimizer.js';
-    import {onMount} from 'svelte';
+    import { loadOptimizer, SqsgenOptimizer } from '$lib/optimizer.js';
+    import { onMount } from 'svelte';
 
     import {
         faCirclePlay,
@@ -26,11 +28,12 @@
         faSquareCaretDown,
         faSquareCaretUp,
         faFile,
-        faCircleQuestion, faShareSquare,
+        faCircleQuestion,
+        faShareSquare
     } from '@fortawesome/free-regular-svg-icons';
-    import Dialog, {Title, Content as DialogContent, Actions, InitialFocus} from '@smui/dialog';
-    import Button, {Label, Icon} from '@smui/button';
-    import List, {Item, Graphic, Text} from '@smui/list';
+    import Dialog, { Title, Content as DialogContent, Actions, InitialFocus } from '@smui/dialog';
+    import Button, { Label, Icon } from '@smui/button';
+    import List, { Item, Graphic, Text } from '@smui/list';
     import Radio from '@smui/radio';
     import * as Ngl from 'ngl';
 
@@ -70,10 +73,9 @@
     onMount(async () => {
         state.optimizer = await loadOptimizer();
         state.ngl = await import('ngl');
-        openDialogInfo = true;
 
         const params = new URLSearchParams(window.location.search);
-        const configData = params.get("config");
+        const configData = params.get('config');
 
         // Ask opener for config
         if (configData) {
@@ -81,11 +83,16 @@
                 json: await decompressData(configData)
             };
         }
-        handleChange({text: JSON.stringify(content.json)}, state.jsonEditorRef?.get(), {} as OnChangeStatus);
+        handleChange(
+            { text: JSON.stringify(content.json) },
+            state.jsonEditorRef?.get(),
+            {} as OnChangeStatus
+        );
+
+        if (!params.has('noTour')) startTour();
     });
 
     let openDialogFileType = $state(false);
-    let openDialogInfo = $state(false);
     let fileTypeDownload = $state('cif');
     let multiThreadingAvailable = typeof SharedArrayBuffer !== 'undefined';
     const loaded = $derived(state.optimizer !== undefined);
@@ -95,11 +102,116 @@
     const stage = $derived(
         state.ngl
             ? new Ngl.Stage('viewport', {
-                backgroundColor: 'white',
-                cameraType: 'orthographic'
-            })
+                    backgroundColor: 'white',
+                    cameraType: 'orthographic'
+                })
             : undefined
     );
+
+    function startTour() {
+        const tour = new Shepherd.Tour({
+            useModalOverlay: true,
+
+            defaultStepOptions: {
+                classes: 'shepherd-theme-custom',
+                scrollTo: { behavior: 'smooth', block: 'center' },
+                cancelIcon: { enabled: true }
+            }
+        });
+
+        tour.addStep({
+            id: 'play',
+            text: 'Play/Pause the optimization',
+            attachTo: { element: '.jse-button[title="Start optimization"]', on: 'bottom' },
+            buttons: [
+                {
+                    text: 'Next',
+                    action: () => {
+                        runOptimization();
+                        tour.next();
+                    }
+                }
+            ]
+        });
+
+        tour.addStep({
+            id: 'share',
+            text: 'Create a shareable link, and share your settings.',
+            attachTo: { element: '.jse-button[title="Share current configuration"]', on: 'bottom' },
+            buttons: [
+                { text: 'Back', action: tour.back },
+                { text: 'Next', action: tour.next }
+            ]
+        });
+
+        tour.addStep({
+            id: 'documentation',
+            text: 'Open the documentation.',
+            attachTo: { element: '.jse-button[title="Open help"]', on: 'bottom' },
+            buttons: [
+                { text: 'Back', action: tour.back },
+                { text: 'Next', action: tour.next }
+            ]
+        });
+
+        tour.addStep({
+            id: 'next',
+            text: 'Navigate results. Switch to results with next higher objective',
+            attachTo: { element: '.jse-button[title="Next objective"]', on: 'bottom' },
+            buttons: [
+                { text: 'Back', action: tour.back },
+                { text: 'Next', action: tour.next }
+            ]
+        });
+
+        tour.addStep({
+            id: 'download',
+            text: 'Downlaod all results in .msgpack format of offline analysis',
+            attachTo: {
+                element: '.jse-button[title="Download results in msgpack format"]',
+                on: 'bottom'
+            },
+            buttons: [
+                { text: 'Back', action: tour.back },
+                { text: 'Next', action: tour.next }
+            ]
+        });
+
+        tour.addStep({
+            id: 'download-selected',
+            text: 'Downlaod the current structure in selected format',
+            attachTo: {
+                element: '.jse-button[title="Download the current file in selected format"]',
+                on: 'bottom'
+            },
+            buttons: [
+                { text: 'Back', action: tour.back },
+                { text: 'Next', action: tour.next }
+            ]
+        });
+
+        tour.addStep({
+            id: 'download-selected',
+            text: 'Change file type for selected structure',
+            attachTo: { element: '.jse-button[title="Change file type"]', on: 'bottom' },
+            buttons: [
+                { text: 'Back', action: tour.back },
+                { text: 'Next', action: tour.next }
+            ]
+        });
+
+        tour.addStep({
+            id: 'inspect',
+            text: 'Inspect selected structure',
+            attachTo: { element: '#viewport', on: 'left' },
+            buttons: [
+                { text: 'Back', action: tour.back },
+                { text: 'Done', action: tour.complete }
+            ]
+        });
+
+        tour.start();
+    }
 
     function refreshEditor() {
         if (state.jsonEditorRef) {
@@ -112,7 +224,52 @@
         if (state.viewer) updateStage(state.viewer);
     }
 
-    function handleRenderMenu(items: MenuItem[], context: RenderMenuContext): MenuItem[] | undefined {
+    function runOptimization() {
+        if (state.optimizationConfig && idling && state.optimizer) {
+            state.optimization = {
+                is: 'running',
+                finished: 0.0,
+                working: 0.0,
+                stopRequested: false,
+                result: undefined
+            };
+            state.viewer = undefined;
+            const iterations = state.optimizationConfig.iterations;
+            updateStage(undefined);
+            state.optimizer
+                .optimizeAsync(state.optimizationConfig, 0, (stats) => {
+                    const finished = stats.finished / iterations;
+                    if (finished > (state.optimization.finished ?? 0.0))
+                        state.optimization.finished = finished;
+                    state.optimization.working = stats.working / iterations;
+                    return state.optimization.stopRequested;
+                })
+                .then((result) => {
+                    state.optimization = {
+                        is: 'idling',
+                        result: result
+                    };
+                    console.log('Optimization finished:', result);
+                    state.viewer = {
+                        objectiveIndex: 0,
+                        structureIndex: 0
+                    };
+                    refreshEditor();
+                })
+                .catch((e) => {
+                    console.error('Optimization failed:', e);
+                    state.optimization = {
+                        is: 'idling',
+                        result: undefined
+                    };
+                    refreshEditor();
+                });
+        } else if (running) state.optimization.stopRequested = true;
+
+        refreshEditor();
+    }
+
+    function handleRenderMenu(items: MenuItem[], _: RenderMenuContext): MenuItem[] | undefined {
         const separator: MenuSeparator = {
             type: 'separator'
         };
@@ -120,50 +277,7 @@
         const buttons: MenuItem[] = [
             {
                 type: 'button',
-                onClick: () => {
-                    if (state.optimizationConfig && idling && state.optimizer) {
-                        state.optimization = {
-                            is: 'running',
-                            finished: 0.0,
-                            working: 0.0,
-                            stopRequested: false,
-                            result: undefined
-                        };
-                        state.viewer = undefined;
-                        const iterations = state.optimizationConfig.iterations;
-                        updateStage(undefined);
-                        state.optimizer
-                            .optimizeAsync(state.optimizationConfig, 0, (stats) => {
-                                const finished = stats.finished / iterations;
-                                if (finished > (state.optimization.finished ?? 0.0))
-                                    state.optimization.finished = finished;
-                                state.optimization.working = stats.working / iterations;
-                                return state.optimization.stopRequested;
-                            })
-                            .then((result) => {
-                                state.optimization = {
-                                    is: 'idling',
-                                    result: result
-                                };
-                                console.log('Optimization finished:', result);
-                                state.viewer = {
-                                    objectiveIndex: 0,
-                                    structureIndex: 0
-                                };
-                                refreshEditor();
-                            })
-                            .catch((e) => {
-                                console.error('Optimization failed:', e);
-                                state.optimization = {
-                                    is: 'idling',
-                                    result: undefined
-                                };
-                                refreshEditor();
-                            });
-                    } else if (running) state.optimization.stopRequested = true;
-
-                    refreshEditor();
-                },
+                onClick: runOptimization,
                 icon: running ? faCircleStop : faCirclePlay,
                 title: running ? 'Stop optimization' : 'Start optimization',
                 disabled: state.optimizationConfig === undefined
@@ -174,13 +288,12 @@
                 title: 'Share current configuration',
                 onClick: () => {
                     if (!state.inputConfig) return;
-                    compressData(state.inputConfig).then(compressed => {
+                    compressData(state.inputConfig).then((compressed) => {
                         const shareUrl = `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(compressed)}`;
                         navigator.clipboard.writeText(shareUrl).then(() => {
                             alert('Shareable link copied to clipboard!');
                         });
                     });
-
                 },
                 disabled: state.optimizationConfig === undefined
             },
@@ -234,8 +347,7 @@
             },
             {
                 type: 'button',
-                onClick: () => {
-                },
+                onClick: () => {},
                 title: state.viewer
                     ? 'Current objective: ' + result.objective(state.viewer.objectiveIndex)
                     : undefined,
@@ -271,14 +383,13 @@
             },
             {
                 type: 'button',
-                onClick: () => {
-                },
+                onClick: () => {},
                 text:
                     state.viewer && result
                         ? state.viewer.structureIndex +
-                        1 +
-                        '/' +
-                        result.numSolutions(state.viewer.objectiveIndex)
+                            1 +
+                            '/' +
+                            result.numSolutions(state.viewer.objectiveIndex)
                         : undefined
             },
             {
@@ -402,8 +513,8 @@
         stage.removeAllComponents();
         // 2. Prepare the PDB as a blob
         const pdbText = result.pdb(viewerState.objectiveIndex, viewerState.structureIndex);
-        const blob = new Blob([pdbText], {type: 'text/plain'});
-        const c = await stage.loadFile(blob, {ext: 'pdb'});
+        const blob = new Blob([pdbText], { type: 'text/plain' });
+        const c = await stage.loadFile(blob, { ext: 'pdb' });
         c.addRepresentation('spacefill', {
             radius_type: 'vdw',
             color_scheme: 'element',
@@ -411,7 +522,7 @@
         });
         c.addRepresentation('unitcell');
         c.autoView();
-        c.updateRepresentations({what: {position: true, color: true}});
+        c.updateRepresentations({ what: { position: true, color: true } });
         stage.viewer.requestRender();
     }
 
@@ -421,48 +532,48 @@
 </script>
 
 <Dialog
-        bind:open={openDialogFileType}
-        selection
-        aria-labelledby="list-selection-title"
-        aria-describedby="list-selection-content"
-        onSMUIDialogClosed={closeHandler}
+    bind:open={openDialogFileType}
+    selection
+    aria-labelledby="list-selection-title"
+    aria-describedby="list-selection-content"
+    onSMUIDialogClosed={closeHandler}
 >
     <Title id="list-selection-title">Choose download format</Title>
     <DialogContent id="list-selection-content">
         <List radioList>
             <Item use={[InitialFocus]}>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="cif"/>
+                    <Radio bind:group={fileTypeDownload} value="cif" />
                 </Graphic>
                 <Text>CIF</Text>
             </Item>
             <Item>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="vasp"/>
+                    <Radio bind:group={fileTypeDownload} value="vasp" />
                 </Graphic>
                 <Text>VASP (POSCAR)</Text>
             </Item>
             <Item>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="pdb"/>
+                    <Radio bind:group={fileTypeDownload} value="pdb" />
                 </Graphic>
                 <Text>PDB</Text>
             </Item>
             <Item>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="json-sqsgen"/>
+                    <Radio bind:group={fileTypeDownload} value="json-sqsgen" />
                 </Graphic>
                 <Text>JSON (sqsgen)</Text>
             </Item>
             <Item>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="json-ase"/>
+                    <Radio bind:group={fileTypeDownload} value="json-ase" />
                 </Graphic>
                 <Text>JSON (ase)</Text>
             </Item>
             <Item>
                 <Graphic>
-                    <Radio bind:group={fileTypeDownload} value="json-pymatgen"/>
+                    <Radio bind:group={fileTypeDownload} value="json-pymatgen" />
                 </Graphic>
                 <Text>JSON (pymatgen)</Text>
             </Item>
@@ -478,76 +589,25 @@
 {#if !loaded}
     <div class="loading-pane">
         <div style="display: flex; align-items: center; gap: 16px;">
-            <img src="/logo_large.svg" style="width: 175px; height: auto" alt="sqsgen logo"/>
-            <CircularProgress style="height: 32px; width: 32px;" indeterminate/>
+            <img src="/logo_large.svg" style="width: 175px; height: auto" alt="sqsgen logo" />
+            <CircularProgress style="height: 32px; width: 32px;" indeterminate />
         </div>
     </div>
 {/if}
 
 {#if loaded && multiThreadingAvailable}
-    <Dialog
-            bind:open={openDialogInfo}
-            aria-labelledby="default-focus-title"
-            aria-describedby="default-focus-content"
-    >
-        <Title id="default-focus-title">Affiliation and Templates</Title>
-        <DialogContent id="default-focus-content">
-            <ul>
-                <li>leave a <a href="https://github.com/dgehringer/sqsgenerator">🌟star</a></li>
-                <li><strong>Affiliation</strong></li>
-                <ul>
-                    <li>
-                        like the package? Let's add your affiliation to our <a
-                            href="https://sqsgenerator.readthedocs.io/en/latest">docs</a
-                    >
-                    </li>
-                    <li>
-                        send logo and full name via <a
-                            href="mailto:dominik@gehringer.tech">mail</a
-                    >
-                    </li>
-                </ul>
-                <li>
-                    <strong>Templates</strong>
-                </li>
-                <ul>
-                    <li>want to share an input file with the community?</li>
-                    <li>
-                        send me the JSON, a name for the template, a list of authors with affiliation, a
-                        description the authors and the an eventual DOI in case you have used it in an article
-                        via
-                        <ul>
-                            <li>via <a href="mailto:dominik@gehringer.tech">mail</a></li>
-                            <li>
-                                by opening <a href="https://github.com/dgehringer/sqsgenerator/issues/new"
-                            >a new issue</a
-                            >
-                            </li>
-                        </ul>
-                    </li>
-                    <li>it will be packaged into the next release automatically</li>
-                    <li>everyone can use it</li>
-                </ul>
-            </ul>
-        </DialogContent>
-        <Actions>
-            <Button action="accept">
-                <Label>OK</Label>
-            </Button>
-        </Actions>
-    </Dialog>
     {#if running}
-        <LinearProgress progress={state.optimization.finished} buffer={state.optimization.working}/>
+        <LinearProgress progress={state.optimization.finished} buffer={state.optimization.working} />
     {/if}
     <Splitpanes vertical={true} style="height: 98vh">
         <Pane minSize={30}>
             <JSONEditor
-                    bind:this={state.jsonEditorRef}
-                    mode={Mode.text}
-                    bind:content
-                    onChange={handleChange}
-                    onRenderMenu={handleRenderMenu}
-                    {validator}
+                bind:this={state.jsonEditorRef}
+                mode={Mode.text}
+                bind:content
+                onChange={handleChange}
+                onRenderMenu={handleRenderMenu}
+                {validator}
             />
         </Pane>
         <Pane size={55} hidden={result === undefined}>
@@ -557,11 +617,41 @@
 {/if}
 
 <style lang="scss">
-  .loading-pane {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    width: 100vw;
-  }
+    .loading-pane {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+    }
+
+    :global(.shepherd-element) {
+        background: var(--jse-panel-background, #fff);
+        color: var(--jse-text-color, #4d4d4d);
+        font-family: var(--jse-font-family, sans-serif);
+        font-size: var(--jse-font-size, 16px);
+        border: 1px solid var(--jse-main-border, #d7d7d7);
+        border-radius: 3px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    :global(.shepherd-text) {
+        color: var(--jse-text-color, #4d4d4d);
+        padding: 12px 16px;
+    }
+
+    /* the little arrow */
+    :global(.shepherd-arrow::before) {
+        background: var(--jse-panel-background, #fff);
+        border: 1px solid var(--jse-main-border, #d7d7d7);
+    }
+
+    :global(.shepherd-header) {
+        background: var(--jse-panel-background, #fff);
+        padding: 10px 16px 0;
+    }
+
+    :global(.shepherd-footer) {
+        padding: 0 16px 12px;
+    }
 </style>
