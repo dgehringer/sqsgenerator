@@ -19,3 +19,4 @@ cmake \
   -S "${PROJECT_DIR}/js/wasm"
 
 cmake --build ${BUILD_PATH} --target core -j 6
+cmake --build ${BUILD_PATH} --target core_parser -j 6
