@@ -63,11 +63,11 @@ jobs:
       - name: Upload core artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: wasm-artifacts
+          name: wasm-core
           path: build/core.*
 
       - name: Upload core parser artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: wasm-artifacts
+          name: wasm-core-parser
           path: build/core_parser.*
