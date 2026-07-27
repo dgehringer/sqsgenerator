@@ -60,8 +60,14 @@ jobs:
       - name: Build WebAssembly libraries
         run: ${{ github.workspace }}/scripts/build-wasm.sh build
 
-      - name: Upload artifacts
+      - name: Upload core artifacts
         uses: actions/upload-artifact@v7
         with:
           name: wasm-artifacts
           path: build/core.*
+
+      - name: Upload core parser artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: wasm-artifacts
+          path: build/core_parser.*
