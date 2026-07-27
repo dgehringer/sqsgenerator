@@ -79,7 +79,7 @@ target_compile_definitions(core_parser PRIVATE
         SQSGEN_MINOR_VERSION=${VERSION_MINOR}
         SQSGEN_MAJOR_VERSION=${VERSION_MAJOR}
 )
-set_target_properties(core_parser PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS}")
+set_target_properties(core_parser PROPERTIES COMPILE_FLAGS "-Os -fno-threadsafe-statics -fPIC -mbulk-memory -matomics -fwasm-exceptions")
 set_target_properties(core_parser PROPERTIES LINK_FLAGS "-O3 --emit-tsd core_parser.d.ts -sEXPORT_ES6=1 -sSINGLE_FILE=1 -sALLOW_MEMORY_GROWTH=1 -sPROXY_TO_PTHREAD -sEXIT_RUNTIME=0 -sASSERTIONS=2 -s MODULARIZE=1 --bind -fPIC --closure 1 -EXPORT_NAME=core_parser")
 target_link_libraries(core_parser PRIVATE
         nlohmann_json::nlohmann_json
