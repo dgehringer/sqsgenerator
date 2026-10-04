@@ -9,7 +9,6 @@
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/config/combined.h"
-#include "sqsgen/io/dict.h"
 #include "sqsgen/io/json.h"
 #include "sqsgen/types.h"
 
@@ -17,8 +16,6 @@ namespace sqsgen::testing {
   using json = nlohmann::json;
   using namespace sqsgen::io;
   using namespace sqsgen::io::config;
-  namespace py = pybind11;
-  using namespace py::literals;
 
   template <class T> void assert_structure_equal(core::structure<T> const& lhs,
                                                  core::structure<T> const& rhs,
@@ -35,12 +32,6 @@ namespace sqsgen::testing {
       ASSERT_NEAR(lsite.frac_coords(2), rsite.frac_coords(2), epsilon);
     }
   }
-
-  template <class... Args> py::list as_pylist(Args&&... obj) {
-    py::list list;
-    (list.append(py::handle(obj)), ...);
-    return list;
-  };
 
   template <class T> const static auto TEST_FCC_STRUCTURE = core::structure<T>{
       lattice_t<T>{{1, 0, 0}, {0, 2, 0}, {0, 0, 3}},
@@ -95,7 +86,6 @@ namespace sqsgen::testing {
   }
 
   TEST(test_parse_structure, DISABLED_required_fields_success) {
-    using namespace py::literals;
     auto s = TEST_FCC_STRUCTURE<double>;
     json json = {
         {"structure", {{"lattice", s.lattice}, {"coords", s.frac_coords}, {"species", s.species}}}};
@@ -276,7 +266,6 @@ namespace sqsgen::testing {
 
   TEST(test_parse_shell_radii, default_case) {
     using namespace sqsgen::io;
-    auto module = py::module::import("ShellRadiiDetection");
 
     auto json = make_test_structure_and_composition<double>(std::array{2, 2, 2});
 
@@ -291,7 +280,6 @@ namespace sqsgen::testing {
 
   TEST(test_parse_shell_radii, perfect_lattice) {
     using namespace sqsgen::io;
-    auto module = py::module::import("ShellRadiiDetection");
 
     auto json = make_test_structure_and_composition<double>(std::array{2, 2, 2});
     json["bin_width"] = 0.001;

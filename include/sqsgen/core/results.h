@@ -371,7 +371,7 @@ namespace sqsgen::core {
         : statistics(stats),
           config(std::forward<core::configuration<T>>(configuration)),
           _optimization_config(core::detail::from_opt_config<T, SMode>(
-              std::forward<detail::opt_config_arg_t<T, SMode>>(opt_config))),
+              std::forward<core::detail::opt_config_arg_t<T, SMode>>(opt_config))),
           _structure(std::make_shared<structure<T>>(config.structure.structure())),
           results(core::detail::from_result_collection(std::forward<decltype(results)>(results),
                                                        _structure, _optimization_config)) {}

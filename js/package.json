@@ -76,6 +76,7 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "ngl": "^2.4.0",
     "rollup-plugin-svelte": "^7.2.2",
+    "shepherd.js": "^15.2.2",
     "svelte-jsoneditor": "^3.8.0",
     "svelte-splitpanes": "^8.0.9"
   }
