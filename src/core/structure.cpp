@@ -172,7 +172,6 @@ namespace sqsgen::core {
     }
     return prefactors;
   }
-  // namespace detail
 
   template <class T> std::vector<T> distances_naive(structure<T> &&structure,
                                                     T atol = std::numeric_limits<T>::epsilon(),
@@ -249,7 +248,6 @@ namespace sqsgen::core {
   }
 
   template <class T>
-    requires std::is_arithmetic_v<T>
   structure<T>::structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
                           configuration_t const &species, const std::array<bool, 3> &pbc)
       : lattice(lattice),
@@ -262,10 +260,8 @@ namespace sqsgen::core {
           "frac coords must have the same size as the species input and must not be empty");
   }
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  structure<T>::structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords,
-                          configuration_t &&species, std::array<bool, 3> &&pbc)
+  template <class T> structure<T>::structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords,
+                                             configuration_t &&species, std::array<bool, 3> &&pbc)
       : lattice(lattice),
         frac_coords(frac_coords),
         species(species),
@@ -276,22 +272,18 @@ namespace sqsgen::core {
           "frac coords must have the same size as the species input and must not be empty");
   }
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  const matrix_t<T> &structure<T>::distance_matrix() {
+  template <class T> const matrix_t<T> &structure<T>::distance_matrix() {
     if (!_distance_matrix.has_value()) _distance_matrix = distance_matrix(lattice, frac_coords);
 
     return _distance_matrix.value();
   }
 
   template <class T>
-    requires std::is_arithmetic_v<T>
   shell_matrix_t structure<T>::shell_matrix(std::vector<T> const &shell_radii, T atol, T rtol) {
     return shell_matrix(distance_matrix(), shell_radii, atol, rtol);
   }
 
   template <class T>
-    requires std::is_arithmetic_v<T>
   structure<T> structure<T>::supercell(std::size_t a, std::size_t b, std::size_t c) const {
     auto num_copies = a * b * c;
     if (num_copies == 0)
@@ -326,7 +318,6 @@ namespace sqsgen::core {
   }
 
   template <class T>
-    requires std::is_arithmetic_v<T>
   structure<T> structure<T>::apply_composition(std::vector<sublattice> const &composition) const {
     auto copy = structure(*this);
     for (const auto &[sites, species] : composition) {
@@ -338,32 +329,25 @@ namespace sqsgen::core {
     return copy;
   }
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  structure<T> structure<T>::with_species(configuration_t const &conf) const {
+  template <class T> structure<T> structure<T>::with_species(configuration_t const &conf) const {
     if (conf.size() != size()) throw std::invalid_argument("Species size mismatch");
     return structure{lattice, frac_coords, conf, pbc};
   }
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  std::vector<structure<T>> structure<T>::apply_composition_and_decompose(
+  template <class T> std::vector<structure<T>> structure<T>::apply_composition_and_decompose(
       std::vector<sublattice> const &composition) const {
     auto with_species = apply_composition(composition);
     return helpers::as<std::vector>{}(
         composition | views::transform([&](auto &&sl) { return with_species.sliced(sl.sites); }));
   }
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  structure<T> structure<T>::without_vacancies() const {
+  template <class T> structure<T> structure<T>::without_vacancies() const {
     return filtered([](auto site) { return site.specie != 0; });
   }
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  auto structure<T>::pairs(std::vector<T> const &radii, shell_weights_t<T> const &weights,
-                           bool pack, T atol, T rtol) {
+  template <class T> auto structure<T>::pairs(std::vector<T> const &radii,
+                                              shell_weights_t<T> const &weights, bool pack, T atol,
+                                              T rtol) {
     using namespace helpers;
     auto [shell_map, reverse_map] = make_index_mapping<std::size_t>(weights | views::elements<0>);
     std::vector<atom_pair> pairs;
@@ -379,19 +363,26 @@ namespace sqsgen::core {
     return std::make_tuple(pairs, shell_map, reverse_map);
   }
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  configuration_t structure<T>::packed_species() const {
+  template <class T> configuration_t structure<T>::packed_species() const {
     auto [map, _] = helpers::make_index_mapping<specie_t>(species);
     return helpers::as<std::vector>{}(species | views::transform([&](auto z) { return map[z]; }));
   }
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  rank_t structure<T>::rank() const {
+  template <class T> rank_t structure<T>::rank() const {
     return rank_permutation(packed_species());
   }
 
   template <> class structure<double>;
   template <> class structure<float>;
+
+  template <> matrix_t<double> distance_matrix(const lattice_t<double> &lattice,
+                                               const coords_t<double> &frac_coords);
+  template <> matrix_t<float> distance_matrix(const lattice_t<float> &lattice,
+                                              const coords_t<float> &frac_coords);
+
+  template <> shell_matrix_t shell_matrix(matrix_t<double> const &distance_matrix,
+                                          std::vector<double> const &dists, double atol,
+                                          double rtol);
+  template <> shell_matrix_t shell_matrix(matrix_t<float> const &distance_matrix,
+                                          std::vector<float> const &dists, float atol, float rtol);
 }  // namespace sqsgen::core

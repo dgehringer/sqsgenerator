@@ -9,3 +9,12 @@ vcpkg_installed/
 .ninja_deps
 .ninja_log
 .DS_Store
+
+build-wasm/
+
+docs/_build/
+python/build/
+
+__pycache__/
+
+*.vasp

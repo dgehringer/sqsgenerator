@@ -18,15 +18,19 @@ namespace sqsgen::core {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
+  template <class T>
+  matrix_t<T> distance_matrix(const lattice_t<T> &lattice, const coords_t<T> &frac_coords);
+
+  template <class T> shell_matrix_t shell_matrix(matrix_t<T> const &distance_matrix,
+                                                 std::vector<T> const &dists, T atol, T rtol);
+
   struct atom_pair {
     std::size_t i;
     std::size_t j;
     std::size_t shell;
   };
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  class structure;
+  template <class T> class structure;
 
   namespace detail {
 
@@ -110,9 +114,7 @@ namespace sqsgen::core {
     }
   }  // namespace detail
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  class structure {
+  template <class T> class structure {
   private:
     std::optional<matrix_t<T>> _distance_matrix = std::nullopt;
 

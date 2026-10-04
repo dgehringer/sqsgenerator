@@ -28,7 +28,12 @@ include_directories("${CMAKE_SOURCE_DIR}/include" ${BS_THREAD_POOL_INCLUDE_DIRS}
 if (BUILD_WASM)
   message("Building WASM module")
   find_package(absl CONFIG REQUIRED)
-  add_executable(wasm wasm/sqsgen.cpp)
+  add_executable(wasm
+    wasm/sqsgen.cpp
+    src/core/optimization.cpp
+    src/core/permutation.cpp
+    src/core/structure.cpp
+  )
   set_target_properties(wasm PROPERTIES
           SUFFIX ".mjs"
   )
