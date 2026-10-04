@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "configurePresets": [
+    {
+      "name": "wasm-debug",
+      "binaryDir": "${sourceDir}/build-wasm",
+      "generator": "Ninja",
+      "environment": {
+        "VCPKG_ROOT": "${sourceDir}/vcpkg"
+      },
+      "cacheVariables": {
+        "BUILD_WASM": "ON",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE":
+            "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+        "CMAKE_CXX_COMPILER": "$env{EMSDK}/upstream/emscripten/em++",
+        "CMAKE_C_COMPILER": "$env{EMSDK}/upstream/emscripten/emcc",
+        "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
+        "VCPKG_MANIFEST_FEATURES": "wasm"
+      }
+    }
+  ]
+}

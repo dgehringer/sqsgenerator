@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.18)
-project(MyProject)
 
 # Function to extract version and Git info from a given directory
 # Usage: extract_version_and_git_info(<path_to_directory_containing_vcpkg.json>)
