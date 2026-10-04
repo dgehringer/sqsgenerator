@@ -1,3 +1,11 @@
 
 # Local Netlify folder
 .netlify
+
+vcpkg_installed/
+
+.idea/
+.cache/
+.ninja_deps
+.ninja_log
+.DS_Store
