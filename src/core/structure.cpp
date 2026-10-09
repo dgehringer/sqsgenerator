@@ -8,8 +8,9 @@
 
 #include "sqsgen/core/helpers/as.h"
 #include "sqsgen/core/helpers/fold.h"
+#include "sqsgen/core/helpers/hash.h"
 #include "sqsgen/core/helpers/numeric.h"
-#include "sqsgen/core/helpers/sorted_vector.h"
+#include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -17,7 +18,7 @@ namespace sqsgen::core {
   namespace views = ranges::views;
 
   template <class T>
-  matrix_t<T> distance_matrix(const lattice_t<T> &lattice, const coords_t<T> &frac_coords) {
+  matrix_t<T> distance_matrix(const lattice_t<T>& lattice, const coords_t<T>& frac_coords) {
     const coords_t<T> cart_coords = frac_coords * lattice;
     assert(frac_coords.cols() == 3);
     const auto num_atoms = frac_coords.rows();
@@ -26,16 +27,16 @@ namespace sqsgen::core {
     auto b{lattice.row(1)};
     auto c{lattice.row(2)};
 
-    std::array axis{-1, 0, 1};
     matrix_t<T> distances = matrix_t<T>::Ones(num_atoms, num_atoms) * std::numeric_limits<T>::max();
 #pragma omp parallel for schedule(static) shared(distances) \
-    firstprivate(a, b, c, axis, num_atoms, cart_coords) if (num_atoms > 100)
+    firstprivate(a, b, c, num_atoms, cart_coords) if (num_atoms > 100)
     for (auto i = 0; i < num_atoms; i++) {
       auto p1{cart_coords.row(i)};
       for (auto j = i; j < num_atoms; j++) {
         auto p2{cart_coords.row(j)};
-        helpers::for_each(
-            [&](auto u, auto v, auto w) {
+        for (auto u = -1; u <= 1; ++u)
+          for (auto v = -1; v <= 1; ++v)
+            for (auto w = -1; w <= 1; ++w) {
               auto t = u * a + v * b + w * c;
               auto diff = p1 - (t + p2);
               T image_norm{std::abs(diff.norm())};
@@ -44,16 +45,15 @@ namespace sqsgen::core {
                 if (i != j) distances(j, i) = image_norm;
                 assert(distances(i, j) == distances(j, i));
               }
-            },
-            axis, axis, axis);
+            }
       }
     }
     assert(distances.rows() == num_atoms && distances.cols() == num_atoms);
     return distances;
   }
 
-  template <class T> shell_matrix_t shell_matrix(matrix_t<T> const &distance_matrix,
-                                                 std::vector<T> const &dists, T atol, T rtol) {
+  template <class T> shell_matrix_t shell_matrix(matrix_t<T> const& distance_matrix,
+                                                 std::vector<T> const& dists, T atol, T rtol) {
     assert(distance_matrix.rows() == distance_matrix.cols());
     const auto num_atoms{distance_matrix.rows()};
 
@@ -72,14 +72,14 @@ namespace sqsgen::core {
       return static_cast<int>(dists.size());
     };
     shell_matrix_t shells = matrix_t<std::size_t>(num_atoms, num_atoms);
-    for (auto i = 0; i < num_atoms; i++) {
-      for (auto j = i + 1; j < num_atoms; j++) {
+    for (auto i = 0; i < num_atoms; ++i) {
+      for (auto j = i + 1; j < num_atoms; ++j) {
         auto shell{find_shell(distance_matrix(i, j))};
         shells(i, j) = static_cast<std::size_t>(shell);
         shells(j, i) = static_cast<std::size_t>(shell);
       }
     }
-    helpers::for_each([&](auto i) { shells(i, i) = 0; }, num_atoms);
+    for (auto i = 0; i < num_atoms; ++i) shells(i, i) = 0;
     return shells;
   }
 
@@ -89,15 +89,15 @@ namespace sqsgen::core {
       return atom::from_z(specie);
     }
 
-    template <class T> bool site<T>::operator<(site const &other) const {
+    template <class T> bool site<T>::operator<(site const& other) const {
       return specie < other.specie && frac_coords(0) < other.frac_coords(0)
              && frac_coords(1) < other.frac_coords(1) && frac_coords(2) < other.frac_coords(2);
     }
-    template <class T> bool site<T>::operator==(const site &other) const {
+    template <class T> bool site<T>::operator==(const site& other) const {
       return specie == other.specie && frac_coords == other.frac_coords;
     }
 
-    template <class T> std::size_t site<T>::hasher::operator()(site const &s) const {
+    template <class T> std::size_t site<T>::hasher::operator()(site const& s) const {
       std::size_t res = 0;
       helpers::hash_combine(res, s.specie);
       helpers::hash_combine(res, s.frac_coords(0));
@@ -111,17 +111,17 @@ namespace sqsgen::core {
 
   };  // namespace detail
 
-  inline std::size_t compute_num_species(configuration_t const &configuration) {
-    return static_cast<std::size_t>(helpers::sorted_vector<specie_t>(configuration).size());
+  inline std::size_t compute_num_species(configuration_t const& configuration) {
+    return static_cast<std::size_t>(sorted_vector<specie_t>(configuration).size());
   }
 
-  template <class T> cube_t<T> compute_prefactors(shell_matrix_t const &shell_matrix,
-                                                  shell_weights_t<T> const &weights,
-                                                  configuration_t const &configuration) {
+  template <class T> cube_t<T> compute_prefactors(shell_matrix_t const& shell_matrix,
+                                                  shell_weights_t<T> const& weights,
+                                                  configuration_t const& configuration) {
     using namespace helpers;
     if (weights.empty()) throw std::out_of_range("no coordination shells selected");
     auto neighbors = count(shell_matrix.reshaped());
-    for (const auto &[shell, count] : neighbors) {
+    for (const auto& [shell, count] : neighbors) {
       auto atoms_per_shell{static_cast<T>(count) / static_cast<T>(configuration.size())};
       if (atoms_per_shell < 1)
         log::warn(format_string(
@@ -173,12 +173,12 @@ namespace sqsgen::core {
     return prefactors;
   }
 
-  template <class T> std::vector<T> distances_naive(structure<T> &&structure,
+  template <class T> std::vector<T> distances_naive(structure<T>&& structure,
                                                     T atol = std::numeric_limits<T>::epsilon(),
                                                     T rtol = 1e-9) {
     using namespace sqsgen::core::helpers;
     sorted_vector<T> dists(structure.distance_matrix().reshaped());
-    auto reduced = fold_left(dists, std::vector<T>{T(0)}, [&](auto &&vec, auto dist) {
+    auto reduced = fold_left(dists, std::vector<T>{T(0)}, [&](auto&& vec, auto dist) {
       if (is_close(vec.back(), dist, atol, rtol))
         vec[vec.size() - 1] = 0.5 * (dist + vec.back());
       else
@@ -189,7 +189,7 @@ namespace sqsgen::core {
   }
 
   template <class T>
-  std::vector<T> distances_histogram(structure<T> &&structure, T bin_width, T peak_isolation) {
+  std::vector<T> distances_histogram(structure<T>&& structure, T bin_width, T peak_isolation) {
     using namespace helpers;
     auto distances
         = as<std::vector>{}(structure.distance_matrix().reshaped() | views::filter([](auto dist) {
@@ -240,16 +240,16 @@ namespace sqsgen::core {
     return shells;
   }
 
-  template <class T> cube_t<T> compute_prefactors(structure<T> &&structure,
-                                                  std::vector<T> const &shell_radii,
-                                                  shell_weights_t<T> const &weights) {
+  template <class T> cube_t<T> compute_prefactors(structure<T>&& structure,
+                                                  std::vector<T> const& shell_radii,
+                                                  shell_weights_t<T> const& weights) {
     return detail::compute_prefactors<T>(structure.shell_matrix(shell_radii), weights,
                                          structure.species);
   }
 
   template <class T>
-  structure<T>::structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
-                          configuration_t const &species, const std::array<bool, 3> &pbc)
+  structure<T>::structure(const lattice_t<T>& lattice, const coords_t<T>& frac_coords,
+                          configuration_t const& species, const std::array<bool, 3>& pbc)
       : lattice(lattice),
         frac_coords(frac_coords),
         species(species),
@@ -260,8 +260,8 @@ namespace sqsgen::core {
           "frac coords must have the same size as the species input and must not be empty");
   }
 
-  template <class T> structure<T>::structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords,
-                                             configuration_t &&species, std::array<bool, 3> &&pbc)
+  template <class T> structure<T>::structure(lattice_t<T>&& lattice, coords_t<T>&& frac_coords,
+                                             configuration_t&& species, std::array<bool, 3>&& pbc)
       : lattice(lattice),
         frac_coords(frac_coords),
         species(species),
@@ -272,14 +272,14 @@ namespace sqsgen::core {
           "frac coords must have the same size as the species input and must not be empty");
   }
 
-  template <class T> const matrix_t<T> &structure<T>::distance_matrix() {
+  template <class T> const matrix_t<T>& structure<T>::distance_matrix() {
     if (!_distance_matrix.has_value()) _distance_matrix = distance_matrix(lattice, frac_coords);
 
     return _distance_matrix.value();
   }
 
   template <class T>
-  shell_matrix_t structure<T>::shell_matrix(std::vector<T> const &shell_radii, T atol, T rtol) {
+  shell_matrix_t structure<T>::shell_matrix(std::vector<T> const& shell_radii, T atol, T rtol) {
     return shell_matrix(distance_matrix(), shell_radii, atol, rtol);
   }
 
@@ -299,54 +299,52 @@ namespace sqsgen::core {
     lattice_t<T> iscale = scale.inverse();
     coords_t<T> scaled_frac_coords = frac_coords * iscale.transpose();
     std::vector<specie_t> supercell_species(num_atoms * num_copies);
-    helpers::for_each(
-        [&](auto i, auto j, auto k) {
+    for (auto i = 0; i < a; ++i)
+      for (auto j = 0; j < b; ++j)
+        for (auto k = 0; k < c; ++k) {
           using vec3_t = Eigen::Matrix<T, 1, 3>;
           vec3_t translation
               = vec3_t{static_cast<T>(i), static_cast<T>(j), static_cast<T>(k)} * iscale;
-          helpers::for_each(
-              [&](auto index) {
-                supercell_coords.row(site_index) = translation + scaled_frac_coords.row(index);
-                supercell_species[site_index] = species[index];
-                site_index++;
-              },
-              num_atoms);
-        },
-        a, b, c);
+          for (auto index = 0; index < num_atoms; ++index) {
+            supercell_coords.row(site_index) = translation + scaled_frac_coords.row(index);
+            supercell_species[site_index] = species[index];
+            site_index++;
+          }
+        }
 
     return structure(lattice * scale, supercell_coords, supercell_species, pbc);
   }
 
   template <class T>
-  structure<T> structure<T>::apply_composition(std::vector<sublattice> const &composition) const {
+  structure<T> structure<T>::apply_composition(std::vector<sublattice> const& composition) const {
     auto copy = structure(*this);
-    for (const auto &[sites, species] : composition) {
+    for (const auto& [sites, species] : composition) {
       auto index = sites.begin();
-      for (auto &&[specie, amount] : species)
+      for (auto&& [specie, amount] : species)
         for (auto _ = 0; _ < amount; _++, ++index) copy.species[*index] = specie;
     }
     copy.num_species = sqsgen::core::detail::compute_num_species(copy.species);
     return copy;
   }
 
-  template <class T> structure<T> structure<T>::with_species(configuration_t const &conf) const {
+  template <class T> structure<T> structure<T>::with_species(configuration_t const& conf) const {
     if (conf.size() != size()) throw std::invalid_argument("Species size mismatch");
     return structure{lattice, frac_coords, conf, pbc};
   }
 
   template <class T> std::vector<structure<T>> structure<T>::apply_composition_and_decompose(
-      std::vector<sublattice> const &composition) const {
+      std::vector<sublattice> const& composition) const {
     auto with_species = apply_composition(composition);
     return helpers::as<std::vector>{}(
-        composition | views::transform([&](auto &&sl) { return with_species.sliced(sl.sites); }));
+        composition | views::transform([&](auto&& sl) { return with_species.sliced(sl.sites); }));
   }
 
   template <class T> structure<T> structure<T>::without_vacancies() const {
     return filtered([](auto site) { return site.specie != 0; });
   }
 
-  template <class T> auto structure<T>::pairs(std::vector<T> const &radii,
-                                              shell_weights_t<T> const &weights, bool pack, T atol,
+  template <class T> auto structure<T>::pairs(std::vector<T> const& radii,
+                                              shell_weights_t<T> const& weights, bool pack, T atol,
                                               T rtol) {
     using namespace helpers;
     auto [shell_map, reverse_map] = make_index_mapping<std::size_t>(weights | views::elements<0>);
@@ -375,14 +373,14 @@ namespace sqsgen::core {
   template <> class structure<double>;
   template <> class structure<float>;
 
-  template <> matrix_t<double> distance_matrix(const lattice_t<double> &lattice,
-                                               const coords_t<double> &frac_coords);
-  template <> matrix_t<float> distance_matrix(const lattice_t<float> &lattice,
-                                              const coords_t<float> &frac_coords);
+  template <> matrix_t<double> distance_matrix(const lattice_t<double>& lattice,
+                                               const coords_t<double>& frac_coords);
+  template <> matrix_t<float> distance_matrix(const lattice_t<float>& lattice,
+                                              const coords_t<float>& frac_coords);
 
-  template <> shell_matrix_t shell_matrix(matrix_t<double> const &distance_matrix,
-                                          std::vector<double> const &dists, double atol,
+  template <> shell_matrix_t shell_matrix(matrix_t<double> const& distance_matrix,
+                                          std::vector<double> const& dists, double atol,
                                           double rtol);
-  template <> shell_matrix_t shell_matrix(matrix_t<float> const &distance_matrix,
-                                          std::vector<float> const &dists, float atol, float rtol);
+  template <> shell_matrix_t shell_matrix(matrix_t<float> const& distance_matrix,
+                                          std::vector<float> const& dists, float atol, float rtol);
 }  // namespace sqsgen::core

@@ -12,7 +12,6 @@
 #include "helpers/for_each.h"
 #include "helpers/hash.h"
 #include "helpers/numeric.h"
-#include "helpers/sorted_vector.h"
 #include "helpers/static_string.h"
 #include "helpers/templates.h"
 #include "sqsgen/log.h"

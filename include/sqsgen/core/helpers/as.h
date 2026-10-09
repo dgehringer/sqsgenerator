@@ -11,7 +11,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "sqsgen/core/helpers/sorted_vector.h"
+#include "sqsgen/core/sorted_vector.h"
 
 namespace sqsgen::core::helpers {
   namespace ranges = std::ranges;

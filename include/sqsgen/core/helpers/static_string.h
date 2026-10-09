@@ -5,6 +5,8 @@
 #ifndef SQSGEN_CORE_HELPERS_STATIC_STRING_H
 #define SQSGEN_CORE_HELPERS_STATIC_STRING_H
 
+#include <algorithm>
+
 namespace sqsgen::core::helpers {
 
   template <size_t N> struct string_literal {

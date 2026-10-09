@@ -1,9 +1,7 @@
-//
-// Created by Dominik Gehringer on 19.09.24.
-//
 
 #ifndef SQSGEN_TYPES_H
 #define SQSGEN_TYPES_H
+
 #include <Eigen/Core>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <map>
@@ -12,7 +10,7 @@
 #include <vector>
 
 #include "absl/hash/hash.h"
-#include "sqsgen/core/helpers/sorted_vector.h"
+#include "sqsgen/core/sorted_vector.h"
 
 namespace sqsgen {
 
@@ -20,17 +18,13 @@ namespace sqsgen {
   using rank_t = boost::multiprecision::cpp_int;
   using configuration_t = std::vector<specie_t>;
 
-  template <class T> using vset = core::helpers::sorted_vector<T>;
+  template <class T> using vset = sqsgen::core::sorted_vector<T>;
 
   template <class T> using counter = std::map<T, size_t>;
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  using lattice_t = Eigen::Matrix<T, 3, 3>;
+  template <class T> using lattice_t = Eigen::Matrix<T, 3, 3>;
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  using coords_t = Eigen::Matrix<T, Eigen::Dynamic, 3>;
+  template <class T> using coords_t = Eigen::Matrix<T, Eigen::Dynamic, 3>;
 
   template <class T> using matrix_t = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
@@ -88,93 +82,6 @@ namespace sqsgen {
   struct sublattice {
     vset<std::size_t> sites;
     composition_t composition;
-  };
-
-  template <class, SublatticeMode> struct sqs_result {};
-
-  template <class T> struct sqs_result<T, SUBLATTICE_MODE_INTERACT> {
-    T objective;
-    configuration_t species;
-    cube_t<T> sro;
-
-    template <typename H> friend H AbslHashValue(H h, const sqs_result& c) {
-      return H::combine(std::move(h), c.species);
-    }
-
-    sqs_result() = default;
-
-    // Explicit copy constructor
-    sqs_result(const sqs_result& other)
-        : objective(other.objective),
-          species(other.species),
-          sro(other.sro) {}  // Eigen::Tensor should handle this properly
-
-    // Explicit move constructor
-    sqs_result(sqs_result&& other) noexcept
-        : objective(std::move(other.objective)),
-          species(std::move(other.species)),
-          sro(std::move(other.sro)) {}  // Eigen::Tensor should handle this properly
-
-    // Assignment operators
-    sqs_result& operator=(const sqs_result& other) {
-      if (this != &other) {
-        objective = other.objective;
-        species = other.species;
-        sro = other.sro;
-      }
-      return *this;
-    }
-
-    sqs_result& operator=(sqs_result&& other) noexcept {
-      if (this != &other) {
-        objective = std::move(other.objective);
-        species = std::move(other.species);
-        sro = std::move(other.sro);
-      }
-      return *this;
-    }
-
-    sqs_result(T objective, configuration_t species, cube_t<T> sro)
-        : objective(objective), species(std::move(species)), sro(std::move(sro)) {}
-
-    // compatibility constructor to SPLIT mode result
-    sqs_result(T, T objective, configuration_t species, cube_t<T> sro)
-        : sqs_result(objective, std::move(species), std::move(sro)) {}
-
-    bool operator==(sqs_result const& other) const {
-      return objective == other.objective && species == other.species;
-    }
-  };
-
-  template <class T> struct sqs_result<T, SUBLATTICE_MODE_SPLIT> {
-    T objective;
-    std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>> sublattices;
-
-    template <typename H> friend H AbslHashValue(H h, const sqs_result& c) {
-      H hash_state = std::move(h);
-      for (auto const& sublattice : c.sublattices)
-        hash_state = H::combine(std::move(hash_state), sublattice);
-      return hash_state;
-    }
-
-    sqs_result() = default;
-
-    sqs_result(T objective, std::vector<sqs_result<T, SUBLATTICE_MODE_INTERACT>> const& sublattices)
-        : objective(objective), sublattices(sublattices) {}
-
-    sqs_result(T objective, std::vector<T> const& objectives,
-               const std::vector<configuration_t>& species, std::vector<cube_t<T>> const& sro)
-        : objective(objective) {
-      if (objectives.size() != species.size() || objectives.size() != sro.size())
-        throw std::invalid_argument("invalid number entries");
-      sublattices.reserve(objectives.size());
-      for (auto i = 0; i < objectives.size(); ++i)
-        sublattices.push_back({objectives[i], species[i], sro[i]});
-    }
-
-    bool operator==(sqs_result const& other) const {
-      return objective == other.objective && sublattices == other.sublattices;
-    }
   };
 
   enum Timing {

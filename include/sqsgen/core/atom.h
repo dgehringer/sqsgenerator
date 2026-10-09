@@ -5,6 +5,7 @@
 #ifndef ATOM_H
 #define ATOM_H
 
+#include <array>
 #include <string>
 
 #include "sqsgen/log.h"

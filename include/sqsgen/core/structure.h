@@ -8,7 +8,7 @@
 #include <Eigen/Dense>
 
 #include "sqsgen/core/atom.h"
-#include "sqsgen/core/helpers.h"
+#include "sqsgen/core/helpers/as.h"
 #include "sqsgen/core/permutation.h"
 #include "sqsgen/log.h"
 #include "sqsgen/types.h"

@@ -3,7 +3,7 @@
   "configurePresets": [
     {
       "name": "wasm-debug",
-      "binaryDir": "${sourceDir}/build-wasm",
+      "binaryDir": "${sourceDir}/build/wasm",
       "generator": "Ninja",
       "environment": {
         "VCPKG_ROOT": "${sourceDir}/vcpkg"
@@ -17,7 +17,8 @@
         "CMAKE_CXX_COMPILER": "$env{EMSDK}/upstream/emscripten/em++",
         "CMAKE_C_COMPILER": "$env{EMSDK}/upstream/emscripten/emcc",
         "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
-        "VCPKG_MANIFEST_FEATURES": "wasm"
+        "VCPKG_MANIFEST_FEATURES": "wasm",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     }
   ]

@@ -33,6 +33,7 @@ if (BUILD_WASM)
     src/core/optimization.cpp
     src/core/permutation.cpp
     src/core/structure.cpp
+    src/core/result.cpp
   )
   set_target_properties(wasm PROPERTIES
           SUFFIX ".mjs"
