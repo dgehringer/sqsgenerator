@@ -12,16 +12,6 @@
 
 namespace sqsgen {
 
-  template <class T> class structure_config {
-  public:
-    lattice_t<T> lattice;
-    coords_t<T> coords;
-    configuration_t species;
-    std::array<int, 3> supercell{1, 1, 1};
-
-    core::structure<T> structure(bool supercell = true) const;
-  };
-
   template <class T, SublatticeMode S, IterationMode I> struct configuration_base {
     static constexpr SublatticeMode sublattice_mode = S;
     static constexpr IterationMode iteration_mode = I;

@@ -32,10 +32,9 @@ if (BUILD_WASM)
   add_executable(wasm
     wasm/sqsgen.cpp
     src/optimization.cpp
-    src/configuration.cpp
+    # src/configuration.cpp
     src/core/permutation.cpp
     src/core/structure.cpp
-    src/core/result.cpp
   )
   set_target_properties(wasm PROPERTIES
           SUFFIX ".mjs"

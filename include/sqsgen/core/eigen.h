@@ -2,6 +2,8 @@
 #ifndef SQSGEN_CORE_EIGEN_H
 #define SQSGEN_CORE_EIGEN_H
 
+#include <expected>
+
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -105,7 +107,7 @@ namespace sqsgen::core {
         return out;
       }
 
-      std::expected<Eigen::Tensor<T, N>, tensor_shape_error> from(const packed_cube<T, N>& p) {
+      std::expected<Eigen::Tensor<T, N>, tensor_shape_error> from(const packed_tensor<T, N>& p) {
         std::array<Eigen::Index, N> shape{};
         std::int64_t count = 1;
         for (int d = 0; d < N; ++d) {
@@ -169,18 +171,18 @@ namespace sqsgen::core {
   }  // namespace eigen::detail
 
   template <class Target, class T, int N> Target tensor_as(const Eigen::Tensor<T, N>& t) {
-    return tensor_converter<Target>::to(t);
+    return eigen::detail::tensor_converter<Target>::to(t);
   }
 
   template <class T, int N>
   std::expected<Eigen::Tensor<T, N>, tensor_shape_error> tensor_from(const packed_tensor<T, N>& p) {
-    return tensor_converter<packed_tensor<T, N>>::from(p);
+    return eigen::detail::tensor_converter<packed_tensor<T, N>>::from(p);
   }
 
   // nested -> Eigen::Tensor
   template <class T, int N>
   std::expected<Eigen::Tensor<T, N>, tensor_shape_error> tensor_from(const nested_tensor<T, N>& v) {
-    return tensor_converter<nested_tensor<T, N>>::from(v);
+    return eigen::detail::tensor_converter<nested_tensor<T, N>>::from(v);
   }
 
 }  // namespace sqsgen::core

@@ -63,11 +63,9 @@ namespace sqsgen {
     SHELL_RADII_DETECTION_PEAK
   };
 
-  enum SublatticeMode {
-    SUBLATTICE_MODE_INVALID = -1,
-    SUBLATTICE_MODE_INTERACT,
-    SUBLATTICE_MODE_SPLIT,
-  };
+  enum class iteration_mode { random, systematic };
+
+  enum class sublattice_mode { interact, split };
 
   using composition_t = std::map<specie_t, std::size_t>;
 
@@ -138,6 +136,8 @@ namespace sqsgen {
     STRUCTURE_FORMAT_POSCAR = 4,
     STRUCTURE_FORMAT_PDB = 5,
   };
+
+  enum class structure_format { json_sqsgen, json_pymatgen, json_ase, cif, poscar, pdb };
 
   template <class T> class sqs_callback_context {
     std::shared_ptr<std::stop_source> _stop;

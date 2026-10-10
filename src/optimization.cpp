@@ -4,19 +4,21 @@
 
 #include "sqsgen/optimization.h"
 
+#include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/numeric.h"
 
 namespace sqsgen::optimization {
 
+  namespace core = sqsgen::core;
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
   template <class T> cube_t<T> scaled_pair_weights(cube_t<T> const& pair_weights,
                                                    shell_weights_t<T> const& weights,
                                                    std::size_t num_species) {
+    using namespace core::helpers;
     auto w(pair_weights);
-    auto shells_rmap
-        = std::get<1>(helpers::make_index_mapping<std::size_t>(weights | views::elements<0>));
+    auto shells_rmap = index_map<std::size_t>(weights | views::elements<0>);
     for (auto s = 0; s < weights.size(); ++s) {
       auto w_s = weights.at(shells_rmap.at(s));
       for (auto xi = 0; xi < num_species; ++xi)
@@ -31,7 +33,7 @@ namespace sqsgen::optimization {
 
   template <class T>
   std::tuple<std::vector<std::size_t>, std::vector<bounds_t<std::size_t>>, std::vector<std::size_t>>
-  compute_shuffling_bounds(structure<T> const& structure,
+  compute_shuffling_bounds(core::structure<T> const& structure,
                            std::vector<sublattice> const& composition) {
     using namespace core::helpers;
     auto num_atoms = structure.size();
@@ -110,11 +112,11 @@ namespace sqsgen::optimization {
 
   template <>
   std::tuple<std::vector<std::size_t>, std::vector<bounds_t<std::size_t>>, std::vector<std::size_t>>
-  compute_shuffling_bounds(structure<double> const& structure,
+  compute_shuffling_bounds(core::structure<double> const& structure,
                            std::vector<sublattice> const& composition);
   template <>
   std::tuple<std::vector<std::size_t>, std::vector<bounds_t<std::size_t>>, std::vector<std::size_t>>
-  compute_shuffling_bounds(structure<float> const& structure,
+  compute_shuffling_bounds(core::structure<float> const& structure,
                            std::vector<sublattice> const& composition);
 
   template <> double compute_objective(cube_t<double>& sro, cube_t<std::size_t> const& bonds,

@@ -2,11 +2,16 @@
 // Created by Dominik Gehringer on 18.11.24.
 //
 
-#ifndef SQSGEN_IO_CONFIG_STRUCTURE_H
-#define SQSGEN_IO_CONFIG_STRUCTURE_H
+#ifndef SQSGEN_CONFIGURATION_STRUCTURE_H
+#define SQSGEN_CONFIGURATION_STRUCTURE_H
 
+#include <cstddef>
+#include <expected>
 #include <fstream>
+#include <variant>
+#include <vector>
 
+#include "sqsgen/configuration/common.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/config.h"
 #include "sqsgen/core/helpers.h"
@@ -15,6 +20,39 @@
 #include "sqsgen/io/structure.h"
 #include "sqsgen/log.h"
 #include "sqsgen/types.h"
+
+namespace sqsgen::configuration {
+
+  template <class T> class structure_config {
+  public:
+    lattice_t<T> lattice;
+    coords_t<T> coords;
+    configuration_t species;
+  };
+
+  template <class T> struct stucture_definition_input {
+    nested_t<T, 2> lattice;
+    nested_t<T, 2> coords;
+    bool frac = true;
+    std::variant<std::vector<std::string>, std::vector<int>> species;
+    std::array<int, 3> supercell{1, 1, 1};
+  };
+
+  struct stucture_file_input {
+    std::optional<structure_format> format;
+    std::string file;
+    std::array<int, 3> supercell{1, 1, 1};
+  };
+
+  template <class T> using structure_input
+      = std::variant<stucture_definition_input<T>, stucture_file_input>;
+
+  template <class T> struct configuration_parser
+      : configuration_parse_base<"structure", structure_input<T>, structure_config<T>> {
+    std::expected<structure_config<T>, configuration_error> parse(structure_input<T> const& input);
+  };
+
+};  // namespace sqsgen::configuration
 
 namespace sqsgen::io {
   namespace config {
@@ -155,4 +193,4 @@ namespace sqsgen::io {
   };  // namespace config
 
 }  // namespace sqsgen::io
-#endif  // SQSGEN_IO_CONFIG_STRUCTURE_H
+#endif  // SQSGEN_CONFIGURATION_STRUCTURE_H
