@@ -35,6 +35,7 @@ if (BUILD_WASM)
     # src/configuration.cpp
     src/core/permutation.cpp
     src/core/structure.cpp
+    src/io/structure/pymatgen.cpp
   )
   set_target_properties(wasm PROPERTIES
           SUFFIX ".mjs"

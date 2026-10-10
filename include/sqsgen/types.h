@@ -88,7 +88,10 @@ namespace sqsgen {
     using type = T;
   };
   template <class T, int N> using nested_t = typename nested_type<T, N>::type;
-  template <class T, int N> using nested_tensor = typename nested_type<T, N>::type;
+  template <class T, int N> struct nested_tensor {
+    static constexpr int rank = N;
+    nested_t<T, N> value;
+  };
 
   using seed_t = std::vector<std::optional<std::uint64_t>>;
 

@@ -37,7 +37,7 @@ namespace sqsgen::core {
     }
 
     template <class T, int N, int M>
-    void measure_nested(const nested_tensor<T, M>& v, std::array<Eigen::Index, N>& shape) {
+    void measure_nested(const nested_t<T, M>& v, std::array<Eigen::Index, N>& shape) {
       if constexpr (M > 0) {
         shape[N - M] = static_cast<Eigen::Index>(v.size());
         if (!v.empty()) measure_nested<T, N, M - 1>(v.front(), shape);
@@ -46,7 +46,7 @@ namespace sqsgen::core {
 
     // every sibling at each level must match the measured extent for that level.
     template <class T, int N, int M>
-    bool is_rectangular(const nested_tensor<T, M>& v, const std::array<Eigen::Index, N>& shape) {
+    bool is_rectangular(const nested_t<T, M>& v, const std::array<Eigen::Index, N>& shape) {
       if constexpr (M == 0) {
         return true;
       } else {
@@ -58,7 +58,7 @@ namespace sqsgen::core {
     }
 
     // copy nested values into the tensor at the running multi-index.
-    template <class T, int N, int M> void fill_from_nested(const nested_tensor<T, M>& v,
+    template <class T, int N, int M> void fill_from_nested(const nested_t<T, M>& v,
                                                            Eigen::Tensor<T, N>& out,
                                                            std::array<Eigen::Index, N>& idx) {
       if constexpr (M == 0) {
@@ -73,13 +73,13 @@ namespace sqsgen::core {
 
     // build the nested array for the sub-block fixed by the leading coords of idx.
     template <class T, int N, int Level>
-    nested_tensor<T, N - Level> build_nested(const Eigen::Tensor<T, N>& t,
-                                             std::array<Eigen::Index, N>& idx) {
+    nested_t<T, N - Level> build_nested(const Eigen::Tensor<T, N>& t,
+                                        std::array<Eigen::Index, N>& idx) {
       if constexpr (Level == N) {
         return at(t, idx);  // scalar leaf
       } else {
         const Eigen::Index dim = t.dimension(Level);
-        nested_tensor<T, N - Level> node(static_cast<std::size_t>(dim));
+        nested_t<T, N - Level> node(static_cast<std::size_t>(dim));
         for (Eigen::Index i = 0; i < dim; ++i) {
           idx[Level] = i;
           node[static_cast<std::size_t>(i)] = build_nested<T, N, Level + 1>(t, idx);
@@ -135,18 +135,15 @@ namespace sqsgen::core {
         } while (next_index(idx, shape));
         return t;
       }
+    };
 
-    }
-
-    template <class T, int N>
-    struct tensor_converter<nested_tensor<T, N>> {
-      nested_tensor<T, N> to(const Eigen::Tensor<T, N>& t) {
+    template <class T, int N> struct tensor_converter<nested_tensor<T, N>> {
+      nested_t<T, N> to(const Eigen::Tensor<T, N>& t) {
         std::array<Eigen::Index, N> idx{};
         return build_nested<T, N, 0>(t, idx);
       }
 
-      std::expected<Eigen::Tensor<T, N>, tensor_shape_error> from(
-          const nested_tensor<T, N>& nested) {
+      std::expected<Eigen::Tensor<T, N>, tensor_shape_error> from(const nested_t<T, N>& nested) {
         std::array<Eigen::Index, N> shape{};
         measure_nested<T, N, N>(nested, shape);
 
@@ -167,7 +164,7 @@ namespace sqsgen::core {
         fill_from_nested<T, N, N>(nested, t, idx);
         return t;
       }
-    }
+    };
   }  // namespace eigen::detail
 
   template <class Target, class T, int N> Target tensor_as(const Eigen::Tensor<T, N>& t) {
@@ -181,7 +178,7 @@ namespace sqsgen::core {
 
   // nested -> Eigen::Tensor
   template <class T, int N>
-  std::expected<Eigen::Tensor<T, N>, tensor_shape_error> tensor_from(const nested_tensor<T, N>& v) {
+  std::expected<Eigen::Tensor<T, N>, tensor_shape_error> tensor_from(const nested_t<T, N>& v) {
     return eigen::detail::tensor_converter<nested_tensor<T, N>>::from(v);
   }
 

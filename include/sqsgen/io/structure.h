@@ -6,11 +6,12 @@
 #define SQSGEN_IO_STRUCTURE_H
 
 #include <map>
+#include <numeric>
 #include <ranges>
 #include <regex>
 
 #include "sqsgen/core/structure.h"
-#include "sqsgen/io/json.h"
+#include "sqsgen/types.h"
 
 // PI is not defined on standard C++ headers when using MSVC
 #ifndef M_PI
@@ -29,9 +30,9 @@ namespace sqsgen::io {
       auto csize = ranges::size(crumbs);
       if (csize == 0) return "";
       std::string result;
-      result.reserve(
-          core::helpers::sum(crumbs | views::transform([](auto&& s) { return s.size(); }))
-          + (csize - 1) * delimiter.size());
+      auto total_size
+          = std::accumulate(crumbs | views::transform([](auto&& s) { return s.size(); }), 0);
+      result.reserve(total_size + (csize - 1) * delimiter.size());
       for (auto it = ranges::begin(crumbs); it != ranges::end(crumbs); ++it) {
         if (it != ranges::begin(crumbs)) result.append(delimiter);
         result.append(*it);
@@ -136,6 +137,8 @@ namespace sqsgen::io {
 
   template <class, StructureFormat> struct structure_adapter {};
 
+  template <class, structure_format> struct structure_adapter_ {};
+
   template <class T> struct structure_adapter<T, STRUCTURE_FORMAT_JSON_ASE> {
     static auto _format_array(std::string const& dtype, auto const& shape, auto const& array) {
       return nlohmann::json{
@@ -198,7 +201,7 @@ namespace sqsgen::io {
       // one coordinate line holds about 72 characters, to be safe we multiply by two
       constexpr absl::string_view row_format = "%23.16f %23.16f %23.16f";
       auto sorted = filtered.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
-      auto unique_species = core::helpers::sorted_vector<specie_t>{sorted.species};
+      auto unique_species = core::sorted_vector<specie_t>{sorted.species};
       auto num_species = core::count_species(sorted.species);
 
       std::string result;
@@ -513,7 +516,7 @@ namespace sqsgen::io {
     static std::string format(core::structure<T> const& structure) {
       auto filtered = structure.without_vacancies();
       auto sorted = filtered.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
-      auto unique_species = core::helpers::sorted_vector<specie_t>{sorted.species};
+      auto unique_species = core::sorted_vector<specie_t>{sorted.species};
       auto num_species = core::count_species(sorted.species);
       const auto z_to_symbol = [](auto&& z) { return core::atom::from_z(z).symbol; };
       std::string result;
@@ -598,16 +601,13 @@ namespace sqsgen::io {
 
       std::size_t maxnum = 100000;
       println("MODEL     0");
-      core::helpers::for_each(
-          [&, maxnum](auto&& index) {
-            auto row = cart_coords.row(index);
-            auto symbol = z_to_symbol(filtered.species[index]);
-            println(format_string(
-                "ATOM  %5d %4s MOL     1    %8.3f%8.3f%8.3f  1.00  0.00          %2s  ",
-                index % maxnum, symbol, row(0), row(1), row(2), detail::rjust(symbol, 2)));
-          },
-          filtered.size());
-
+      for (auto index = 0; index < filtered.size(); ++index) {
+        auto row = cart_coords.row(index);
+        auto symbol = z_to_symbol(filtered.species[index]);
+        println(format_string(
+            "ATOM  %5d %4s MOL     1    %8.3f%8.3f%8.3f  1.00  0.00          %2s  ", index % maxnum,
+            symbol, row(0), row(1), row(2), detail::rjust(symbol, 2)));
+      }
       println("ENDMDL");
       result.shrink_to_fit();
       return result;

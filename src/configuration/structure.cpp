@@ -2,13 +2,10 @@
 
 #include "sqsgen/configuration/structure.h"
 
-#include <Eigen/Core>
 #include <array>
-#include <cstddef>
 #include <expected>
 #include <string>
 #include <variant>
-#include <vector>
 
 #include "sqsgen/configuration/common.h"
 #include "sqsgen/core/eigen.h"
@@ -88,7 +85,98 @@ namespace sqsgen::configuration {
           configuration_error{key, error_code::invalid_size, "A lattice must be a 3x3 matrix"});
   };
 
-  template <class T> result_t<structure_config<T>> parse_structure_definition(
-      stucture_definition_input<T> const& input) {}
+  template <class T> result_t<coords_t<T>> validate_coords(nested_tensor<T, 2> const& matrix) {
+    static constexpr std::string key = "structure.coords";
+    auto coords = core::tensor_from<nested_tensor<T, 2>>(matrix);
+    if (!coords)
+      return coords.transform_error(
+          [](auto err) { return configuration_error{key, error_code::bad_argument, err.message}; });
+    if (coords->rows() > 1)
+      return *coords;
+    else
+      return std::unexpected(configuration_error{key, error_code::invalid_size,
+                                                 "A structure must contain at least one site"});
+  };
 
-};  // namespace sqsgen::configuration
+  template <class T> result_t<structure_config<T>> validate_structure_definition(
+      stucture_definition_input<T> const& input) {
+    auto coords = validate_coords(input.coords);
+    if (!coords) return std::unexpected(coords.error());
+    auto species = validate_species(input.species, coords->rows());
+    if (!species) return std::unexpected(species.error());
+    auto lattice = validate_lattice(input.lattice);
+    if (!lattice) return std::unexpected(lattice.error());
+    auto supercell = validate_supercell(input.supercell);
+    if (!supercell) return std::unexpected(supercell.error());
+    return structure_config<T>{*lattice, *coords, *species, *supercell};
+  }
+
+  result_t<structure_format> structure_format_from_path(std::string const& path) {
+    if (path.ends_with(".pymatgen.json")) return structure_format::json_pymatgen;
+
+    if (path.ends_with(".sqs.json")) return structure_format::json_sqsgen;
+
+    if (path.ends_with(".vasp") || path.ends_with(".poscar")) return structure_format::poscar;
+
+    return std::unexpected(configuration_error{
+        "structure.format", error_code::bad_argument,
+        format_string("Unsupported file extension \"%s\". Currently only .pymatgen.json, "
+                      ".sqs.json, .vasp and .poscar are supported",
+                      path)});
+  }
+
+  result_t<std::string> read_file(std::string const& path) {
+    static constexpr std::string key = "structure.path";
+    if (!std::filesystem::exists(path))
+      return std::unexpected(configuration_error{
+          key, error_code::bad_argument, format_string("The file \"%s\" does not exist", path)});
+    std::ifstream ifs(path);
+    if (!ifs)
+      return std::unexpected(configuration_error{key, error_code::bad_argument,
+                                                 format_string("Could not open file: %s", path)});
+    std::ostringstream oss;
+    oss << ifs.rdbuf();
+    return oss.str();
+  }
+
+  template <class T>
+  result_t<core::structure<T>> validate_path(std::string const& path, structure_format format) {
+    if (format == structure_format::json_pymatgen)
+      return read_file<key>(path).and_then([&](auto&& data) {
+        return io::structure_adapter<T, STRUCTURE_FORMAT_JSON_PYMATGEN>::from_json(
+            std::forward<std::string>(data));
+      });
+
+    if (path.ends_with(".sqs.json"))
+      return read_file<key>(path).and_then([&](auto&& data) {
+        return io::structure_adapter<T, STRUCTURE_FORMAT_JSON_SQSGEN>::from_json(
+            std::forward<std::string>(data));
+      });
+
+    if (path.ends_with(".vasp") || path.ends_with(".poscar"))
+      return read_file<key>(path).and_then([&](auto&& data) {
+        return io::structure_adapter<T, STRUCTURE_FORMAT_POSCAR>::from_string(
+            std::forward<std::string>(data));
+      });
+
+    template <class T>
+    result_t<structure_config<T>> validate_structure_file(stucture_file_input const& input) {
+      structure_format format = structure_format::json_sqsgen;
+      if (!input.format) {
+        if (auto format_from_path = structure_format_from_path(input.path); format_from_path)
+          format = *format_from_path;
+        else
+          return std::unexpected(format_from_path.error());
+      } else if (auto parsed_format = input.format.value();
+                 parsed_format == structure_format::json_ase || structure_format::json_pymatgen
+                 || structure_format::poscar) {
+        format = parsed_format;
+
+      } else
+        return std::unexpected(configuration_error{
+            "structure.format", error_code::bad_argument,
+            "Only json_ase, json_pymatgen, json_sqsgen and poscar are allowed for "
+            "reading. cif and pdb are write only"});
+    }
+
+  };  // namespace sqsgen::configuration

@@ -28,6 +28,7 @@ namespace sqsgen::configuration {
     lattice_t<T> lattice;
     coords_t<T> coords;
     configuration_t species;
+    std::array<int, 3> supercell{1, 1, 1};
   };
 
   template <class T> struct stucture_definition_input {
@@ -40,7 +41,7 @@ namespace sqsgen::configuration {
 
   struct stucture_file_input {
     std::optional<structure_format> format;
-    std::string file;
+    std::string path;
     std::array<int, 3> supercell{1, 1, 1};
   };
 
@@ -58,70 +59,6 @@ namespace sqsgen::io {
   namespace config {
 
     using namespace sqsgen::core;
-
-    template <string_literal key>
-    parse_result<configuration_t> validate_ordinals(std::vector<int>&& ordinals, auto num_sites) {
-      if (ordinals.size() != num_sites)
-        return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-            format_string("Number of coordinates (%i) does not match number of species %i",
-                          num_sites, ordinals.size()));
-      configuration_t conf;
-      for (auto o : ordinals) {
-        if (0 <= o && o < core::KNOWN_ELEMENTS.size())
-          conf.push_back(o);
-        else
-          return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-              format_string("An atomic element with ordinal number %u is not known to me", o));
-      }
-      return conf;
-    }
-
-    template <string_literal key>
-    parse_result<configuration_t> validate_symbols(std::vector<std::string>&& symbols,
-                                                   auto num_sites) {
-      if (symbols.size() != num_sites)
-        return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(format_string(
-            "Number of coordinates (%u) does not match number of species %u specified", num_sites,
-            symbols.size()));
-      configuration_t conf;
-      for (const auto& element : symbols)
-        if (core::SYMBOL_MAP.contains(element))
-          conf.push_back(core::atom::from_symbol(element).Z);
-        else
-          return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-              format_string("An atomic element with name \"%s\" is not known to me", element));
-      return conf;
-    }
-
-    template <string_literal key, class Document>
-    parse_result<configuration_t> parse_species(Document const& doc, auto num_sites) {
-      return get_either<key, std::vector<int>, std::vector<std::string>>(doc)
-          .template collapse<configuration_t>(
-              [=](std::vector<int>&& ordinals) {
-                return validate_ordinals<key>(std::forward<std::vector<int>>(ordinals), num_sites);
-              },
-              [=](std::vector<std::string>&& symbols) {
-                return validate_symbols<key>(std::forward<std::vector<std::string>>(symbols),
-                                             num_sites);
-              });
-    }
-
-    template <string_literal key, class Document>
-    parse_result<std::array<int, 3>> parse_supercell(Document const& doc) {
-      using result_t = parse_result<std::array<int, 3>>;
-      return fmap(
-                 [&](auto&& cell) {
-                   return cell.and_then([&](auto&& supercell) -> result_t {
-                     for (auto amount : supercell)
-                       if (amount < 0)
-                         return parse_error::from_msg<key, CODE_OUT_OF_RANGE>(
-                             "A supercell replication factor must be positive");
-                     return result_t{supercell};
-                   });
-                 },
-                 get_either_optional<key, std::array<int, 3>>(doc))
-          .value_or(result_t{std::array{1, 1, 1}});
-    }
 
     template <string_literal key>
     inline parse_result<std::string> read_file(std::string const& filename) {
