@@ -2,6 +2,7 @@
   "name": "sqsgenerator",
   "version-string": "0.5.6",
   "dependencies": [
+    "glaze",
     "nlohmann-json",
     "eigen3",
     "boost-multiprecision",

@@ -33,6 +33,12 @@ namespace sqsgen::core::helpers {
 
   template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
     requires std::is_integral_v<U>
+  std::map<T, U> reversed_index_map(R&& r) {
+    return reversed_index_map(index_map<U, R, T>(std::forward(r)));
+  }
+
+  template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
+    requires std::is_integral_v<U>
   index_mapping_t<T, U> make_index_mapping(R&& r) {
     std::map<U, T> forward_map = index_map(std::forward(r));
     return index_mapping_t<T, U>(reversed_index_map(forward_map), forward_map);

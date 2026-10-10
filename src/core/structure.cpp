@@ -7,8 +7,10 @@
 #include <Eigen/Dense>
 
 #include "sqsgen/core/helpers/as.h"
+#include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/helpers/fold.h"
 #include "sqsgen/core/helpers/hash.h"
+#include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/numeric.h"
 #include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/types.h"
@@ -135,8 +137,8 @@ namespace sqsgen::core {
       neighbors[shell] = atoms_per_shell;
     }
 
-    auto shell_map = std::get<1>(make_index_mapping<std::size_t>(weights | views::elements<0>));
-    auto conf_map = std::get<1>(make_index_mapping<std::size_t>(configuration));
+    auto shell_map = index_map<std::size_t>(weights | views::elements<0>);
+    auto conf_map = index_map<std::size_t>(configuration);
 
     auto hist = core::count_species(configuration);
     auto num_sites{configuration.size()};
@@ -362,8 +364,9 @@ namespace sqsgen::core {
   }
 
   template <class T> configuration_t structure<T>::packed_species() const {
-    auto [map, _] = helpers::make_index_mapping<specie_t>(species);
-    return helpers::as<std::vector>{}(species | views::transform([&](auto z) { return map[z]; }));
+    using namespace helpers;
+    auto map = reversed_index_map<specie_t>(species);
+    return as<std::vector>{}(species | views::transform([&](auto z) { return map[z]; }));
   }
 
   template <class T> rank_t structure<T>::rank() const {

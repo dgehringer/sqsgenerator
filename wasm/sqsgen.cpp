@@ -3,7 +3,6 @@
 #include <emscripten/proxying.h>
 #include <emscripten/threading.h>
 
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/results.h"
 #include "sqsgen/io/config/combined.h"
 #include "sqsgen/io/json.h"

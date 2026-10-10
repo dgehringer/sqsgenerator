@@ -2,10 +2,9 @@
 // Created by Dominik Gehringer on 18.03.25.
 //
 
-#ifndef SQSGEN_CORE_OPTIMIZATION_H
-#define SQSGEN_CORE_OPTIMIZATION_H
+#ifndef SQSGEN_OPTIMIZATION_H
+#define SQSGEN_OPTIMIZATION_H
 
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
@@ -28,4 +27,4 @@ namespace sqsgen::core::optimization {
                                          auto num_species);
 }  // namespace sqsgen::core::optimization
 
-#endif  // SQSGEN_CORE_OPTIMIZATION_H
+#endif  // SQSGEN_OPTIMIZATION_H

@@ -6,9 +6,12 @@
 #define SQSGEN_CORE_STRUCTURE_H
 
 #include <Eigen/Dense>
+#include <cstddef>
 
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers/as.h"
+#include "sqsgen/core/helpers/count.h"
+#include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/permutation.h"
 #include "sqsgen/log.h"
 #include "sqsgen/types.h"
@@ -19,10 +22,10 @@ namespace sqsgen::core {
   namespace views = ranges::views;
 
   template <class T>
-  matrix_t<T> distance_matrix(const lattice_t<T> &lattice, const coords_t<T> &frac_coords);
+  matrix_t<T> distance_matrix(const lattice_t<T>& lattice, const coords_t<T>& frac_coords);
 
-  template <class T> shell_matrix_t shell_matrix(matrix_t<T> const &distance_matrix,
-                                                 std::vector<T> const &dists, T atol, T rtol);
+  template <class T> shell_matrix_t shell_matrix(matrix_t<T> const& distance_matrix,
+                                                 std::vector<T> const& dists, T atol, T rtol);
 
   struct atom_pair {
     std::size_t i;
@@ -43,25 +46,25 @@ namespace sqsgen::core {
       row_t frac_coords;
       [[nodiscard]] sqsgen::core::atom atom() const;
 
-      bool operator<(site const &other) const;
+      bool operator<(site const& other) const;
 
-      bool operator==(const site &other) const;
+      bool operator==(const site& other) const;
       struct hasher {
-        std::size_t operator()(site const &s) const;
+        std::size_t operator()(site const& s) const;
       };
     };
 
-    inline std::size_t compute_num_species(configuration_t const &configuration) {
-      return static_cast<std::size_t>(helpers::sorted_vector<specie_t>(configuration).size());
+    inline std::size_t compute_num_species(configuration_t const& configuration) {
+      return static_cast<std::size_t>(sorted_vector<specie_t>(configuration).size());
     }
 
-    template <class T> cube_t<T> compute_prefactors(shell_matrix_t const &shell_matrix,
-                                                    shell_weights_t<T> const &weights,
-                                                    configuration_t const &configuration) {
+    template <class T> cube_t<T> compute_prefactors(shell_matrix_t const& shell_matrix,
+                                                    shell_weights_t<T> const& weights,
+                                                    configuration_t const& configuration) {
       using namespace helpers;
       if (weights.empty()) throw std::out_of_range("no coordination shells selected");
-      auto neighbors = count(shell_matrix.reshaped());
-      for (const auto &[shell, count] : neighbors) {
+      auto neighbors = helpers::count(shell_matrix.reshaped());
+      for (const auto& [shell, count] : neighbors) {
         auto atoms_per_shell{static_cast<T>(count) / static_cast<T>(configuration.size())};
         if (atoms_per_shell < 1)
           log::warn(format_string(
@@ -75,10 +78,10 @@ namespace sqsgen::core {
         neighbors[shell] = atoms_per_shell;
       }
 
-      auto shell_map = std::get<1>(make_index_mapping<std::size_t>(weights | views::elements<0>));
-      auto conf_map = std::get<1>(make_index_mapping<std::size_t>(configuration));
+      auto shell_map = index_map<std::size_t>(weights | views::elements<0>);
+      auto conf_map = index_map<std::size_t>(configuration);
 
-      auto hist = core::count_species(configuration);
+      auto hist = count(configuration);
       auto num_sites{configuration.size()};
       auto num_species{static_cast<long>(hist.size())};
       auto num_shells{weights.size()};
@@ -129,7 +132,7 @@ namespace sqsgen::core {
 
     template <ranges::input_range R>
       requires std::is_same_v<ranges::range_value_t<R>, sqsgen::core::detail::site<T>>
-    structure(const lattice_t<T> &lattice, R &&r) : lattice(lattice) {
+    structure(const lattice_t<T>& lattice, R&& r) : lattice(lattice) {
       auto sites = helpers::as<std::vector>{}(r);
       if (sites.empty()) throw std::invalid_argument("Cannot create a structure without atoms");
       coords_t<T> fc(sites.size(), 3);
@@ -143,15 +146,15 @@ namespace sqsgen::core {
       num_species = sqsgen::core::detail::compute_num_species(species);
     }
 
-    structure(const lattice_t<T> &lattice, const coords_t<T> &frac_coords,
-              configuration_t const &species, const std::array<bool, 3> &pbc = {true, true, true});
+    structure(const lattice_t<T>& lattice, const coords_t<T>& frac_coords,
+              configuration_t const& species, const std::array<bool, 3>& pbc = {true, true, true});
 
-    structure(lattice_t<T> &&lattice, coords_t<T> &&frac_coords, configuration_t &&species,
-              std::array<bool, 3> &&pbc = {true, true, true});
+    structure(lattice_t<T>&& lattice, coords_t<T>&& frac_coords, configuration_t&& species,
+              std::array<bool, 3>&& pbc = {true, true, true});
 
-    [[nodiscard]] const matrix_t<T> &distance_matrix();
+    [[nodiscard]] const matrix_t<T>& distance_matrix();
 
-    [[nodiscard]] shell_matrix_t shell_matrix(std::vector<T> const &shell_radii,
+    [[nodiscard]] shell_matrix_t shell_matrix(std::vector<T> const& shell_radii,
                                               T atol = std::numeric_limits<T>::epsilon(),
                                               T rtol = 1.0e-9);
 
@@ -168,7 +171,7 @@ namespace sqsgen::core {
     }
 
     template <class Fn>
-    std::tuple<structure<T>, std::vector<std::size_t>> sorted_with_indices(Fn &&fn) const {
+    std::tuple<structure<T>, std::vector<std::size_t>> sorted_with_indices(Fn&& fn) const {
       auto s = helpers::as<std::vector>{}(sites());
       std::sort(s.begin(), s.end(), std::forward<Fn>(fn));
       return std::make_tuple(
@@ -176,18 +179,18 @@ namespace sqsgen::core {
           helpers::as<std::vector>{}(s | views::transform([](auto site) { return site.index; })));
     }
 
-    template <class Fn> auto sorted(Fn &&fn) const {
+    template <class Fn> auto sorted(Fn&& fn) const {
       return std::get<0>(sorted_with_indices(std::forward<Fn>(fn)));
     }
 
-    structure apply_composition(std::vector<sublattice> const &composition) const;
+    structure apply_composition(std::vector<sublattice> const& composition) const;
 
-    structure with_species(configuration_t const &conf) const;
+    structure with_species(configuration_t const& conf) const;
 
     std::vector<structure> apply_composition_and_decompose(
-        std::vector<sublattice> const &composition) const;
+        std::vector<sublattice> const& composition) const;
 
-    template <class Fn> auto filtered(Fn &&fn) const {
+    template <class Fn> auto filtered(Fn&& fn) const {
       return structure(lattice, sites() | views::filter(std::forward<Fn>(fn)));
     }
 
@@ -195,7 +198,7 @@ namespace sqsgen::core {
 
     template <ranges::input_range R, class V = ranges::range_value_t<R>>
       requires std::is_integral_v<V>
-    structure sliced(R &&r) const {
+    structure sliced(R&& r) const {
       auto sites = std::vector<sqsgen::core::detail::site<T>>{};
       for (auto index : r) {
         if (index >= size() || index < 0)
@@ -207,7 +210,7 @@ namespace sqsgen::core {
       return structure(lattice, sites);
     }
 
-    auto pairs(std::vector<T> const &radii, shell_weights_t<T> const &weights, bool pack = true,
+    auto pairs(std::vector<T> const& radii, shell_weights_t<T> const& weights, bool pack = true,
                T atol = std::numeric_limits<T>::epsilon(), T rtol = 1.0e-9);
 
     [[nodiscard]] configuration_t packed_species() const;

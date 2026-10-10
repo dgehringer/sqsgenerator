@@ -2,11 +2,11 @@
 // Created by Dominik Gehringer on 18.03.25.
 //
 
-#include "sqsgen/core/optimization.h"
+#include "sqsgen/optimization.h"
 
-#include "sqsgen/core/helpers.h"
+#include "sqsgen/core/helpers/numeric.h"
 
-namespace sqsgen::core::optimization {
+namespace sqsgen::optimization {
 
   namespace ranges = std::ranges;
   namespace views = ranges::views;
@@ -129,4 +129,4 @@ namespace sqsgen::core::optimization {
                                       cube_t<float> const& target, std::size_t num_shells,
                                       std::size_t num_species);
 
-}  // namespace sqsgen::core::optimization
+}  // namespace sqsgen::optimization

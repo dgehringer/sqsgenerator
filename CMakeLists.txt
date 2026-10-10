@@ -8,7 +8,7 @@ project(sqsgenerator-wasm
         VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
         LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_definitions(
@@ -19,6 +19,7 @@ add_compile_definitions(
         SQSGEN_MAJOR_VERSION=${VERSION_MAJOR}
 )
 
+find_package(glaze CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(boost_multiprecision REQUIRED CONFIG)
@@ -30,7 +31,8 @@ if (BUILD_WASM)
   find_package(absl CONFIG REQUIRED)
   add_executable(wasm
     wasm/sqsgen.cpp
-    src/core/optimization.cpp
+    src/optimization.cpp
+    src/configuration.cpp
     src/core/permutation.cpp
     src/core/structure.cpp
     src/core/result.cpp
@@ -49,5 +51,6 @@ if (BUILD_WASM)
           Eigen3::Eigen
           Boost::multiprecision
           embind
+          glaze::glaze
   )
 endif ()

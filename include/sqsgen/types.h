@@ -77,6 +77,21 @@ namespace sqsgen {
 
   using thread_config_t = std::vector<std::size_t>;
 
+  template <class T, int N> struct packed_tensor {
+    std::array<std::int64_t, N> shape{};  // extents, one per dimension
+    std::vector<T> data{};                // prod(shape) values, flat
+  };
+
+  template <class T, int N> struct nested_type {
+    using type = std::vector<typename nested_type<T, N - 1>::type>;
+  };
+
+  template <class T> struct nested_type<T, 0> {
+    using type = T;
+  };
+  template <class T, int N> using nested_t = typename nested_type<T, N>::type;
+  template <class T, int N> using nested_tensor = typename nested_type<T, N>::type;
+
   using seed_t = std::vector<std::optional<std::uint64_t>>;
 
   struct sublattice {

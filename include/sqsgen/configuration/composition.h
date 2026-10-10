@@ -2,12 +2,8 @@
 // Created by Dominik Gehringer on 23.11.24.
 //
 
-#ifndef SQSGEN_IO_CONFIG_COMPOSITION_H
-#define SQSGEN_IO_CONFIG_COMPOSITION_H
-
-#ifdef WITH_PYTHON
-#  include <pybind11/pybind11.h>
-#endif
+#ifndef SQSGEN_CONFIGURATION_COMPOSITION_H
+#define SQSGEN_CONFIGURATION_COMPOSITION_H
 
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/config.h"
@@ -195,4 +191,4 @@ namespace sqsgen::io::config {
   }
 
 }  // namespace sqsgen::io::config
-#endif  // SQSGEN_IO_CONFIG_COMPOSITION_H
+#endif  // SQSGEN_CONFIGURATION_COMPOSITION_H

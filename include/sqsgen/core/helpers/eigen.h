@@ -75,4 +75,4 @@ namespace sqsgen::core::helpers {
   }
 }  // namespace sqsgen::core::helpers
 
-#endif SQSGEN_CORE_HELPERS_EIGEN_H
+#endif  // SQSGEN_CORE_HELPERS_EIGEN_H
