@@ -34,8 +34,6 @@ namespace sqsgen::configuration {
     CODE_BAD_ARGUMENT = 4,
   };
 
-  enum class error_code { unknown, out_of_range, bad_argument, invalid_size };
-
   struct configuration_error {
     std::string key;
     error_code code;

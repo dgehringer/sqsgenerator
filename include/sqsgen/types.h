@@ -75,6 +75,8 @@ namespace sqsgen {
 
   using thread_config_t = std::vector<std::size_t>;
 
+  enum class error_code { unknown, out_of_range, bad_argument, invalid_size, not_found };
+
   template <class T, int N> struct packed_tensor {
     std::array<std::int64_t, N> shape{};  // extents, one per dimension
     std::vector<T> data{};                // prod(shape) values, flat
