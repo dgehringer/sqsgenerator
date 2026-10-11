@@ -22,8 +22,8 @@ namespace sqsgen::configuration {
   using composition_spec = std::map<std::string, site_spec>;
   using composition_input = std::variant<std::vector<composition_spec>, composition_spec>;
 
-  template <sublattice_mode, class R>
-  result_t<R> validate_composition_input(const composition_input&, const configuration_t& conf);
+  result_t<std::vector<sublattice>> validate_composition_input(const composition_input&,
+                                                               const configuration_t& conf);
 
   /*
     namespace detail {

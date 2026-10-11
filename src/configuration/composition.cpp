@@ -4,6 +4,7 @@
 
 #include "sqsgen/configuration/composition.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <expected>
 #include <format>
@@ -165,33 +166,51 @@ namespace sqsgen::configuration {
     return sublattice_helper{sites, composition};
   }
 
-  template <>
-  result_t<sublattice> validate_composition_input<sublattice_mode::interact, sublattice>(
-      const composition_input& input, const configuration_t& conf) {
+  result_t<std::vector<sublattice>> validate_composition_input(const composition_input& input,
+                                                               const configuration_t& conf) {
     auto helper = std::visit(
         helpers::overloaded{
-            [&](const composition_spec& spec) -> result_t<sublattice_helper> {
-              return validate_sublattice(spec, conf, std::nullopt);
+            [&](const composition_spec& spec) -> result_t<std::vector<sublattice_helper>> {
+              auto sublattice = validate_sublattice(spec, conf, std::nullopt);
+              if (!sublattice) return std::unexpected(std::move(sublattice).error());
+              return std::vector{std::move(*sublattice)};
             },
-            [&](const std::vector<composition_spec>& spec) -> result_t<sublattice_helper> {
+            [&](const std::vector<composition_spec>& spec)
+                -> result_t<std::vector<sublattice_helper>> {
               if (spec.empty())
-                return std::unexpected(configuration_error{
-                    "composition", error_code::invalid_size,
-                    "You must specify exactly one composition in sublattice_mode = interact"});
-              if (spec.size() != 1)
-                return std::unexpected(configuration_error{
-                    "composition", error_code::invalid_size,
-                    helpers::format_string("You must specify exactly one composition in "
-                                           "sublattice_mode = interact, got: %u",
-                                           spec.size())});
-              return validate_sublattice(spec.front(), conf, std::make_optional(0));
+                return std::unexpected(
+                    configuration_error{"composition", error_code::invalid_size,
+                                        "You must specify one or more compositions"});
+              std::vector<sublattice_helper> out;
+              out.reserve(spec.size());
+              for (auto index = 0; index < spec.size(); ++index) {
+                auto sublattice
+                    = validate_sublattice(spec.at(index), conf, std::make_optional(index));
+                if (!sublattice) return std::unexpected(std::move(sublattice).error());
+                out.push_back(std::move(*sublattice));
+              }
+              return out;
             }},
         input);
     // in case no sites have been specified we use up the whole structure conf.size()
     if (!helper) return std::unexpected(std::move(helper).error());
-    sublattice out{helper->sites.has_value() ? *(helper->sites)
-                                             : indices_t(std::ranges::views::iota(conf.size())),
-                   helper->composition};
+    auto sublattice_helpers = std::move(helper.value());
+
+    auto sublattices_without_site_spec
+        = std::ranges::count_if(helper.value(), [](const auto& h) { return !h.sites.has_value(); });
+    if (sublattices_without_site_spec > 1)
+      return std::unexpected(configuration_error{
+          "composition",
+          error_code::bad_argument,
+          "If you do not specify \"sites\" with more than one sublattice you may omit it only for "
+          "one composition definition",
+      });
+
+    std::vector
+
+        sublattice out{helper->sites.has_value() ? *(helper->sites)
+                                                 : indices_t(std::ranges::views::iota(conf.size())),
+                       helper->composition};
     auto num_sites = out.sites.size();
     auto values_view = helper->composition | std::ranges::views::values;
     auto distributed_atoms = std::accumulate(values_view.begin(), values_view.end(), 0);
