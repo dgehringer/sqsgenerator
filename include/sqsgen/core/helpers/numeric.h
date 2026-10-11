@@ -5,9 +5,12 @@
 #ifndef SQSGEN_CORE_HELPERS_NUMERIC_H
 #define SQSGEN_CORE_HELPERS_NUMERIC_H
 
+#include <cmath>
+#include <stdexcept>
+#include <type_traits>
+
 namespace sqsgen::core::helpers {
-  namespace ranges = std::ranges;
-  namespace views = std::ranges::views;
+
   template <class T> bool is_close(T a, T b, T atol = 1.0e-5, T rtol = 1.0e-3) {
     return std::abs(a - b) <= (atol + rtol * std::abs(b));
   }

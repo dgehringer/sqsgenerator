@@ -74,6 +74,12 @@ namespace sqsgen {
 
   enum class error_code { unknown, out_of_range, bad_argument, invalid_size, not_found };
 
+  struct configuration_error {
+    std::string key;
+    error_code code;
+    std::string msg;
+  };
+
   template <size_t N> using string_literal = core::helpers::string_literal<N>;
 
   template <class T, int N> struct packed_tensor {

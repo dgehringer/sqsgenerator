@@ -2,12 +2,20 @@
 // Created by Dominik Gehringer on 11.11.24.
 //
 
-#ifndef SQSGEN_CORE_HELPERS_STATIC_STRING_H
-#define SQSGEN_CORE_HELPERS_STATIC_STRING_H
+#ifndef SQSGEN_CORE_HELPERS_STRING_H
+#define SQSGEN_CORE_HELPERS_STRING_H
 
 #include <algorithm>
+#include <string_view>
+
+#include "absl/strings/str_format.h"
 
 namespace sqsgen::core::helpers {
+
+  template <class... Args>
+  std::string format_string(const absl::FormatSpec<Args...>& fmt, Args&&... args) {
+    return absl::StrFormat(fmt, std::forward<Args>(args)...);
+  }
 
   template <size_t N> struct string_literal {
     static constexpr size_t length = N;
@@ -40,4 +48,4 @@ namespace sqsgen::core::helpers {
 
 }  // namespace sqsgen::core::helpers
 
-#endif  // SQSGEN_CORE_HELPERS_STATIC_STRING_H
+#endif  // SQSGEN_CORE_HELPERS_STRING_H
