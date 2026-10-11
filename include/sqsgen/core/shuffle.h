@@ -5,7 +5,10 @@
 #ifndef SQSGEN_CORE_SHUFFLE_H
 #define SQSGEN_CORE_SHUFFLE_H
 
+#include <optional>
 #include <random>
+#include <utility>
+#include <vector>
 
 #include "sqsgen/core/helpers/rapidhash.h"
 #include "sqsgen/core/permutation.h"
@@ -20,25 +23,63 @@ namespace sqsgen::core {
     return dis(gen);
   }
 
-  static uint64_t rapidrand(uint64_t &seed) {
+  static uint64_t rapidrand(uint64_t& seed) {
     seed += rapid_secret[0];
     return rapid_mix(seed, seed ^ rapid_secret[1]);
   }
 
-  static std::size_t random_bounded(std::size_t range, uint64_t &seed) {
+  static std::size_t random_bounded(std::size_t range, uint64_t& seed) {
     uint32_t x = rapidrand(seed);
     uint64_t m = static_cast<uint64_t>(x) * static_cast<uint64_t>(range);
     return m >> 32;
   }
+
+  template <iteration_mode, sublattice_mode> struct shuffler {};
+
+  template <> struct shuffler<iteration_mode::random, sublattice_mode::interact> {
+  public:
+    shuffler<iteration_mode::random, sublattice_mode::interact>(bounds_t<std::size_t> bounds,
+                                                                std::optional<seed_t>);
+    void shuffle(configuration_t& configuration);
+    void unrank_permutation(configuration_t& configuration, rank_t rank);
+    rank_t rank_permutation(configuration_t& configuration);
+
+  private:
+    std::uint64_t _seed;
+  };
+
+  template <> struct shuffler<iteration_mode::systematic, sublattice_mode::interact> {
+  public:
+    shuffler<iteration_mode::systematic, sublattice_mode::interact>(bounds_t<std::size_t> bounds,
+                                                                    std::optional<seed_t>);
+    void shuffle(configuration_t& configuration);
+    void unrank_permutation(configuration_t& configuration, rank_t rank);
+    rank_t rank_permutation(configuration_t& configuration);
+
+  private:
+    std::uint64_t _seed;
+  };
+
+  template <> struct shuffler<iteration_mode::random, sublattice_mode::split> {
+  public:
+    shuffler<iteration_mode::random, sublattice_mode::split>(
+        const std::vector<std::pair<bounds_t<std::size_t>, std::optional<std::uint64_t>>>&);
+    void shuffle(configuration_t& configuration);
+    void unrank_permutation(configuration_t& configuration, rank_t rank);
+    std::vector<rank_t> rank_permutation(configuration_t& configuration);
+
+  private:
+    std::vector<std::pair<bounds_t<std::size_t>, std::uint64_t>> _bounds_and_seeds;
+  };
 
   class shuffler {
   public:
     explicit shuffler(std::vector<bounds_t<std::size_t>> bounds,
                       std::optional<std::uint64_t> seed = std::nullopt)
         : _seed(seed.value_or(make_random_seed())), _bounds(std::move(bounds)) {}
-    template <IterationMode Mode> void shuffle(configuration_t &configuration) {
+    template <IterationMode Mode> void shuffle(configuration_t& configuration) {
       if constexpr (Mode == ITERATION_MODE_RANDOM) {
-        for (auto &bound : _bounds) {
+        for (auto& bound : _bounds) {
           auto [lower_bound, upper_bound] = bound;
           assert(upper_bound > lower_bound);
           auto window_size = upper_bound - lower_bound;
@@ -58,16 +99,16 @@ namespace sqsgen::core {
       }
     }
 
-    rank_t rank_permutation(configuration_t &configuration) {
+    rank_t rank_permutation(configuration_t& configuration) {
       using namespace core::helpers;
 
       return core::rank_permutation(
           as<std::vector>{}(range(std::forward<bounds_t<std::size_t>>(_bounds.front()))
-                            | views::transform([&](auto &&i) { return configuration[i]; })));
+                            | views::transform([&](auto&& i) { return configuration[i]; })));
     }
 
     template <IterationMode Mode>
-    void unrank_permutation(configuration_t &configuration, rank_t rank) {
+    void unrank_permutation(configuration_t& configuration, rank_t rank) {
       static_assert(Mode == ITERATION_MODE_SYSTEMATIC);
       assert(_bounds.size() == 1);
       if (_bounds.empty() || _bounds.front() == bounds_t<std::size_t>{0, configuration.size()})
@@ -76,11 +117,11 @@ namespace sqsgen::core {
         auto [start, end] = _bounds.front();
         auto irange = helpers::range(std::forward<bounds_t<std::size_t>>(_bounds.front()));
         auto [species_map, species_rmap] = helpers::make_index_mapping<specie_t>(
-            irange | views::transform([&](auto &&i) { return configuration[i]; }));
+            irange | views::transform([&](auto&& i) { return configuration[i]; }));
         configuration_t conf{helpers::as<std::vector>{}(
-            irange | views::transform([&](auto &&i) { return species_map.at(configuration[i]); }))};
+            irange | views::transform([&](auto&& i) { return species_map.at(configuration[i]); }))};
         core::unrank_permutation(conf, rank);
-        ranges::for_each(helpers::range(conf.size()), [&, start](auto &&i) {
+        ranges::for_each(helpers::range(conf.size()), [&, start](auto&& i) {
           configuration[start + i] = species_rmap.at(conf[i]);
         });
         return;

@@ -13,7 +13,7 @@ namespace sqsgen::core {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  inline counter<specie_t> count_species(configuration_t const& c) { return helpers::count(c); }
+  counter<specie_t> count_species(configuration_t const& c) { return helpers::count(c); }
 
   template <ranges::input_range R, class T = ranges::range_value_t<R>>
   rank_t num_permutations_impl(R&& freqs) {

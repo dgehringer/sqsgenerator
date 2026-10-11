@@ -4,6 +4,7 @@
 
 #include <Eigen/Core>
 #include <boost/multiprecision/cpp_int.hpp>
+#include <expected>
 #include <map>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <utility>
@@ -74,7 +75,15 @@ namespace sqsgen {
 
   template <size_t N> using string_literal = core::helpers::string_literal<N>;
 
-  enum class error_code { unknown, out_of_range, bad_argument, invalid_size, not_found, parsing };
+  enum class error_code {
+    unknown,
+    out_of_range,
+    bad_argument,
+    invalid_size,
+    not_found,
+    parsing,
+    type_error
+  };
 
   namespace configuration {
 
@@ -84,13 +93,19 @@ namespace sqsgen {
       std::string msg;
     };
 
+    template <class T> using result_t = std::expected<T, configuration_error>;
+
   };  // namespace configuration
 
   namespace io {
+
     struct parser_error {
       error_code code;
       std::string msg;
     };
+
+    template <class T> using result_t = std::expected<T, parser_error>;
+
     enum class structure_format { sqsgen, pymatgen, ase, cif, poscar, pdb };
 
     enum class wire_format { json, yaml, cbor, msgpack, beve };

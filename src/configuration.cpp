@@ -9,15 +9,6 @@
 
 namespace sqsgen {
 
-  template <class T> core::structure<T> structure_config<T>::structure(bool supercell) const {
-    core::structure<T> structure(lattice, coords, species);
-    if (supercell) {
-      auto [a, b, c] = this->supercell;
-      structure = structure.supercell(a, b, c);
-    }
-    return structure;
-  }
-
   template <class T> struct configuration<T, SUBLATTICE_MODE_SPLIT, ITERATION_MODE_RANDOM>
       : configuration_base<T, SUBLATTICE_MODE_SPLIT, ITERATION_MODE_RANDOM> {
     seed_t seed;

@@ -7,7 +7,6 @@
 #include <string>
 #include <variant>
 
-#include "sqsgen/configuration/common.h"
 #include "sqsgen/core/eigen.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/core/structure.h"
