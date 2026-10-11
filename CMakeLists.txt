@@ -35,6 +35,7 @@ if (BUILD_WASM)
     # src/configuration.cpp
     src/core/permutation.cpp
     src/core/structure.cpp
+    src/io/structure/sqsgen.cpp
     src/io/structure/pymatgen.cpp
     src/io/structure/detail.cpp
     src/io/structure/vasp.cpp

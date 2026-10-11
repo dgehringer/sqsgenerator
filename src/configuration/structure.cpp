@@ -118,7 +118,7 @@ namespace sqsgen::configuration {
   }
 
   result_t<io::structure_format> structure_format_from_path(std::string const& path) {
-    if (path.ends_with(".pymatgen.json")) return io::structure_format::json_pymatgen;
+    if (path.ends_with(".pymatgen.json")) return io::structure_format::pymatgen;
 
     if (path.ends_with(".sqs.json")) return io::structure_format::json_sqsgen;
 

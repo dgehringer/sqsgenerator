@@ -91,7 +91,7 @@ namespace sqsgen {
       error_code code;
       std::string msg;
     };
-    enum class structure_format { json_sqsgen, json_pymatgen, json_ase, cif, poscar, pdb };
+    enum class structure_format { sqsgen, pymatgen, ase, cif, poscar, pdb };
 
     enum class wire_format { json, yaml, cbor, msgpack, beve };
   };  // namespace io

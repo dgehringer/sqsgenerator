@@ -4,6 +4,7 @@
 
 #include <expected>
 
+#include "sqsgen/core/helpers/string.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -167,8 +168,61 @@ namespace sqsgen::core {
     };
   }  // namespace eigen::detail
 
+  template <class T, int R, int C> Eigen::Tensor<T, 2> to_tensor(const Eigen::Matrix<T, R, C>& m) {
+    Eigen::Tensor<T, 2> out(m.rows(), m.cols());
+    for (Eigen::Index i = 0; i < m.rows(); ++i)
+      for (Eigen::Index j = 0; j < m.cols(); ++j)
+        out(i, j) = m(i, j);  // logical copy — order-independent, transpose-safe
+    return out;
+  }
+
+  template <class T>
+  std::expected<lattice_t<T>, tensor_shape_error> tensor_to_lattice(const Eigen::Tensor<T, 2>& t) {
+    if (t.dimension(0) != 3 || t.dimension(1) != 3)
+      return std::unexpected(
+          tensor_shape_error{tensor_shape_error::kind::size_mismatch,
+                             helpers::format_string("lattice must be 3×3, got %ix%i",
+                                                    t.dimension(0), t.dimension(1))});
+    lattice_t<T> out;
+    for (int i = 0; i < 3; ++i)
+      for (int j = 0; j < 3; ++j) out(i, j) = t(i, j);
+    return out;
+  }
+
+  template <class T>
+  std::expected<coords_t<T>, tensor_shape_error> tensor_to_coords(const Eigen::Tensor<T, 2>& t) {
+    if (t.dimension(1) != 3)
+      return std::unexpected(tensor_shape_error{
+          tensor_shape_error::kind::size_mismatch,
+          helpers::format_string("coordinates must have 3 columns, got %i", t.dimension(1))});
+
+    coords_t<T> out(t.dimension(0), 3);
+    for (Eigen::Index i = 0; i < t.dimension(0); ++i)
+      for (int j = 0; j < 3; ++j) out(i, j) = t(i, j);
+    return out;
+  }
+
   template <class Target, class T, int N> Target tensor_as(const Eigen::Tensor<T, N>& t) {
     return eigen::detail::tensor_converter<Target>::to(t);
+  }
+
+  template <class Target, class T> Target tensor_as(const lattice_t<T>& t) {
+    return eigen::detail::tensor_converter<Target>::to(to_tensor(t));
+  }
+
+  template <class Target, class T> Target tensor_as(const coords_t<T>& t) {
+    return eigen::detail::tensor_converter<Target>::to(to_tensor(t));
+  }
+
+  template <class T>
+  std::expected<lattice_t<T>, tensor_shape_error> lattice_from(const packed_tensor<T, 2>& p) {
+    return eigen::detail::tensor_converter<packed_tensor<T, 2>>::from(p).and_then(
+        tensor_to_lattice);
+  }
+
+  template <class T>
+  std::expected<lattice_t<T>, tensor_shape_error> coords_from(const packed_tensor<T, 2>& p) {
+    return eigen::detail::tensor_converter<packed_tensor<T, 2>>::from(p).and_then(tensor_to_coords);
   }
 
   template <class T, int N>
@@ -180,6 +234,17 @@ namespace sqsgen::core {
   template <class T, int N>
   std::expected<Eigen::Tensor<T, N>, tensor_shape_error> tensor_from(const nested_t<T, N>& v) {
     return eigen::detail::tensor_converter<nested_tensor<T, N>>::from(v);
+  }
+
+  template <class T>
+  std::expected<lattice_t<T>, tensor_shape_error> lattice_from(const nested_t<T, 2>& p) {
+    return eigen::detail::tensor_converter<nested_tensor<T, 2>>::from(p).and_then(
+        tensor_to_lattice);
+  }
+
+  template <class T>
+  std::expected<lattice_t<T>, tensor_shape_error> coords_from(const nested_t<T, 2>& p) {
+    return eigen::detail::tensor_converter<nested_tensor<T, 2>>::from(p).and_then(tensor_to_coords);
   }
 
 }  // namespace sqsgen::core

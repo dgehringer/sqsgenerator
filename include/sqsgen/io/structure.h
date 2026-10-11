@@ -9,6 +9,7 @@
 #include <numeric>
 #include <ranges>
 
+#include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
 // PI is not defined on standard C++ headers when using MSVC
@@ -19,6 +20,7 @@
 namespace sqsgen::io {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
+  namespace core = sqsgen::core;
 
   namespace detail {
 
@@ -53,6 +55,29 @@ namespace sqsgen::io {
   }  // namespace detail
 
   template <class, structure_format> struct structure_adapter {};
+
+  template <class T> struct structure_adapter<T, structure_format::pymatgen> {
+    static std::string format(core::structure<T> const& structure,
+                              wire_format format = wire_format::json);
+
+    static std::expected<core::structure<T>, parser_error> read(std::string_view data,
+                                                                wire_format format
+                                                                = wire_format::json);
+  };
+
+  template <class T> struct structure_adapter<T, structure_format::sqsgen> {
+    static std::string format(core::structure<T> const& structure,
+                              wire_format format = wire_format::json);
+
+    static std::expected<core::structure<T>, parser_error> read(std::string_view data,
+                                                                wire_format format
+                                                                = wire_format::json);
+  };
+
+  template <class T> struct structure_adapter<T, structure_format::poscar> {
+    static std::string format(core::structure<T> const& structure);
+    static std::expected<core::structure<T>, parser_error> read(std::string const& input);
+  };
 
   /*template <class T>
   std::string format(core::structure<T> const& structure, StructureFormat format) {
