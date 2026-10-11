@@ -74,7 +74,7 @@ namespace sqsgen {
 
   template <size_t N> using string_literal = core::helpers::string_literal<N>;
 
-  enum class error_code { unknown, out_of_range, bad_argument, invalid_size, not_found };
+  enum class error_code { unknown, out_of_range, bad_argument, invalid_size, not_found, parsing };
 
   namespace configuration {
 
@@ -87,7 +87,13 @@ namespace sqsgen {
   };  // namespace configuration
 
   namespace io {
+    struct parser_error {
+      error_code code;
+      std::string msg;
+    };
     enum class structure_format { json_sqsgen, json_pymatgen, json_ase, cif, poscar, pdb };
+
+    enum class wire_format { json, yaml, cbor, msgpack, beve };
   };  // namespace io
 
   namespace core {

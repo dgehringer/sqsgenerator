@@ -38,6 +38,7 @@ if (BUILD_WASM)
     src/io/structure/pymatgen.cpp
     src/io/structure/detail.cpp
     src/io/structure/vasp.cpp
+    src/io/glaze.cpp
   )
   set_target_properties(wasm PROPERTIES
           SUFFIX ".mjs"

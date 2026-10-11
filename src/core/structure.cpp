@@ -12,7 +12,9 @@
 #include "sqsgen/core/helpers/hash.h"
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/numeric.h"
+#include "sqsgen/core/permutation.h"
 #include "sqsgen/core/sorted_vector.h"
+#include "sqsgen/log.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {

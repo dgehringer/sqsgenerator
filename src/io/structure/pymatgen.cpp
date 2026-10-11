@@ -1,14 +1,23 @@
+#include <array>
+#include <expected>
 #include <glaze/glaze.hpp>
 #include <glaze/json/generic_fwd.hpp>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include "sqsgen/core/eigen.h"
+#include "sqsgen/core/atom.h"
+#include "sqsgen/core/helpers/string.h"
+#include "sqsgen/core/structure.h"
+#include "sqsgen/io/glaze.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::io {
 
+  namespace core = sqsgen::core;
+  namespace helpers = sqsgen::core::helpers;
   namespace detail {
     template <class T> struct pymatgen_species {
       std::string element;
@@ -16,7 +25,7 @@ namespace sqsgen::io {
     };
 
     template <class T> struct pymatgen_lattice {
-      nested_t<T, 2> matrix;  // whatever Glaze-serializable form your lattice maps to
+      core::nested_t<T, 2> matrix;
       std::array<bool, 3> pbc;
       T a, b, c;
       T volume;
@@ -40,10 +49,26 @@ namespace sqsgen::io {
     };
   }  // namespace detail
 
-  template <class T> struct structure_adapter_<T, structure_format::json_pymatgen> {
+  template <class T> struct structure_adapter<T, structure_format::json_pymatgen> {
+    static std::string format(core::structure<T> const& structure,
+                              wire_format format = wire_format::json) {
+      auto data = write_any(to_pymatgen(structure), format);
+      if (!data) throw std::runtime_error{"failed to serialize strucure"};
+      return std::move(*data);
+    }
+
+    static std::expected<core::structure<T>, parser_error> read(std::string_view data,
+                                                                wire_format format
+                                                                = wire_format::json) {
+      auto dto = read_any<detail::pymatgen_structure<T>>(data, format);
+      if (!dto) return std::unexpected(std::move(dto).error());
+      return dto.and_then(to_structure);
+    }
+
+  private:
     static detail::pymatgen_structure<T> to_pymatgen(core::structure<T> const& structure) {
       auto filtered = structure.without_vacancies();
-      const auto [a, b, c] = detail::lengths<T>(filtered.lattice);
+      const auto [a, b, c] = detail::lengths(filtered.lattice);
       const auto [alpha, beta, gamma] = detail::angles<T>(filtered.lattice);
 
       detail::pymatgen_structure<T> out;
@@ -68,13 +93,46 @@ namespace sqsgen::io {
       return out;
     }
 
-    static std::string format(core::structure<T> const& structure) {
-      return glz::write_json(to_pymatgen(structure)).value_or("");  // handle error properly
+    static std::expected<std::pair<std::string, std::array<T, 3>>, parser_error> convert_site(
+        const detail::pymatgen_site<T>& site) {
+      if (site.species.size() != 1)
+        return std::unexpected(
+            parser_error{error_code::out_of_range,
+                         helpers::format_string("Cannot handle site with more than one species %u",
+                                                site.species.size())});
+      auto specie = site.species.front();
+      if (!core::SYMBOL_MAP.contains(specie.element))
+        return std::unexpected(parser_error{
+            error_code::out_of_range, helpers::format_string("Unkown species %s", specie.element)});
+      return std::make_pair(core::atom::from_symbol(specie.element).Z, site.abc);
+    }
+
+    static std::expected<core::structure<T>, parser_error> to_structure(
+        const detail::pymatgen_structure<T>& dto) {
+      const auto n = dto.sites.size();
+      if (n == 0)
+        return std::unexpected(
+            parser_error{error_code::invalid_size, "Cannot load an empty structure"});
+      configuration_t species;
+      species.reserve(n);
+      coords_t<T> frac_coords(n, 3);
+
+      int index = 0;
+      for (const auto& site : dto.sites) {
+        auto site_result = convert_site(site);
+        if (!site_result) return std::unexpected(std::move(site_result).error());
+        auto [specie, fc] = *site_result;
+        species.push_back(specie);
+        auto [a, b, c] = fc;
+        frac_coords.row(index++) = Eigen::Vector3<T>{a, b, c};
+      }
+
+      return core::structure<T>(dto.lattice.matrix, frac_coords, species);
     }
   };
 
-  template <> struct structure_adapter_<float, structure_format::json_pymatgen>;
-  template <> struct structure_adapter_<double, structure_format::json_pymatgen>;
+  template <> struct structure_adapter<float, structure_format::json_pymatgen>;
+  template <> struct structure_adapter<double, structure_format::json_pymatgen>;
 }  // namespace sqsgen::io
 
 namespace glz {
@@ -84,4 +142,7 @@ namespace glz {
         = glz::object("properties", &S::properties, "lattice", &S::lattice, "@module", &S::module,
                       "@class", &S::class_, "charge", &S::charge, "sites", &S::sites);
   };
+
+  template <> struct glz::meta<sqsgen::io::detail::pymatgen_structure<float>>;
+  template <> struct glz::meta<sqsgen::io::detail::pymatgen_structure<double>>;
 }  // namespace glz

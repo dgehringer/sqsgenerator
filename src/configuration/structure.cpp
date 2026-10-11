@@ -16,6 +16,9 @@ namespace sqsgen::configuration {
 
   using namespace sqsgen::core::helpers;
 
+  namespace core = sqsgen::core;
+  namespace io = sqsgen::io;
+
   result_t<configuration_t> validate_ordinals(std::vector<int> const& ordinals, auto num_sites) {
     static constexpr std::string key = "structure.species";
     if (ordinals.size() != num_sites)
@@ -75,9 +78,9 @@ namespace sqsgen::configuration {
     return supercell;
   }
 
-  template <class T> result_t<lattice_t<T>> validate_lattice(nested_tensor<T, 2> const& matrix) {
+  template <class T> result_t<lattice_t<T>> validate_lattice(core::nested_t<T, 2> const& matrix) {
     static constexpr std::string key = "structure.lattice";
-    auto lattice = core::tensor_from<nested_tensor<T, 2>>(matrix);
+    auto lattice = core::tensor_from<core::nested_tensor<T, 2>>(matrix);
     if (!lattice)
       return lattice.transform_error(
           [](auto err) { return configuration_error{key, error_code::bad_argument, err.message}; });
@@ -88,9 +91,9 @@ namespace sqsgen::configuration {
           configuration_error{key, error_code::invalid_size, "A lattice must be a 3x3 matrix"});
   };
 
-  template <class T> result_t<coords_t<T>> validate_coords(nested_tensor<T, 2> const& matrix) {
+  template <class T> result_t<coords_t<T>> validate_coords(core::nested_t<T, 2> const& matrix) {
     static constexpr std::string key = "structure.coords";
-    auto coords = core::tensor_from<nested_tensor<T, 2>>(matrix);
+    auto coords = core::tensor_from<core::nested_tensor<T, 2>>(matrix);
     if (!coords)
       return coords.transform_error(
           [](auto err) { return configuration_error{key, error_code::bad_argument, err.message}; });
@@ -114,12 +117,12 @@ namespace sqsgen::configuration {
     return structure_config<T>{*lattice, *coords, *species, *supercell};
   }
 
-  result_t<structure_format> structure_format_from_path(std::string const& path) {
-    if (path.ends_with(".pymatgen.json")) return structure_format::json_pymatgen;
+  result_t<io::structure_format> structure_format_from_path(std::string const& path) {
+    if (path.ends_with(".pymatgen.json")) return io::structure_format::json_pymatgen;
 
-    if (path.ends_with(".sqs.json")) return structure_format::json_sqsgen;
+    if (path.ends_with(".sqs.json")) return io::structure_format::json_sqsgen;
 
-    if (path.ends_with(".vasp") || path.ends_with(".poscar")) return structure_format::poscar;
+    if (path.ends_with(".vasp") || path.ends_with(".poscar")) return io::structure_format::poscar;
 
     return std::unexpected(configuration_error{
         "structure.format", error_code::bad_argument,
@@ -143,7 +146,7 @@ namespace sqsgen::configuration {
   }
 
   template <class T>
-  result_t<core::structure<T>> validate_path(std::string const& path, structure_format format) {
+  result_t<core::structure<T>> validate_path(std::string const& path, io::structure_format format) {
     if (format == structure_format::json_pymatgen)
       return read_file<key>(path).and_then([&](auto&& data) {
         return io::structure_adapter<T, STRUCTURE_FORMAT_JSON_PYMATGEN>::from_json(

@@ -12,7 +12,6 @@
 #include "sqsgen/core/helpers/as.h"
 #include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/helpers/misc.h"
-#include "sqsgen/log.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -53,67 +52,11 @@ namespace sqsgen::core {
       };
     };
 
-    inline std::size_t compute_num_species(configuration_t const& configuration) {
-      return static_cast<std::size_t>(sorted_vector<specie_t>(configuration).size());
-    }
+    inline std::size_t compute_num_species(configuration_t const& configuration);
 
     template <class T> cube_t<T> compute_prefactors(shell_matrix_t const& shell_matrix,
                                                     shell_weights_t<T> const& weights,
-                                                    configuration_t const& configuration) {
-      using namespace helpers;
-      if (weights.empty()) throw std::out_of_range("no coordination shells selected");
-      auto neighbors = helpers::count(shell_matrix.reshaped());
-      for (const auto& [shell, count] : neighbors) {
-        auto atoms_per_shell{static_cast<T>(count) / static_cast<T>(configuration.size())};
-        if (atoms_per_shell < 1)
-          log::warn(format_string(
-              R"(The coordination shell %i contains no or only one lattice position(s). Increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
-              shell));
-        if (!is_close(atoms_per_shell, static_cast<T>(static_cast<std::size_t>(atoms_per_shell))))
-          log::warn(format_string(
-              "The coordination shell %i does not contain an integer number of sites. I hope you "
-              "know what you are doing",
-              count));
-        neighbors[shell] = atoms_per_shell;
-      }
-
-      auto shell_map = index_map<std::size_t>(weights | views::elements<0>);
-      auto conf_map = index_map<std::size_t>(configuration);
-
-      auto hist = count(configuration);
-      auto num_sites{configuration.size()};
-      auto num_species{static_cast<long>(hist.size())};
-      auto num_shells{weights.size()};
-
-      Eigen::Tensor<T, 3> prefactors(num_shells, num_species, num_species);
-
-      for (auto s = 0; s < num_shells; s++) {
-        const auto neighbor_count = neighbors[shell_map[s]];
-        if (neighbor_count > 0) {
-          T M_i{static_cast<T>(neighbor_count)};
-          for (auto a = 0; a < num_species; a++) {
-            T x_a{static_cast<T>(hist[conf_map[a]]) / static_cast<T>(num_sites)};
-            for (auto b = a; b < num_species; b++) {
-              T x_b{static_cast<T>(hist[conf_map[b]]) / static_cast<T>(num_sites)};
-              T prefactor{T(1.0) / (M_i * x_a * x_b * static_cast<T>(num_sites))};
-              prefactors(s, a, b) = prefactor;
-              prefactors(s, b, a) = prefactor;
-            }
-          }
-        } else {
-          log::warn(format_string(
-              "The coordination shell %i contains no sites. This shell will not contribute to the "
-              "objective function and can be removed from the \"shell_weights\" parameter",
-              shell_map[s]));
-          for (auto a = 0; a < num_species; a++)
-            for (auto b = a; b < num_species; b++) {
-              prefactors(s, a, b) = 0;
-              prefactors(s, b, a) = 0;
-            }
-        }
-      }
-      return prefactors;
-    }
+                                                    configuration_t const& configuration);
   }  // namespace detail
 
   template <class T> class structure {
@@ -142,7 +85,7 @@ namespace sqsgen::core {
       };
       frac_coords = fc;
       _distance_matrix = std::nullopt;
-      num_species = sqsgen::core::detail::compute_num_species(species);
+      num_species = detail::compute_num_species(species);
     }
 
     structure(const lattice_t<T>& lattice, const coords_t<T>& frac_coords,

@@ -1,15 +1,28 @@
 
+#include <algorithm>
 #include <expected>
+#include <numeric>
+#include <variant>
+#include <vector>
 
 #include "sqsgen/core/helpers/as.h"
+#include "sqsgen/core/helpers/expected.h"
 #include "sqsgen/core/helpers/misc.h"
+#include "sqsgen/core/helpers/string.h"
+#include "sqsgen/core/helpers/variant.h"
+#include "sqsgen/core/permutation.h"
+#include "sqsgen/core/structure.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::io {
 
   namespace helpers = sqsgen::core::helpers;
-  template <class T> struct structure_adapter_<T, structure_format::poscar> {
+  namespace core = sqsgen::core;
+
+  template <class T> using result_t = std::expected<T, parser_error>;
+
+  template <class T> struct structure_adapter<T, structure_format::poscar> {
     using row_t = Eigen::Vector3<T>;
     using tokens_t = std::vector<std::string_view>;
     static std::string format(core::structure<T> const& structure) {
@@ -23,8 +36,9 @@ namespace sqsgen::io {
       std::string result;
       result.reserve(filtered.size() * 144);
 
-      const auto println
-          = [&result](std::string const& line) { result.append(format_string("%s\n", line)); };
+      const auto println = [&result](std::string const& line) {
+        result.append(helpers::format_string("%s\n", line));
+      };
       const auto format_row
           = [&](auto&& row) { return format_string(row_format, row(0), row(1), row(2)); };
 
@@ -77,14 +91,14 @@ namespace sqsgen::io {
       const auto get_line = [&](int l) -> std::expected<tokens_t, parser_error> {
         if (lines.contains(l)) return {lines[l]};
         return std::unexpected(
-            parser_error{error_code::out_of_range, format_string("Line %i not found", l)});
+            parser_error{error_code::out_of_range, helpers::format_string("Line %i not found", l)});
       };
 
       const auto get_row = [&](int l) -> std::expected<row_t, parser_error> {
         return get_line(l).and_then(parse_row);
       };
 
-      auto lattice = get_row(2).combine(get_row(3)).combine(get_row(4)).and_then([&](auto&& m) {
+      auto lattice = helpers::combine(get_row(2), get_row(3), get_row(4)).and_then([&](auto&& m) {
         auto [a, b, c] = m;
         lattice_t<T> l;
         l.row(0) = a;
@@ -92,33 +106,37 @@ namespace sqsgen::io {
         l.row(2) = c;
         return get_line(1)
             .and_then(parse_scaling)
-            .template collapse<lattice_t<T>>(
-                [&](T&& scaling) -> parse_result<lattice_t<T>> {
-                  if (scaling < 0)
-                    return lattice_t<T>{l * std::pow(-scaling / l.determinant(), 1.0 / 3.0)};
-                  else
-                    return lattice_t<T>{l * scaling};
-                },
-                [&](row_t&& s) -> parse_result<lattice_t<T>> {
-                  lattice_t<T> ll(std::move(l));
-                  ll.row(0) *= s(0);
-                  ll.row(1) *= s(1);
-                  ll.row(2) *= s(2);
-                  return ll;
-                });
+            .and_then([&l](std::variant<std::vector<T, row_t>>&& lattice_scaling) {
+              return std::visit(
+                  helpers::overloaded{[&l](T&& scaling) {
+                                        if (scaling < 0)
+                                          return lattice_t<T>{
+                                              l * std::pow(-scaling / l.determinant(), 1.0 / 3.0)};
+                                        else
+                                          return lattice_t<T>{l * scaling};
+                                      },
+                                      [&](row_t&& s) {
+                                        lattice_t<T> ll(std::move(l));
+                                        ll.row(0) *= s(0);
+                                        ll.row(1) *= s(1);
+                                        ll.row(2) *= s(2);
+                                        return ll;
+                                      }},
+                  std::move(lattice_scaling));
+            });
       });
 
       auto species
-          = get_line(5)
-                .and_then(parse_species_decl)
-                .combine(get_line(6).and_then(parse_species_amount))
-                .and_then([&](auto&& specs_and_decls) -> parse_result<configuration_t> {
+          = helpers::combine(get_line(5).and_then(parse_species_decl),
+                             get_line(6).and_then(parse_species_amount))
+                .and_then([&](auto&& specs_and_decls) {
                   auto&& [species, amounts] = specs_and_decls;
                   if (species.size() != amounts.size())
-                    return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
-                        "Species and number of ions per species must have the same length");
+                    return std::unexpected(parser_error{
+                        error_code::out_of_range,
+                        "Species and number of ions per species must have the same length"});
                   configuration_t conf;
-                  conf.reserve(sum(amounts));
+                  conf.reserve(std::accumulate(amounts->begin(), amounts->end(), 0));
                   for (auto i : range(species.size()))
                     for (auto _ : range(amounts[i])) conf.push_back(species[i]);
                   return conf;
@@ -141,76 +159,72 @@ namespace sqsgen::io {
     }
 
   private:
-    static parse_result<configuration_t> parse_species_decl(tokens_t const& tokens) {
-      using result_t = parse_result<configuration_t>;
-      auto result = core::helpers::fold_left(
-          tokens, result_t{configuration_t{}}, [](auto&& conf_result, auto&& symbol) -> result_t {
-            if (conf_result.failed()) return conf_result;
-            auto sym = std::string{symbol};
-            if (!core::SYMBOL_MAP.contains(sym))
-              return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
-                  format_string("Unknown element \"%s\"", symbol));
-            else {
-              auto species = conf_result.result();
-              species.push_back(core::atom::from_symbol(sym).Z);
-              return {species};
-            }
-          });
-      if (result.ok() && result.result().size() == 0)
-        return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
+    static std::expected<configuration_t, parser_error> parse_species_decl(tokens_t const& tokens) {
+      configuration_t species{};
+      for (const auto& symbol : tokens) {
+        auto sym = std::string{symbol};
+        if (!core::SYMBOL_MAP.contains(sym))
+          return std::unexpected(parser_error{
+              error_code::out_of_range, helpers::format_string("Unknown element \"%s\"", symbol)});
+        species.push_back(core::atom::from_symbol(sym).Z);
+      }
+
+      if (species.size() == 0)
+        return std::unexpected(parser_error{
+            error_code::out_of_range,
             "Could not find and species. sqsgen has no mechanism to detect the species from "
             "POTCAR. For me the 'optional' species declaration line is mandatory. Please read "
-            "\"https://www.vasp.at/wiki/index.php/POSCAR\" for further information.");
-      else
-        return result;
+            "\"https://www.vasp.at/wiki/index.php/POSCAR\" for further information."});
+      return species;
     }
 
-    static parse_result<std::vector<int>> parse_species_amount(tokens_t const& tokens) {
-      using result_t = parse_result<std::vector<int>>;
-      auto result = core::helpers::fold_left(tokens, result_t{std::vector<int>{}},
-                                             [](auto&& result, auto&& token) -> result_t {
-                                               if (result.ok()) {
-                                                 auto amount = detail::parse_number<int>(token);
-                                                 if (amount.ok()) {
-                                                   auto amounts = result.result();
-                                                   amounts.push_back(amount.result());
-                                                   return result_t{amounts};
-                                                 } else
-                                                   return amount.error();
-                                               } else
-                                                 return result;
-                                             });
-      if (result.ok() && result.result().size() == 0)
-        return parse_error::from_msg<KEY_NONE, CODE_OUT_OF_RANGE>(
-            "No number of ions per species found");
+    static std::expected<std::vector<int>, parser_error> parse_species_amount(
+        tokens_t const& tokens) {
+      std::vector<int> result;
+      for (const auto& token : tokens) {
+        auto amount = detail::parse_number<int>(token);
+        if (!amount) return std::unexpected(std::move(amount).error());
+        result.push_back(*amount);
+      }
+
+      auto number_of_ions = std::accumulate(result.begin(), result.end(), 0);
+      if (number_of_ions < 1)
+        return std::unexpected(
+            parser_error{error_code::invalid_size, "No ions found in the number specification"});
       return result;
     }
 
     static std::expected<row_t, parser_error> parse_row(tokens_t const& tokens) {
       if (tokens.size() >= 3) {
-        auto sa = detail::parse_number<T>(tokens[0]);
-        if (!sa) return std::unexpected(std::move(sa).error());
-        auto sb = detail::parse_number<T>(tokens[1]);
-        if (!sb) return std::unexpected(std::move(sb).error());
-        auto sc = detail::parse_number<T>(tokens[2]);
-        if (!sc) return std::unexpected(std::move(sc).error());
-        return row_t{*sa, *sb, *sc};
+        return helpers::combine(detail::parse_number<T>(tokens[0]),
+                                detail::parse_number<T>(tokens[1]),
+                                detail::parse_number<T>(tokens[2]))
+            .and_then([](auto&& scale) {
+              const auto [sa, sb, sc] = scale;
+              return row_t{sa, sb, sc};
+            });
       } else
         return std::unexpected(parser_error{
             error_code::out_of_range,
-            format_string("A vector row must contain three entries, but got %u", tokens.size())});
+            helpers::format_string("A vector row must contain three entries, but got %u",
+                                   tokens.size())});
     }
 
-    static parse_result<T, row_t> parse_scaling(tokens_t const& tokens) {
-      using result_t = parse_result<T, row_t>;
+    static std::expected<std::variant<T, row_t>, parser_error> parse_scaling(
+        tokens_t const& tokens) {
       if (tokens.size() == 1)
-        return detail::parse_number<T>(tokens.front()).and_then([](auto&& scale) -> result_t {
-          return scale;
-        });
+        return detail::parse_number<T>(tokens.front())
+            .and_then([](auto&& scale) -> std::variant<T, row_t> { return scale; });
       if (tokens.size() == 3)
-        return parse_row(tokens).and_then([](auto&& scale) -> result_t { return scale; });
-      return parse_error::from_msg<KEY_NONE, CODE_BAD_ARGUMENT>(format_string(
-          "Scaling must be a single float or a triplet of floats, but got %u", tokens.size()));
+        return parse_row(tokens).and_then(
+            [](auto&& scale) -> std::variant<T, row_t> { return scale; });
+      return std::unexpected(parser_error{
+          error_code::invalid_size,
+          helpers::format_string(
+              "Scaling must be a single float or a triplet of floats, but got %u", tokens.size())});
     }
   };
+
+  template <> struct structure_adapter<float, structure_format::poscar>;
+  template <> struct structure_adapter<double, structure_format::poscar>;
 }  // namespace sqsgen::io
