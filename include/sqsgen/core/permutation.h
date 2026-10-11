@@ -8,9 +8,6 @@
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
-  namespace ranges = std::ranges;
-  namespace views = ranges::views;
-
   inline counter<specie_t> count_species(configuration_t const& c);
   static rank_t num_permutations(counter<specie_t> const& hist);
   static rank_t num_permutations(configuration_t const& conf);

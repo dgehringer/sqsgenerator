@@ -8,10 +8,12 @@
 #include <array>
 #include <string>
 
-#include "sqsgen/log.h"
+#include "sqsgen/core/helpers/string.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
+
+  using namespace sqsgen::core::helpers;
 
   namespace detail {
     using atom_record

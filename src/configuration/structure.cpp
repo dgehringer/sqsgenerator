@@ -9,9 +9,12 @@
 
 #include "sqsgen/configuration/common.h"
 #include "sqsgen/core/eigen.h"
+#include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
+
+  using namespace sqsgen::core::helpers;
 
   result_t<configuration_t> validate_ordinals(std::vector<int> const& ordinals, auto num_sites) {
     static constexpr std::string key = "structure.species";

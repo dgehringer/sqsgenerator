@@ -12,13 +12,8 @@
 #include <vector>
 
 #include "sqsgen/configuration/common.h"
-#include "sqsgen/core/atom.h"
-#include "sqsgen/core/config.h"
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/core/structure.h"
-#include "sqsgen/io/parsing.h"
 #include "sqsgen/io/structure.h"
-#include "sqsgen/log.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
@@ -32,15 +27,15 @@ namespace sqsgen::configuration {
   };
 
   template <class T> struct stucture_definition_input {
-    nested_t<T, 2> lattice;
-    nested_t<T, 2> coords;
+    core::nested_t<T, 2> lattice;
+    core::nested_t<T, 2> coords;
     bool frac = true;
     std::variant<std::vector<std::string>, std::vector<int>> species;
     std::array<int, 3> supercell{1, 1, 1};
   };
 
   struct stucture_file_input {
-    std::optional<structure_format> format;
+    std::optional<sqsgen::io::structure_format> format;
     std::string path;
     std::array<int, 3> supercell{1, 1, 1};
   };

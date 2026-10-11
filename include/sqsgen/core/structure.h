@@ -12,7 +12,6 @@
 #include "sqsgen/core/helpers/as.h"
 #include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/helpers/misc.h"
-#include "sqsgen/core/permutation.h"
 #include "sqsgen/log.h"
 #include "sqsgen/types.h"
 

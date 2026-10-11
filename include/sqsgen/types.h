@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include "sqsgen/core/helpers/static_string.h"
+#include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/sorted_vector.h"
 
 namespace sqsgen {
@@ -18,7 +18,7 @@ namespace sqsgen {
   using rank_t = boost::multiprecision::cpp_int;
   using configuration_t = std::vector<specie_t>;
 
-  template <class T> using vset = sqsgen::core::sorted_vector<T>;
+  template <class T> using sorted_vector = sqsgen::core::sorted_vector<T>;
 
   template <class T> using counter = std::map<T, size_t>;
 
@@ -72,38 +72,48 @@ namespace sqsgen {
 
   using thread_config_t = std::vector<std::size_t>;
 
-  enum class error_code { unknown, out_of_range, bad_argument, invalid_size, not_found };
-
-  struct configuration_error {
-    std::string key;
-    error_code code;
-    std::string msg;
-  };
-
   template <size_t N> using string_literal = core::helpers::string_literal<N>;
 
-  template <class T, int N> struct packed_tensor {
-    std::array<std::int64_t, N> shape{};  // extents, one per dimension
-    std::vector<T> data{};                // prod(shape) values, flat
-  };
+  enum class error_code { unknown, out_of_range, bad_argument, invalid_size, not_found };
 
-  template <class T, int N> struct nested_type {
-    using type = std::vector<typename nested_type<T, N - 1>::type>;
-  };
+  namespace configuration {
 
-  template <class T> struct nested_type<T, 0> {
-    using type = T;
-  };
-  template <class T, int N> using nested_t = typename nested_type<T, N>::type;
-  template <class T, int N> struct nested_tensor {
-    static constexpr int rank = N;
-    nested_t<T, N> value;
-  };
+    struct configuration_error {
+      std::string key;
+      error_code code;
+      std::string msg;
+    };
+
+  };  // namespace configuration
+
+  namespace io {
+    enum class structure_format { json_sqsgen, json_pymatgen, json_ase, cif, poscar, pdb };
+  };  // namespace io
+
+  namespace core {
+    template <class T, int N> struct packed_tensor {
+      std::array<std::int64_t, N> shape{};  // extents, one per dimension
+      std::vector<T> data{};                // prod(shape) values, flat
+    };
+
+    template <class T, int N> struct nested_type {
+      using type = std::vector<typename nested_type<T, N - 1>::type>;
+    };
+
+    template <class T> struct nested_type<T, 0> {
+      using type = T;
+    };
+    template <class T, int N> using nested_t = typename nested_type<T, N>::type;
+    template <class T, int N> struct nested_tensor {
+      static constexpr int rank = N;
+      nested_t<T, N> value;
+    };
+  };  // namespace core
 
   using seed_t = std::vector<std::optional<std::uint64_t>>;
 
   struct sublattice {
-    vset<std::size_t> sites;
+    sorted_vector<std::size_t> sites;
     composition_t composition;
   };
 
@@ -146,8 +156,6 @@ namespace sqsgen {
     STRUCTURE_FORMAT_POSCAR = 4,
     STRUCTURE_FORMAT_PDB = 5,
   };
-
-  enum class structure_format { json_sqsgen, json_pymatgen, json_ase, cif, poscar, pdb };
 
   template <class T> class sqs_callback_context {
     std::shared_ptr<std::stop_source> _stop;

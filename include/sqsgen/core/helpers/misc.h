@@ -5,7 +5,6 @@
 
 #include <ranges>
 
-#include "absl/strings/str_format.h"
 #include "sqsgen/core/helpers/as.h"
 #include "sqsgen/types.h"
 
@@ -50,11 +49,6 @@ namespace sqsgen::core::helpers {
     std::transform(result.begin(), result.end(), result.begin(),
                    [](unsigned char c) { return std::toupper(c); });
     return result;
-  }
-
-  template <class... Args>
-  std::string format_string(const absl::FormatSpec<Args...>& fmt, Args&&... args) {
-    return absl::StrFormat(fmt, std::forward<Args>(args)...);
   }
 
 }  // namespace sqsgen::core::helpers
