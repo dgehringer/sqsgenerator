@@ -33,6 +33,7 @@ if (BUILD_WASM)
     wasm/sqsgen.cpp
     src/optimization.cpp
     # src/configuration.cpp
+    src/configuration/structure.cpp
     src/core/permutation.cpp
     src/core/structure.cpp
     src/io/structure/sqsgen.cpp
@@ -40,6 +41,7 @@ if (BUILD_WASM)
     src/io/structure/detail.cpp
     src/io/structure/vasp.cpp
     src/io/glaze.cpp
+
   )
   set_target_properties(wasm PROPERTIES
           SUFFIX ".mjs"

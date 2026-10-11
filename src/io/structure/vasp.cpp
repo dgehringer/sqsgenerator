@@ -159,7 +159,7 @@ namespace sqsgen::io {
           parser_error{error_code::out_of_range, helpers::format_string("Line %i not found", l)});
     };
 
-    const auto get_row = [&](int l) -> std::expected<row_t, parser_error> {
+    const auto get_row = [&](int l) -> std::expected<row_t<T>, parser_error> {
       return get_line(l).and_then(parse_row);
     };
 
@@ -171,7 +171,7 @@ namespace sqsgen::io {
       l.row(2) = c;
       return get_line(1)
           .and_then(parse_scaling)
-          .and_then([&l](std::variant<std::vector<T, row_t>>&& lattice_scaling) {
+          .and_then([&l](std::variant<std::vector<T, row_t<T>>>&& lattice_scaling) {
             return std::visit(
                 helpers::overloaded{[&l](T&& scaling) {
                                       if (scaling < 0)
@@ -180,7 +180,7 @@ namespace sqsgen::io {
                                       else
                                         return lattice_t<T>{l * scaling};
                                     },
-                                    [&](row_t&& s) {
+                                    [&](row_t<T>&& s) {
                                       lattice_t<T> ll(std::move(l));
                                       ll.row(0) *= s(0);
                                       ll.row(1) *= s(1);
