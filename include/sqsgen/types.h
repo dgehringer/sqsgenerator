@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/hash/hash.h"
+#include "sqsgen/core/helpers/static_string.h"
 #include "sqsgen/core/sorted_vector.h"
 
 namespace sqsgen {
@@ -29,9 +29,6 @@ namespace sqsgen {
   template <class T> using matrix_t = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
   template <class T> using cube_t = Eigen::Tensor<T, 3>;
-
-  template <class T> using stl_matrix_t = std::vector<std::vector<T>>;
-  template <class T> using stl_cube_t = std::vector<std::vector<std::vector<T>>>;
 
   template <class T, class U>
     requires std::is_integral_v<T> && std::is_integral_v<U>
@@ -76,6 +73,8 @@ namespace sqsgen {
   using thread_config_t = std::vector<std::size_t>;
 
   enum class error_code { unknown, out_of_range, bad_argument, invalid_size, not_found };
+
+  template <size_t N> using string_literal = core::helpers::string_literal<N>;
 
   template <class T, int N> struct packed_tensor {
     std::array<std::int64_t, N> shape{};  // extents, one per dimension
