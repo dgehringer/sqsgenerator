@@ -4,10 +4,10 @@
 
 #include "sqsgen/configuration/composition.h"
 
-#include <algorithm>
 #include <cstddef>
 #include <expected>
 #include <format>
+#include <iterator>
 #include <numeric>
 #include <optional>
 #include <ranges>
@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "sqsgen/core/atom.h"
+#include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/core/permutation.h"
@@ -23,7 +24,6 @@
 
 namespace sqsgen::configuration {
 
-  namespace ranges = std::ranges;
   namespace core = sqsgen::core;
   namespace helpers = sqsgen::core::helpers;
 
@@ -81,7 +81,7 @@ namespace sqsgen::configuration {
     indices_t indices;
     for (auto i = 0; i < conf.size(); ++i)
       if (unique_species.contains(conf.at(i))) indices.insert(static_cast<std::size_t>(i));
-    if (indices.size() == 0)
+    if (indices.empty())
       return std::unexpected(configuration_error{key, error_code::invalid_size,
                                                  "Cannot use an empty sublattice definition"});
     return indices;
@@ -166,9 +166,22 @@ namespace sqsgen::configuration {
     return sublattice_helper{sites, composition};
   }
 
-  result_t<std::vector<sublattice>> validate_composition_input(const composition_input& input,
-                                                               const configuration_t& conf) {
-    auto helper = std::visit(
+  result_t<sublattice> validate_composition(sublattice_helper&& helper) {
+    auto num_sites = helper.sites->size();
+    auto values_view = helper.composition | std::ranges::views::values;
+    auto distributed_atoms
+        = std::accumulate(values_view.begin(), values_view.end(), std::size_t{0});
+    if (distributed_atoms != num_sites)
+      return std::unexpected(configuration_error{
+          "composition", error_code::invalid_size,
+          helpers::format_string("You tried to distribute %zu atoms on a sublattice with %zu sites",
+                                 distributed_atoms, num_sites)});
+    return sublattice{std::move(helper.sites.value()), std::move(helper.composition)};
+  }
+
+  result_t<std::vector<sublattice_helper>> parse_sublattice_helpers(const composition_input& input,
+                                                                    const configuration_t& conf) {
+    return std::visit(
         helpers::overloaded{
             [&](const composition_spec& spec) -> result_t<std::vector<sublattice_helper>> {
               auto sublattice = validate_sublattice(spec, conf, std::nullopt);
@@ -183,42 +196,70 @@ namespace sqsgen::configuration {
                                         "You must specify one or more compositions"});
               std::vector<sublattice_helper> out;
               out.reserve(spec.size());
-              for (auto index = 0; index < spec.size(); ++index) {
-                auto sublattice
-                    = validate_sublattice(spec.at(index), conf, std::make_optional(index));
+              for (std::size_t index = 0; index < spec.size(); ++index) {
+                auto sublattice = validate_sublattice(spec[index], conf, std::make_optional(index));
                 if (!sublattice) return std::unexpected(std::move(sublattice).error());
                 out.push_back(std::move(*sublattice));
               }
               return out;
             }},
         input);
-    // in case no sites have been specified we use up the whole structure conf.size()
+  }
+
+  result_t<std::vector<sublattice>> validate_composition_input(const composition_input& input,
+                                                               const configuration_t& conf) {
+    auto helper = parse_sublattice_helpers(input, conf);
     if (!helper) return std::unexpected(std::move(helper).error());
-    auto sublattice_helpers = std::move(helper.value());
+    auto [sublattices_with_site_spec, sublattices_without_site_spec] = helpers::partition(
+        [](const auto& h) { return h.sites.has_value(); }, std::move(helper).value());
 
-    auto sublattices_without_site_spec
-        = std::ranges::count_if(helper.value(), [](const auto& h) { return !h.sites.has_value(); });
-    if (sublattices_without_site_spec > 1)
-      return std::unexpected(configuration_error{
-          "composition",
-          error_code::bad_argument,
-          "If you do not specify \"sites\" with more than one sublattice you may omit it only for "
-          "one composition definition",
-      });
-
-    std::vector
-
-        sublattice out{helper->sites.has_value() ? *(helper->sites)
-                                                 : indices_t(std::ranges::views::iota(conf.size())),
-                       helper->composition};
-    auto num_sites = out.sites.size();
-    auto values_view = helper->composition | std::ranges::views::values;
-    auto distributed_atoms = std::accumulate(values_view.begin(), values_view.end(), 0);
-    if (distributed_atoms != num_sites)
-      return std::unexpected(configuration_error{
-          "composition", error_code::invalid_size,
-          helpers::format_string("You tried to distribute %i atoms on a sublattice with %u sites",
-                                 distributed_atoms, num_sites)});
+    std::vector<sublattice> out;
+    out.reserve(sublattices_with_site_spec.size() + sublattices_without_site_spec.size());
+    std::map<std::size_t, std::size_t> site_owner;
+    std::size_t index = 0;
+    for (auto&& sl : sublattices_with_site_spec) {
+      for (const auto& site : sl.sites.value()) {
+        auto [it, inserted] = site_owner.try_emplace(site, index);
+        if (!inserted) {
+          const std::size_t other_index = it->second;
+          return std::unexpected(configuration_error{
+              helpers::format_string("composition.%zu", index), error_code::bad_argument,
+              helpers::format_string(
+                  "the atomic site %zu is contained in at least two sublattices (%zu and %zu). "
+                  "sublattices must be mutually exclusive",
+                  site, index, other_index)});
+        }
+      }
+      auto validated = validate_composition(std::move(sl));
+      if (!validated) return std::unexpected(std::move(validated).error());
+      out.emplace_back(std::move(validated).value());
+      index++;
+    }
+    if (!sublattices_without_site_spec.empty()) {
+      if (sublattices_without_site_spec.size() > 1)
+        return std::unexpected(configuration_error{
+            "composition",
+            error_code::bad_argument,
+            "If you do not specify \"sites\" with more than one sublattice you may omit it only "
+            "for "
+            "one composition definition",
+        });
+      core::sorted_vector<std::size_t> remaining(
+          std::ranges::views::iota(std::size_t{0}, conf.size())
+          | std::ranges::views::filter(
+              [&](const auto site) { return !site_owner.contains(site); }));
+      if (remaining.empty())
+        return std::unexpected(configuration_error{
+            "composition",
+            error_code::invalid_size,
+            "The sublattice definition without a site specification maps to an empty set of sites",
+        });
+      auto validated = validate_composition(sublattice_helper{
+          .sites = std::move(remaining),
+          .composition = std::move(sublattices_without_site_spec.front().composition)});
+      if (!validated) return std::unexpected(std::move(validated).error());
+      out.emplace_back(std::move(validated).value());
+    }
     return out;
   }
 

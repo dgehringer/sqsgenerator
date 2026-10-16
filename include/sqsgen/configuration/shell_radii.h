@@ -5,10 +5,24 @@
 #ifndef SQSGEN_IO_CONFIG_SHELL_RADII_H
 #define SQSGEN_IO_CONFIG_SHELL_RADII_H
 
-#include "sqsgen/core/config.h"
+#include <type_traits>
+#include <variant>
+#include <vector>
+
 #include "sqsgen/core/helpers.h"
 #include "sqsgen/io/config/shared.h"
 #include "sqsgen/io/parsing.h"
+#include "sqsgen/types.h"
+
+namespace sqsgen::configuration {
+
+  template <class T, sublattice_mode Mode> using shell_radii_spec
+      = std::conditional_t<Mode == sublattice_mode::interact, std::vector<T>,
+                           std::vector<std::vector<T>>>;
+
+  template <class T, sublattice_mode Mode> using shell_radii_input
+      = std::variant<shell_radii_detection, shell_radii_spec<T, Mode>>;
+}  // namespace sqsgen::configuration
 
 namespace sqsgen::io::config {
 

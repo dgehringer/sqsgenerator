@@ -31,14 +31,14 @@ namespace sqsgen::configuration {
     std::array<int, 3> supercell{1, 1, 1};
   };
 
-  struct stucture_file_input {
+  struct structure_file_input {
     std::optional<sqsgen::io::structure_format> format;
     std::string path;
     std::array<int, 3> supercell{1, 1, 1};
   };
 
   template <class T> using structure_input
-      = std::variant<stucture_definition_input<T>, stucture_file_input>;
+      = std::variant<stucture_definition_input<T>, structure_file_input>;
 
   template <class T>
   std::expected<structure_config<T>, configuration_error> validate_structure_input(

@@ -3,12 +3,37 @@
 #ifndef SQSGEN_CORE_HELPERS_MISC_H
 #define SQSGEN_CORE_HELPERS_MISC_H
 
+#include <functional>
 #include <ranges>
+#include <utility>
+#include <vector>
 
 #include "sqsgen/core/helpers/as.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core::helpers {
+
+  template <std::ranges::input_range R, class Predicate, class T = std::ranges::range_value_t<R>>
+    requires std::predicate<Predicate&, std::ranges::range_reference_t<R>>
+  std::pair<std::vector<T>, std::vector<T>> partition(Predicate&& predicate, R&& r) {
+    std::pair<std::vector<T>, std::vector<T>> out;
+
+    // size hint only when the range can give one cheaply
+    if constexpr (std::ranges::sized_range<R>) {
+      const auto n = std::ranges::size(r);
+      out.first.reserve(n);
+      out.second.reserve(n);
+    }
+
+    for (auto&& e : r) {
+      // forward each element: moves out of an rvalue range, copies from an lvalue one
+      if (std::invoke(predicate, e))
+        out.first.emplace_back(std::forward<decltype(e)>(e));
+      else
+        out.second.emplace_back(std::forward<decltype(e)>(e));
+    }
+    return out;
+  }
 
   template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
     requires std::is_integral_v<U>

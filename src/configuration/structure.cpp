@@ -26,20 +26,20 @@ namespace sqsgen::configuration {
 
   result_t<configuration_t> validate_ordinals(std::vector<int> const& ordinals, auto num_sites) {
     if (ordinals.size() != num_sites)
-      return std::unexpected(
+      return std::unexpected(configuration_error{
           "structure.species", error_code::invalid_size,
           helpers::format_string("Number of coordinates (%i) does not match number of species %i",
-                                 num_sites, ordinals.size()));
+                                 num_sites, ordinals.size())});
 
     configuration_t conf;
 
     for (auto o : ordinals) {
-      if (0 <= o && o < core::KNOWN_ELEMENTS.size())
+      if (0 <= o && o < static_cast<int>(core::KNOWN_ELEMENTS.size()))
         conf.push_back(o);
       else
         return std::unexpected(configuration_error{
             "structure.species", error_code::out_of_range,
-            helpers::format_string("An atomic element with ordinal number %u is not known to me",
+            helpers::format_string("An atomic element with ordinal number %i is not known to me",
                                    o)});
     }
     return conf;
@@ -47,11 +47,11 @@ namespace sqsgen::configuration {
 
   result_t<configuration_t> validate_symbols(std::vector<std::string>&& symbols, auto num_sites) {
     if (symbols.size() != num_sites)
-      return std::unexpected(
+      return std::unexpected(configuration_error{
           "structure.species", error_code::invalid_size,
           helpers::format_string(
               "Number of coordinates (%u) does not match number of species %u specified", num_sites,
-              symbols.size()));
+              symbols.size())});
     configuration_t conf;
     for (const auto& element : symbols)
       if (core::SYMBOL_MAP.contains(element))
@@ -120,7 +120,8 @@ namespace sqsgen::configuration {
     if (!lattice) return std::unexpected(std::move(lattice).error());
     auto supercell = validate_supercell(input.supercell);
     if (!supercell) return std::unexpected(std::move(supercell).error());
-    return structure_config<T>{*lattice, *coords, *species, *supercell};
+    return structure_config<T>{std::move(lattice).value(), std::move(coords).value(),
+                               std::move(species).value(), std::move(supercell).value()};
   }
 
   result_t<io::structure_format> structure_format_from_path(std::string const& path) {
@@ -162,7 +163,7 @@ namespace sqsgen::configuration {
             std::move(data), io::wire_format::json);
         if (!structure)
           return std::unexpected(forward_error("structure.path", std::move(structure).error()));
-        return *structure;
+        return std::move(structure).value();
       });
     if (format == io::structure_format::sqsgen)
       return content.and_then([](auto&& data) {
@@ -170,7 +171,7 @@ namespace sqsgen::configuration {
             std::move(data), io::wire_format::json);
         if (!structure)
           return std::unexpected(forward_error("structure.path", std::move(structure).error()));
-        return *structure;
+        return std::move(structure).value();
       });
 
     if (format == io::structure_format::poscar)
@@ -179,12 +180,16 @@ namespace sqsgen::configuration {
             = io::structure_adapter<T, io::structure_format::poscar>::read(std::move(data));
         if (!structure)
           return std::unexpected(forward_error("structure.path", std::move(structure).error()));
-        return *structure;
+        return std::move(structure).value();
       });
+
+    return std::unexpected(configuration_error{"structure.format", error_code::bad_argument,
+                                               "The structure format specified has no parser "
+                                               "implemented and is meant for write-only use."});
   }
 
   template <class T>
-  result_t<structure_config<T>> validate_structure_file(const stucture_file_input& input) {
+  result_t<structure_config<T>> validate_structure_file(const structure_file_input& input) {
     io::structure_format format = io::structure_format::sqsgen;
     if (!input.format) {
       if (auto format_from_path = structure_format_from_path(input.path); format_from_path)
@@ -209,8 +214,8 @@ namespace sqsgen::configuration {
     auto supercell = validate_supercell(input.supercell);
     if (!supercell) return std::unexpected(std::move(supercell).error());
 
-    return structure_config<T>{structure->lattice, structure->frac_coords, structure->species,
-                               *supercell};
+    return structure_config<T>{std::move(structure->lattice), std::move(structure->frac_coords),
+                               std::move(structure->species), std::move(supercell).value()};
   }
 
   template <class T>
@@ -219,16 +224,16 @@ namespace sqsgen::configuration {
     return std::visit(
         helpers::overloaded{
             [&](const stucture_definition_input<T>& input) {
-              return validate_structure_definition(input);
+              return validate_structure_definition<T>(input);
             },
-            [&](const stucture_file_input& input) { return validate_structure_file<T>(input); },
+            [&](const structure_file_input& input) { return validate_structure_file<T>(input); },
         },
         input);
   }
 
-  template <> std::expected<structure_config<float>, configuration_error> validate_structure_input(
+  template std::expected<structure_config<float>, configuration_error> validate_structure_input(
       const structure_input<float>& input);
-  template <> std::expected<structure_config<double>, configuration_error> validate_structure_input(
+  template std::expected<structure_config<double>, configuration_error> validate_structure_input(
       const structure_input<double>& input);
 
 };  // namespace sqsgen::configuration

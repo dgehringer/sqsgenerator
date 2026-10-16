@@ -95,6 +95,8 @@ namespace sqsgen {
 
     template <class T> using result_t = std::expected<T, configuration_error>;
 
+    enum class shell_radii_detection { naive, peak };
+
   };  // namespace configuration
 
   namespace io {
