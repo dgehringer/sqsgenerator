@@ -83,6 +83,14 @@ namespace sqsgen::io {
     static std::string format(const core::structure<T>& structure);
   };
 
+  template <class T> struct structure_adapter<T, structure_format::pdb> {
+    static std::string format(const core::structure<T>& structure);
+  };
+
+  template <class T> struct structure_adapter<T, structure_format::ase> {
+    static std::string format(const core::structure<T>& structure);
+  };
+
   /*template <class T>
   std::string format(core::structure<T> const& structure, StructureFormat format) {
     switch (format) {

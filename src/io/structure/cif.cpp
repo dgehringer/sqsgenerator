@@ -79,6 +79,10 @@ namespace sqsgen::io {
                             site.frac_coords(0), site.frac_coords(1), site.frac_coords(2)));
     println("");
     result.shrink_to_fit();
+
     return result;
   }
+
+  template <> struct structure_adapter<float, structure_format::cif>;
+  template <> struct structure_adapter<double, structure_format::cif>;
 }  // namespace sqsgen::io
