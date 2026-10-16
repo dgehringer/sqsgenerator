@@ -47,6 +47,9 @@ namespace sqsgen::io {
       T charge{0};
       std::vector<pymatgen_site<T>> sites;
     };
+
+    template <> struct pymatgen_structure<float>;
+    template <> struct pymatgen_structure<double>;
   }  // namespace detail
 
   template <class T>

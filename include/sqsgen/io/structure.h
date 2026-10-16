@@ -88,7 +88,8 @@ namespace sqsgen::io {
   };
 
   template <class T> struct structure_adapter<T, structure_format::ase> {
-    static std::string format(const core::structure<T>& structure);
+    static std::string format(const core::structure<T>& structure,
+                              wire_format format = wire_format::json);
   };
 
   /*template <class T>

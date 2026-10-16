@@ -76,6 +76,12 @@ namespace sqsgen::core::helpers {
     return result;
   }
 
+  template <class T> bool is_close(T a, T b, T atol = 1.0e-5, T rtol = 1.0e-3) {
+    return std::abs(a - b) <= (atol + rtol * std::abs(b));
+  }
+
+  template <class T> T absolute(T a) { return a > 0 ? a : -a; }
+
 }  // namespace sqsgen::core::helpers
 
 #endif  // SQSGEN_CORE_HELPERS_MISC_H

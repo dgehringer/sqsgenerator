@@ -9,7 +9,6 @@
 #include "sqsgen/core/helpers/as.h"
 #include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/helpers/fold.h"
-#include "sqsgen/core/helpers/numeric.h"
 
 namespace sqsgen::core {
 
@@ -32,9 +31,9 @@ namespace sqsgen::core {
   template <ranges::input_range R, class T = ranges::range_value_t<R>>
   rank_t num_permutations_impl(R&& freqs) {
     auto num_atoms = helpers::fold_left_first(freqs, std::plus{}).value_or(0);
-    return helpers::factorial<rank_t, T>(num_atoms)
-           / helpers::fold_left_first(
-                 freqs | ranges::views::transform(helpers::factorial<rank_t, T>), std::multiplies{})
+    return factorial<rank_t, T>(num_atoms)
+           / helpers::fold_left_first(freqs | ranges::views::transform(factorial<rank_t, T>),
+                                      std::multiplies{})
                  .value_or(1);
   }
 

@@ -9,7 +9,6 @@
 #include <variant>
 #include <vector>
 
-#include "sqsgen/core/helpers.h"
 #include "sqsgen/io/config/shared.h"
 #include "sqsgen/io/parsing.h"
 #include "sqsgen/types.h"
