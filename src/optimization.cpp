@@ -1,8 +1,9 @@
 //
 // Created by Dominik Gehringer on 18.03.25.
 //
-
 #include "sqsgen/optimization.h"
+
+#include <ranges>
 
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/numeric.h"
@@ -16,7 +17,7 @@ namespace sqsgen::optimization {
                                                    shell_weights_t<T> const& weights,
                                                    std::size_t num_species) {
     auto w(pair_weights);
-    auto shells_rmap = index_map<std::size_t>(weights | views::elements<0>);
+    auto shells_rmap = index_map<std::size_t>(weights | std::ranges::views::elements<0>);
     for (auto s = 0; s < weights.size(); ++s) {
       auto w_s = weights.at(shells_rmap.at(s));
       for (auto xi = 0; xi < num_species; ++xi)
@@ -49,7 +50,8 @@ namespace sqsgen::optimization {
     auto [sorted, sort_order] = structure.sorted_with_indices(
         [&](auto&& a, auto&& b) { return sublattice_index(a) < sublattice_index(b); });
 
-    auto sublattice_indices = as<std::vector>{}(sort_order | views::transform(sublattice_index));
+    auto sublattice_indices
+        = as<std::vector>{}(sort_order | std::ranges::views::transform(sublattice_index));
 
     assert(ranges::all_of(range(num_atoms - 1), [&](auto&& i) {
       return sublattice_indices[i] <= sublattice_indices[i + 1];
