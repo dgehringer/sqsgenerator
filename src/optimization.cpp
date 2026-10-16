@@ -10,13 +10,11 @@
 namespace sqsgen::optimization {
 
   namespace core = sqsgen::core;
-  namespace ranges = std::ranges;
-  namespace views = ranges::views;
+  using namespace core::helpers;
 
   template <class T> cube_t<T> scaled_pair_weights(cube_t<T> const& pair_weights,
                                                    shell_weights_t<T> const& weights,
                                                    std::size_t num_species) {
-    using namespace core::helpers;
     auto w(pair_weights);
     auto shells_rmap = index_map<std::size_t>(weights | views::elements<0>);
     for (auto s = 0; s < weights.size(); ++s) {
