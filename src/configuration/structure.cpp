@@ -24,7 +24,7 @@ namespace sqsgen::configuration {
     return {key, err.code, err.msg};
   }
 
-  result_t<configuration_t> validate_ordinals(std::vector<int> const& ordinals, auto num_sites) {
+  result_t<configuration_t> validate_ordinals(const std::vector<int>& ordinals, auto num_sites) {
     if (ordinals.size() != num_sites)
       return std::unexpected(configuration_error{
           "structure.species", error_code::invalid_size,
@@ -45,7 +45,8 @@ namespace sqsgen::configuration {
     return conf;
   }
 
-  result_t<configuration_t> validate_symbols(std::vector<std::string>&& symbols, auto num_sites) {
+  result_t<configuration_t> validate_symbols(const std::vector<std::string>& symbols,
+                                             auto num_sites) {
     if (symbols.size() != num_sites)
       return std::unexpected(configuration_error{
           "structure.species", error_code::invalid_size,
@@ -65,11 +66,11 @@ namespace sqsgen::configuration {
   }
 
   result_t<configuration_t> validate_species(
-      std::variant<std::vector<std::string>, std::vector<int>> const& species, auto num_sites) {
-    return std::visit(helpers::overloaded{[&](std::vector<std::string> const& species) {
+      const std::variant<std::vector<std::string>, std::vector<int>>& species, auto num_sites) {
+    return std::visit(helpers::overloaded{[&](const std::vector<std::string>& species) {
                                             return validate_symbols(species, num_sites);
                                           },
-                                          [&](std::vector<int> const& species) {
+                                          [&](const std::vector<int>& species) {
                                             return validate_ordinals(species, num_sites);
                                           }},
                       species);
@@ -77,7 +78,7 @@ namespace sqsgen::configuration {
 
   result_t<std::array<int, 3>> validate_supercell(std::array<int, 3> const& supercell) {
     for (auto amount : supercell)
-      if (amount < 0)
+      if (amount <= 0)
         return std::unexpected(
             configuration_error{"structure.supercell", error_code::out_of_range,
                                 "A supercell replication factor must be positive"});
@@ -91,7 +92,7 @@ namespace sqsgen::configuration {
         return configuration_error{"structure.lattice", error_code::bad_argument, err.message};
       });
     if (lattice->rows() == 3 && lattice->cols() == 3)
-      return *lattice;
+      return std::move(lattice).value();
     else
       return std::unexpected(configuration_error{"structure.lattice", error_code::invalid_size,
                                                  "A lattice must be a 3x3 matrix"});
@@ -103,8 +104,8 @@ namespace sqsgen::configuration {
       return coords.transform_error([](auto err) {
         return configuration_error{"structure.coords", error_code::bad_argument, err.message};
       });
-    if (coords->rows() > 1)
-      return *coords;
+    if (coords->rows() >= 1)
+      return std::move(coords).value();
     else
       return std::unexpected(configuration_error{"structure.coords", error_code::invalid_size,
                                                  "A structure must contain at least one site"});
@@ -158,7 +159,7 @@ namespace sqsgen::configuration {
     auto content = read_file(path);
     if (!content) return std::unexpected(std::move(content).error());
     if (format == io::structure_format::pymatgen)
-      return content.and_then([](auto&& data) {
+      return content.and_then([](auto&& data) -> result_t<core::structure<T>> {
         auto structure = io::structure_adapter<T, io::structure_format::pymatgen>::read(
             std::move(data), io::wire_format::json);
         if (!structure)
@@ -166,7 +167,7 @@ namespace sqsgen::configuration {
         return std::move(structure).value();
       });
     if (format == io::structure_format::sqsgen)
-      return content.and_then([](auto&& data) {
+      return content.and_then([](auto&& data) -> result_t<core::structure<T>> {
         auto structure = io::structure_adapter<T, io::structure_format::sqsgen>::read(
             std::move(data), io::wire_format::json);
         if (!structure)
@@ -175,7 +176,7 @@ namespace sqsgen::configuration {
       });
 
     if (format == io::structure_format::poscar)
-      return content.and_then([](auto&& data) {
+      return content.and_then([](auto&& data) -> result_t<core::structure<T>> {
         auto structure
             = io::structure_adapter<T, io::structure_format::poscar>::read(std::move(data));
         if (!structure)
@@ -231,9 +232,9 @@ namespace sqsgen::configuration {
         input);
   }
 
-  template std::expected<structure_config<float>, configuration_error> validate_structure_input(
+  template <> std::expected<structure_config<float>, configuration_error> validate_structure_input(
       const structure_input<float>& input);
-  template std::expected<structure_config<double>, configuration_error> validate_structure_input(
+  template <> std::expected<structure_config<double>, configuration_error> validate_structure_input(
       const structure_input<double>& input);
 
 };  // namespace sqsgen::configuration
