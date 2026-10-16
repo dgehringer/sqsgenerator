@@ -49,7 +49,7 @@ namespace sqsgen::io {
   }
 
   template <class T> std::string structure_adapter<T, structure_format::sqsgen>::format(
-      core::structure<T> const& structure, wire_format format) {
+      const core::structure<T>& structure, wire_format format) {
     auto data = write_any(
         detail::structure_dto<T>{
             structure.species, core::tensor_as<core::packed_tensor<T, 2>>(structure.lattice),

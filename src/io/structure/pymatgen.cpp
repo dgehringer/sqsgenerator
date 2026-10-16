@@ -116,7 +116,7 @@ namespace sqsgen::io {
   }
 
   template <class T> std::string structure_adapter<T, structure_format::pymatgen>::format(
-      core::structure<T> const& structure, wire_format format) {
+      const core::structure<T>& structure, wire_format format) {
     auto data = write_any(to_pymatgen(structure), format);
     if (!data) throw std::runtime_error{"failed to serialize strucure"};
     return std::move(*data);

@@ -89,7 +89,7 @@ namespace sqsgen::io {
   }
 
   template <class T> std::string structure_adapter<T, structure_format::poscar>::format(
-      core::structure<T> const& structure) {
+      const core::structure<T>& structure) {
     auto filtered = structure.without_vacancies();
     // one coordinate line holds about 72 characters, to be safe we multiply by two
     constexpr absl::string_view row_format = "%23.16f %23.16f %23.16f";

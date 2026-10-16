@@ -1,8 +1,10 @@
 //
 // Created by Dominik Gehringer on 20.06.26.
 //
-
 #include "sqsgen/core/permutation.h"
+
+#include <algorithm>
+#include <ranges>
 
 #include "sqsgen/core/helpers/as.h"
 #include "sqsgen/core/helpers/count.h"
@@ -10,10 +12,22 @@
 #include "sqsgen/core/helpers/numeric.h"
 
 namespace sqsgen::core {
-  namespace ranges = std::ranges;
-  namespace views = ranges::views;
 
   counter<specie_t> count_species(configuration_t const& c) { return helpers::count(c); }
+
+  template <typename Out, typename In>
+    requires std::is_convertible_v<In, Out>
+  Out factorial(In n) {
+    if (n < 0) throw std::invalid_argument("n must be positive");
+    if (n == 1) return 1;
+    Out result = 1;
+    In i = 1;
+    while (i <= n) {
+      result *= i;
+      ++i;
+    }
+    return result;
+  }
 
   template <ranges::input_range R, class T = ranges::range_value_t<R>>
   rank_t num_permutations_impl(R&& freqs) {
@@ -25,7 +39,7 @@ namespace sqsgen::core {
   }
 
   static rank_t num_permutations(counter<specie_t> const& hist) {
-    return num_permutations_impl(views::values(hist));
+    return num_permutations_impl(std::ranges::views::values(hist));
   }
 
   static rank_t num_permutations(configuration_t const& conf) {
@@ -60,7 +74,7 @@ namespace sqsgen::core {
     auto k{0};
     auto num_atoms{configuration.size()};
     auto num_species{freqs.size()};
-    auto hist = helpers::as<std::vector>{}(views::values(freqs));
+    auto hist = helpers::as<std::vector>{}(std::ranges::views::values(freqs));
 
     for (auto i = 0; i < num_atoms; i++) {
       for (auto j = 0; j < num_species; j++) {

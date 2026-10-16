@@ -48,7 +48,7 @@ namespace sqsgen::core::helpers {
 
   inline constexpr fold_left_first_fn fold_left_first;
 
-  template <ranges::range R, class T = ranges::range_value_t<R>> T sum(R&& r) {
+  template <std::ranges::range R, class T = std::ranges::range_value_t<R>> T sum(R&& r) {
     return fold_left(std::forward<R>(r), T(0), std::plus<T>{});
   }
 };  // namespace sqsgen::core::helpers

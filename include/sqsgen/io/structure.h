@@ -57,7 +57,7 @@ namespace sqsgen::io {
   template <class, structure_format> struct structure_adapter {};
 
   template <class T> struct structure_adapter<T, structure_format::pymatgen> {
-    static std::string format(core::structure<T> const& structure,
+    static std::string format(const core::structure<T>& structure,
                               wire_format format = wire_format::json);
 
     static std::expected<core::structure<T>, parser_error> read(std::string_view data,
@@ -66,7 +66,7 @@ namespace sqsgen::io {
   };
 
   template <class T> struct structure_adapter<T, structure_format::sqsgen> {
-    static std::string format(core::structure<T> const& structure,
+    static std::string format(const core::structure<T>& structure,
                               wire_format format = wire_format::json);
 
     static std::expected<core::structure<T>, parser_error> read(std::string_view data,
@@ -75,8 +75,12 @@ namespace sqsgen::io {
   };
 
   template <class T> struct structure_adapter<T, structure_format::poscar> {
-    static std::string format(core::structure<T> const& structure);
-    static std::expected<core::structure<T>, parser_error> read(std::string const& input);
+    static std::string format(const core::structure<T>& structure);
+    static std::expected<core::structure<T>, parser_error> read(const std::string& input);
+  };
+
+  template <class T> struct structure_adapter<T, structure_format::cif> {
+    static std::string format(const core::structure<T>& structure);
   };
 
   /*template <class T>
