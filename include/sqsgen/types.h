@@ -6,6 +6,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <expected>
 #include <map>
+#include <type_traits>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <utility>
 #include <vector>
@@ -84,6 +85,9 @@ namespace sqsgen {
     parsing,
     type_error
   };
+
+  template <class T, sublattice_mode Mode> using sublattice_mode_nesting
+      = std::conditional_t<Mode == sublattice_mode::interact, T, std::vector<T>>;
 
   namespace configuration {
 

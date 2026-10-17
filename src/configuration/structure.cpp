@@ -4,6 +4,7 @@
 
 #include <array>
 #include <expected>
+#include <fstream>
 #include <string>
 #include <variant>
 
@@ -76,12 +77,14 @@ namespace sqsgen::configuration {
                       species);
   }
 
-  result_t<std::array<int, 3>> validate_supercell(std::array<int, 3> const& supercell) {
-    for (auto amount : supercell)
-      if (amount <= 0)
-        return std::unexpected(
-            configuration_error{"structure.supercell", error_code::out_of_range,
-                                "A supercell replication factor must be positive"});
+  result_t<std::optional<std::array<int, 3>>> validate_supercell(
+      std::optional<std::array<int, 3>> const& supercell) {
+    if (supercell.has_value())
+      for (auto amount : supercell.value())
+        if (amount <= 0)
+          return std::unexpected(
+              configuration_error{"structure.supercell", error_code::out_of_range,
+                                  "A supercell replication factor must be positive"});
     return supercell;
   }
 

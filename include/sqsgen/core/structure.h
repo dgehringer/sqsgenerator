@@ -20,8 +20,12 @@ namespace sqsgen::core {
   template <class T>
   matrix_t<T> distance_matrix(const lattice_t<T>& lattice, const coords_t<T>& frac_coords);
 
-  template <class T> shell_matrix_t shell_matrix(matrix_t<T> const& distance_matrix,
-                                                 std::vector<T> const& dists, T atol, T rtol);
+  template <class T> shell_matrix_t shell_matrix(const matrix_t<T>& distance_matrix,
+                                                 const std::vector<T>& dists, T atol, T rtol);
+
+  template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
+                                                  const shell_weights_t<T>& weights,
+                                                  const configuration_t& configuration);
 
   struct atom_pair {
     std::size_t i;
@@ -50,11 +54,8 @@ namespace sqsgen::core {
       };
     };
 
-    inline std::size_t compute_num_species(configuration_t const& configuration);
+    inline std::size_t compute_num_species(const configuration_t& configuration);
 
-    template <class T> cube_t<T> compute_prefactors(shell_matrix_t const& shell_matrix,
-                                                    shell_weights_t<T> const& weights,
-                                                    configuration_t const& configuration);
   }  // namespace detail
 
   template <class T> class structure {
@@ -157,6 +158,19 @@ namespace sqsgen::core {
 
     [[nodiscard]] rank_t rank() const;
   };
+
+  template <class T> std::vector<T> distances_naive(const structure<T>& structure,
+                                                    T atol = std::numeric_limits<T>::epsilon(),
+                                                    T rtol = 1e-9);
+
+  template <class T>
+  std::vector<T> distances_histogram(const structure<T>& structure, T bin_width, T peak_isolation);
+  template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
+                                                  const shell_weights_t<T>& weights,
+                                                  const configuration_t& configuration);
+  template <class T> cube_t<T> compute_prefactors(const structure<T>& structure,
+                                                  const std::vector<T>& shell_radii,
+                                                  const shell_weights_t<T>& weights);
 
   template <typename T> using site_t = sqsgen::core::detail::site<T>;
 

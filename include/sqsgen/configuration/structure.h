@@ -7,7 +7,7 @@
 
 #include <cstddef>
 #include <expected>
-#include <fstream>
+#include <optional>
 #include <variant>
 #include <vector>
 
@@ -28,13 +28,13 @@ namespace sqsgen::configuration {
     core::nested_t<T, 2> coords;
     bool frac = true;
     std::variant<std::vector<std::string>, std::vector<int>> species;
-    std::array<int, 3> supercell{1, 1, 1};
+    std::optional<std::array<int, 3>> supercell;
   };
 
   struct structure_file_input {
     std::optional<sqsgen::io::structure_format> format;
     std::string path;
-    std::array<int, 3> supercell{1, 1, 1};
+    std::optional<std::array<int, 3>> supercell;
   };
 
   template <class T> using structure_input

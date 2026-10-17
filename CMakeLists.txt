@@ -40,6 +40,9 @@ if (BUILD_WASM)
     src/io/structure/pymatgen.cpp
     src/io/structure/detail.cpp
     src/io/structure/vasp.cpp
+    src/io/structure/cif.cpp
+    src/io/structure/pdb.cpp
+    src/io/structure/ase.cpp
     src/io/glaze.cpp
 
   )
