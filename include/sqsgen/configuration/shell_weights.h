@@ -2,19 +2,33 @@
 // Created by Dominik Gehringer on 02.12.24.
 //
 
-#ifndef SQSGEN_IO_CONFIG_SHELL_WEIGHTS_H
-#define SQSGEN_IO_CONFIG_SHELL_WEIGHTS_H
+#ifndef SQSGEN_CONFIGURATION_SHELL_WEIGHTS_H
+#define SQSGEN_CONFIGURATION_SHELL_WEIGHTS_H
 
-#ifdef WITH_PYTHON
-#  include <pybind11/pybind11.h>
-#endif
-#define NLOHMANN_JSON_ABI_TAG v3_11_3
-#include <nlohmann/json.hpp>
+#include <map>
+#include <string>
 
-#include "sqsgen/core/helpers.h"
-#include "sqsgen/io/config/shared.h"
-#include "sqsgen/io/parsing.h"
+#include "sqsgen/types.h"
 
+namespace sqsgen::configuration {
+
+  template <class T> using shell_weight_spec = std::map<std::string, T>;
+
+  template <class T, sublattice_mode Mode> using shell_weights_input
+      = std::optional<sublattice_mode_nesting<shell_weight_spec<T>, Mode>>;
+
+  template <class T, sublattice_mode Mode> using shell_weights
+      = sublattice_mode_nesting<shell_weights_t<T>, Mode>;
+
+  template <class T, sublattice_mode Mode> using shell_radii
+      = sublattice_mode_nesting<std::vector<T>, Mode>;
+
+  template <class T, sublattice_mode Mode>
+  result_t<shell_weights<T, Mode>> validate_shell_weight_input(
+      const shell_weights_input<T, Mode>&, const shell_radii<T, Mode>& shell_radii);
+
+}  // namespace sqsgen::configuration
+/*
 namespace sqsgen::io::config {
 
   using namespace sqsgen::core::helpers;
@@ -119,5 +133,5 @@ namespace sqsgen::io::config {
   }
 
 }  // namespace sqsgen::io::config
-
-#endif  // SQSGEN_IO_CONFIG_SHELL_WEIGHTS_H
+*/
+#endif  // SQSGEN_CONFIGURATION_SHELL_WEIGHTS_H

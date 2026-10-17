@@ -20,7 +20,7 @@ namespace sqsgen::configuration {
 
   namespace helpers = sqsgen::core::helpers;
 
-  template <class T> T round_digits(double value, int n) {
+  template <class T> T round_digits(T value, int n) {
     T multiplier = std::pow(10.0, n);
     return std::round(value * multiplier) / multiplier;
   }
@@ -50,6 +50,7 @@ namespace sqsgen::configuration {
 
     std::vector<T> out;
     out.reserve(unique_radii.size());
+    out.push_back(unique_radii.front());
     T prev = unique_radii.front();
     for (std::size_t index = 1; index < unique_radii.size(); ++index) {
       auto radius = unique_radii[index];
@@ -59,9 +60,9 @@ namespace sqsgen::configuration {
             helpers::format_string("two shells are too close (not even %f apart) or the second one "
                                    "is smaller than the first. Those are %f and %f",
                                    atol, prev, radius)});
-        out.push_back(radius);
-        prev = radius;
       }
+      out.push_back(radius);
+      prev = radius;
     }
     return out;
   };
@@ -84,8 +85,7 @@ namespace sqsgen::configuration {
           [&](const std::vector<T>& radii) -> result_t<shell_radii<T, sublattice_mode::interact>> {
             return std::move(validate_radii(radii, atol));
           }});
-    }
-    if constexpr (Mode == sublattice_mode::split) {
+    } else if constexpr (Mode == sublattice_mode::split) {
       using output_t = shell_radii<T, Mode>;
       return std::visit(helpers::overloaded{
           [&](shell_radii_detection mode) -> result_t<output_t> {
@@ -93,15 +93,16 @@ namespace sqsgen::configuration {
               return structure | std::ranges::views::transform([&](const auto& structure) {
                        return core::distances_naive(structure, atol, rtol);
                      })
-                     | std::ranges::to<output_t>;
+                     | std::ranges::to<output_t>();
             }
             if (mode == shell_radii_detection::peak) {
               return structure | std::ranges::views::transform([&](const auto& structure) {
                        return core::distances_histogram(structure, bin_width, peak_isolation);
                      })
-                     | std::ranges::to<output_t>;
+                     | std::ranges::to<output_t>();
             }
-            throw std::invalid_argument("Unknown shell detection mode");
+            return std::unexpected(configuration_error{"shell_radii", error_code::unknown,
+                                                       "Unknown shell detection mode"});
           },
           [&](const shell_radii_spec<T, Mode>& radii) -> result_t<output_t> {
             if (radii.size() != structure.size()) {
@@ -114,13 +115,15 @@ namespace sqsgen::configuration {
             output_t out;
             out.reserve(structure.size());
             for (const auto& r : radii) {
-              auto validated = validate_radii(r);
-              if (!validated) return std::move(validated).error();
+              auto validated = validate_radii(r, atol);
+              if (!validated) return std::unexpected(std::move(validated).error());
               out.push_back(std::move(validated).value());
             }
             return out;
           }});
-    }
+    } else
+      static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
+                    "unhandled sublattice_mode");
   }
 
   template <> std::expected<shell_radii<float, sublattice_mode::interact>, configuration_error>

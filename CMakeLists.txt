@@ -35,6 +35,7 @@ if (BUILD_WASM)
     src/configuration/structure.cpp
     src/configuration/composition.cpp
     src/configuration/shell_radii.cpp
+    src/configuration/shell_weights.cpp
     src/core/permutation.cpp
     src/core/structure.cpp
     src/io/structure/sqsgen.cpp
