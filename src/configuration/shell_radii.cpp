@@ -123,4 +123,28 @@ namespace sqsgen::configuration {
     }
   }
 
+  template <> std::expected<shell_radii<float, sublattice_mode::interact>, configuration_error>
+  validate_shell_radii_input<float, sublattice_mode::interact>(
+      const shell_radii_input<float, sublattice_mode::interact>& input,
+      const structure_input<float, sublattice_mode::interact>& structure, float atol, float rtol,
+      float bin_width, float peak_isolation);
+
+  template <> std::expected<shell_radii<float, sublattice_mode::split>, configuration_error>
+  validate_shell_radii_input<float, sublattice_mode::split>(
+      const shell_radii_input<float, sublattice_mode::split>& input,
+      const structure_input<float, sublattice_mode::split>& structure, float atol, float rtol,
+      float bin_width, float peak_isolation);
+
+  template <> std::expected<shell_radii<double, sublattice_mode::interact>, configuration_error>
+  validate_shell_radii_input<double, sublattice_mode::interact>(
+      const shell_radii_input<double, sublattice_mode::interact>& input,
+      const structure_input<double, sublattice_mode::interact>& structure, double atol, double rtol,
+      double bin_width, double peak_isolation);
+
+  template <> std::expected<shell_radii<double, sublattice_mode::split>, configuration_error>
+  validate_shell_radii_input<double, sublattice_mode::split>(
+      const shell_radii_input<double, sublattice_mode::split>& input,
+      const structure_input<double, sublattice_mode::split>& structure, double atol, double rtol,
+      double bin_width, double peak_isolation);
+
 };  // namespace sqsgen::configuration
