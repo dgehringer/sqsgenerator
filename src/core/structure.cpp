@@ -243,8 +243,8 @@ namespace sqsgen::core {
   }
 
   template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
-                                                  shell_weights_t<T> const& weights,
-                                                  configuration_t const& configuration) {
+                                                  const shell_weights_t<T>& weights,
+                                                  const configuration_t& configuration) {
     using namespace helpers;
     if (weights.empty()) throw std::out_of_range("no coordination shells selected");
     auto neighbors = count(shell_matrix.reshaped());

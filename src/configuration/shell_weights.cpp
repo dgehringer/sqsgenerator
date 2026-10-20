@@ -5,7 +5,6 @@
 #include <map>
 #include <optional>
 #include <string>
-#include <vector>
 
 #include "sqsgen/core/helpers/string.h"
 #include "sqsgen/types.h"
@@ -78,21 +77,30 @@ namespace sqsgen::configuration {
         return parse_shell_weights(input.value(), num_shells);
     }
     if constexpr (Mode == sublattice_mode::split) {
-      if (input.size() != shell_radii.size()) {
-        return std::unexpected(configuration_error{
-            "shell_radii", error_code::invalid_size,
-            helpers::format_string("the number of shell weight definitions (%zu) does not match "
-                                   "the number of sublattices (%zu).",
-                                   input.size(), shell_radii.size())});
-      }
-      auto num_sublattices = input.size();
+      auto num_sublattices = shell_radii.size();
       shell_weights<T, Mode> out;
       out.reserve(num_sublattices);
-      for (std::size_t index = 0; index < num_sublattices; ++index) {
-        auto num_shells = shell_radii[index].size() - 1;
-        auto validated = parse_shell_weights(input[index], num_shells, std::make_optional(index));
-        if (!validated) return std::unexpected(std::move(validated).error());
-        out.push_back(std::move(validated).value());
+      if (!input.has_value()) {
+        if (input.size() != shell_radii.size()) {
+          return std::unexpected(configuration_error{
+              "shell_radii", error_code::invalid_size,
+              helpers::format_string("the number of shell weight definitions (%zu) does not match "
+                                     "the number of sublattices (%zu).",
+                                     input.size(), shell_radii.size())});
+        }
+        for (const auto& shell_radii_vector : shell_radii) {
+          auto num_shells = shell_radii[index].size() - 1;
+          out.push_back(std::move(default_shell_weights(num_shells)));
+        }
+
+      } else {
+        for (std::size_t index = 0; index < num_sublattices; ++index) {
+          auto num_shells = shell_radii[index].size() - 1;
+          auto validated
+              = parse_shell_weights(input.value()[index], num_shells, std::make_optional(index));
+          if (!validated) return std::unexpected(std::move(validated).error());
+          out.push_back(std::move(validated).value());
+        }
       }
       return out;
     } else

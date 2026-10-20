@@ -32,6 +32,7 @@ if (BUILD_WASM)
   add_executable(wasm
     wasm/sqsgen.cpp
     src/optimization.cpp
+    src/configuration/arrays.cpp
     src/configuration/structure.cpp
     src/configuration/composition.cpp
     src/configuration/shell_radii.cpp
