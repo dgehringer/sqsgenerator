@@ -116,11 +116,27 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode, template <class, sublattice_mode> class Out,
             template <class, sublattice_mode> class In,
             DefaultFn<T, Out<T, sublattice_mode::interact>> Fn>
-  result_t<Out<T, Mode>> validate_array(const std::string& key, const In<T, Mode>& input,
-                                        Fn&& default_fn, const structure_input<T, Mode>& structure,
-                                        const shell_weights<T, Mode>& weights,
-                                        const shell_radii<T, Mode>& radii) {
+  result_t<Out<T, Mode>> validate_array_input(const std::string& key, const In<T, Mode>& input,
+                                              Fn&& default_fn,
+                                              const structure_input<T, Mode>& structure,
+                                              const shell_weights<T, Mode>& weights,
+                                              const shell_radii<T, Mode>& radii) {
     if (input.has_value()) {
+      if constexpr (Mode == sublattice_mode::interact) {
+        return validate_array(key, input.value(), radii.size() - 1, structure.num_species);
+      } else if constexpr (Mode == sublattice_mode::split) {
+        const auto data = input.value();
+        if (structure.size() != data.size())
+          return std::unexpected(configuration_error{
+              key, error_code::invalid_size,
+              helpers::format_string("the number of %s arrays (%zu) does not match "
+                                     "the number of sublattices (%zu).",
+                                     key, data.size(), structure.size())});
+        Out<T, Mode> out;
+        out.reserve(structure.size());
+        for (const auto& raw_input : input) } else
+        static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
+                      "unhandled sublattice_mode");
     } else {
       if constexpr (Mode == sublattice_mode::interact) {
         return default_fn(structure, weights, radii);
@@ -128,10 +144,10 @@ namespace sqsgen::configuration {
         assert(structure.size() == weights.size() && structure.size() == radii.size()
                  && "validate_array split: per-sublattice vectors must be equal length "
                     "(invariant established upstream)");
-        Out<T, sublattice_mode::split> out;
+        Out<T, Mode> out;
         out.reserve(structure.size());
         for (auto&& [s, w, r] : std::views::zip(structure, weights, radii)) {
-          auto res = default_fn(s, w, r);  // the interact fn, per sublattice
+          auto res = default_fn(s, w, r);
           if (!res) return std::unexpected(std::move(res).error());
           out.push_back(std::move(res).value());
         }

@@ -1,6 +1,7 @@
 
 #include "sqsgen/configuration/shell_weights.h"
 
+#include <cassert>
 #include <cstddef>
 #include <map>
 #include <optional>
@@ -15,8 +16,9 @@ namespace sqsgen::configuration {
 
   result_t<std::size_t> parse_shell(const std::string& key,
                                     std::optional<std::size_t> index = std::nullopt) {
-    auto path = index.has_value() ? helpers::format_string("shell_weights.%zu", index.value())
-                                  : "shell_weights";
+    std::string path = index.has_value()
+                           ? helpers::format_string("shell_weights.%zu", index.value())
+                           : "shell_weights";
     try {
       return static_cast<std::size_t>(std::stoul(key));
     } catch (std::invalid_argument const& e) {
@@ -35,8 +37,9 @@ namespace sqsgen::configuration {
                                                    std::size_t num_shells,
                                                    std::optional<std::size_t> index
                                                    = std::nullopt) {
-    auto path = index.has_value() ? helpers::format_string("shell_weights.%zu", index.value())
-                                  : "shell_weights";
+    std::string path = index.has_value()
+                           ? helpers::format_string("shell_weights.%zu", index.value())
+                           : "shell_weights";
     if (weight_input.empty())
       return std::unexpected(
           configuration_error{path, error_code::invalid_size, "shell weights cannot be empty"});
@@ -72,33 +75,34 @@ namespace sqsgen::configuration {
     if constexpr (Mode == sublattice_mode::interact) {
       auto num_shells = shell_radii.size() - 1;
       if (!input.has_value())
-        return default_shell_weights(num_shells);
+        return default_shell_weights<T>(num_shells);
       else
         return parse_shell_weights(input.value(), num_shells);
     } else if constexpr (Mode == sublattice_mode::split) {
       auto num_sublattices = shell_radii.size();
       shell_weights<T, Mode> out;
       out.reserve(num_sublattices);
-      if (!input.has_value()) {
-        if (input.size() != shell_radii.size()) {
+      if (input.has_value()) {
+        const auto& data = input.value();
+        if (data.size() != shell_radii.size()) {
           return std::unexpected(configuration_error{
-              "shell_radii", error_code::invalid_size,
+              "shell_weights", error_code::invalid_size,
               helpers::format_string("the number of shell weight definitions (%zu) does not match "
                                      "the number of sublattices (%zu).",
-                                     input.size(), shell_radii.size())});
+                                     data.size(), shell_radii.size())});
         }
-        for (const auto& shell_radii_vector : shell_radii) {
-          auto num_shells = shell_radii[index].size() - 1;
-          out.push_back(std::move(default_shell_weights(num_shells)));
-        }
-
-      } else {
         for (std::size_t index = 0; index < num_sublattices; ++index) {
           auto num_shells = shell_radii[index].size() - 1;
           auto validated
               = parse_shell_weights(input.value()[index], num_shells, std::make_optional(index));
           if (!validated) return std::unexpected(std::move(validated).error());
           out.push_back(std::move(validated).value());
+        }
+      } else {
+        for (const auto& shell_radii_vector : shell_radii) {
+          assert(shell_radii_vector.size() >= 1);
+          auto num_shells = shell_radii_vector.size() - 1;
+          out.push_back(default_shell_weights<T>(num_shells));
         }
       }
       return out;
