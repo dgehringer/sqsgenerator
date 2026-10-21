@@ -43,18 +43,19 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode>
   result_t<pair_weights<T, Mode>> validate_pair_weights_input(const pair_weights_input<T, Mode>&,
                                                               const structure_input<T, Mode>&,
-                                                              const shell_weights<T, Mode>&);
+                                                              const shell_weights<T, Mode>&,
+                                                              const shell_radii<T, Mode>&);
 
   template <class T, sublattice_mode Mode>
   result_t<pair_weights<T, Mode>> validate_target_objective_input(
       const target_objective_input<T, Mode>&, const structure_input<T, Mode>&,
-      const shell_weights<T, Mode>&);
+      const shell_weights<T, Mode>&, const shell_radii<T, Mode>&);
 
   template <class T, sublattice_mode Mode>
-  result_t<pair_weights<T, Mode>> validate_prefactors_input(const pair_weights_input<T, Mode>&,
-                                                            const structure_input<T, Mode>&,
-                                                            const shell_weights<T, Mode>&,
-                                                            const shell_radii<T, Mode>&);
+  result_t<prefactors<T, Mode>> validate_prefactors_input(const prefactors_input<T, Mode>&,
+                                                          const structure_input<T, Mode>&,
+                                                          const shell_weights<T, Mode>&,
+                                                          const shell_radii<T, Mode>&);
 
 };  // namespace sqsgen::configuration
 

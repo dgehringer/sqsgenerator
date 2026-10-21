@@ -13,11 +13,6 @@
 
 namespace sqsgen::configuration {
 
-  template <class T> static constexpr T atol_default = 1.0e-3;
-  template <class T> static constexpr T rtol_default = 1.0e-5;
-  template <class T> static constexpr T bin_width_default = 0.05;       // Angstrom
-  template <class T> static constexpr T peak_isolation_default = 0.25;  // Angstrom
-
   template <class T, sublattice_mode Mode> using structure_input
       = sublattice_mode_nesting<core::structure<T>, Mode>;
 

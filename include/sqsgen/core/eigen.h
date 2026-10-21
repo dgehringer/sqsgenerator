@@ -202,6 +202,16 @@ namespace sqsgen::core {
     return out;
   }
 
+  template <class T>
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> tensor_to_matrix(const Eigen::Tensor<T, 2>& t) {
+    const Eigen::Index rows = t.dimension(0);
+    const Eigen::Index cols = t.dimension(1);
+    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> out(rows, cols);
+    for (Eigen::Index i = 0; i < rows; ++i)
+      for (Eigen::Index j = 0; j < cols; ++j) out(i, j) = t(i, j);
+    return out;
+  }
+
   template <class Target, class T, int N> Target tensor_as(const Eigen::Tensor<T, N>& t) {
     return eigen::detail::tensor_converter<Target>::to(t);
   }
@@ -225,6 +235,11 @@ namespace sqsgen::core {
     return eigen::detail::tensor_converter<packed_tensor<T, 2>>::from(p).and_then(tensor_to_coords);
   }
 
+  template <class T>
+  std::expected<matrix_t<T>, tensor_shape_error> matrix_from(const packed_tensor<T, 2>& p) {
+    return eigen::detail::tensor_converter<packed_tensor<T, 2>>::from(p).and_then(tensor_to_matrix);
+  }
+
   template <class T, int N>
   std::expected<Eigen::Tensor<T, N>, tensor_shape_error> tensor_from(const packed_tensor<T, N>& p) {
     return eigen::detail::tensor_converter<packed_tensor<T, N>>::from(p);
@@ -245,6 +260,11 @@ namespace sqsgen::core {
   template <class T>
   std::expected<lattice_t<T>, tensor_shape_error> coords_from(const nested_t<T, 2>& p) {
     return eigen::detail::tensor_converter<nested_tensor<T, 2>>::from(p).and_then(tensor_to_coords);
+  }
+
+  template <class T>
+  std::expected<matrix_t<T>, tensor_shape_error> matrix_from(const nested_t<T, 2>& p) {
+    return eigen::detail::tensor_converter<nested_tensor<T, 2>>::from(p).and_then(tensor_to_matrix);
   }
 
 }  // namespace sqsgen::core

@@ -2,9 +2,11 @@
 #include "sqsgen/configuration/arrays.h"
 
 #include <Eigen/Core>
+#include <cassert>
 #include <concepts>
 #include <cstddef>
 #include <expected>
+#include <ranges>
 #include <string>
 #include <type_traits>
 #include <variant>
@@ -38,7 +40,7 @@ namespace sqsgen::configuration {
     return {key, map_error_kind(err.which), err.message};
   }
 
-  template <class T> cube_t<T> stack_matrix(matrix_t<T>&& m, std::size_t num_shells) {
+  template <class T> cube_t<T> stack_matrix(const matrix_t<T>& m, std::size_t num_shells) {
     cube_t<T> result(num_shells, m.rows(), m.cols());
     for (Eigen::Index s = 0; s < static_cast<Eigen::Index>(num_shells); ++s)
       for (Eigen::Index xi = 0; xi < m.rows(); ++xi)
@@ -88,27 +90,47 @@ namespace sqsgen::configuration {
                                      std::optional<std::size_t> index = std::nullopt) {
     std::string path
         = index.has_value() ? helpers::format_string("%s.%zu", key, index.value()) : key;
-    return std::visit(helpers::overloaded{
-        [&](T scalar) -> result_t<cube_t<T>> {
-          return stack_scalar(scalar, num_shells, num_species);
-        },
-        [&](const core::nested_t<T, 2>& data) -> result_t<cube_t<T>> {
-          auto matrix = core::tensor_from(data);
-          if (!matrix) return std::unexpected(forward_error(path, std::move(matrix).error()));
-          return validate_matrix(key, matrix.value(), num_shells, num_species, index);
-        },
-        [&](const core::nested_t<T, 3>& data) -> result_t<cube_t<T>> {
-          auto tensor = core::tensor_from(data);
-          if (!tensor) return std::unexpected(forward_error(path, std::move(tensor).error()));
-          return validate_cube(key, tensor.value(), num_shells, num_species, index);
-        }});
+    return std::visit(
+        helpers::overloaded{
+            [&](T scalar) -> result_t<cube_t<T>> {
+              return stack_scalar(scalar, num_shells, num_species);
+            },
+            [&](const core::nested_t<T, 2>& data) -> result_t<cube_t<T>> {
+              auto matrix = core::matrix_from<T>(data);
+              if (!matrix) return std::unexpected(forward_error(path, std::move(matrix).error()));
+              return validate_matrix(key, matrix.value(), num_shells, num_species, index);
+            },
+            [&](const core::nested_t<T, 3>& data) -> result_t<cube_t<T>> {
+              auto tensor = core::tensor_from<T, 3>(data);
+              if (!tensor) return std::unexpected(forward_error(path, std::move(tensor).error()));
+              return validate_cube(key, tensor.value(), num_shells, num_species, index);
+            }},
+        array_spec);
   }
 
-  template <class T>
-  cube_t<T> default_pair_weights(std::size_t num_shells, std::size_t num_species) {
+  template <class T> result_t<cube_t<T>> default_pair_weights(
+      const structure_input<T, sublattice_mode::interact>& structure,
+      const shell_weights<T, sublattice_mode::interact>& weights,
+      const shell_radii<T, sublattice_mode::interact>&) {
+    Eigen::Index num_species = static_cast<Eigen::Index>(structure.num_species);
+    Eigen::Index num_shells = static_cast<Eigen::Index>(weights.size());
     return stack_matrix<T>(matrix_t<T>::Constant(num_species, num_species, 1.0)
                                - matrix_t<T>::Identity(num_species, num_species),
                            num_shells);
+  }
+
+  template <class T> result_t<cube_t<T>> default_target_objective(
+      const structure_input<T, sublattice_mode::interact>& structure,
+      const shell_weights<T, sublattice_mode::interact>& weights,
+      const shell_radii<T, sublattice_mode::interact>&) {
+    return stack_scalar<T>(T(0.0), weights.size(), structure.num_species);
+  }
+
+  template <class T> result_t<cube_t<T>> default_prefactors(
+      const structure_input<T, sublattice_mode::interact>& structure,
+      const shell_weights<T, sublattice_mode::interact>& weights,
+      const shell_radii<T, sublattice_mode::interact>& radii) {
+    return core::compute_prefactors(structure, radii, weights);
   }
 
   template <class Fn, class T, class Element>
@@ -164,51 +186,60 @@ namespace sqsgen::configuration {
           out.push_back(std::move(res).value());
         }
       }
+      return out;
     } else
       static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
                     "unhandled sublattice_mode");
   }
-}
 
-template <class T, sublattice_mode Mode>
-result_t<pair_weights<T, Mode>> validate_pair_weights_input(
-    const pair_weights_input<T, Mode>& input, const structure_input<T, Mode>& structure,
-    const shell_weights<T, Mode>& weights) {
-  if (!input.has_value()) {
-    if constexpr (Mode == sublattice_mode::interact) {
-      return default_pair_weights<T>(weights.size(), structure.num_species);
-    }  // namespace sqsgen::configuration
-    else if constexpr (Mode == sublattice_mode::split) {
-      assert(weights.size() == structure.size());
-      return std::ranges::views::zip(weights, structure)
-             | std::ranges::views::transform([](const auto& weights_, const auto& structure_) {
-                 return default_pair_weights<T>(weights_.size(), structure_.num_species);
-               })
-             | std::ranges::to<pair_weights<T, Mode>>();
-    } else
-      static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
-                    "unhandled sublattice_mode");
-  }
-};
+  template <class T, sublattice_mode Mode>
+  result_t<pair_weights<T, Mode>> validate_pair_weights_input(
+      const pair_weights_input<T, Mode>& input, const structure_input<T, Mode>& structure,
+      const shell_weights<T, Mode>& weights, const shell_radii<T, Mode>& radii) {
+    return validate_array_input<T, Mode, pair_weights, pair_weights_input>(
+        "pair_weights", input, default_pair_weights<T>, structure, weights, radii);
+  };
 
-template <class T, sublattice_mode Mode>
-result_t<target_objective<T, Mode>> validate_target_objective_input(
-    const target_objective_input<T, Mode>& input, const structure_input<T, Mode>& structure,
-    const shell_weights<T, Mode>& weights) {
-  if (!input.has_value()) {
-    if constexpr (Mode == sublattice_mode::interact) {
-      return stack_scalar<T>(T(0.0), weights.size(), structure.num_species);
-    } else if constexpr (Mode == sublattice_mode::split) {
-      assert(weights.size() == structure.size());
-      return std::ranges::views::zip(weights, structure)
-             | std::ranges::views::transform([](const auto& weights_, const auto& structure_) {
-                 return stack_scalar<T>(T(0.0), weights_.size(), structure_.num_species);
-               })
-             | std::ranges::to<target_objective<T, Mode>>();
-    } else
-      static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
-                    "unhandled sublattice_mode");
+  template <class T, sublattice_mode Mode>
+  result_t<target_objective<T, Mode>> validate_target_objective_input(
+      const target_objective_input<T, Mode>& input, const structure_input<T, Mode>& structure,
+      const shell_weights<T, Mode>& weights, const shell_radii<T, Mode>& radii) {
+    return validate_array_input<T, Mode, target_objective, target_objective_input>(
+        "target_objective", input, default_target_objective<T>, structure, weights, radii);
+  };
+
+  template <class T, sublattice_mode Mode>
+  result_t<prefactors<T, Mode>> validate_prefactors_input(const prefactors_input<T, Mode>& input,
+                                                          const structure_input<T, Mode>& structure,
+                                                          const shell_weights<T, Mode>& weights,
+                                                          const shell_radii<T, Mode>& radii) {
+    return validate_array_input<T, Mode, prefactors, prefactors_input>(
+        "prefactors", input, default_prefactors<T>, structure, weights, radii);
   }
-};
+
+  template result_t<pair_weights<float, sublattice_mode::interact>> validate_pair_weights_input<
+      float, sublattice_mode::interact>(const pair_weights_input<float, sublattice_mode::interact>&,
+                                        const structure_input<float, sublattice_mode::interact>&,
+                                        const shell_weights<float, sublattice_mode::interact>&,
+                                        const shell_radii<float, sublattice_mode::interact>&);
+
+  template result_t<pair_weights<float, sublattice_mode::split>> validate_pair_weights_input<
+      float, sublattice_mode::split>(const pair_weights_input<float, sublattice_mode::split>&,
+                                     const structure_input<float, sublattice_mode::split>&,
+                                     const shell_weights<float, sublattice_mode::split>&,
+                                     const shell_radii<float, sublattice_mode::split>&);
+
+  template result_t<pair_weights<double, sublattice_mode::interact>>
+  validate_pair_weights_input<double, sublattice_mode::interact>(
+      const pair_weights_input<double, sublattice_mode::interact>&,
+      const structure_input<double, sublattice_mode::interact>&,
+      const shell_weights<double, sublattice_mode::interact>&,
+      const shell_radii<double, sublattice_mode::interact>&);
+
+  template result_t<pair_weights<double, sublattice_mode::split>> validate_pair_weights_input<
+      double, sublattice_mode::split>(const pair_weights_input<double, sublattice_mode::split>&,
+                                      const structure_input<double, sublattice_mode::split>&,
+                                      const shell_weights<double, sublattice_mode::split>&,
+                                      const shell_radii<double, sublattice_mode::split>&);
 
 }  // namespace sqsgen::configuration
