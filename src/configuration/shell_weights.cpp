@@ -54,7 +54,7 @@ namespace sqsgen::configuration {
       if (shell.value() >= num_shells)
         return std::unexpected(configuration_error{
             helpers::format_string("%s.%s", path, key), error_code::invalid_size,
-            helpers::format_string("There are %zu shells but you specified a shell index of %i",
+            helpers::format_string("There are %zu shells but you specified a shell index of %zu",
                                    num_shells, shell.value())});
       out.insert(shell.value(), weight);
     }
@@ -93,14 +93,13 @@ namespace sqsgen::configuration {
         }
         for (std::size_t index = 0; index < num_sublattices; ++index) {
           auto num_shells = shell_radii[index].size() - 1;
-          auto validated
-              = parse_shell_weights(input.value()[index], num_shells, std::make_optional(index));
+          auto validated = parse_shell_weights(data[index], num_shells, std::make_optional(index));
           if (!validated) return std::unexpected(std::move(validated).error());
           out.push_back(std::move(validated).value());
         }
       } else {
         for (const auto& shell_radii_vector : shell_radii) {
-          assert(shell_radii_vector.size() >= 1);
+          assert(shell_radii_vector.size() >= 1 && "checked upstream in shell_radii validator");
           auto num_shells = shell_radii_vector.size() - 1;
           out.push_back(default_shell_weights<T>(num_shells));
         }
