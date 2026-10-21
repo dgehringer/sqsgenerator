@@ -19,13 +19,13 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode> using shell_radii_spec
       = sublattice_mode_nesting<std::vector<T>, Mode>;
 
-  template <class T, sublattice_mode Mode> using shell_radii = shell_radii_spec<T, Mode>;
+  template <class T, sublattice_mode Mode> using shell_radii_t = shell_radii_spec<T, Mode>;
 
   template <class T, sublattice_mode Mode> using shell_radii_input
       = std::variant<shell_radii_detection, shell_radii_spec<T, Mode>>;
 
   template <class T, sublattice_mode Mode>
-  std::expected<shell_radii<T, Mode>, configuration_error> validate_shell_radii_input(
+  std::expected<shell_radii_t<T, Mode>, configuration_error> validate_shell_radii_input(
       const shell_radii_input<T, Mode>&, const structure_input<T, Mode>& structure, T atol, T rtol,
       T bin_width, T peak_isolation);
 

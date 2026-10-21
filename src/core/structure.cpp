@@ -100,7 +100,7 @@ namespace sqsgen::core {
       return specie == other.specie && frac_coords == other.frac_coords;
     }
 
-    template <class T> std::size_t site<T>::hasher::operator()(site const& s) const {
+    template <class T> std::size_t site<T>::hasher::operator()(const site& s) const {
       std::size_t res = 0;
       helpers::hash_combine(res, s.specie);
       helpers::hash_combine(res, s.frac_coords(0));
@@ -120,7 +120,7 @@ namespace sqsgen::core {
 
   template <class T>
   structure<T>::structure(const lattice_t<T>& lattice, const coords_t<T>& frac_coords,
-                          configuration_t const& species, const std::array<bool, 3>& pbc)
+                          const configuration_t& species, const std::array<bool, 3>& pbc)
       : lattice(lattice),
         frac_coords(frac_coords),
         species(species),
@@ -150,7 +150,7 @@ namespace sqsgen::core {
   }
 
   template <class T>
-  shell_matrix_t structure<T>::shell_matrix(std::vector<T> const& shell_radii, T atol, T rtol) {
+  shell_matrix_t structure<T>::shell_matrix(const std::vector<T>& shell_radii, T atol, T rtol) {
     return shell_matrix(distance_matrix(), shell_radii, atol, rtol);
   }
 
@@ -187,7 +187,7 @@ namespace sqsgen::core {
   }
 
   template <class T>
-  structure<T> structure<T>::apply_composition(std::vector<sublattice> const& composition) const {
+  structure<T> structure<T>::apply_composition(const std::vector<sublattice>& composition) const {
     auto copy = structure(*this);
     for (const auto& [sites, species] : composition) {
       auto index = sites.begin();
@@ -198,13 +198,13 @@ namespace sqsgen::core {
     return copy;
   }
 
-  template <class T> structure<T> structure<T>::with_species(configuration_t const& conf) const {
+  template <class T> structure<T> structure<T>::with_species(const configuration_t& conf) const {
     if (conf.size() != size()) throw std::invalid_argument("Species size mismatch");
     return structure{lattice, frac_coords, conf, pbc};
   }
 
   template <class T> std::vector<structure<T>> structure<T>::apply_composition_and_decompose(
-      std::vector<sublattice> const& composition) const {
+      const std::vector<sublattice>& composition) const {
     auto with_species = apply_composition(composition);
     return helpers::as<std::vector>{}(
         composition | views::transform([&](auto&& sl) { return with_species.sliced(sl.sites); }));
@@ -214,9 +214,9 @@ namespace sqsgen::core {
     return filtered([](auto site) { return site.specie != 0; });
   }
 
-  template <class T> auto structure<T>::pairs(std::vector<T> const& radii,
-                                              shell_weights_t<T> const& weights, bool pack, T atol,
-                                              T rtol) {
+  template <class T> auto structure<T>::pairs(const std::vector<T>& radii,
+                                              const std::map<std::size_t, T>& weights, bool pack,
+                                              T atol, T rtol) {
     using namespace helpers;
     auto [shell_map, reverse_map] = make_index_mapping<std::size_t>(weights | views::elements<0>);
     std::vector<atom_pair> pairs;
@@ -243,7 +243,7 @@ namespace sqsgen::core {
   }
 
   template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
-                                                  const shell_weights_t<T>& weights,
+                                                  const std::map<std::size_t, T>& weights,
                                                   const configuration_t& configuration) {
     using namespace helpers;
     if (weights.empty()) throw std::out_of_range("no coordination shells selected");
@@ -367,7 +367,7 @@ namespace sqsgen::core {
 
   template <class T> cube_t<T> compute_prefactors(const structure<T>& structure,
                                                   const std::vector<T>& shell_radii,
-                                                  const shell_weights_t<T>& weights) {
+                                                  const std::map<std::size_t, T>& weights) {
     return compute_prefactors<T>(structure.shell_matrix(shell_radii), weights, structure.species);
   }
 
@@ -379,9 +379,9 @@ namespace sqsgen::core {
   template <> matrix_t<float> distance_matrix(const lattice_t<float>& lattice,
                                               const coords_t<float>& frac_coords);
 
-  template <> shell_matrix_t shell_matrix(matrix_t<double> const& distance_matrix,
-                                          std::vector<double> const& dists, double atol,
+  template <> shell_matrix_t shell_matrix(const matrix_t<double>& distance_matrix,
+                                          const std::vector<double>& dists, double atol,
                                           double rtol);
-  template <> shell_matrix_t shell_matrix(matrix_t<float> const& distance_matrix,
-                                          std::vector<float> const& dists, float atol, float rtol);
+  template <> shell_matrix_t shell_matrix(const matrix_t<float>& distance_matrix,
+                                          const std::vector<float>& dists, float atol, float rtol);
 }  // namespace sqsgen::core

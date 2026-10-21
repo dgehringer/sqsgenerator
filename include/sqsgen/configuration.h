@@ -10,9 +10,9 @@
 #include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
-namespace sqsgen {
+namespace sqsgen::configuration {
 
-  template <class T, SublatticeMode S, IterationMode I> struct configuration_base {
+  template <class T, sublattice_mode S, IterationMode I> struct configuration_base {
     static constexpr SublatticeMode sublattice_mode = S;
     static constexpr IterationMode iteration_mode = I;
     ShellRadiiDetection radii_detection_mode = SHELL_RADII_DETECTION_PEAK;
@@ -35,6 +35,6 @@ namespace sqsgen {
     iterations_t iterations;
   };
 
-}  // namespace sqsgen
+}  // namespace sqsgen::configuration
 
 #endif  // SQSGEN_CONFIGURATION_H

@@ -78,7 +78,7 @@ namespace sqsgen::configuration {
   }
 
   result_t<std::optional<std::array<int, 3>>> validate_supercell(
-      std::optional<std::array<int, 3>> const& supercell) {
+      const std::optional<std::array<int, 3>>& supercell) {
     if (supercell.has_value())
       for (auto amount : supercell.value())
         if (amount <= 0)
@@ -88,8 +88,8 @@ namespace sqsgen::configuration {
     return supercell;
   }
 
-  template <class T> result_t<lattice_t<T>> validate_lattice(core::nested_t<T, 2> const& matrix) {
-    auto lattice = core::tensor_from<core::nested_tensor<T, 2>>(matrix);
+  template <class T> result_t<lattice_t<T>> validate_lattice(const core::nested_t<T, 2>& matrix) {
+    auto lattice = core::lattice_from<T>(matrix);
     if (!lattice)
       return lattice.transform_error([](auto err) {
         return configuration_error{"structure.lattice", error_code::bad_argument, err.message};
@@ -101,8 +101,8 @@ namespace sqsgen::configuration {
                                                  "A lattice must be a 3x3 matrix"});
   };
 
-  template <class T> result_t<coords_t<T>> validate_coords(core::nested_t<T, 2> const& matrix) {
-    auto coords = core::tensor_from<core::nested_tensor<T, 2>>(matrix);
+  template <class T> result_t<coords_t<T>> validate_coords(const core::nested_t<T, 2>& matrix) {
+    auto coords = core::coords_from<T>(matrix);
     if (!coords)
       return coords.transform_error([](auto err) {
         return configuration_error{"structure.coords", error_code::bad_argument, err.message};
@@ -115,12 +115,12 @@ namespace sqsgen::configuration {
   };
 
   template <class T> result_t<structure_config<T>> validate_structure_definition(
-      stucture_definition_input<T> const& input) {
-    auto coords = validate_coords(input.coords);
+      const stucture_definition_input<T>& input) {
+    auto coords = validate_coords<T>(input.coords);
     if (!coords) return std::unexpected(std::move(coords).error());
     auto species = validate_species(input.species, coords->rows());
     if (!species) return std::unexpected(std::move(species).error());
-    auto lattice = validate_lattice(input.lattice);
+    auto lattice = validate_lattice<T>(input.lattice);
     if (!lattice) return std::unexpected(std::move(lattice).error());
     auto supercell = validate_supercell(input.supercell);
     if (!supercell) return std::unexpected(std::move(supercell).error());
@@ -128,7 +128,7 @@ namespace sqsgen::configuration {
                                std::move(species).value(), std::move(supercell).value()};
   }
 
-  result_t<io::structure_format> structure_format_from_path(std::string const& path) {
+  result_t<io::structure_format> structure_format_from_path(const std::string& path) {
     if (path.ends_with(".pymatgen.json")) return io::structure_format::pymatgen;
 
     if (path.ends_with(".sqs.json")) return io::structure_format::sqsgen;
@@ -142,7 +142,7 @@ namespace sqsgen::configuration {
                                path)});
   }
 
-  result_t<std::string> read_file(std::string const& path) {
+  result_t<std::string> read_file(const std::string& path) {
     if (!std::filesystem::exists(path))
       return std::unexpected(
           configuration_error{"structure.path", error_code::bad_argument,
@@ -158,7 +158,7 @@ namespace sqsgen::configuration {
   }
 
   template <class T>
-  result_t<core::structure<T>> parse_file(std::string const& path, io::structure_format format) {
+  result_t<core::structure<T>> parse_file(const std::string& path, io::structure_format format) {
     auto content = read_file(path);
     if (!content) return std::unexpected(std::move(content).error());
     if (format == io::structure_format::pymatgen)
@@ -223,8 +223,7 @@ namespace sqsgen::configuration {
   }
 
   template <class T>
-  std::expected<structure_config<T>, configuration_error> validate_structure_input(
-      const structure_input<T>& input) {
+  result_t<structure_config<T>> validate_structure_input(const structure_input<T>& input) {
     return std::visit(
         helpers::overloaded{
             [&](const stucture_definition_input<T>& input) {
@@ -235,9 +234,18 @@ namespace sqsgen::configuration {
         input);
   }
 
-  template <> std::expected<structure_config<float>, configuration_error> validate_structure_input(
+  template <class T> core::structure<T> structure_config<T>::structure() const {
+    core::structure<T> out(lattice, coords, species);
+    if (supercell.has_value()) {
+      auto [a, b, c] = supercell.value();
+      return out.supercell(a, b, c);
+    }
+    return out;
+  }
+
+  template result_t<structure_config<float>> validate_structure_input(
       const structure_input<float>& input);
-  template <> std::expected<structure_config<double>, configuration_error> validate_structure_input(
+  template result_t<structure_config<double>> validate_structure_input(
       const structure_input<double>& input);
 
 };  // namespace sqsgen::configuration

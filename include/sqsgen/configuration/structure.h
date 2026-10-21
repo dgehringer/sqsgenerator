@@ -11,6 +11,7 @@
 #include <variant>
 #include <vector>
 
+#include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
@@ -20,7 +21,9 @@ namespace sqsgen::configuration {
     lattice_t<T> lattice;
     coords_t<T> coords;
     configuration_t species;
-    std::array<int, 3> supercell{1, 1, 1};
+    std::optional<std::array<int, 3>> supercell;
+
+    [[nodiscard]] core::structure<T> structure() const;
   };
 
   template <class T> struct stucture_definition_input {
@@ -39,6 +42,9 @@ namespace sqsgen::configuration {
 
   template <class T> using structure_input
       = std::variant<stucture_definition_input<T>, structure_file_input>;
+
+  template <class T, sublattice_mode Mode> using structure_t
+      = sublattice_mode_nesting<core::structure<T>, Mode>;
 
   template <class T>
   std::expected<structure_config<T>, configuration_error> validate_structure_input(

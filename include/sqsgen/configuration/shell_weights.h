@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 
+#include "sqsgen/configuration/shell_radii.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
@@ -17,15 +18,12 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode> using shell_weights_input
       = std::optional<sublattice_mode_nesting<shell_weight_spec<T>, Mode>>;
 
-  template <class T, sublattice_mode Mode> using shell_weights
-      = sublattice_mode_nesting<shell_weights_t<T>, Mode>;
-
-  template <class T, sublattice_mode Mode> using shell_radii
-      = sublattice_mode_nesting<std::vector<T>, Mode>;
+  template <class T, sublattice_mode Mode> using shell_weights_t
+      = sublattice_mode_nesting<std::map<std::size_t, T>, Mode>;
 
   template <class T, sublattice_mode Mode>
-  result_t<shell_weights<T, Mode>> validate_shell_weight_input(
-      const shell_weights_input<T, Mode>&, const shell_radii<T, Mode>& shell_radii);
+  result_t<shell_weights_t<T, Mode>> validate_shell_weight_input(
+      const shell_weights_input<T, Mode>&, const shell_radii_t<T, Mode>& shell_radii);
 
 }  // namespace sqsgen::configuration
 /*

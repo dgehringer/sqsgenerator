@@ -68,12 +68,12 @@ namespace sqsgen::configuration {
   };
 
   template <class T, sublattice_mode Mode>
-  std::expected<shell_radii<T, Mode>, configuration_error> validate_shell_radii_input(
+  std::expected<shell_radii_t<T, Mode>, configuration_error> validate_shell_radii_input(
       const shell_radii_input<T, Mode>& input, const structure_input<T, Mode>& structure, T atol,
       T rtol, T bin_width, T peak_isolation) {
     if constexpr (Mode == sublattice_mode::interact) {
       return std::visit(helpers::overloaded{
-          [&](shell_radii_detection mode) -> result_t<shell_radii<T, sublattice_mode::interact>> {
+          [&](shell_radii_detection mode) -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
             if (mode == shell_radii_detection::naive) {
               return core::distances_naive(structure, atol, rtol);
             }
@@ -82,11 +82,12 @@ namespace sqsgen::configuration {
             }
             throw std::invalid_argument("Unknown shell detection mode");
           },
-          [&](const std::vector<T>& radii) -> result_t<shell_radii<T, sublattice_mode::interact>> {
+          [&](const std::vector<T>& radii)
+              -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
             return std::move(validate_radii(radii, atol));
           }});
     } else if constexpr (Mode == sublattice_mode::split) {
-      using output_t = shell_radii<T, Mode>;
+      using output_t = shell_radii_t<T, Mode>;
       return std::visit(helpers::overloaded{
           [&](shell_radii_detection mode) -> result_t<output_t> {
             if (mode == shell_radii_detection::naive) {
@@ -126,25 +127,25 @@ namespace sqsgen::configuration {
                     "unhandled sublattice_mode");
   }
 
-  template <> std::expected<shell_radii<float, sublattice_mode::interact>, configuration_error>
+  template <> std::expected<shell_radii_t<float, sublattice_mode::interact>, configuration_error>
   validate_shell_radii_input<float, sublattice_mode::interact>(
       const shell_radii_input<float, sublattice_mode::interact>& input,
       const structure_input<float, sublattice_mode::interact>& structure, float atol, float rtol,
       float bin_width, float peak_isolation);
 
-  template <> std::expected<shell_radii<float, sublattice_mode::split>, configuration_error>
+  template <> std::expected<shell_radii_t<float, sublattice_mode::split>, configuration_error>
   validate_shell_radii_input<float, sublattice_mode::split>(
       const shell_radii_input<float, sublattice_mode::split>& input,
       const structure_input<float, sublattice_mode::split>& structure, float atol, float rtol,
       float bin_width, float peak_isolation);
 
-  template <> std::expected<shell_radii<double, sublattice_mode::interact>, configuration_error>
+  template <> std::expected<shell_radii_t<double, sublattice_mode::interact>, configuration_error>
   validate_shell_radii_input<double, sublattice_mode::interact>(
       const shell_radii_input<double, sublattice_mode::interact>& input,
       const structure_input<double, sublattice_mode::interact>& structure, double atol, double rtol,
       double bin_width, double peak_isolation);
 
-  template <> std::expected<shell_radii<double, sublattice_mode::split>, configuration_error>
+  template <> std::expected<shell_radii_t<double, sublattice_mode::split>, configuration_error>
   validate_shell_radii_input<double, sublattice_mode::split>(
       const shell_radii_input<double, sublattice_mode::split>& input,
       const structure_input<double, sublattice_mode::split>& structure, double atol, double rtol,

@@ -47,7 +47,8 @@ if (BUILD_WASM)
     src/io/structure/pdb.cpp
     src/io/structure/ase.cpp
     src/io/glaze.cpp
-
+    src/optimization/result.cpp
+    src/optimization/result_collection.cpp
   )
   set_target_properties(wasm PROPERTIES
           SUFFIX ".mjs"

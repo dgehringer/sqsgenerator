@@ -24,7 +24,7 @@ namespace sqsgen::core {
                                                  const std::vector<T>& dists, T atol, T rtol);
 
   template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
-                                                  const shell_weights_t<T>& weights,
+                                                  const std::map<std::size_t, T>& weights,
                                                   const configuration_t& configuration);
 
   struct atom_pair {
@@ -46,11 +46,11 @@ namespace sqsgen::core {
       row_t frac_coords;
       [[nodiscard]] sqsgen::core::atom atom() const;
 
-      bool operator<(site const& other) const;
+      bool operator<(const site& other) const;
 
       bool operator==(const site& other) const;
       struct hasher {
-        std::size_t operator()(site const& s) const;
+        std::size_t operator()(const site& s) const;
       };
     };
 
@@ -88,14 +88,14 @@ namespace sqsgen::core {
     }
 
     structure(const lattice_t<T>& lattice, const coords_t<T>& frac_coords,
-              configuration_t const& species, const std::array<bool, 3>& pbc = {true, true, true});
+              const configuration_t& species, const std::array<bool, 3>& pbc = {true, true, true});
 
     structure(lattice_t<T>&& lattice, coords_t<T>&& frac_coords, configuration_t&& species,
               std::array<bool, 3>&& pbc = {true, true, true});
 
     [[nodiscard]] const matrix_t<T>& distance_matrix();
 
-    [[nodiscard]] shell_matrix_t shell_matrix(std::vector<T> const& shell_radii,
+    [[nodiscard]] shell_matrix_t shell_matrix(const std::vector<T>& shell_radii,
                                               T atol = std::numeric_limits<T>::epsilon(),
                                               T rtol = 1.0e-9);
 
@@ -124,12 +124,12 @@ namespace sqsgen::core {
       return std::get<0>(sorted_with_indices(std::forward<Fn>(fn)));
     }
 
-    structure apply_composition(std::vector<sublattice> const& composition) const;
+    structure apply_composition(const std::vector<sublattice>& composition) const;
 
-    structure with_species(configuration_t const& conf) const;
+    structure with_species(const configuration_t& conf) const;
 
     std::vector<structure> apply_composition_and_decompose(
-        std::vector<sublattice> const& composition) const;
+        const std::vector<sublattice>& composition) const;
 
     template <class Fn> auto filtered(Fn&& fn) const {
       return structure(lattice, sites() | views::filter(std::forward<Fn>(fn)));
@@ -151,8 +151,8 @@ namespace sqsgen::core {
       return structure(lattice, sites);
     }
 
-    auto pairs(std::vector<T> const& radii, shell_weights_t<T> const& weights, bool pack = true,
-               T atol = std::numeric_limits<T>::epsilon(), T rtol = 1.0e-9);
+    auto pairs(const std::vector<T>& radii, const std::map<std::size_t, T>& weights,
+               bool pack = true, T atol = std::numeric_limits<T>::epsilon(), T rtol = 1.0e-9);
 
     [[nodiscard]] configuration_t packed_species() const;
 
@@ -166,11 +166,11 @@ namespace sqsgen::core {
   template <class T>
   std::vector<T> distances_histogram(const structure<T>& structure, T bin_width, T peak_isolation);
   template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
-                                                  const shell_weights_t<T>& weights,
+                                                  const std::map<std::size_t, T>& weights,
                                                   const configuration_t& configuration);
   template <class T> cube_t<T> compute_prefactors(const structure<T>& structure,
                                                   const std::vector<T>& shell_radii,
-                                                  const shell_weights_t<T>& weights);
+                                                  const std::map<std::size_t, T>& weights);
 
   template <typename T> using site_t = sqsgen::core::detail::site<T>;
 

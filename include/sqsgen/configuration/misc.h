@@ -20,11 +20,14 @@ namespace sqsgen::configuration {
   template <class T> static constexpr T bin_width_default = 0.05;
   template <class T> static constexpr T peak_isolation_default = 0.25;
 
-  using iterations_input = std::optional<iterations_t>;
-  using iterations = iterations_t;
+  using iterations_input = std::optional<unsigned long long>;
+  using iterations = unsigned long long;
 
-  using chunck_size_input = std::optional<iterations_t>;
-  using chunck_size = iterations_t;
+  using chunck_size_input = std::optional<unsigned long long>;
+  using chunck_size_t = unsigned long long;
+
+  using max_results_per_objective_input = std::optional<iterations_t>;
+  using max_results_per_objective_t = iterations_t;
 
   template <class T> using atol_input = std::optional<T>;
   template <class T> using atol = T;

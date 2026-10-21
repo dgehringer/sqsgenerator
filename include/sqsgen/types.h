@@ -40,10 +40,6 @@ namespace sqsgen {
 
   template <class T> using bounds_t = std::pair<T, T>;
 
-  template <class T>
-    requires std::is_arithmetic_v<T>
-  using shell_weights_t = std::map<std::size_t, T>;
-
   enum class prec { Single, Double };
 
   enum class iteration_mode { random, systematic };

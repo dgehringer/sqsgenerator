@@ -2,6 +2,8 @@
 #ifndef SQSGEN_CORE_RESULT_H
 #define SQSGEN_CORE_RESULT_H
 
+#include <flat_map>
+
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
