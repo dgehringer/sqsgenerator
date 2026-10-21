@@ -63,9 +63,8 @@ namespace sqsgen::configuration {
 
   using prec_input = std::string;
 
-  template <class T, sublattice_mode Mode>
-  result_t<iteration_mode> validate_iterations_input(iteration_mode, const std::vector<sublattice>&,
-                                                     const structure_t<T, Mode>&);
+  result_t<iteration_mode> validate_iterations_input(iteration_mode,
+                                                     const std::vector<sublattice>&);
 
   template <class T, sublattice_mode Mode>
   result_t<iterations_t> validate_iterations_input(const iterations_input&, iteration_mode,

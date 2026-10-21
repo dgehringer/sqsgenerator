@@ -36,11 +36,11 @@ namespace sqsgen::core {
                  .value_or(1);
   }
 
-  static rank_t num_permutations(const composition_t& hist) {
+  rank_t num_permutations(const composition_t& hist) {
     return num_permutations_impl(std::ranges::views::values(hist));
   }
 
-  static rank_t num_permutations(const configuration_t& conf) {
+  rank_t num_permutations(const configuration_t& conf) {
     return num_permutations(count_species(conf));
   }
 
