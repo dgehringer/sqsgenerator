@@ -8,11 +8,11 @@
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
-  counter<specie_t> count_species(configuration_t const& c);
-  static rank_t num_permutations(counter<specie_t> const& hist);
-  static rank_t num_permutations(configuration_t const& conf);
-  inline rank_t rank_permutation(configuration_t const& configuration);
-  inline void unrank_permutation(configuration_t& configuration, rank_t const& to_rank);
+  counter<specie_t> count_species(const configuration_t& c);
+  static rank_t num_permutations(const counter<specie_t>& hist);
+  static rank_t num_permutations(const configuration_t& conf);
+  inline rank_t rank_permutation(const configuration_t& configuration);
+  inline void unrank_permutation(configuration_t& configuration, const rank_t& to_rank);
   inline bool next_permutation(configuration_t::iterator start, configuration_t::iterator end);
 }  // namespace sqsgen::core
 
