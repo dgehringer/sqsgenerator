@@ -109,9 +109,9 @@ namespace sqsgen::configuration {
   }
 
   template <class T> result_t<cube_t<T>> default_pair_weights(
-      const structure_input<T, sublattice_mode::interact>& structure,
-      const shell_weights<T, sublattice_mode::interact>& weights,
-      const shell_radii<T, sublattice_mode::interact>&) {
+      const structure_t<T, sublattice_mode::interact>& structure,
+      const shell_weights_t<T, sublattice_mode::interact>& weights,
+      const shell_radii_t<T, sublattice_mode::interact>&) {
     Eigen::Index num_species = static_cast<Eigen::Index>(structure.num_species);
     Eigen::Index num_shells = static_cast<Eigen::Index>(weights.size());
     return stack_matrix<T>(matrix_t<T>::Constant(num_species, num_species, 1.0)
@@ -120,38 +120,37 @@ namespace sqsgen::configuration {
   }
 
   template <class T> result_t<cube_t<T>> default_target_objective(
-      const structure_input<T, sublattice_mode::interact>& structure,
-      const shell_weights<T, sublattice_mode::interact>& weights,
-      const shell_radii<T, sublattice_mode::interact>&) {
+      const structure_t<T, sublattice_mode::interact>& structure,
+      const shell_weights_t<T, sublattice_mode::interact>& weights,
+      const shell_radii_t<T, sublattice_mode::interact>&) {
     return stack_scalar<T>(T(0.0), weights.size(), structure.num_species);
   }
 
   template <class T> result_t<cube_t<T>> default_prefactors(
-      const structure_input<T, sublattice_mode::interact>& structure,
-      const shell_weights<T, sublattice_mode::interact>& weights,
-      const shell_radii<T, sublattice_mode::interact>& radii) {
+      const structure_t<T, sublattice_mode::interact>& structure,
+      const shell_weights_t<T, sublattice_mode::interact>& weights,
+      const shell_radii_t<T, sublattice_mode::interact>& radii) {
     return core::compute_prefactors(structure, radii, weights);
   }
 
   template <class Fn, class T, class Element>
-  concept DefaultFn
-      = std::invocable<Fn, const structure_input<T, sublattice_mode::interact>&,
-                       const shell_weights<T, sublattice_mode::interact>&,
-                       const shell_radii<T, sublattice_mode::interact>&>
-        && std::convertible_to<
-            std::invoke_result_t<Fn, const structure_input<T, sublattice_mode::interact>&,
-                                 const shell_weights<T, sublattice_mode::interact>&,
-                                 const shell_radii<T, sublattice_mode::interact>&>,
-            result_t<Element>>;
+  concept DefaultFn = std::invocable<Fn, const structure_t<T, sublattice_mode::interact>&,
+                                     const shell_weights_t<T, sublattice_mode::interact>&,
+                                     const shell_radii_t<T, sublattice_mode::interact>&>
+                      && std::convertible_to<
+                          std::invoke_result_t<Fn, const structure_t<T, sublattice_mode::interact>&,
+                                               const shell_weights_t<T, sublattice_mode::interact>&,
+                                               const shell_radii_t<T, sublattice_mode::interact>&>,
+                          result_t<Element>>;
 
   template <class T, sublattice_mode Mode, template <class, sublattice_mode> class Out,
             template <class, sublattice_mode> class In,
             DefaultFn<T, Out<T, sublattice_mode::interact>> Fn>
   result_t<Out<T, Mode>> validate_array_input(const std::string& key, const In<T, Mode>& input,
                                               Fn&& default_fn,
-                                              const structure_input<T, Mode>& structure,
-                                              const shell_weights<T, Mode>& weights,
-                                              const shell_radii<T, Mode>& radii) {
+                                              const structure_t<T, Mode>& structure,
+                                              const shell_weights_t<T, Mode>& weights,
+                                              const shell_radii_t<T, Mode>& radii) {
     if constexpr (Mode == sublattice_mode::interact) {
       if (input.has_value()) {
         return validate_array(key, input.value(), weights.size(), structure.num_species);
@@ -193,36 +192,36 @@ namespace sqsgen::configuration {
   }
 
   template <class T, sublattice_mode Mode>
-  result_t<pair_weights<T, Mode>> validate_pair_weights_input(
-      const pair_weights_input<T, Mode>& input, const structure_input<T, Mode>& structure,
-      const shell_weights<T, Mode>& weights, const shell_radii<T, Mode>& radii) {
-    return validate_array_input<T, Mode, pair_weights, pair_weights_input>(
+  result_t<pair_weights_t<T, Mode>> validate_pair_weights_input(
+      const pair_weights_input<T, Mode>& input, const structure_t<T, Mode>& structure,
+      const shell_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
+    return validate_array_input<T, Mode, pair_weights_t, pair_weights_input>(
         "pair_weights", input, default_pair_weights<T>, structure, weights, radii);
   };
 
   template <class T, sublattice_mode Mode>
-  result_t<target_objective<T, Mode>> validate_target_objective_input(
-      const target_objective_input<T, Mode>& input, const structure_input<T, Mode>& structure,
-      const shell_weights<T, Mode>& weights, const shell_radii<T, Mode>& radii) {
-    return validate_array_input<T, Mode, target_objective, target_objective_input>(
+  result_t<target_objective_t<T, Mode>> validate_target_objective_input(
+      const target_objective_input<T, Mode>& input, const structure_t<T, Mode>& structure,
+      const shell_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
+    return validate_array_input<T, Mode, target_objective_t, target_objective_input>(
         "target_objective", input, default_target_objective<T>, structure, weights, radii);
   };
 
   template <class T, sublattice_mode Mode>
-  result_t<prefactors<T, Mode>> validate_prefactors_input(const prefactors_input<T, Mode>& input,
-                                                          const structure_input<T, Mode>& structure,
-                                                          const shell_weights<T, Mode>& weights,
-                                                          const shell_radii<T, Mode>& radii) {
-    return validate_array_input<T, Mode, prefactors, prefactors_input>(
+  result_t<prefactors_t<T, Mode>> validate_prefactors_input(const prefactors_input<T, Mode>& input,
+                                                            const structure_t<T, Mode>& structure,
+                                                            const shell_weights_t<T, Mode>& weights,
+                                                            const shell_radii_t<T, Mode>& radii) {
+    return validate_array_input<T, Mode, prefactors_t, prefactors_input>(
         "prefactors", input, default_prefactors<T>, structure, weights, radii);
   }
 
   // arrays.cpp — bottom, after the bodies
 
-#define INSTANTIATE_VALIDATOR(FN, IN, OUT, T, MODE)                                                \
-  template result_t<OUT<T, MODE>> FN<T, MODE>(const IN<T, MODE>&, const structure_input<T, MODE>&, \
-                                              const shell_weights<T, MODE>&,                       \
-                                              const shell_radii<T, MODE>&);
+#define INSTANTIATE_VALIDATOR(FN, IN, OUT, T, MODE)                                            \
+  template result_t<OUT<T, MODE>> FN<T, MODE>(const IN<T, MODE>&, const structure_t<T, MODE>&, \
+                                              const shell_weights_t<T, MODE>&,                 \
+                                              const shell_radii_t<T, MODE>&);
 
 #define INSTANTIATE_ALL_MODES(FN, IN, OUT)                              \
   INSTANTIATE_VALIDATOR(FN, IN, OUT, float, sublattice_mode::interact)  \
@@ -230,9 +229,9 @@ namespace sqsgen::configuration {
   INSTANTIATE_VALIDATOR(FN, IN, OUT, double, sublattice_mode::interact) \
   INSTANTIATE_VALIDATOR(FN, IN, OUT, double, sublattice_mode::split)
 
-  INSTANTIATE_ALL_MODES(validate_pair_weights_input, pair_weights_input, pair_weights)
-  INSTANTIATE_ALL_MODES(validate_target_objective_input, target_objective_input, target_objective)
-  INSTANTIATE_ALL_MODES(validate_prefactors_input, prefactors_input, prefactors)
+  INSTANTIATE_ALL_MODES(validate_pair_weights_input, pair_weights_input, pair_weights_t)
+  INSTANTIATE_ALL_MODES(validate_target_objective_input, target_objective_input, target_objective_t)
+  INSTANTIATE_ALL_MODES(validate_prefactors_input, prefactors_input, prefactors_t)
 
 #undef INSTANTIATE_ALL_MODES
 #undef INSTANTIATE_VALIDATOR

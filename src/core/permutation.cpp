@@ -72,7 +72,7 @@ namespace sqsgen::core {
     auto k{0};
     auto num_atoms{configuration.size()};
     auto num_species{freqs.size()};
-    auto hist = std::ranges::views::values(freqs) | std::ranges::to<std::vector>();
+    auto hist = std::ranges::views::values(freqs) | std::ranges::to<std::vector>();
 
     for (auto i = 0; i < num_atoms; i++) {
       for (auto j = 0; j < num_species; j++) {

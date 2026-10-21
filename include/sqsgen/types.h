@@ -117,8 +117,6 @@ namespace sqsgen {
     };
   };  // namespace core
 
-  using seed_t = std::vector<std::optional<std::uint64_t>>;
-
   struct sublattice {
     sorted_vector<std::size_t> sites;
     composition_t composition;
