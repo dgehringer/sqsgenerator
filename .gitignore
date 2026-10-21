@@ -10,6 +10,7 @@ vcpkg_installed/
 .ninja_log
 .DS_Store
 
+build/
 build-wasm/
 
 docs/_build/
