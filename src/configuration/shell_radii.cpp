@@ -69,7 +69,7 @@ namespace sqsgen::configuration {
 
   template <class T, sublattice_mode Mode>
   std::expected<shell_radii_t<T, Mode>, configuration_error> validate_shell_radii_input(
-      const shell_radii_input<T, Mode>& input, const structure_input<T, Mode>& structure, T atol,
+      const shell_radii_input<T, Mode>& input, const structure_t<T, Mode>& structure, T atol,
       T rtol, T bin_width, T peak_isolation) {
     if constexpr (Mode == sublattice_mode::interact) {
       return std::visit(helpers::overloaded{
@@ -130,25 +130,25 @@ namespace sqsgen::configuration {
   template <> std::expected<shell_radii_t<float, sublattice_mode::interact>, configuration_error>
   validate_shell_radii_input<float, sublattice_mode::interact>(
       const shell_radii_input<float, sublattice_mode::interact>& input,
-      const structure_input<float, sublattice_mode::interact>& structure, float atol, float rtol,
+      const structure_t<float, sublattice_mode::interact>& structure, float atol, float rtol,
       float bin_width, float peak_isolation);
 
   template <> std::expected<shell_radii_t<float, sublattice_mode::split>, configuration_error>
   validate_shell_radii_input<float, sublattice_mode::split>(
       const shell_radii_input<float, sublattice_mode::split>& input,
-      const structure_input<float, sublattice_mode::split>& structure, float atol, float rtol,
+      const structure_t<float, sublattice_mode::split>& structure, float atol, float rtol,
       float bin_width, float peak_isolation);
 
   template <> std::expected<shell_radii_t<double, sublattice_mode::interact>, configuration_error>
   validate_shell_radii_input<double, sublattice_mode::interact>(
       const shell_radii_input<double, sublattice_mode::interact>& input,
-      const structure_input<double, sublattice_mode::interact>& structure, double atol, double rtol,
+      const structure_t<double, sublattice_mode::interact>& structure, double atol, double rtol,
       double bin_width, double peak_isolation);
 
   template <> std::expected<shell_radii_t<double, sublattice_mode::split>, configuration_error>
   validate_shell_radii_input<double, sublattice_mode::split>(
       const shell_radii_input<double, sublattice_mode::split>& input,
-      const structure_input<double, sublattice_mode::split>& structure, double atol, double rtol,
+      const structure_t<double, sublattice_mode::split>& structure, double atol, double rtol,
       double bin_width, double peak_isolation);
 
 };  // namespace sqsgen::configuration
