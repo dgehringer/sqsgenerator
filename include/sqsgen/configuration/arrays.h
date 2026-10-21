@@ -6,7 +6,6 @@
 #define SQSGEN_CONFIGURATION_ARRAYS_H
 
 #include <optional>
-#include <ranges>
 #include <variant>
 #include <vector>
 

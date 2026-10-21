@@ -31,7 +31,6 @@ if (BUILD_WASM)
   find_package(absl CONFIG REQUIRED)
   add_executable(wasm
     wasm/sqsgen.cpp
-    src/optimization.cpp
     src/configuration/arrays.cpp
     src/configuration/structure.cpp
     src/configuration/composition.cpp

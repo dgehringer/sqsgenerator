@@ -3,16 +3,11 @@
 #include <emscripten/proxying.h>
 #include <emscripten/threading.h>
 
-#include "sqsgen/core/results.h"
-#include "sqsgen/io/config/combined.h"
-#include "sqsgen/io/json.h"
-#include "sqsgen/io/parsing.h"
-#include "sqsgen/io/structure.h"
-#include "sqsgen/log.h"
-#include "sqsgen/sqs.h"
 #include "sqsgen/types.h"
 
 using namespace emscripten;
+/*
+
 using namespace sqsgen::core::helpers;
 using namespace sqsgen::core;
 
@@ -172,6 +167,7 @@ val optimize(val const& config, sqsgen::Prec prec, val const& cb) {
 
   return promise.get_return_object();
 }
+*/
 
 EMSCRIPTEN_BINDINGS(m) {
   // Core optimization function
@@ -180,26 +176,27 @@ EMSCRIPTEN_BINDINGS(m) {
   register_optional<std::size_t>();
   register_optional<std::uint64_t>();
   register_optional<double>();
+  /*
+    enum_<sqsgen::Prec>("Prec")
+        .value("single", sqsgen::Prec::PREC_SINGLE)
+        .value("double", sqsgen::Prec::PREC_DOUBLE);
 
-  enum_<sqsgen::Prec>("Prec")
-      .value("single", sqsgen::Prec::PREC_SINGLE)
-      .value("double", sqsgen::Prec::PREC_DOUBLE);
+    class_<sqs_results>("SqsResults")
+        .function("pdb", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_PDB>)
+        .function("poscar", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_POSCAR>)
+        .function("cif", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_CIF>)
+        .function("sqsgen", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_SQSGEN>)
+        .function("ase", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_ASE>)
+        .function("pymatgen", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_PYMATGEN>)
+        .function("msgpack", &sqs_results::msgpack)
+        .function("numObjectives", &sqs_results::num_objectives)
+        .function("numSolutions", &sqs_results::num_solutions)
+        .function("objective", &sqs_results::objective);
 
-  class_<sqs_results>("SqsResults")
-      .function("pdb", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_PDB>)
-      .function("poscar", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_POSCAR>)
-      .function("cif", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_CIF>)
-      .function("sqsgen", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_SQSGEN>)
-      .function("ase", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_ASE>)
-      .function("pymatgen", &sqs_results::format<sqsgen::STRUCTURE_FORMAT_JSON_PYMATGEN>)
-      .function("msgpack", &sqs_results::msgpack)
-      .function("numObjectives", &sqs_results::num_objectives)
-      .function("numSolutions", &sqs_results::num_solutions)
-      .function("objective", &sqs_results::objective);
-
-  // Helper functions
-  function("parseConfig", &parse_config);
-  function("optimizeAsync", &optimize);
+    // Helper functions
+    function("parseConfig", &parse_config);
+    function("optimizeAsync", &optimize);
+    */
 }
 
 int main() {

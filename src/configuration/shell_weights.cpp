@@ -75,8 +75,7 @@ namespace sqsgen::configuration {
         return default_shell_weights(num_shells);
       else
         return parse_shell_weights(input.value(), num_shells);
-    }
-    if constexpr (Mode == sublattice_mode::split) {
+    } else if constexpr (Mode == sublattice_mode::split) {
       auto num_sublattices = shell_radii.size();
       shell_weights<T, Mode> out;
       out.reserve(num_sublattices);

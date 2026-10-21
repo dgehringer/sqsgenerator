@@ -2,9 +2,11 @@
 #include "sqsgen/configuration/arrays.h"
 
 #include <Eigen/Core>
+#include <concepts>
 #include <cstddef>
 #include <expected>
 #include <string>
+#include <type_traits>
 #include <variant>
 
 #include "sqsgen/core/eigen.h"
@@ -100,6 +102,46 @@ namespace sqsgen::configuration {
                            num_shells);
   }
 
+  template <class Fn, class T, class Element>
+  concept DefaultFn
+      = std::invocable<Fn, const structure_input<T, sublattice_mode::interact>&,
+                       const shell_weights<T, sublattice_mode::interact>&,
+                       const shell_radii<T, sublattice_mode::interact>&>
+        && std::convertible_to<
+            std::invoke_result_t<Fn, const structure_input<T, sublattice_mode::interact>&,
+                                 const shell_weights<T, sublattice_mode::interact>&,
+                                 const shell_radii<T, sublattice_mode::interact>&>,
+            result_t<Element>>;
+
+  template <class T, sublattice_mode Mode, template <class, sublattice_mode> class Out,
+            template <class, sublattice_mode> class In,
+            DefaultFn<T, Out<T, sublattice_mode::interact>> Fn>
+  result_t<Out<T, Mode>> validate_array(const std::string& key, const In<T, Mode>& input,
+                                        Fn&& default_fn, const structure_input<T, Mode>& structure,
+                                        const shell_weights<T, Mode>& weights,
+                                        const shell_radii<T, Mode>& radii) {
+    if (input.has_value()) {
+    } else {
+      if constexpr (Mode == sublattice_mode::interact) {
+        return default_fn(structure, weights, radii);
+      } else if constexpr (Mode == sublattice_mode::split) {
+        assert(structure.size() == weights.size() && structure.size() == radii.size()
+                 && "validate_array split: per-sublattice vectors must be equal length "
+                    "(invariant established upstream)");
+        Out<T, sublattice_mode::split> out;
+        out.reserve(structure.size());
+        for (auto&& [s, w, r] : std::views::zip(structure, weights, radii)) {
+          auto res = default_fn(s, w, r);  // the interact fn, per sublattice
+          if (!res) return std::unexpected(std::move(res).error());
+          out.push_back(std::move(res).value());
+        }
+        return out;
+      } else
+        static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
+                      "unhandled sublattice_mode");
+    }
+  }
+
   template <class T, sublattice_mode Mode>
   result_t<pair_weights<T, Mode>> validate_pair_weights_input(
       const pair_weights_input<T, Mode>& input, const structure_input<T, Mode>& structure,
@@ -107,10 +149,34 @@ namespace sqsgen::configuration {
     if (!input.has_value()) {
       if constexpr (Mode == sublattice_mode::interact) {
         return default_pair_weights<T>(weights.size(), structure.num_species);
-      }
-      if constexpr (Mode == sublattice_mode::split) {
+      }  // namespace sqsgen::configuration
+      else if constexpr (Mode == sublattice_mode::split) {
         assert(weights.size() == structure.size());
-        std::ranges::views::zip(structure, weights);
+        return std::ranges::views::zip(weights, structure)
+               | std::ranges::views::transform([](const auto& weights_, const auto& structure_) {
+                   return default_pair_weights<T>(weights_.size(), structure_.num_species);
+                 })
+               | std::ranges::to<pair_weights<T, Mode>>();
+      } else
+        static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
+                      "unhandled sublattice_mode");
+    }
+  };
+
+  template <class T, sublattice_mode Mode>
+  result_t<target_objective<T, Mode>> validate_target_objective_input(
+      const target_objective_input<T, Mode>& input, const structure_input<T, Mode>& structure,
+      const shell_weights<T, Mode>& weights) {
+    if (!input.has_value()) {
+      if constexpr (Mode == sublattice_mode::interact) {
+        return stack_scalar<T>(T(0.0), weights.size(), structure.num_species);
+      } else if constexpr (Mode == sublattice_mode::split) {
+        assert(weights.size() == structure.size());
+        return std::ranges::views::zip(weights, structure)
+               | std::ranges::views::transform([](const auto& weights_, const auto& structure_) {
+                   return stack_scalar<T>(T(0.0), weights_.size(), structure_.num_species);
+                 })
+               | std::ranges::to<target_objective<T, Mode>>();
       } else
         static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
                       "unhandled sublattice_mode");
