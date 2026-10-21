@@ -21,29 +21,27 @@ namespace sqsgen::configuration {
                            : "shell_weights";
     try {
       return static_cast<std::size_t>(std::stoul(key));
-    } catch (std::invalid_argument const& e) {
+    } catch (const std::invalid_argument& e) {
       return std::unexpected(
           configuration_error{helpers::format_string("%s.%s", path, key), error_code::bad_argument,
                               helpers::format_string("Could not parse shell index: %s", key)});
-    } catch (std::out_of_range const& e) {
+    } catch (const std::out_of_range& e) {
       return std::unexpected(
           configuration_error{helpers::format_string("%s.%s", path, key), error_code::out_of_range,
                               helpers::format_string("Could not parse shell index: %s", key)});
     }
   }
 
-  template <class T>
-  result_t<shell_weights_t<T>> parse_shell_weights(const std::map<std::string, T>& weight_input,
-                                                   std::size_t num_shells,
-                                                   std::optional<std::size_t> index
-                                                   = std::nullopt) {
+  template <class T> result_t<std::map<std::size_t, T>> parse_shell_weights(
+      const std::map<std::string, T>& weight_input, std::size_t num_shells,
+      std::optional<std::size_t> index = std::nullopt) {
     std::string path = index.has_value()
                            ? helpers::format_string("shell_weights.%zu", index.value())
                            : "shell_weights";
     if (weight_input.empty())
       return std::unexpected(
           configuration_error{path, error_code::invalid_size, "shell weights cannot be empty"});
-    shell_weights_t<T> out;
+    std::map<std::size_t, T> out;
     for (const auto& [key, weight] : weight_input) {
       auto shell = parse_shell(key, index);
       if (!shell) return std::unexpected(std::move(shell).error());
@@ -61,8 +59,8 @@ namespace sqsgen::configuration {
     return out;
   }
 
-  template <class T> shell_weights_t<T> default_shell_weights(std::size_t num_shells) {
-    shell_weights_t<T> out;
+  template <class T> std::map<std::size_t, T> default_shell_weights(std::size_t num_shells) {
+    std::map<std::size_t, T> out;
     for (std::size_t index = 1; index < num_shells + 1; ++index)
       out.insert(index, T(1.0) / static_cast<T>(index));
 
@@ -70,8 +68,8 @@ namespace sqsgen::configuration {
   }
 
   template <class T, sublattice_mode Mode>
-  result_t<shell_weights<T, Mode>> validate_shell_weight_input(
-      const shell_weights_input<T, Mode>& input, const shell_radii<T, Mode>& shell_radii) {
+  result_t<shell_weights_t<T, Mode>> validate_shell_weight_input(
+      const shell_weights_input<T, Mode>& input, const shell_radii_t<T, Mode>& shell_radii) {
     if constexpr (Mode == sublattice_mode::interact) {
       auto num_shells = shell_radii.size() - 1;
       if (!input.has_value())
@@ -80,7 +78,7 @@ namespace sqsgen::configuration {
         return parse_shell_weights(input.value(), num_shells);
     } else if constexpr (Mode == sublattice_mode::split) {
       auto num_sublattices = shell_radii.size();
-      shell_weights<T, Mode> out;
+      shell_weights_t<T, Mode> out;
       out.reserve(num_sublattices);
       if (input.has_value()) {
         const auto& data = input.value();
