@@ -44,23 +44,7 @@ namespace sqsgen {
     requires std::is_arithmetic_v<T>
   using shell_weights_t = std::map<std::size_t, T>;
 
-  enum Prec {
-    PREC_INVALID = -1,
-    PREC_SINGLE = 0,
-    PREC_DOUBLE = 1,
-  };
-
-  enum IterationMode {
-    ITERATION_MODE_INVALID = -1,
-    ITERATION_MODE_RANDOM,
-    ITERATION_MODE_SYSTEMATIC,
-  };
-
-  enum ShellRadiiDetection {
-    SHELL_RADII_DETECTION_INVALID = -1,
-    SHELL_RADII_DETECTION_NAIVE,
-    SHELL_RADII_DETECTION_PEAK
-  };
+  enum class prec { Single, Double };
 
   enum class iteration_mode { random, systematic };
 

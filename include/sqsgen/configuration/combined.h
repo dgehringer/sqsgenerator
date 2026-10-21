@@ -37,6 +37,10 @@ namespace sqsgen::io::config {
 
   static constexpr iterations_t iterations_default = 500000;
   static constexpr iterations_t chunk_size_default = 100000;
+  template <class T> static constexpr T atol_default = 1.0e-3;
+  template <class T> static constexpr T rtol_default = 1.0e-5;
+  template <class T> static constexpr T bin_width_default = 0.05;
+  template <class T> static constexpr T peak_isolation_default = 0.25;
 
   template <string_literal key, class Document>
   parse_result<IterationMode> parse_iteration_mode(Document const& document) {

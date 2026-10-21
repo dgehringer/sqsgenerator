@@ -217,29 +217,23 @@ namespace sqsgen::configuration {
         "prefactors", input, default_prefactors<T>, structure, weights, radii);
   }
 
-  template result_t<pair_weights<float, sublattice_mode::interact>> validate_pair_weights_input<
-      float, sublattice_mode::interact>(const pair_weights_input<float, sublattice_mode::interact>&,
-                                        const structure_input<float, sublattice_mode::interact>&,
-                                        const shell_weights<float, sublattice_mode::interact>&,
-                                        const shell_radii<float, sublattice_mode::interact>&);
+  // arrays.cpp — bottom, after the bodies
 
-  template result_t<pair_weights<float, sublattice_mode::split>> validate_pair_weights_input<
-      float, sublattice_mode::split>(const pair_weights_input<float, sublattice_mode::split>&,
-                                     const structure_input<float, sublattice_mode::split>&,
-                                     const shell_weights<float, sublattice_mode::split>&,
-                                     const shell_radii<float, sublattice_mode::split>&);
+#define INSTANTIATE_VALIDATOR(FN, IN, OUT, T, MODE)                                                \
+  template result_t<OUT<T, MODE>> FN<T, MODE>(const IN<T, MODE>&, const structure_input<T, MODE>&, \
+                                              const shell_weights<T, MODE>&,                       \
+                                              const shell_radii<T, MODE>&);
 
-  template result_t<pair_weights<double, sublattice_mode::interact>>
-  validate_pair_weights_input<double, sublattice_mode::interact>(
-      const pair_weights_input<double, sublattice_mode::interact>&,
-      const structure_input<double, sublattice_mode::interact>&,
-      const shell_weights<double, sublattice_mode::interact>&,
-      const shell_radii<double, sublattice_mode::interact>&);
+#define INSTANTIATE_ALL_MODES(FN, IN, OUT)                              \
+  INSTANTIATE_VALIDATOR(FN, IN, OUT, float, sublattice_mode::interact)  \
+  INSTANTIATE_VALIDATOR(FN, IN, OUT, float, sublattice_mode::split)     \
+  INSTANTIATE_VALIDATOR(FN, IN, OUT, double, sublattice_mode::interact) \
+  INSTANTIATE_VALIDATOR(FN, IN, OUT, double, sublattice_mode::split)
 
-  template result_t<pair_weights<double, sublattice_mode::split>> validate_pair_weights_input<
-      double, sublattice_mode::split>(const pair_weights_input<double, sublattice_mode::split>&,
-                                      const structure_input<double, sublattice_mode::split>&,
-                                      const shell_weights<double, sublattice_mode::split>&,
-                                      const shell_radii<double, sublattice_mode::split>&);
+  INSTANTIATE_ALL_MODES(validate_pair_weights_input, pair_weights_input, pair_weights)
+  INSTANTIATE_ALL_MODES(validate_target_objective_input, target_objective_input, target_objective)
+  INSTANTIATE_ALL_MODES(validate_prefactors_input, prefactors_input, prefactors)
 
+#undef INSTANTIATE_ALL_MODES
+#undef INSTANTIATE_VALIDATOR
 }  // namespace sqsgen::configuration

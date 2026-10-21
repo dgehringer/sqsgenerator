@@ -5,6 +5,7 @@
     "glaze",
     "nlohmann-json",
     "eigen3",
+    "unordered-dense",
     "boost-multiprecision",
     "bshoshany-thread-pool"
   ],

@@ -108,7 +108,8 @@ namespace sqsgen::core {
         return out;
       }
 
-      std::expected<Eigen::Tensor<T, N>, tensor_shape_error> from(const packed_tensor<T, N>& p) {
+      static std::expected<Eigen::Tensor<T, N>, tensor_shape_error> from(
+          const packed_tensor<T, N>& p) {
         std::array<Eigen::Index, N> shape{};
         std::int64_t count = 1;
         for (int d = 0; d < N; ++d) {
@@ -139,12 +140,13 @@ namespace sqsgen::core {
     };
 
     template <class T, int N> struct tensor_converter<nested_tensor<T, N>> {
-      nested_t<T, N> to(const Eigen::Tensor<T, N>& t) {
+      static nested_t<T, N> to(const Eigen::Tensor<T, N>& t) {
         std::array<Eigen::Index, N> idx{};
         return build_nested<T, N, 0>(t, idx);
       }
 
-      std::expected<Eigen::Tensor<T, N>, tensor_shape_error> from(const nested_t<T, N>& nested) {
+      static std::expected<Eigen::Tensor<T, N>, tensor_shape_error> from(
+          const nested_t<T, N>& nested) {
         std::array<Eigen::Index, N> shape{};
         measure_nested<T, N, N>(nested, shape);
 
@@ -202,11 +204,10 @@ namespace sqsgen::core {
     return out;
   }
 
-  template <class T>
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> tensor_to_matrix(const Eigen::Tensor<T, 2>& t) {
+  template <class T> matrix_t<T> tensor_to_matrix(const Eigen::Tensor<T, 2>& t) {
     const Eigen::Index rows = t.dimension(0);
     const Eigen::Index cols = t.dimension(1);
-    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> out(rows, cols);
+    matrix_t<T> out(rows, cols);
     for (Eigen::Index i = 0; i < rows; ++i)
       for (Eigen::Index j = 0; j < cols; ++j) out(i, j) = t(i, j);
     return out;
@@ -264,7 +265,9 @@ namespace sqsgen::core {
 
   template <class T>
   std::expected<matrix_t<T>, tensor_shape_error> matrix_from(const nested_t<T, 2>& p) {
-    return eigen::detail::tensor_converter<nested_tensor<T, 2>>::from(p).and_then(tensor_to_matrix);
+    auto tensor = eigen::detail::tensor_converter<nested_tensor<T, 2>>::from(p);
+    if (!tensor) return std::unexpected(std::move(tensor).error());
+    return tensor_to_matrix(std::move(tensor.value()));
   }
 
 }  // namespace sqsgen::core

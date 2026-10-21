@@ -22,6 +22,7 @@ add_compile_definitions(
 find_package(glaze CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(unordered_dense CONFIG REQUIRED)
 find_package(boost_multiprecision REQUIRED CONFIG)
 find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
 include_directories("${CMAKE_SOURCE_DIR}/include" ${BS_THREAD_POOL_INCLUDE_DIRS})
@@ -63,5 +64,6 @@ if (BUILD_WASM)
           Boost::multiprecision
           embind
           glaze::glaze
+              unordered_dense::unordered_dense
   )
 endif ()
