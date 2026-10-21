@@ -3,6 +3,7 @@
 #ifndef SQSGEN_CONFIGURATION_MISC_H
 #define SQSGEN_CONFIGURATION_MISC_H
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 
@@ -10,24 +11,28 @@
 #include "sqsgen/types.h"
 namespace sqsgen::configuration {
 
-  template <class T, sublattice_mode Mode> using structure_input
+  namespace defaults {
+    static constexpr std::size_t keep_default = 1UL;
+    static constexpr std::size_t max_results_per_objective_default = 10UL;
+    static constexpr iterations_t iterations_default = 500000;
+    static constexpr iterations_t chunk_size_default = 100000;
+    template <class T> static constexpr T atol_default = 1.0e-3;
+    template <class T> static constexpr T rtol_default = 1.0e-5;
+    template <class T> static constexpr T bin_width_default = 0.05;
+    template <class T> static constexpr T peak_isolation_default = 0.25;
+
+  }  // namespace defaults
+  template <class T, sublattice_mode Mode> using structure_t
       = sublattice_mode_nesting<core::structure<T>, Mode>;
 
-  static constexpr iterations_t iterations_default = 500000;
-  static constexpr iterations_t chunk_size_default = 100000;
-  template <class T> static constexpr T atol_default = 1.0e-3;
-  template <class T> static constexpr T rtol_default = 1.0e-5;
-  template <class T> static constexpr T bin_width_default = 0.05;
-  template <class T> static constexpr T peak_isolation_default = 0.25;
-
-  using iterations_input = std::optional<unsigned long long>;
   using iterations_t = unsigned long long;
+  using iterations_input = std::optional<iterations_t>;
 
-  using chunck_size_input = std::optional<unsigned long long>;
-  using chunck_size_t = unsigned long long;
+  using chunck_size_input = std::optional<iterations_t>;
+  using chunck_size_t = iterations_t;
 
-  using max_results_per_objective_input = std::optional<iterations_t>;
-  using max_results_per_objective_t = iterations_t;
+  using max_results_per_objective_input = std::optional<std::size_t>;
+  using max_results_per_objective_t = std::size_t;
 
   template <class T> using atol_input = std::optional<T>;
   template <class T> using atol_t = T;
@@ -45,9 +50,13 @@ namespace sqsgen::configuration {
   template <sublattice_mode Mode> using seed_input = sublattice_mode_nesting<seed_spec, Mode>;
   template <sublattice_mode Mode> using seed_t = seed_spec;
 
-  template <sublattice_mode Mode>
-  result_t<iterations_t> validate_iterations_input(const iterations_input&,
-                                                   const structure_input<T, sublattice_mode Mode>);
+  using keep_input = std::optional<std::size_t>;
+  using keep_t = std::size_t;
+
+  template <class T, sublattice_mode Mode>
+  result_t<iterations_t> validate_iterations_input(const iterations_input&, iteration_mode,
+                                                   const structure_t<T, Mode>&);
+
   result_t<iterations_t> validate_chunk_size_input(const iterations_input&,
                                                    std::optional<iterations_t>);
   template <class T> result_t<atol_t<T>> validate_atol_input(const atol_input<T>&);
@@ -59,6 +68,8 @@ namespace sqsgen::configuration {
 
   template <sublattice_mode Mode>
   result_t<seed_t<Mode>> validate_seed(const seed_input<Mode>& mode, iteration_mode imode);
+
+  result_t<keep_t> validate_keep_input(const keep_input&);
 
 }  // namespace sqsgen::configuration
 #endif
