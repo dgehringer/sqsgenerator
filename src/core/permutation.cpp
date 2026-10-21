@@ -11,7 +11,7 @@
 
 namespace sqsgen::core {
 
-  counter<specie_t> count_species(configuration_t const& c) { return helpers::count(c); }
+  composition_t count_species(const configuration_t& c) { return helpers::count(c); }
 
   template <typename Out, typename In>
     requires std::is_convertible_v<In, Out>
@@ -36,15 +36,15 @@ namespace sqsgen::core {
                  .value_or(1);
   }
 
-  static rank_t num_permutations(counter<specie_t> const& hist) {
+  static rank_t num_permutations(const composition_t& hist) {
     return num_permutations_impl(std::ranges::views::values(hist));
   }
 
-  static rank_t num_permutations(configuration_t const& conf) {
+  static rank_t num_permutations(const configuration_t& conf) {
     return num_permutations(count_species(conf));
   }
 
-  inline rank_t rank_permutation(configuration_t const& configuration) {
+  inline rank_t rank_permutation(const configuration_t& configuration) {
     auto num_atoms{configuration.size()}, num_species{count_species(configuration).size()};
     rank_t rank{1}, suffix_permutations{1};
     std::vector hist(num_species, 0);
@@ -62,7 +62,7 @@ namespace sqsgen::core {
     return rank;
   }
 
-  inline void unrank_permutation(configuration_t& configuration, rank_t const& to_rank) {
+  inline void unrank_permutation(configuration_t& configuration, const rank_t& to_rank) {
     using namespace core::helpers;
     auto freqs = count(configuration);
     rank_t total_permutations{num_permutations(freqs)}, rank{to_rank};

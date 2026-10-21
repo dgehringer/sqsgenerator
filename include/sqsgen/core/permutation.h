@@ -8,8 +8,8 @@
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
-  counter<specie_t> count_species(const configuration_t& c);
-  static rank_t num_permutations(const counter<specie_t>& hist);
+  composition_t count_species(const configuration_t& c);
+  static rank_t num_permutations(const composition_t& hist);
   static rank_t num_permutations(const configuration_t& conf);
   inline rank_t rank_permutation(const configuration_t& configuration);
   inline void unrank_permutation(configuration_t& configuration, const rank_t& to_rank);

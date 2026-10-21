@@ -6,15 +6,28 @@
 #define SQSGEN_CONFIGURATION_H
 
 #include <optional>
+#include <type_traits>
 
 #include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
 
-  template <class T, sublattice_mode S, IterationMode I> struct configuration_base {
-    static constexpr SublatticeMode sublattice_mode = S;
-    static constexpr IterationMode iteration_mode = I;
+  template <class T>
+    requires std::is_arithmetic_v<T>
+  consteval prec arithmethic_to_prec() {
+    if constexpr (std::is_same_v<T, float>) {
+      return prec::Single;
+    } else if constexpr (std::is_same_v<double, double>) {
+      return prec::Double;
+    } else
+      static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>, "unhandled precision");
+  }
+
+  template <class T, sublattice_mode SMode> struct configuration_base {
+    static constexpr sublattice_mode sublattice_mode;
+    static constexpr iteration_mode iteration_mode = IMode;
+    static constexpr prec prec = arithmethic_to_prec<T>();
     ShellRadiiDetection radii_detection_mode = SHELL_RADII_DETECTION_PEAK;
     structure_config<T> structure;
     std::size_t keep;
