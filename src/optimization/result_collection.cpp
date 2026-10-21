@@ -74,4 +74,9 @@ namespace sqsgen::optimization {
     return it->second.get();
   }
 
+  template <> struct sqs_result_collection<float, sublattice_mode::interact>;
+  template <> struct sqs_result_collection<double, sublattice_mode::interact>;
+  template <> struct sqs_result_collection<float, sublattice_mode::split>;
+  template <> struct sqs_result_collection<double, sublattice_mode::split>;
+
 };  // namespace sqsgen::optimization
