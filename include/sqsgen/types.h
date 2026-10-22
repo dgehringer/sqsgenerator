@@ -4,6 +4,7 @@
 
 #include <Eigen/Core>
 #include <boost/multiprecision/cpp_int.hpp>
+#include <cstdint>
 #include <expected>
 #include <map>
 #include <type_traits>
@@ -48,9 +49,7 @@ namespace sqsgen {
 
   using composition_t = std::map<specie_t, std::size_t>;
 
-  using iterations_t = unsigned long long;
-
-  using nanoseconds_t = iterations_t;
+  using nanoseconds_t = std::uint64_t;
 
   using thread_config_t = std::vector<std::size_t>;
 
@@ -138,9 +137,9 @@ namespace sqsgen {
   };
 
   template <class T> struct sqs_statistics_data {
-    iterations_t finished{};
-    iterations_t working{};
-    iterations_t best_rank{};
+    std::uint64_t finished{};
+    std::uint64_t working{};
+    std::uint64_t best_rank{};
     T best_objective{std::numeric_limits<T>::infinity()};
     std::map<Timing, nanoseconds_t> timings{{TIMING_TOTAL, 0},
                                             {TIMING_CHUNK_SETUP, 0},

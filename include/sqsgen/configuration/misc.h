@@ -12,28 +12,16 @@
 #include "sqsgen/types.h"
 namespace sqsgen::configuration {
 
-  namespace defaults {
-    static constexpr std::size_t keep_default = 1UL;
-    static constexpr std::size_t max_results_per_objective_default = 10UL;
-    static constexpr iterations_t iterations_default = 500000;
-    static constexpr iterations_t chunk_size_default = 100000;
-    static constexpr iteration_mode iteration_mode_default = iteration_mode::random;
-    template <class T> static constexpr T atol_default = 1.0e-3;
-    template <class T> static constexpr T rtol_default = 1.0e-5;
-    template <class T> static constexpr T bin_width_default = 0.05;
-    template <class T> static constexpr T peak_isolation_default = 0.25;
-
-  }  // namespace defaults
   template <class T, sublattice_mode Mode> using structure_t
       = sublattice_mode_nesting<core::structure<T>, Mode>;
 
   using iteration_mode_input = std::optional<iteration_mode>;
 
-  using iterations_t = unsigned long long;
-  using iterations_input = std::optional<iterations_t>;
+  using iterations_t = std::optional<std::uint64_t>;
+  using iterations_input = std::optional<std::uint64_t>;
 
-  using chunck_size_input = std::optional<iterations_t>;
-  using chunck_size_t = iterations_t;
+  using chunck_size_input = std::optional<std::uint64_t>;
+  using chunck_size_t = std::uint64_t;
 
   using max_results_per_objective_input = std::optional<std::size_t>;
   using max_results_per_objective_t = std::size_t;
@@ -50,9 +38,9 @@ namespace sqsgen::configuration {
   template <class T> using peak_isolation_input = std::optional<T>;
   template <class T> using peak_isolation_t = T;
 
-  using seed_spec = std::optional<std::uint64_t>;
-  template <sublattice_mode Mode> using seed_input = sublattice_mode_nesting<seed_spec, Mode>;
-  template <sublattice_mode Mode> using seed_t = seed_spec;
+  using seed_spec = std::vector<std::optional<std::uint64_t>>;
+  using seed_input = std::optional<seed_spec>;
+  using seed_t = seed_spec;
 
   using keep_input = std::optional<std::size_t>;
   using keep_t = std::size_t;
@@ -63,15 +51,13 @@ namespace sqsgen::configuration {
 
   using prec_input = std::string;
 
-  result_t<iteration_mode> validate_iterations_input(iteration_mode,
-                                                     const std::vector<sublattice>&);
+  result_t<iteration_mode> validate_iteration_mode_input(iteration_mode,
+                                                         const std::vector<sublattice>&);
 
-  template <class T, sublattice_mode Mode>
-  result_t<iterations_t> validate_iterations_input(const iterations_input&, iteration_mode,
-                                                   const structure_t<T, Mode>&);
+  result_t<iterations_t> validate_iterations_input(const iterations_input&,
+                                                   const std::vector<sublattice>&, iteration_mode);
 
-  result_t<iterations_t> validate_chunk_size_input(const chunck_size_input&,
-                                                   const std::optional<iterations_t>&);
+  result_t<chunck_size_t> validate_chunk_size_input(const chunck_size_input&, const iterations_t&);
   template <class T> result_t<atol_t<T>> validate_atol_input(const atol_input<T>&);
   template <class T> result_t<rtol_t<T>> validate_rtol_input(const rtol_input<T>&);
 
@@ -80,7 +66,7 @@ namespace sqsgen::configuration {
   result_t<peak_isolation_t<T>> validate_peak_isolation_input(const peak_isolation_input<T>&);
 
   template <sublattice_mode Mode>
-  result_t<seed_t<Mode>> validate_seed(const seed_input<Mode>&, iteration_mode);
+  result_t<seed_t> validate_seed(const seed_input&, const std::vector<sublattice>&, iteration_mode);
 
   result_t<keep_t> validate_keep_input(const keep_input&);
 
@@ -88,6 +74,20 @@ namespace sqsgen::configuration {
   result_t<thread_config_t<Mpi>> validate_thread_config_input(const thread_config_input<Mpi>&);
 
   result_t<prec> validate_prec_input(const prec_input&);
+
+  namespace defaults {
+    static constexpr std::size_t keep_default = 1UL;
+    static constexpr std::size_t max_results_per_objective_default = 10UL;
+    static constexpr std::uint64_t iterations_default = 500000;
+    static constexpr chunck_size_t chunk_size_default = 100000;
+    static constexpr iteration_mode iteration_mode_default = iteration_mode::random;
+    static constexpr std::optional<std::uint64_t> seed_default = std::nullopt;
+    template <class T> static constexpr T atol_default = 1.0e-3;
+    template <class T> static constexpr T rtol_default = 1.0e-5;
+    template <class T> static constexpr T bin_width_default = 0.05;
+    template <class T> static constexpr T peak_isolation_default = 0.25;
+
+  }  // namespace defaults
 
 }  // namespace sqsgen::configuration
 #endif

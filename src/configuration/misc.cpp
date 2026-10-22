@@ -2,13 +2,13 @@
 
 #include "sqsgen/configuration/misc.h"
 
+#include <cstddef>
 #include <expected>
 #include <optional>
 
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/permutation.h"
-#include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
@@ -31,8 +31,8 @@ namespace sqsgen::configuration {
     return default_value;
   }
 
-  result_t<iteration_mode> validate_iterations_input(iteration_mode_input input,
-                                                     const std::vector<sublattice>& composition) {
+  result_t<iteration_mode> validate_iteration_mode_input(
+      iteration_mode_input input, const std::vector<sublattice>& composition) {
     if (input.has_value()) {
       auto iteration_mode = input.value();
       if (iteration_mode == iteration_mode::systematic) {
@@ -55,13 +55,28 @@ namespace sqsgen::configuration {
     return defaults::iteration_mode_default;
   }
 
-  template <class T, sublattice_mode Mode>
   result_t<iterations_t> validate_iterations_input(const iterations_input& input,
-                                                   iteration_mode mode,
-                                                   const structure_t<T, Mode>& structure);
+                                                   iteration_mode mode) {
+    if (input.value()) {
+      if (mode == iteration_mode::systematic)
+        return std::unexpected(
+            configuration_error{"iterations", error_code::bad_argument,
+                                "In systematic mode no iterations can be specified"});
+      auto iterations = input.value();
+      if (iterations == 0) {
+        return std::unexpected(configuration_error{
+            "iterations", error_code::bad_argument,
+            helpers::format_string("The number of iterations must be greater 0")});
+      }
+      return input;
+    } else {
+      return mode == iteration_mode::random ? std::make_optional(defaults::iterations_default)
+                                            : std::nullopt;
+    }
+  }
 
-  result_t<iterations_t> validate_chunk_size_input(const chunck_size_input& input,
-                                                   const std::optional<iterations_t> iterations) {
+  result_t<chunck_size_t> validate_chunk_size_input(const chunck_size_input& input,
+                                                    const iterations_t iterations) {
     if (input) {
       auto chunk_size = input.value();
       if (iterations.has_value() && chunk_size > iterations.value())
@@ -94,8 +109,26 @@ namespace sqsgen::configuration {
                                         "relative peak isolation in the shell radii historgram");
   };
 
-  template <sublattice_mode Mode>
-  result_t<seed_t<Mode>> validate_seed(const seed_input<Mode>&, iteration_mode);
+  result_t<seed_t> validate_seed(const seed_input& input,
+                                 const std::vector<sublattice>& composition, iteration_mode mode) {
+    if (mode == iteration_mode::systematic)
+      return std::unexpected(configuration_error{
+          "seed", error_code::bad_argument,
+          "You cannot specify a seed if you have set the iteration mode to \"systematic\". The "
+          "seed is only used for random iterations, but in systematic mode there is no "
+          "randomness involved."});
+    if (input.has_value()) {
+      auto seed = input.value();
+      if (seed.size() != composition.size())
+        std::unexpected(
+            configuration_error{"seed", error_code::invalid_size,
+                                helpers::format_string("The number of seeds specified (%zu) does "
+                                                       "not match the number of sublattices (%zu)",
+                                                       seed.size(), composition.size())});
+      return seed;
+    }
+    return seed_t(composition.size(), defaults::seed_default);
+  };
 
   result_t<keep_t> validate_keep_input(const keep_input& input) {
     if (input.has_value()) {
