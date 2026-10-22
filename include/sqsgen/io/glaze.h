@@ -15,12 +15,11 @@ namespace sqsgen::io {
 
   namespace detail {
 
-    template <class DTO>
+    template <class DTO, glz::opts opts = {
+        .error_on_unknown_keys = false,
+        .error_on_missing_keys = true,
+    }>
     static glz::error_ctx read_any(DTO& dto, std::string_view data, wire_format fmt) {
-      constexpr glz::opts opts{
-          .error_on_unknown_keys = false,
-          .error_on_missing_keys = true,
-      };
       switch (fmt) {
         case wire_format::json:
           return glz::read<opts>(dto, data);
@@ -39,11 +38,14 @@ namespace sqsgen::io {
     parser_error forward_glaze_error(const glz::error_ctx& ec, std::string_view buffer);
   }  // namespace detail
 
-  template <class DTO>
+  template <class DTO, glz::opts opts = {
+      .error_on_unknown_keys = false,
+      .error_on_missing_keys = true,
+  }>
     requires std::is_default_constructible_v<DTO>
   static std::expected<DTO, parser_error> read_any(std::string_view data, wire_format fmt) {
     DTO dto{};
-    if (auto ec = read_any(dto, data, fmt))
+    if (auto ec = read_any<DTO, opts>(dto, data, fmt))
       return std::unexpected(detail::forward_glaze_error(ec, data));
     return dto;
   }

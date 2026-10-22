@@ -5,10 +5,15 @@
 #ifndef SQSGEN_CONFIGURATION_H
 #define SQSGEN_CONFIGURATION_H
 
-#include <optional>
+#include <expected>
 #include <type_traits>
 
-#include "sqsgen/core/structure.h"
+#include "sqsgen/configuration/arrays.h"
+#include "sqsgen/configuration/composition.h"
+#include "sqsgen/configuration/misc.h"
+#include "sqsgen/configuration/shell_radii.h"
+#include "sqsgen/configuration/shell_weights.h"
+#include "sqsgen/configuration/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
@@ -24,29 +29,50 @@ namespace sqsgen::configuration {
       static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>, "unhandled precision");
   }
 
-  template <class T, sublattice_mode SMode> struct configuration_base {
-    static constexpr sublattice_mode sublattice_mode;
-    static constexpr iteration_mode iteration_mode = IMode;
+  template <class T, sublattice_mode Mode> struct configuration_input {
+    sublattice_mode sublattice_mode;
+    prec_input prec;
+    structure_input<T> structure;
+    composition_input composition;
+    iteration_mode iteration_mode;
+    shell_radii_input<T, Mode> shell_radii;
+    shell_weights_input<T, Mode> shell_weights;
+    pair_weights_input<T, Mode> pair_weights;
+    target_objective_input<T, Mode> target_objective;
+    prefactors_input<T, Mode> prefactors;
+    iterations_input iterations;
+    chunk_size_input chunk_size;
+    keep_input keep;
+    thread_config_input thread_config;
+    max_results_per_objective_input max_results_per_objective;
+    seed_input seed;
+  };
+
+  template <class T, sublattice_mode Mode> struct configuration {
+    static constexpr sublattice_mode sublattice_mode = Mode;
     static constexpr prec prec = arithmethic_to_prec<T>();
-    ShellRadiiDetection radii_detection_mode = SHELL_RADII_DETECTION_PEAK;
     structure_config<T> structure;
-    std::size_t keep;
-    thread_config_t thread_config;
-    std::optional<std::size_t> max_results_per_objective;
-  };
-
-  template <class T, SublatticeMode S, IterationMode I> struct configuration;
-
-  template <class T> struct configuration<T, SUBLATTICE_MODE_SPLIT, ITERATION_MODE_RANDOM>
-      : configuration_base<T, SUBLATTICE_MODE_SPLIT, ITERATION_MODE_RANDOM> {
     std::vector<sublattice> composition;
-    nested_t<T, 2> shell_radii;
-    std::vector<shell_weights_t<T>> shell_weights;
-    std::vector<cube_t<T>> prefactors;
-    std::vector<cube_t<T>> pair_weights;
-    std::vector<cube_t<T>> target_objective;
+    iteration_mode iteration_mode;
+    shell_radii_t<T, Mode> shell_radii;
+    shell_weights_t<T, Mode> shell_weights;
+    pair_weights_t<T, Mode> pair_weights;
+    target_objective_t<T, Mode> target_objective;
+    prefactors_t<T, Mode> prefactors;
     iterations_t iterations;
+    chunk_size_t chunk_size;
+    keep_t keep;
+    thread_config_t thread_config;
+    max_results_per_objective_t max_results_per_objective;
+    seed_t seed;
   };
+
+  std::expected<std::variant<configuration_input<float, sublattice_mode::interact>,
+                             configuration_input<float, sublattice_mode::split>,
+                             configuration_input<double, sublattice_mode::interact>,
+                             configuration_input<double, sublattice_mode::split>>,
+                configuration_error>
+      read_input(std::string_view, io::wire_format);
 
 }  // namespace sqsgen::configuration
 

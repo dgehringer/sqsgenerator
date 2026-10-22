@@ -20,8 +20,8 @@ namespace sqsgen::configuration {
   using iterations_t = std::optional<std::uint64_t>;
   using iterations_input = std::optional<std::uint64_t>;
 
-  using chunck_size_input = std::optional<std::uint64_t>;
-  using chunck_size_t = std::uint64_t;
+  using chunk_size_input = std::optional<std::uint64_t>;
+  using chunk_size_t = std::uint64_t;
 
   using max_results_per_objective_input = std::optional<std::size_t>;
   using max_results_per_objective_t = std::size_t;
@@ -47,9 +47,9 @@ namespace sqsgen::configuration {
 
   using prec_input = std::string;
 
-  template <bool Mpi> using thread_config_t
-      = std::conditional<Mpi, std::vector<std::optional<std::size_t>>, std::optional<std::size_t>>;
-  template <bool Mpi> using thread_config_input = thread_config_t<Mpi>;
+  using thread_config_t = std::vector<std::optional<std::size_t>>;
+  using thread_config_input = std::optional<
+      std::variant<std::optional<std::size_t>, std::vector<std::optional<std::size_t>>>>;
 
   result_t<iteration_mode> validate_iteration_mode_input(iteration_mode,
                                                          const std::vector<sublattice>&);
@@ -57,7 +57,7 @@ namespace sqsgen::configuration {
   result_t<iterations_t> validate_iterations_input(const iterations_input&,
                                                    const std::vector<sublattice>&, iteration_mode);
 
-  result_t<chunck_size_t> validate_chunk_size_input(const chunck_size_input&, const iterations_t&);
+  result_t<chunk_size_t> validate_chunk_size_input(const chunk_size_input&, const iterations_t&);
   template <class T> result_t<atol_t<T>> validate_atol_input(const atol_input<T>&);
   template <class T> result_t<rtol_t<T>> validate_rtol_input(const rtol_input<T>&);
 
@@ -69,8 +69,7 @@ namespace sqsgen::configuration {
 
   result_t<keep_t> validate_keep_input(const keep_input&);
 
-  template <bool Mpi>
-  result_t<thread_config_t<Mpi>> validate_thread_config_input(const thread_config_input<Mpi>&);
+  result_t<thread_config_t> validate_thread_config_input(const thread_config_input&);
 
   result_t<prec> validate_prec_input(const prec_input&);
 
@@ -78,7 +77,7 @@ namespace sqsgen::configuration {
     static constexpr std::size_t keep_default = 1UL;
     static constexpr std::size_t max_results_per_objective_default = 10UL;
     static constexpr std::uint64_t iterations_default = 500000;
-    static constexpr chunck_size_t chunk_size_default = 100000;
+    static constexpr chunk_size_t chunk_size_default = 100000;
     static constexpr iteration_mode iteration_mode_default = iteration_mode::random;
     static constexpr std::optional<std::uint64_t> seed_default = std::nullopt;
     template <class T> static constexpr T atol_default = 1.0e-3;

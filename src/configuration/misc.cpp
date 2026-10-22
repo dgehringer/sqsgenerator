@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <expected>
 #include <optional>
+#include <vector>
 
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/string.h"
@@ -75,8 +76,8 @@ namespace sqsgen::configuration {
     }
   }
 
-  result_t<chunck_size_t> validate_chunk_size_input(const chunck_size_input& input,
-                                                    const iterations_t iterations) {
+  result_t<chunk_size_t> validate_chunk_size_input(const chunk_size_input& input,
+                                                   const iterations_t iterations) {
     if (input) {
       auto chunk_size = input.value();
       if (iterations.has_value() && chunk_size > iterations.value())
@@ -142,13 +143,8 @@ namespace sqsgen::configuration {
     return defaults::keep_default;
   }
 
-  template <bool Mpi> result_t<thread_config_t<Mpi>> validate_thread_config_input(
-      const thread_config_input<Mpi>& input) {
-    if constexpr (Mpi == false) {
-      return input;
-    } else {
-      static_assert(Mpi == false, "MPI mode not implemented yet");
-    }
+  result_t<thread_config_t> validate_thread_config_input(const thread_config_input&) {
+    return thread_config_t(1, std::nullopt);
   }
 
   result_t<prec> validate_prec_input(const prec_input& input) {
@@ -174,6 +170,4 @@ namespace sqsgen::configuration {
   template result_t<peak_isolation_t<double>> validate_peak_isolation_input(
       const peak_isolation_input<double>&);
 
-  template result_t<thread_config_t<false>> validate_thread_config_input(
-      const thread_config_input<false>&);
 }  // namespace sqsgen::configuration

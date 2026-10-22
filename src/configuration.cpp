@@ -2,35 +2,38 @@
 
 #include "sqsgen/configuration.h"
 
-#include <optional>
-
-#include "sqsgen/core/structure.h"
+#include "sqsgen/configuration/misc.h"
+#include "sqsgen/io/glaze.h"
 #include "sqsgen/types.h"
 
-namespace sqsgen {
+namespace sqsgen::configuration {
 
-  template <class T> struct configuration<T, SUBLATTICE_MODE_SPLIT, ITERATION_MODE_RANDOM>
-      : configuration_base<T, SUBLATTICE_MODE_SPLIT, ITERATION_MODE_RANDOM> {
-    seed_t seed;
-    std::vector<sublattice> composition;
-    std::optional<nested_t<T, 2>::type> shell_radii;
-    std::optional<std::vector<shell_weights_t<T>>> shell_weights;
-    std::optional<std::vector<cube_t<T>>> prefactors;
-    std::optional<std::vector<cube_t<T>>> pair_weights;
-    std::optional<std::vector<cube_t<T>>> target_objective;
-    std::optional<iterations_t> iterations;
-  };
+  namespace detail {
+    struct configuration_input_meta {
+      prec_input prec;
+      sublattice_mode sublattice_mode;
+    };
 
-  template <class T> struct configuration<T, SUBLATTICE_MODE_SPLIT, ITERATION_MODE_RANDOM>
-      : configuration_base<T, SUBLATTICE_MODE_SPLIT, ITERATION_MODE_RANDOM> {
-    seed_t seed;
-    std::vector<sublattice> composition;
-    stl_matrix_t<T> shell_radii;
-    std::vector<shell_weights_t<T>> shell_weights;
-    std::vector<cube_t<T>> prefactors;
-    std::vector<cube_t<T>> pair_weights;
-    std::vector<cube_t<T>> target_objective;
-    std::optional<iterations_t> iterations;
-  };
+    configuration_error forward_error(io::parser_error error) {
+      return configuration_error{.key = "", .code = error.code, .msg = error.msg};
+    }
+  }  // namespace detail
 
-};  // namespace sqsgen
+  template <> struct configuration_input<float, sublattice_mode::interact>;
+  template <> struct configuration_input<float, sublattice_mode::split>;
+  template <> struct configuration_input<double, sublattice_mode::interact>;
+  template <> struct configuration_input<double, sublattice_mode::split>;
+
+  template <> struct configuration<float, sublattice_mode::interact>;
+  template <> struct configuration<float, sublattice_mode::split>;
+  template <> struct configuration<double, sublattice_mode::interact>;
+  template <> struct configuration<double, sublattice_mode::split>;
+
+  std::expected<std::variant<configuration_input<float, sublattice_mode::interact>,
+                             configuration_input<float, sublattice_mode::split>,
+                             configuration_input<double, sublattice_mode::interact>,
+                             configuration_input<double, sublattice_mode::split>>,
+                configuration_error>
+  read_input(std::string_view, io::wire_format) {}
+
+};  // namespace sqsgen::configuration

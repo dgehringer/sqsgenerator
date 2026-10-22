@@ -51,8 +51,6 @@ namespace sqsgen {
 
   using nanoseconds_t = std::uint64_t;
 
-  using thread_config_t = std::vector<std::size_t>;
-
   template <size_t N> using string_literal = core::helpers::string_literal<N>;
 
   enum class error_code {
