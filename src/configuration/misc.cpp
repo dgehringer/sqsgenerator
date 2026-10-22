@@ -142,8 +142,14 @@ namespace sqsgen::configuration {
     return defaults::keep_default;
   }
 
-  template <bool Mpi>
-  result_t<thread_config_t<Mpi>> validate_thread_config_input(const thread_config_input<Mpi>&);
+  template <bool Mpi> result_t<thread_config_t<Mpi>> validate_thread_config_input(
+      const thread_config_input<Mpi>& input) {
+    if constexpr (Mpi == false) {
+      return input;
+    } else {
+      static_assert(Mpi == false, "MPI mode not implemented yet");
+    }
+  }
 
   result_t<prec> validate_prec_input(const prec_input& input) {
     if ("SINGLE" == helpers::to_uppercase(input))
@@ -153,4 +159,21 @@ namespace sqsgen::configuration {
     return std::unexpected(configuration_error{"prec", error_code::bad_argument,
                                                "prec can only be \"single\" or \"double\""});
   }
+
+  template result_t<atol_t<float>> validate_atol_input(const atol_input<float>&);
+  template result_t<atol_t<double>> validate_atol_input(const atol_input<double>&);
+
+  template result_t<rtol_t<float>> validate_rtol_input(const rtol_input<float>&);
+  template result_t<rtol_t<double>> validate_rtol_input(const rtol_input<double>&);
+
+  template result_t<bin_width_t<float>> validate_bin_width_input(const bin_width_input<float>&);
+  template result_t<bin_width_t<double>> validate_bin_width_input(const bin_width_input<double>&);
+
+  template result_t<peak_isolation_t<float>> validate_peak_isolation_input(
+      const peak_isolation_input<float>&);
+  template result_t<peak_isolation_t<double>> validate_peak_isolation_input(
+      const peak_isolation_input<double>&);
+
+  template result_t<thread_config_t<false>> validate_thread_config_input(
+      const thread_config_input<false>&);
 }  // namespace sqsgen::configuration

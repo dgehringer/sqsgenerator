@@ -45,11 +45,11 @@ namespace sqsgen::configuration {
   using keep_input = std::optional<std::size_t>;
   using keep_t = std::size_t;
 
+  using prec_input = std::string;
+
   template <bool Mpi> using thread_config_t
       = std::conditional<Mpi, std::vector<std::optional<std::size_t>>, std::optional<std::size_t>>;
   template <bool Mpi> using thread_config_input = thread_config_t<Mpi>;
-
-  using prec_input = std::string;
 
   result_t<iteration_mode> validate_iteration_mode_input(iteration_mode,
                                                          const std::vector<sublattice>&);
@@ -65,7 +65,6 @@ namespace sqsgen::configuration {
   template <class T>
   result_t<peak_isolation_t<T>> validate_peak_isolation_input(const peak_isolation_input<T>&);
 
-  template <sublattice_mode Mode>
   result_t<seed_t> validate_seed(const seed_input&, const std::vector<sublattice>&, iteration_mode);
 
   result_t<keep_t> validate_keep_input(const keep_input&);
