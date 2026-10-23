@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <expected>
 #include <optional>
+#include <ranges>
 #include <variant>
 #include <vector>
 
@@ -15,6 +16,9 @@
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
+
+  template <class T, sublattice_mode Mode> using structure_t
+      = sublattice_mode_nesting<core::structure<T>, Mode>;
 
   template <class T> class structure_config {
   public:
@@ -24,6 +28,17 @@ namespace sqsgen::configuration {
     std::optional<std::array<int, 3>> supercell;
 
     [[nodiscard]] core::structure<T> structure() const;
+
+    template <sublattice_mode Mode>
+    structure_t<T, Mode> for_mode(const std::vector<sublattice>& composition) {
+      if constexpr (Mode == sublattice_mode::interact) {
+        return structure();
+      } else if constexpr (Mode == sublattice_mode::split) {
+        return structure().apply_composition_and_decompose(composition);
+      } else
+        static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
+                      "unhandled sublattice_mode");
+    }
   };
 
   template <class T> struct stucture_definition_input {
@@ -41,9 +56,6 @@ namespace sqsgen::configuration {
 
   template <class T> using structure_input
       = std::variant<stucture_definition_input<T>, structure_file_input>;
-
-  template <class T, sublattice_mode Mode> using structure_t
-      = sublattice_mode_nesting<core::structure<T>, Mode>;
 
   template <class T>
   std::expected<structure_config<T>, configuration_error> validate_structure_input(
