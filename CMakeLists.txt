@@ -31,7 +31,8 @@ if (BUILD_WASM)
   message("Building WASM module")
   find_package(absl CONFIG REQUIRED)
   add_executable(wasm
-    wasm/sqsgen.cpp
+    wasm/parser.cpp
+    src/configuration.cpp
     src/configuration/misc.cpp
     src/configuration/arrays.cpp
     src/configuration/structure.cpp

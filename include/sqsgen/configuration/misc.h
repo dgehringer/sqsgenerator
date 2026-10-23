@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
-#include <type_traits>
 
 #include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
@@ -45,8 +44,6 @@ namespace sqsgen::configuration {
   using keep_input = std::optional<std::size_t>;
   using keep_t = std::size_t;
 
-  using prec_input = std::string;
-
   using thread_config_t = std::vector<std::optional<std::size_t>>;
   using thread_config_input = std::optional<
       std::variant<std::optional<std::size_t>, std::vector<std::optional<std::size_t>>>>;
@@ -71,9 +68,9 @@ namespace sqsgen::configuration {
 
   result_t<thread_config_t> validate_thread_config_input(const thread_config_input&);
 
-  result_t<prec> validate_prec_input(const prec_input&);
-
   namespace defaults {
+    static constexpr prec prec_default = prec::Single;
+    static constexpr sublattice_mode sublattice_mode_default = sublattice_mode::interact;
     static constexpr std::size_t keep_default = 1UL;
     static constexpr std::size_t max_results_per_objective_default = 10UL;
     static constexpr std::uint64_t iterations_default = 500000;

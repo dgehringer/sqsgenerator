@@ -29,7 +29,6 @@ namespace sqsgen::configuration {
   template <class T> struct stucture_definition_input {
     core::nested_t<T, 2> lattice;
     core::nested_t<T, 2> coords;
-    bool frac = true;
     std::variant<std::vector<std::string>, std::vector<int>> species;
     std::optional<std::array<int, 3>> supercell;
   };

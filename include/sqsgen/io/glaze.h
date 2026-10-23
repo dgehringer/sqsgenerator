@@ -4,6 +4,7 @@
 
 #include <expected>
 #include <glaze/cbor.hpp>
+#include <glaze/core/common.hpp>
 #include <glaze/glaze.hpp>
 #include <glaze/msgpack.hpp>
 #include <glaze/yaml.hpp>
@@ -45,7 +46,7 @@ namespace sqsgen::io {
     requires std::is_default_constructible_v<DTO>
   static std::expected<DTO, parser_error> read_any(std::string_view data, wire_format fmt) {
     DTO dto{};
-    if (auto ec = read_any<DTO, opts>(dto, data, fmt))
+    if (auto ec = detail::read_any<DTO, opts>(dto, data, fmt))
       return std::unexpected(detail::forward_glaze_error(ec, data));
     return dto;
   }
@@ -75,4 +76,32 @@ namespace sqsgen::io {
   }
 }  // namespace sqsgen::io
 
+namespace glz {
+  template <> struct meta<sqsgen::prec> {
+    using enum sqsgen::prec;
+    static constexpr auto value = glz::enumerate("single", Single, "double", Double);
+  };
+
+  template <> struct meta<sqsgen::error_code> {
+    using enum sqsgen::error_code;
+    static constexpr auto value
+        = glz::enumerate(type_error, out_of_range, invalid_size, bad_argument, not_found, parsing);
+  };
+
+  template <> struct meta<sqsgen::sublattice_mode> {
+    using enum sqsgen::sublattice_mode;
+    static constexpr auto value = glz::enumerate(interact, split);
+  };
+
+  template <> struct meta<sqsgen::iteration_mode> {
+    using enum sqsgen::iteration_mode;
+    static constexpr auto value = glz::enumerate(random, systematic);
+  };
+
+  template <> struct meta<sqsgen::configuration::shell_radii_detection> {
+    using enum sqsgen::configuration::shell_radii_detection;
+    static constexpr auto value = glz::enumerate(naive, peak);
+  };
+
+}  // namespace glz
 #endif  // SQSGEN_IO_GLAZE_H

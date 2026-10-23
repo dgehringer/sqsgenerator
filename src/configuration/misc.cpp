@@ -147,15 +147,6 @@ namespace sqsgen::configuration {
     return thread_config_t(1, std::nullopt);
   }
 
-  result_t<prec> validate_prec_input(const prec_input& input) {
-    if ("SINGLE" == helpers::to_uppercase(input))
-      return prec::Single;
-    else if ("DOUBLE" == helpers::to_uppercase(input))
-      return prec::Double;
-    return std::unexpected(configuration_error{"prec", error_code::bad_argument,
-                                               "prec can only be \"single\" or \"double\""});
-  }
-
   template result_t<atol_t<float>> validate_atol_input(const atol_input<float>&);
   template result_t<atol_t<double>> validate_atol_input(const atol_input<double>&);
 

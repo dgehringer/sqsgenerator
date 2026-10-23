@@ -31,7 +31,9 @@ namespace sqsgen::configuration {
 
   template <class T, sublattice_mode Mode> struct configuration_input {
     sublattice_mode sublattice_mode;
-    prec_input prec;
+    prec prec;
+    atol_input<T> atol;
+    rtol_input<T> rtol;
     structure_input<T> structure;
     composition_input composition;
     iteration_mode iteration_mode;
@@ -49,8 +51,8 @@ namespace sqsgen::configuration {
   };
 
   template <class T, sublattice_mode Mode> struct configuration {
-    static constexpr sublattice_mode sublattice_mode = Mode;
-    static constexpr prec prec = arithmethic_to_prec<T>();
+    sublattice_mode sublattice_mode = Mode;
+    prec prec = arithmethic_to_prec<T>();
     structure_config<T> structure;
     std::vector<sublattice> composition;
     iteration_mode iteration_mode;
@@ -67,12 +69,14 @@ namespace sqsgen::configuration {
     seed_t seed;
   };
 
-  std::expected<std::variant<configuration_input<float, sublattice_mode::interact>,
-                             configuration_input<float, sublattice_mode::split>,
-                             configuration_input<double, sublattice_mode::interact>,
-                             configuration_input<double, sublattice_mode::split>>,
-                configuration_error>
-      read_input(std::string_view, io::wire_format);
+  using configuration_variant_t
+      = std::variant<configuration_input<float, sublattice_mode::interact>,
+                     configuration_input<float, sublattice_mode::split>,
+                     configuration_input<double, sublattice_mode::interact>,
+                     configuration_input<double, sublattice_mode::split>>;
+
+  std::expected<configuration_variant_t, io::parser_error> read_input(std::string_view,
+                                                                      io::wire_format);
 
 }  // namespace sqsgen::configuration
 
