@@ -23,7 +23,7 @@ namespace sqsgen::configuration {
   using chunk_size_t = std::uint64_t;
 
   using max_results_per_objective_input = std::optional<std::size_t>;
-  using max_results_per_objective_t = std::size_t;
+  using max_results_per_objective_t = std::optional<std::size_t>;
 
   template <class T> using atol_input = std::optional<T>;
   template <class T> using atol_t = T;
@@ -62,11 +62,15 @@ namespace sqsgen::configuration {
   template <class T>
   result_t<peak_isolation_t<T>> validate_peak_isolation_input(const peak_isolation_input<T>&);
 
-  result_t<seed_t> validate_seed(const seed_input&, const std::vector<sublattice>&, iteration_mode);
+  result_t<seed_t> validate_seed_input(const seed_input&, const std::vector<sublattice>&,
+                                       iteration_mode);
 
   result_t<keep_t> validate_keep_input(const keep_input&);
 
   result_t<thread_config_t> validate_thread_config_input(const thread_config_input&);
+
+  result_t<max_results_per_objective_t> validate_max_results_per_objective_input(
+      const max_results_per_objective_input&);
 
   namespace defaults {
     static constexpr prec prec_default = prec::Single;

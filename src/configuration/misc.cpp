@@ -110,8 +110,9 @@ namespace sqsgen::configuration {
                                         "relative peak isolation in the shell radii historgram");
   };
 
-  result_t<seed_t> validate_seed(const seed_input& input,
-                                 const std::vector<sublattice>& composition, iteration_mode mode) {
+  result_t<seed_t> validate_seed_input(const seed_input& input,
+                                       const std::vector<sublattice>& composition,
+                                       iteration_mode mode) {
     if (mode == iteration_mode::systematic)
       return std::unexpected(configuration_error{
           "seed", error_code::bad_argument,
@@ -141,6 +142,19 @@ namespace sqsgen::configuration {
       return keep;
     }
     return defaults::keep_default;
+  }
+
+  result_t<max_results_per_objective_t> validate_max_results_per_objective_input(
+      const max_results_per_objective_input& input) {
+    if (input.has_value()) {
+      auto max_results_per_objective = input.value();
+      if (max_results_per_objective == 0)
+        return std::unexpected(configuration_error{
+            "max_results_per_objective", error_code::bad_argument,
+            "The number of degenerate configuration per objective must be greater than 0"});
+      return max_results_per_objective;
+    }
+    return defaults::max_results_per_objective_default;
   }
 
   result_t<thread_config_t> validate_thread_config_input(const thread_config_input&) {

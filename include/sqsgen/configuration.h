@@ -34,6 +34,8 @@ namespace sqsgen::configuration {
     prec prec;
     atol_input<T> atol;
     rtol_input<T> rtol;
+    bin_width_input<T> bin_width;
+    peak_isolation_input<T> peak_isolation;
     structure_input<T> structure;
     composition_input composition;
     iteration_mode iteration_mode;
@@ -53,6 +55,10 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode> struct configuration {
     sublattice_mode sublattice_mode = Mode;
     prec prec = arithmethic_to_prec<T>();
+    atol_t<T> atol;
+    rtol_t<T> rtol;
+    bin_width_t<T> bin_width;
+    peak_isolation_t<T> peak_isolation;
     structure_config<T> structure;
     std::vector<sublattice> composition;
     iteration_mode iteration_mode;
@@ -69,15 +75,21 @@ namespace sqsgen::configuration {
     seed_t seed;
   };
 
-  using configuration_variant_t
+  using configuration_input_variant_t
       = std::variant<configuration_input<float, sublattice_mode::interact>,
                      configuration_input<float, sublattice_mode::split>,
                      configuration_input<double, sublattice_mode::interact>,
                      configuration_input<double, sublattice_mode::split>>;
 
-  std::expected<configuration_variant_t, io::parser_error> read_input(std::string_view,
-                                                                      io::wire_format);
+  using configuration_variant_t = std::variant<configuration<float, sublattice_mode::interact>,
+                                               configuration<float, sublattice_mode::split>,
+                                               configuration<double, sublattice_mode::interact>,
+                                               configuration<double, sublattice_mode::split>>;
 
+  std::expected<configuration_input_variant_t, io::parser_error> read_input(std::string_view,
+                                                                            io::wire_format);
+
+  result_t<configuration_variant_t> parse_configuration(const configuration_input_variant_t&);
 }  // namespace sqsgen::configuration
 
 #endif  // SQSGEN_CONFIGURATION_H

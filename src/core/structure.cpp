@@ -206,8 +206,9 @@ namespace sqsgen::core {
   template <class T> std::vector<structure<T>> structure<T>::apply_composition_and_decompose(
       const std::vector<sublattice>& composition) const {
     auto with_species = apply_composition(composition);
-    return helpers::as<std::vector>{}(
-        composition | views::transform([&](auto&& sl) { return with_species.sliced(sl.sites); }));
+    return composition
+           | std::ranges::transform([&](auto&& sl) { return with_species.sliced(sl.sites); })
+           | std::ranges::to<std::vector<structure<T>>>();
   }
 
   template <class T> structure<T> structure<T>::without_vacancies() const {
