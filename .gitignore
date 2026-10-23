@@ -4,6 +4,7 @@
 
 vcpkg_installed/
 
+.zed/
 .idea/
 .cache/
 .ninja_deps
