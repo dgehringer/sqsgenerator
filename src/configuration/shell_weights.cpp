@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/string.h"
 #include "sqsgen/types.h"
 
@@ -107,4 +108,11 @@ namespace sqsgen::configuration {
       static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
                     "unhandled sublattice_mode");
   }
+
+#define INST_SHELL_WEIGHTS(PREC, SMODE)                                                     \
+  template result_t<shell_weights_t<PREC, SMODE>> validate_shell_weight_input<PREC, SMODE>( \
+      const shell_weights_input<PREC, SMODE>&, const shell_radii_t<PREC, SMODE>&);
+
+  SQSGEN_INSTANTIATE_PREC_SMODE(INST_SHELL_WEIGHTS)
+#undef INST_SHELL_WEIGHTS
 }  // namespace sqsgen::configuration

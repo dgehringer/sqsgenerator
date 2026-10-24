@@ -2,8 +2,7 @@
 
 #include <string>
 
-#include "sqsgen/core/permutation.h"
-#include "sqsgen/core/sorted_vector.h"
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/types.h"
@@ -27,7 +26,8 @@ namespace sqsgen::io {
 
     const auto [a, b, c] = detail::lengths<T>(filtered.lattice);
     const auto [alpha, beta, gamma] = detail::angles<T>(filtered.lattice);
-    println(format_string("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1", a, b, c, alpha, beta, gamma));
+    println(helpers::format_string("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1", a, b, c, alpha, beta,
+                                   gamma));
 
     coords_t<T> cart_coords = filtered.frac_coords * filtered.lattice.transpose();
 
@@ -36,9 +36,9 @@ namespace sqsgen::io {
     for (std::size_t index = 0; index < filtered.size(); ++index) {
       auto row = cart_coords.row(index);
       auto symbol = z_to_symbol(filtered.species[index]);
-      println(format_string("ATOM  %5d %4s MOL     1    %8.3f%8.3f%8.3f  1.00  0.00          %2s  ",
-                            index % maxnum, symbol, row(0), row(1), row(2),
-                            detail::rjust(symbol, 2)));
+      println(helpers::format_string(
+          "ATOM  %5d %4s MOL     1    %8.3f%8.3f%8.3f  1.00  0.00          %2s  ", index % maxnum,
+          symbol, row(0), row(1), row(2), detail::rjust(symbol, 2)));
     }
 
     println("ENDMDL");
@@ -46,6 +46,8 @@ namespace sqsgen::io {
     return result;
   }
 
-  template <> struct structure_adapter<float, structure_format::pdb>;
-  template <> struct structure_adapter<double, structure_format::pdb>;
+#define INST_STRUCTURE_ADAPTER_PDB(PREC) \
+  template struct structure_adapter<PREC, structure_format::pdb>;
+  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_ADAPTER_PDB)
+#undef INST_STRUCTURE_ADAPTER_PDB
 }  // namespace sqsgen::io

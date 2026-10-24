@@ -41,6 +41,7 @@ if (BUILD_WASM)
     src/configuration/shell_weights.cpp
     src/core/permutation.cpp
     src/core/structure.cpp
+    src/core/eigen.cpp
     src/io/structure/sqsgen.cpp
     src/io/structure/pymatgen.cpp
     src/io/structure/detail.cpp

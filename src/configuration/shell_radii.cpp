@@ -9,6 +9,7 @@
 #include <variant>
 #include <vector>
 
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/helpers/variant.h"
@@ -40,7 +41,7 @@ namespace sqsgen::configuration {
                                           return round_digits<T>(shell, num_digits);
                                         }));
 
-    if (helpers::is_close(unique_radii.front(), 0.0)) {
+    if (helpers::is_close<T>(unique_radii.front(), 0.0)) {
       if (unique_radii.size() == 1)
         return std::unexpected(
             configuration_error{"shell_radii", error_code::invalid_size,
@@ -53,7 +54,7 @@ namespace sqsgen::configuration {
     out.push_back(unique_radii.front());
     T prev = unique_radii.front();
     for (std::size_t index = 1; index < unique_radii.size(); ++index) {
-      auto radius = unique_radii[index];
+      auto radius = unique_radii.at(index);
       if (helpers::is_close(prev + atol, radius) || radius < prev + atol) {
         return std::unexpected(configuration_error{
             "shell_radii", error_code::bad_argument,
@@ -71,84 +72,80 @@ namespace sqsgen::configuration {
   std::expected<shell_radii_t<T, Mode>, configuration_error> validate_shell_radii_input(
       const shell_radii_input<T, Mode>& input, const structure_t<T, Mode>& structure, T atol,
       T rtol, T bin_width, T peak_isolation) {
+    std::variant<shell_radii_detection, shell_radii_spec<T, Mode>> input_or_default
+        = input.value_or(shell_radii_detection::peak);
     if constexpr (Mode == sublattice_mode::interact) {
-      return std::visit(helpers::overloaded{
-          [&](shell_radii_detection mode) -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
-            if (mode == shell_radii_detection::naive) {
-              return core::distances_naive(structure, atol, rtol);
-            }
-            if (mode == shell_radii_detection::peak) {
-              return core::distances_histogram(structure, bin_width, peak_isolation);
-            }
-            throw std::invalid_argument("Unknown shell detection mode");
-          },
-          [&](const std::vector<T>& radii)
-              -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
-            return std::move(validate_radii(radii, atol));
-          }});
+      return std::visit(
+          helpers::overloaded{[&](shell_radii_detection mode)
+                                  -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
+                                if (mode == shell_radii_detection::naive) {
+                                  return core::distances_naive(structure, atol, rtol);
+                                }
+                                if (mode == shell_radii_detection::peak) {
+                                  return core::distances_histogram(structure, bin_width,
+                                                                   peak_isolation);
+                                }
+                                throw std::invalid_argument("Unknown shell detection mode");
+                              },
+                              [&](const std::vector<T>& radii)
+                                  -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
+                                auto shell_radii = validate_radii<T>(radii, atol);
+                                if (!shell_radii)
+                                  return std::unexpected(std::move(shell_radii).error());
+                                return std::move(shell_radii).value();
+                              }},
+          input_or_default);
     } else if constexpr (Mode == sublattice_mode::split) {
       using output_t = shell_radii_t<T, Mode>;
-      return std::visit(helpers::overloaded{
-          [&](shell_radii_detection mode) -> result_t<output_t> {
-            if (mode == shell_radii_detection::naive) {
-              return structure | std::ranges::views::transform([&](const auto& structure) {
-                       return core::distances_naive(structure, atol, rtol);
-                     })
-                     | std::ranges::to<output_t>();
-            }
-            if (mode == shell_radii_detection::peak) {
-              return structure | std::ranges::views::transform([&](const auto& structure) {
-                       return core::distances_histogram(structure, bin_width, peak_isolation);
-                     })
-                     | std::ranges::to<output_t>();
-            }
-            return std::unexpected(configuration_error{"shell_radii", error_code::unknown,
-                                                       "Unknown shell detection mode"});
-          },
-          [&](const shell_radii_spec<T, Mode>& radii) -> result_t<output_t> {
-            if (radii.size() != structure.size()) {
-              return std::unexpected(configuration_error{
-                  "shell_radii", error_code::invalid_size,
-                  helpers::format_string("the number of shell radii vectors (%zu) does not match "
-                                         "the number of sublattices (%zu).",
-                                         radii.size(), structure.size())});
-            }
-            output_t out;
-            out.reserve(structure.size());
-            for (const auto& r : radii) {
-              auto validated = validate_radii(r, atol);
-              if (!validated) return std::unexpected(std::move(validated).error());
-              out.push_back(std::move(validated).value());
-            }
-            return out;
-          }});
+      return std::visit(
+          helpers::overloaded{
+              [&](shell_radii_detection mode) -> result_t<output_t> {
+                if (mode == shell_radii_detection::naive) {
+                  return structure | std::ranges::views::transform([&](const auto& structure) {
+                           return core::distances_naive(structure, atol, rtol);
+                         })
+                         | std::ranges::to<output_t>();
+                }
+                if (mode == shell_radii_detection::peak) {
+                  return structure | std::ranges::views::transform([&](const auto& structure) {
+                           return core::distances_histogram(structure, bin_width, peak_isolation);
+                         })
+                         | std::ranges::to<output_t>();
+                }
+                return std::unexpected(configuration_error{"shell_radii", error_code::unknown,
+                                                           "Unknown shell detection mode"});
+              },
+              [&](const shell_radii_spec<T, Mode>& radii) -> result_t<output_t> {
+                if (radii.size() != structure.size()) {
+                  return std::unexpected(configuration_error{
+                      "shell_radii", error_code::invalid_size,
+                      helpers::format_string(
+                          "the number of shell radii vectors (%zu) does not match "
+                          "the number of sublattices (%zu).",
+                          radii.size(), structure.size())});
+                }
+                output_t out;
+                out.reserve(structure.size());
+                for (const auto& r : radii) {
+                  auto validated = validate_radii(r, atol);
+                  if (!validated) return std::unexpected(std::move(validated).error());
+                  out.push_back(std::move(validated).value());
+                }
+                return out;
+              }},
+          input_or_default);
     } else
       static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
                     "unhandled sublattice_mode");
   }
 
-  template <> std::expected<shell_radii_t<float, sublattice_mode::interact>, configuration_error>
-  validate_shell_radii_input<float, sublattice_mode::interact>(
-      const shell_radii_input<float, sublattice_mode::interact>& input,
-      const structure_t<float, sublattice_mode::interact>& structure, float atol, float rtol,
-      float bin_width, float peak_isolation);
+#define INST_SHELL_RADII(PREC, SMODE)                                                           \
+  template std::expected<shell_radii_t<PREC, SMODE>, configuration_error>                       \
+  validate_shell_radii_input<PREC, SMODE>(const shell_radii_input<PREC, SMODE>& input,          \
+                                          const structure_t<PREC, SMODE>& structure, PREC atol, \
+                                          PREC rtol, PREC bin_width, PREC peak_isolation);
 
-  template <> std::expected<shell_radii_t<float, sublattice_mode::split>, configuration_error>
-  validate_shell_radii_input<float, sublattice_mode::split>(
-      const shell_radii_input<float, sublattice_mode::split>& input,
-      const structure_t<float, sublattice_mode::split>& structure, float atol, float rtol,
-      float bin_width, float peak_isolation);
-
-  template <> std::expected<shell_radii_t<double, sublattice_mode::interact>, configuration_error>
-  validate_shell_radii_input<double, sublattice_mode::interact>(
-      const shell_radii_input<double, sublattice_mode::interact>& input,
-      const structure_t<double, sublattice_mode::interact>& structure, double atol, double rtol,
-      double bin_width, double peak_isolation);
-
-  template <> std::expected<shell_radii_t<double, sublattice_mode::split>, configuration_error>
-  validate_shell_radii_input<double, sublattice_mode::split>(
-      const shell_radii_input<double, sublattice_mode::split>& input,
-      const structure_t<double, sublattice_mode::split>& structure, double atol, double rtol,
-      double bin_width, double peak_isolation);
+  SQSGEN_INSTANTIATE_PREC_SMODE(INST_SHELL_RADII)
+#undef INST_SHELL_RADII
 
 };  // namespace sqsgen::configuration

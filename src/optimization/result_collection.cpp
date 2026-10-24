@@ -3,6 +3,8 @@
 
 #include <limits>
 
+#include "sqsgen/core/helpers/inst.h"
+
 namespace sqsgen::optimization {
 
   template <class T, sublattice_mode Mode>
@@ -74,9 +76,8 @@ namespace sqsgen::optimization {
     return it->second.get();
   }
 
-  template <> struct sqs_result_collection<float, sublattice_mode::interact>;
-  template <> struct sqs_result_collection<double, sublattice_mode::interact>;
-  template <> struct sqs_result_collection<float, sublattice_mode::split>;
-  template <> struct sqs_result_collection<double, sublattice_mode::split>;
+#define INST_SQS_RESULT_COLLECTION(PREC, SMODE) template struct sqs_result_collection<PREC, SMODE>;
+  SQSGEN_INSTANTIATE_PREC_SMODE(INST_SQS_RESULT_COLLECTION)
+#undef INST_SQS_RESULT
 
 };  // namespace sqsgen::optimization

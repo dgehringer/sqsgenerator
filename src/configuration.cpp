@@ -3,8 +3,8 @@
 #include "sqsgen/configuration.h"
 
 #include <expected>
+#include <ranges>
 #include <variant>
-#include <vector>
 
 #include "sqsgen/configuration/arrays.h"
 #include "sqsgen/configuration/composition.h"
@@ -12,6 +12,7 @@
 #include "sqsgen/configuration/shell_radii.h"
 #include "sqsgen/configuration/shell_weights.h"
 #include "sqsgen/configuration/structure.h"
+#include "sqsgen/core/eigen.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/io/glaze.h"
 #include "sqsgen/types.h"
@@ -24,16 +25,26 @@
 namespace sqsgen::configuration {
 
   namespace helpers = sqsgen::core::helpers;
+  namespace core = sqsgen::core;
 
-  template <> struct configuration_input<float, sublattice_mode::interact>;
-  template <> struct configuration_input<float, sublattice_mode::split>;
-  template <> struct configuration_input<double, sublattice_mode::interact>;
-  template <> struct configuration_input<double, sublattice_mode::split>;
+  template struct configuration_input<float, sublattice_mode::interact>;
+  template struct configuration_input<float, sublattice_mode::split>;
+  template struct configuration_input<double, sublattice_mode::interact>;
+  template struct configuration_input<double, sublattice_mode::split>;
 
-  template <> struct configuration<float, sublattice_mode::interact>;
-  template <> struct configuration<float, sublattice_mode::split>;
-  template <> struct configuration<double, sublattice_mode::interact>;
-  template <> struct configuration<double, sublattice_mode::split>;
+  template struct configuration<float, sublattice_mode::interact>;
+  template struct configuration<float, sublattice_mode::split>;
+  template struct configuration<double, sublattice_mode::interact>;
+  template struct configuration<double, sublattice_mode::split>;
+
+  template struct configuration_dto<float, sublattice_mode::interact, core::array_mode::nested>;
+  template struct configuration_dto<float, sublattice_mode::split, core::array_mode::nested>;
+  template struct configuration_dto<double, sublattice_mode::interact, core::array_mode::nested>;
+  template struct configuration_dto<double, sublattice_mode::split, core::array_mode::nested>;
+  template struct configuration_dto<float, sublattice_mode::interact, core::array_mode::packed>;
+  template struct configuration_dto<float, sublattice_mode::split, core::array_mode::packed>;
+  template struct configuration_dto<double, sublattice_mode::interact, core::array_mode::packed>;
+  template struct configuration_dto<double, sublattice_mode::split, core::array_mode::packed>;
 
   namespace detail {
     struct configuration_input_meta {
@@ -90,8 +101,8 @@ namespace sqsgen::configuration {
     // the first thing we need is structure and composition
     TRY_ASSIGN(_structure_config, validate_structure_input<T>(input.structure));
 
-    TRY_ASSIGN(composition,
-               validate_composition_input(input.composition, _structure_config.species));
+    TRY_ASSIGN(composition, validate_composition_input(input.composition,
+                                                       _structure_config.make_structure().species));
     const structure_t<T, Mode> structure = _structure_config.template for_mode<Mode>(composition);
     TRY_ASSIGN(imode, validate_iteration_mode_input(input.iteration_mode, composition));
     TRY_ASSIGN(seed, validate_seed_input(input.seed, composition, imode));
@@ -139,6 +150,104 @@ namespace sqsgen::configuration {
         .thread_config = std::move(thread_config),
         .max_results_per_objective = max_results_per_objective,
         .seed = std::move(seed),
+    };
+  }
+
+  io::parser_error forward_error(core::tensor_shape_error err) {
+    return {map_error_kind(err.which), err.message};
+  }
+
+  template <core::array_mode AMode, sublattice_mode Mode, class T, int N>
+  sublattice_mode_nesting<core::tensor_representation_t<T, N, AMode>, Mode> to_dto(
+      const sublattice_mode_nesting<Eigen::Tensor<T, N>, Mode>& data) {
+    if constexpr (Mode == sublattice_mode::interact) {
+      return core::tensor_as<AMode>(data);
+    } else if constexpr (Mode == sublattice_mode::split) {
+      return data | std::ranges::views::transform([](const Eigen::Tensor<T, N>& tensor) {
+               return tensor_as<AMode>(tensor);
+             })
+             | std::ranges::to<std::vector>();
+    } else {
+      static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split);
+    }
+  }
+
+  template <core::array_mode AMode, sublattice_mode Mode, class T, int N>
+  io::result_t<sublattice_mode_nesting<Eigen::Tensor<T, N>, Mode>> from_dto(
+      const sublattice_mode_nesting<core::tensor_representation_t<T, N, AMode>, Mode>& data) {
+    if constexpr (Mode == sublattice_mode::interact) {
+      auto tensor = core::tensor_from<AMode, T, N>(data);
+      if (!tensor) return std::unexpected(forward_error(std::move(tensor).error()));
+      return std::move(tensor).value();
+    } else if constexpr (Mode == sublattice_mode::split) {
+      sublattice_mode_nesting<Eigen::Tensor<T, N>, Mode> out;
+      out.reserve(data.size());
+      for (const core::tensor_representation_t<T, N, AMode>& element : data) {
+        auto tensor = core::tensor_from<AMode, T, N>(element);
+        if (!tensor) return std::unexpected(forward_error(std::move(tensor).error()));
+        out.push_back(std::move(tensor).value());
+      }
+      return out;
+    } else {
+      static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split);
+    }
+  }
+
+  template <class T, sublattice_mode Mode> template <core::array_mode AMode>
+  configuration_dto<T, Mode, AMode> configuration<T, Mode>::to_dto() const {
+    return configuration_dto<T, Mode, AMode>{
+        .sublattice_mode = sublattice_mode,
+        .prec = prec,
+        .atol = atol,
+        .rtol = rtol,
+        .bin_width = bin_width,
+        .peak_isolation = peak_isolation,
+        .structure = structure.template to_dto<AMode>(),
+        .composition = composition,
+        .iteration_mode = iteration_mode,
+        .shell_radii = shell_radii,
+        .shell_weights = shell_weights,
+        .pair_weights = to_dto<AMode, Mode>(pair_weights),
+        .target_objective = to_dto<AMode, Mode>(target_objective),
+        .prefactors = to_dto<AMode, Mode>(prefactors),
+        .iterations = iterations,
+        .chunk_size = chunk_size,
+        .keep = keep,
+        .thread_config = thread_config,
+        .max_results_per_objective = max_results_per_objective,
+        .seed = seed,
+    };
+  }
+
+  template <class T, sublattice_mode Mode> template <core::array_mode AMode>
+  io::result_t<configuration<T, Mode>> configuration<T, Mode>::from_dto(
+      const configuration_dto<T, Mode, AMode>& input) {
+    TRY_ASSIGN(structure, structure_config<T>::template from_dto<AMode>(input.structure));
+    TRY_ASSIGN(pair_weights, from_dto<AMode, T, 3>(input.pair_weights));
+    TRY_ASSIGN(target_objective, from_dto<AMode, T, 3>(input.target_objective));
+    TRY_ASSIGN(prefactors, from_dto<AMode, T, 3>(input.prefactors));
+
+    return configuration<T, Mode>{
+        .sublattice_mode = input.sublattice_mode,
+        .prec = input.prec,
+        .atol = input.atol,
+        .rtol = input.rtol,
+        .bin_width = input.bin_width,
+        .peak_isolation = input.peak_isolation,
+        .structure = std::move(structure).value(),
+        .composition = input.composition,
+        .iteration_mode = input.iteration_mode,
+        .shell_radii = input.shell_radii,
+        .shell_weights = input.shell_weights,
+        .pair_weights = std::move(pair_weights).value(),
+        .target_objective = std::move(target_objective).value(),
+        .prefactors = std::move(prefactors).value(),
+        .iterations = input.iterations,
+        .chunk_size = input.chunk_size,
+        .keep = input.keep,
+        .thread_config = input.thread_config,
+        .max_results_per_objective = input.max_results_per_objective,
+        .seed = input.seed,
     };
   }
 

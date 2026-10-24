@@ -1,5 +1,6 @@
 
 #include <algorithm>
+#include <cmath>
 #include <expected>
 #include <numeric>
 #include <variant>
@@ -7,6 +8,7 @@
 
 #include "sqsgen/core/helpers/as.h"
 #include "sqsgen/core/helpers/expected.h"
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/helpers/variant.h"
@@ -63,9 +65,9 @@ namespace sqsgen::io {
       return helpers::combine(detail::parse_number<T>(tokens[0]),
                               detail::parse_number<T>(tokens[1]),
                               detail::parse_number<T>(tokens[2]))
-          .and_then([](auto&& scale) {
+          .transform([](auto&& scale) {
             const auto [sa, sb, sc] = scale;
-            return row_t{sa, sb, sc};
+            return row_t<T>{sa, sb, sc};
           });
     } else
       return std::unexpected(
@@ -78,9 +80,9 @@ namespace sqsgen::io {
   std::expected<std::variant<T, row_t<T>>, parser_error> parse_scaling(tokens_t const& tokens) {
     if (tokens.size() == 1)
       return detail::parse_number<T>(tokens.front())
-          .and_then([](auto&& scale) -> std::variant<T, row_t<T>> { return scale; });
+          .transform([](auto&& scale) -> std::variant<T, row_t<T>> { return scale; });
     if (tokens.size() == 3)
-      return parse_row<T>(tokens).and_then(
+      return parse_row<T>(tokens).transform(
           [](auto&& scale) -> std::variant<T, row_t<T>> { return scale; });
     return std::unexpected(parser_error{
         error_code::invalid_size,
@@ -104,13 +106,13 @@ namespace sqsgen::io {
       result.append(helpers::format_string("%s\n", line));
     };
     const auto format_row
-        = [&](auto&& row) { return format_string(row_format, row(0), row(1), row(2)); };
+        = [&](auto&& row) { return helpers::format_string(row_format, row(0), row(1), row(2)); };
 
     const auto z_to_symbol = [](auto&& z) { return core::atom::from_z(z).symbol; };
     // generate first line
     std::string composition_string
         = detail::join(unique_species | views::transform([&](auto&& s) {
-                         return format_string("%s%i", z_to_symbol(s), num_species[s]);
+                         return helpers::format_string("%s%i", z_to_symbol(s), num_species[s]);
                        }),
                        "");
     println(composition_string);
@@ -122,12 +124,13 @@ namespace sqsgen::io {
 
     std::string species_amount = detail::join(
         views::values(num_species)
-            | views::transform([](auto&& amount) { return format_string("%i", amount); }),
+            | views::transform([](auto&& amount) { return helpers::format_string("%i", amount); }),
         " ");
     println(species_amount);
     println("Direct");
     for (auto const& site : sorted.sites())
-      println(format_string("%s %s", format_row(site.frac_coords), z_to_symbol(site.specie)));
+      println(
+          helpers::format_string("%s %s", format_row(site.frac_coords), z_to_symbol(site.specie)));
     result.shrink_to_fit();
     return result;
   }
@@ -160,68 +163,76 @@ namespace sqsgen::io {
     };
 
     const auto get_row = [&](int l) -> std::expected<row_t<T>, parser_error> {
-      return get_line(l).and_then(parse_row);
+      return get_line(l).and_then(parse_row<T>);
     };
 
-    auto lattice = helpers::combine(get_row(2), get_row(3), get_row(4)).and_then([&](auto&& m) {
-      auto [a, b, c] = m;
-      lattice_t<T> l;
-      l.row(0) = a;
-      l.row(1) = b;
-      l.row(2) = c;
-      return get_line(1)
-          .and_then(parse_scaling)
-          .and_then([&l](std::variant<std::vector<T, row_t<T>>>&& lattice_scaling) {
-            return std::visit(
-                helpers::overloaded{[&l](T&& scaling) {
-                                      if (scaling < 0)
-                                        return lattice_t<T>{
-                                            l * std::pow(-scaling / l.determinant(), 1.0 / 3.0)};
-                                      else
-                                        return lattice_t<T>{l * scaling};
-                                    },
-                                    [&](row_t<T>&& s) {
-                                      lattice_t<T> ll(std::move(l));
-                                      ll.row(0) *= s(0);
-                                      ll.row(1) *= s(1);
-                                      ll.row(2) *= s(2);
-                                      return ll;
-                                    }},
-                std::move(lattice_scaling));
-          });
-    });
+    std::expected<lattice_t<T>, parser_error> lattice
+        = helpers::combine(get_row(2), get_row(3), get_row(4))
+              .and_then([&](std::tuple<row_t<T>, row_t<T>, row_t<T>>&& m)
+                            -> std::expected<lattice_t<T>, parser_error> {
+                auto [a, b, c] = m;
+                lattice_t<T> l;
+                l.row(0) = a;
+                l.row(1) = b;
+                l.row(2) = c;
+                return get_line(1)
+                    .and_then(parse_scaling<T>)
+                    .transform([&l](std::variant<T, row_t<T>>&& lattice_scaling) {
+                      return std::visit(
+                          helpers::overloaded{
+                              [&l](T&& scaling) -> lattice_t<T> {
+                                if (scaling < 0)
+                                  return lattice_t<T>{
+                                      l * std::pow(-scaling / l.determinant(), 1.0 / 3.0)};
+                                else
+                                  return lattice_t<T>{l * scaling};
+                              },
+                              [&](row_t<T>&& s) -> lattice_t<T> {
+                                lattice_t<T> ll(std::move(l));
+                                ll.row(0) *= s(0);
+                                ll.row(1) *= s(1);
+                                ll.row(2) *= s(2);
+                                return ll;
+                              }},
+                          std::move(lattice_scaling));
+                    });
+              });
 
-    auto species = helpers::combine(get_line(5).and_then(parse_species_decl),
-                                    get_line(6).and_then(parse_species_amount))
-                       .and_then([&](auto&& specs_and_decls) {
-                         auto&& [species, amounts] = specs_and_decls;
-                         if (species.size() != amounts.size())
-                           return std::unexpected(parser_error{
-                               error_code::out_of_range,
-                               "Species and number of ions per species must have the same length"});
-                         configuration_t conf;
-                         conf.reserve(std::accumulate(amounts->begin(), amounts->end(), 0));
-                         for (auto i : range(species.size()))
-                           for (auto _ : range(amounts[i])) conf.push_back(species[i]);
-                         return conf;
-                       });
+    std::expected<configuration_t, parser_error> species
+        = helpers::combine(get_line(5).and_then(parse_species_decl),
+                           get_line(6).and_then(parse_species_amount))
+              .and_then(
+                  [&](const auto& specs_and_decls) -> std::expected<configuration_t, parser_error> {
+                    auto [species, amounts] = specs_and_decls;
+                    if (species.size() != amounts.size())
+                      return std::unexpected(parser_error{
+                          error_code::out_of_range,
+                          "Species and number of ions per species must have the same length"});
 
-    return lattice.combine(std::move(species))
-        .combine(get_coords_line())
-        .and_then([&](auto&& data) -> result_t {
-          auto&& [lattice, configuration, start_line_number] = data;
+                    configuration_t conf;
+                    conf.reserve(std::accumulate(amounts.begin(), amounts.end(), 0));
+                    for (std::size_t i = 0; i < species.size(); ++i)
+                      conf.insert(conf.end(), amounts[i], species[i]);
+                    return conf;
+                  });
+
+    return helpers::combine(std::move(lattice), std::move(species), get_coords_line())
+        .and_then([&](const auto& data) -> std::expected<core::structure<T>, parser_error> {
+          const auto& [lattice, configuration, start_line_number] = data;
           coords_t<T> coords(configuration.size(), 3);
-          for (auto i : range(configuration.size())) {
+          for (std::size_t i = 0; i < configuration.size(); ++i) {
             auto fc = get_row(start_line_number + i);
-            if (fc.ok())
-              coords.row(i) = fc.result();
+            if (!fc)
+              return std::unexpected(std::move(fc).error());
             else
-              return fc.error();
+              coords.row(i) = std::move(fc).value();
           }
-          return core::structure<T>{lattice, coords, configuration};
+          return core::structure<T>(lattice, coords, configuration);
         });
   }
 
-  template <> struct structure_adapter<float, structure_format::poscar>;
-  template <> struct structure_adapter<double, structure_format::poscar>;
+#define INST_STRUCTURE_ADAPTER_POSCAR(PREC) \
+  template struct structure_adapter<PREC, structure_format::poscar>;
+  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_ADAPTER_POSCAR)
+#undef INST_STRUCTURE_ADAPTER_POSCAR
 }  // namespace sqsgen::io

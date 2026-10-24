@@ -15,6 +15,8 @@ namespace sqsgen::core {
     std::string message;
   };
 
+  error_code map_error_kind(tensor_shape_error::kind kind);
+
   namespace eigen::detail {
     template <class Tensor, std::size_t N>
     decltype(auto) at(Tensor&& t, const std::array<Eigen::Index, N>& idx) {
@@ -253,10 +255,20 @@ namespace sqsgen::core {
     return eigen::detail::tensor_converter<packed_tensor<T, N>>::from(p);
   }
 
-  // nested -> Eigen::Tensor
   template <class T, int N>
   std::expected<Eigen::Tensor<T, N>, tensor_shape_error> tensor_from(const nested_t<T, N>& v) {
     return eigen::detail::tensor_converter<nested_tensor<T, N>>::from(v);
+  }
+
+  template <array_mode Mode, class T, int N>
+  std::expected<Eigen::Tensor<T, N>, tensor_shape_error> tensor_from(
+      const tensor_representation_t<T, N, Mode>& v) {
+    if constexpr (Mode == array_mode::nested) {
+      return eigen::detail::tensor_converter<nested_tensor<T, N>>::from(v);
+    } else if constexpr (Mode == array_mode::packed) {
+      return eigen::detail::tensor_converter<packed_tensor<T, N>>::from(v);
+    } else
+      static_assert(Mode == array_mode::nested || Mode == array_mode::packed, "unknown array mode");
   }
 
   template <class T>

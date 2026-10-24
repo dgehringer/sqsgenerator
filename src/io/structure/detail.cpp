@@ -1,6 +1,7 @@
 
 #include <expected>
 
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/types.h"
 
@@ -86,15 +87,20 @@ namespace sqsgen::io::detail {
     return std::unexpected(parser_error{error_code::unknown, "unknown error"});
   }
 
-  template <> std::expected<float, parser_error> parse_number(std::string_view view);
-  template <> std::expected<double, parser_error> parse_number(std::string_view view);
+#define INST_PARSE_NUMBER(PREC) \
+  template std::expected<PREC, parser_error> parse_number(std::string_view view);
+  SQSGEN_INSTANTIATE_PREC(INST_PARSE_NUMBER)
+#undef INST_PARSE_NUMBER
 
-  template <> std::array<float, 3> angles(lattice_t<float> const& m);
-  template <> std::array<double, 3> angles(lattice_t<double> const& m);
+#define INST_ANGLES(PREC) template std::array<PREC, 3> angles(lattice_t<PREC> const& m);
+  SQSGEN_INSTANTIATE_PREC(INST_ANGLES)
+#undef INST_ANGLES
 
-  template <> std::array<float, 3> lengths(lattice_t<float> const& m);
-  template <> std::array<double, 3> lengths(lattice_t<double> const& m);
+#define INST_LENGTHS(PREC) template std::array<PREC, 3> lengths(lattice_t<PREC> const& m);
+  SQSGEN_INSTANTIATE_PREC(INST_LENGTHS)
+#undef INST_LENGTHS
 
-  template <> float clip(float val, float lower, float upper);
-  template <> double clip(double val, double lower, double upper);
+#define INST_CLIP(PREC) template PREC clip(PREC val, PREC lower, PREC upper);
+  SQSGEN_INSTANTIATE_PREC(INST_CLIP)
+#undef INST_CLIP
 }  // namespace sqsgen::io::detail

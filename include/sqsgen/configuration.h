@@ -19,6 +19,7 @@
 namespace sqsgen::configuration {
 
   namespace io = sqsgen::io;
+  namespace core = sqsgen::core;
 
   template <class T>
     requires std::is_arithmetic_v<T>
@@ -54,6 +55,30 @@ namespace sqsgen::configuration {
     seed_input seed;
   };
 
+  template <class T, sublattice_mode Mode, core::array_mode AMode = core::array_mode::nested>
+  struct configuration_dto {
+    sublattice_mode sublattice_mode;
+    prec prec;
+    atol_t<T> atol;
+    rtol_t<T> rtol;
+    bin_width_t<T> bin_width;
+    peak_isolation_t<T> peak_isolation;
+    structure_config_dto<T, AMode> structure;
+    std::vector<sublattice> composition;
+    iteration_mode iteration_mode;
+    shell_radii_t<T, Mode> shell_radii;
+    shell_weights_t<T, Mode> shell_weights;
+    sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> pair_weights;
+    sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> target_objective;
+    sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> prefactors;
+    iterations_t iterations;
+    chunk_size_t chunk_size;
+    keep_t keep;
+    thread_config_t thread_config;
+    max_results_per_objective_t max_results_per_objective;
+    seed_t seed;
+  };
+
   template <class T, sublattice_mode Mode> struct configuration {
     sublattice_mode sublattice_mode = Mode;
     prec prec = arithmethic_to_prec<T>();
@@ -76,7 +101,10 @@ namespace sqsgen::configuration {
     max_results_per_objective_t max_results_per_objective;
     seed_t seed;
 
-    std::string dump(io::wire_format fmt);
+    template <core::array_mode AMode> configuration_dto<T, Mode, AMode> to_dto() const;
+
+    template <core::array_mode AMode> static io::result_t<configuration<T, Mode>> from_dto(
+        const configuration_dto<T, Mode, AMode>& input);
   };
 
   using configuration_input_variant_t

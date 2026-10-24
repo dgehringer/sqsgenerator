@@ -7,6 +7,7 @@
 #include <optional>
 #include <vector>
 
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/permutation.h"
@@ -161,18 +162,25 @@ namespace sqsgen::configuration {
     return thread_config_t(1, std::nullopt);
   }
 
-  template result_t<atol_t<float>> validate_atol_input(const atol_input<float>&);
-  template result_t<atol_t<double>> validate_atol_input(const atol_input<double>&);
+#define INST_ATOL(PREC) \
+  template result_t<atol_t<PREC>> validate_atol_input(const atol_input<PREC>&);
+  SQSGEN_INSTANTIATE_PREC(INST_ATOL)
+#undef INST_ATOL
 
-  template result_t<rtol_t<float>> validate_rtol_input(const rtol_input<float>&);
-  template result_t<rtol_t<double>> validate_rtol_input(const rtol_input<double>&);
+#define INST_RTOL(PREC) \
+  template result_t<rtol_t<PREC>> validate_rtol_input(const rtol_input<PREC>&);
+  SQSGEN_INSTANTIATE_PREC(INST_RTOL)
+#undef INST_RTOL
 
-  template result_t<bin_width_t<float>> validate_bin_width_input(const bin_width_input<float>&);
-  template result_t<bin_width_t<double>> validate_bin_width_input(const bin_width_input<double>&);
+#define INST_BIN_WIDTH(PREC) \
+  template result_t<bin_width_t<PREC>> validate_bin_width_input(const bin_width_input<PREC>&);
+  SQSGEN_INSTANTIATE_PREC(INST_BIN_WIDTH)
+#undef INST_BIN_WIDTH
 
-  template result_t<peak_isolation_t<float>> validate_peak_isolation_input(
-      const peak_isolation_input<float>&);
-  template result_t<peak_isolation_t<double>> validate_peak_isolation_input(
-      const peak_isolation_input<double>&);
+#define INST_PEAK_ISOLATION(PREC)                                          \
+  template result_t<peak_isolation_t<PREC>> validate_peak_isolation_input( \
+      const peak_isolation_input<PREC>&);
+  SQSGEN_INSTANTIATE_PREC(INST_PEAK_ISOLATION)
+#undef INST_PEAK_ISOLATION
 
 }  // namespace sqsgen::configuration

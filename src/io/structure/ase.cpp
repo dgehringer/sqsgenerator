@@ -6,6 +6,7 @@
 #include <tuple>
 #include <vector>
 
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/glaze.h"
 #include "sqsgen/io/structure.h"
@@ -35,9 +36,28 @@ namespace sqsgen::io {
       ase_array<T> positions;
     };
 
-    template <> class ase_structure<float>;
-    template <> class ase_structure<double>;
+#define INST_ASE_STRUCTURE(PREC) template struct ase_structure<PREC>;
+    SQSGEN_INSTANTIATE_PREC(INST_ASE_STRUCTURE)
+#undef INST_ASE_STRUCTURE
   }  // namespace detail
+
+  template <class T, class Array> detail::ndarray<T> make_ndarray(std::string dtype,
+                                                                  std::vector<std::size_t> shape,
+                                                                  const Array& array) {
+    return detail::ndarray<T>{detail::ndarray_payload<T>{
+        std::move(shape),
+        std::move(dtype),
+        std::vector<T>(array.data(), array.data() + array.size()),
+    }};
+  }
+
+  template <class T, class Pbc> detail::ndarray<T> make_pbc_ndarray(const Pbc& pbc) {
+    std::vector<T> data;
+    data.reserve(std::size(pbc));
+    for (auto b : pbc) data.push_back(static_cast<T>(b));
+    return detail::ndarray<T>{
+        detail::ndarray_payload<T>{{std::size(pbc)}, "bool", std::move(data)}};
+  }
 
   double years_since_2000() {
     // January 1, 2000 00:00:00 UTC
@@ -72,7 +92,7 @@ namespace sqsgen::io {
         .__ase_objtype__ = "cell",
     };
     out.pbc = detail::ase_array<T>{
-        .array = make_pbc_ndarray(filtered.pbc),
+        .array = make_pbc_ndarray<T>(filtered.pbc),
     };
     out.positions = detail::ase_array<T>{
         .array = make_ndarray<T>("float64", {n, std::size_t{3}}, positions),
@@ -89,17 +109,21 @@ namespace sqsgen::io {
     return std::move(*data);
   }
 
-  template <> struct structure_adapter<float, structure_format::ase>;
-  template <> struct structure_adapter<double, structure_format::cif>;
+#define INST_STRUCTURE_ADAPTER_ASE(PREC) \
+  template struct structure_adapter<PREC, structure_format::ase>;
+  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_ADAPTER_ASE)
+#undef INST_STRUCTURE_ADAPTER_ASE
 
 }  // namespace sqsgen::io
 
 namespace glz {
   template <class T> struct meta<sqsgen::io::detail::ndarray<T>> {
     using N = sqsgen::io::detail::ndarray<T>;
-    static constexpr auto value = glz::object("__ndarray__", &N::ndarray_);
+    static constexpr auto value = glz::object("__ndarray__", &N::__ndarray__);
   };
 
-  template <> struct meta<sqsgen::io::detail::ndarray<float>>;
-  template <> struct meta<sqsgen::io::detail::ndarray<double>>;
+#define INST_DETAIL_NDARRAY(PREC) template struct meta<sqsgen::io::detail::ndarray<PREC>>;
+  SQSGEN_INSTANTIATE_PREC(INST_DETAIL_NDARRAY)
+#undef INST_DETAIL_NDARRAY
+
 }  // namespace glz

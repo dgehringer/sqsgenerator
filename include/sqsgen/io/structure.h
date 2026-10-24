@@ -47,8 +47,8 @@ namespace sqsgen::io {
 
     template <class T> std::array<T, 3> angles(lattice_t<T> const& m);
 
-    inline std::string rjust(const std::string& input, std::size_t width, char fillchar = ' ');
-    inline std::vector<std::string_view> split(std::string_view str, std::string_view delimeters);
+    std::string rjust(const std::string& input, std::size_t width, char fillchar = ' ');
+    std::vector<std::string_view> split(std::string_view str, std::string_view delimeters);
 
     template <class T> std::expected<T, parser_error> parse_number(std::string_view view);
 

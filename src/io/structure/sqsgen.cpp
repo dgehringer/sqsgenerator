@@ -2,7 +2,9 @@
 
 #include <expected>
 
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/structure.h"
+#include "sqsgen/io/glaze.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/types.h"
 
@@ -12,7 +14,7 @@ namespace sqsgen::io {
 
   template <class T> std::string structure_adapter<T, structure_format::sqsgen>::format(
       const core::structure<T>& structure, wire_format format) {
-    auto data = write_any(structure.template to_dto<T, core::array_mode::packed>(), format);
+    auto data = write_any(structure.template to_dto<core::array_mode::packed>(), format);
     if (!data) throw std::runtime_error{"failed to serialize strucure"};
     return std::move(*data);
   }
@@ -24,7 +26,9 @@ namespace sqsgen::io {
     return dto.and_then(core::structure<T>::template from_dto<core::array_mode::packed>);
   }
 
-  template <> struct structure_adapter<float, structure_format::sqsgen>;
-  template <> struct structure_adapter<double, structure_format::sqsgen>;
+#define INST_STRUCTURE_ADAPTER_SQSGEN(PREC) \
+  template struct structure_adapter<PREC, structure_format::sqsgen>;
+  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_ADAPTER_SQSGEN)
+#undef INST_STRUCTURE_ADAPTER_SQSGEN
 
 };  // namespace sqsgen::io

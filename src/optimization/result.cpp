@@ -1,6 +1,7 @@
 
 #include "sqsgen/optimization/result.h"
 
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::optimization {
@@ -16,9 +17,8 @@ namespace sqsgen::optimization {
     }
   }
 
-  template <> struct sqs_result<float, sublattice_mode::interact>;
-  template <> struct sqs_result<double, sublattice_mode::interact>;
-  template <> struct sqs_result<float, sublattice_mode::split>;
-  template <> struct sqs_result<double, sublattice_mode::split>;
+#define INST_SQS_RESULT(PREC, SMODE) template struct sqs_result<PREC, SMODE>;
+  SQSGEN_INSTANTIATE_PREC_SMODE(INST_SQS_RESULT)
+#undef INST_SQS_RESULT
 
 };  // namespace sqsgen::optimization

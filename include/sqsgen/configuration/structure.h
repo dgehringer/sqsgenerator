@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <expected>
 #include <optional>
-#include <ranges>
 #include <variant>
 #include <vector>
 
@@ -17,35 +16,38 @@
 
 namespace sqsgen::configuration {
 
+  namespace core = sqsgen::core;
+
   template <class T, sublattice_mode Mode> using structure_t
       = sublattice_mode_nesting<core::structure<T>, Mode>;
 
   template <class T, core::array_mode AMode> struct structure_config_dto {
-    core::tensor_representation_t<T, 2, AMode> lattice;
-    core::tensor_representation_t<T, 2, AMode> coords;
-    configuration_t species;
+    core::structure_dto<T, AMode> structure;
     std::optional<std::array<int, 3>> supercell;
   };
 
   template <class T> class structure_config {
   public:
-    lattice_t<T> lattice;
-    coords_t<T> coords;
-    configuration_t species;
+    core::structure<T> structure;
     std::optional<std::array<int, 3>> supercell;
 
-    [[nodiscard]] core::structure<T> structure() const;
+    [[nodiscard]] core::structure<T> make_structure() const;
 
     template <sublattice_mode Mode>
     structure_t<T, Mode> for_mode(const std::vector<sublattice>& composition) {
       if constexpr (Mode == sublattice_mode::interact) {
-        return structure();
+        return make_structure();
       } else if constexpr (Mode == sublattice_mode::split) {
-        return structure().apply_composition_and_decompose(composition);
+        return make_structure().apply_composition_and_decompose(composition);
       } else
         static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
                       "unhandled sublattice_mode");
     }
+
+    template <core::array_mode AMode> structure_config_dto<T, AMode> to_dto() const;
+
+    template <core::array_mode AMode>
+    static io::result_t<structure_config<T>> from_dto(const structure_config_dto<T, AMode>& input);
   };
 
   template <class T> struct stucture_definition_input {

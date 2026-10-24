@@ -12,6 +12,7 @@
 #include "sqsgen/core/helpers/expected.h"
 #include "sqsgen/core/helpers/fold.h"
 #include "sqsgen/core/helpers/hash.h"
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/permutation.h"
 #include "sqsgen/core/sorted_vector.h"
@@ -19,6 +20,9 @@
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
+
+  template class structure<double>;
+  template class structure<float>;
 
   template <class T>
   matrix_t<T> distance_matrix(const lattice_t<T>& lattice, const coords_t<T>& frac_coords) {
@@ -109,8 +113,8 @@ namespace sqsgen::core {
       return res;
     }
 
-    template <> class site<double>;
-    template <> class site<float>;
+    template class site<double>;
+    template class site<float>;
 
   };  // namespace detail
 
@@ -191,7 +195,7 @@ namespace sqsgen::core {
     auto copy = structure(*this);
     for (const auto& [sites, species] : composition) {
       auto index = sites.begin();
-      for (auto&& [specie, amount] : species)
+      for (const auto& [specie, amount] : species)
         for (auto _ = 0; _ < amount; _++, ++index) copy.species[*index] = specie;
     }
     copy.num_species = sqsgen::core::detail::compute_num_species(copy.species);
@@ -398,23 +402,23 @@ namespace sqsgen::core {
     return shells;
   }
 
-  template <class T> cube_t<T> compute_prefactors(const structure<T>& structure,
-                                                  const std::vector<T>& shell_radii,
-                                                  const std::map<std::size_t, T>& weights) {
-    return compute_prefactors<T>(structure.shell_matrix(shell_radii), weights, structure.species);
-  }
+// structure_dto — PREC × AMODE (it's a struct, so `template struct`)
+#define INST_STRUCTURE_DTO(PREC, AMODE) template struct structure_dto<PREC, AMODE>;
 
-  template <> class structure<double>;
-  template <> class structure<float>;
+  SQSGEN_INSTANTIATE_PREC_AMODE(INST_STRUCTURE_DTO)
+#undef INST_STRUCTURE_DTO
 
-  template <> matrix_t<double> distance_matrix(const lattice_t<double>& lattice,
-                                               const coords_t<double>& frac_coords);
-  template <> matrix_t<float> distance_matrix(const lattice_t<float>& lattice,
-                                              const coords_t<float>& frac_coords);
+// distance_matrix — PREC only
+#define INST_DISTANCE_MATRIX(PREC)                                        \
+  template matrix_t<PREC> distance_matrix(const lattice_t<PREC>& lattice, \
+                                          const coords_t<PREC>& frac_coords);
+  SQSGEN_INSTANTIATE_PREC(INST_DISTANCE_MATRIX)
+#undef INST_DISTANCE_MATRIX
 
-  template <> shell_matrix_t shell_matrix(const matrix_t<double>& distance_matrix,
-                                          const std::vector<double>& dists, double atol,
-                                          double rtol);
-  template <> shell_matrix_t shell_matrix(const matrix_t<float>& distance_matrix,
-                                          const std::vector<float>& dists, float atol, float rtol);
+// shell_matrix — PREC only
+#define INST_SHELL_MATRIX(PREC)                                               \
+  template shell_matrix_t shell_matrix(const matrix_t<PREC>& distance_matrix, \
+                                       const std::vector<PREC>& dists, PREC atol, PREC rtol);
+  SQSGEN_INSTANTIATE_PREC(INST_SHELL_MATRIX)
+#undef INST_SHELL_MATRIX
 }  // namespace sqsgen::core

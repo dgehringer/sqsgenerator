@@ -8,6 +8,8 @@
 #include <vector>
 
 #include "sqsgen/core/atom.h"
+#include "sqsgen/core/eigen.h"
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/glaze.h"
@@ -48,9 +50,30 @@ namespace sqsgen::io {
       std::vector<pymatgen_site<T>> sites;
     };
 
-    template <> struct pymatgen_structure<float>;
-    template <> struct pymatgen_structure<double>;
+#define INST_DETAIL_PYMATGEN_SPECIES(PREC) template struct pymatgen_species<PREC>;
+    SQSGEN_INSTANTIATE_PREC(INST_DETAIL_PYMATGEN_SPECIES)
+#undef INST_DETAIL_PYMATGEN_SPECIES
+
+#define INST_DETAIL_PYMATGEN_LATTICE(PREC) template struct pymatgen_lattice<PREC>;
+    SQSGEN_INSTANTIATE_PREC(INST_DETAIL_PYMATGEN_LATTICE)
+#undef INST_DETAIL_PYMATGEN_LATTICE
+
+#define INST_DETAIL_PYMATGEN_SITE(PREC) template struct pymatgen_site<PREC>;
+    SQSGEN_INSTANTIATE_PREC(INST_DETAIL_PYMATGEN_SITE)
+#undef INST_DETAIL_PYMATGEN_SITE
+
+#define INST_DETAIL_PYMATGEN_STRUCTURE(PREC) template struct pymatgen_structure<PREC>;
+    SQSGEN_INSTANTIATE_PREC(INST_DETAIL_PYMATGEN_STRUCTURE)
+#undef INST_DETAIL_PYMATGEN_STRUCTURE
   }  // namespace detail
+
+  template <class T> std::array<T, 3> to_array(const Eigen::Matrix<T, 3, 1>& v) {
+    return {v(0), v(1), v(2)};
+  }
+
+  parser_error forward_error(core::tensor_shape_error err) {
+    return {map_error_kind(err.which), err.message};
+  }
 
   template <class T>
   detail::pymatgen_structure<T> to_pymatgen(core::structure<T> const& structure) {
@@ -59,8 +82,8 @@ namespace sqsgen::io {
     const auto [alpha, beta, gamma] = detail::angles<T>(filtered.lattice);
 
     detail::pymatgen_structure<T> out;
-    out.lattice = {
-        .matrix = filtered.lattice,
+    out.lattice = detail::pymatgen_lattice<T>{
+        .matrix = core::tensor_as<core::array_mode::nested>(filtered.lattice),
         .pbc = filtered.pbc,
         .a = a,
         .b = b,
@@ -72,16 +95,18 @@ namespace sqsgen::io {
     };
 
     const auto make_site = [&](auto&& site) -> detail::pymatgen_site<T> {
-      detail::pymatgen_site{site.frac_coords, filtered.lattice.transpose() * site.frac_coords,
-                            format_string("%s%i", site.atom().symbol, site.index), glz::generic{},
-                            detail::pymatgen_species{site.atom().symbol, 1}};
+      return detail::pymatgen_site<T>{
+          .abc = to_array<T>(site.frac_coords),
+          .xyz = to_array<T>(filtered.lattice.transpose() * site.frac_coords),
+          .label = helpers::format_string("%s%i", site.atom().symbol, site.index),
+          .species = {detail::pymatgen_species<T>{site.atom().symbol, 1}}};
     };
     for (auto&& site : filtered.sites()) out.sites.push_back(make_site(site));
     return out;
   }
 
   template <class T>
-  std::expected<std::pair<std::string, std::array<T, 3>>, parser_error> convert_site(
+  std::expected<std::pair<specie_t, std::array<T, 3>>, parser_error> convert_site(
       const detail::pymatgen_site<T>& site) {
     if (site.species.size() != 1)
       return std::unexpected(
@@ -109,18 +134,21 @@ namespace sqsgen::io {
     for (const auto& site : dto.sites) {
       auto site_result = convert_site(site);
       if (!site_result) return std::unexpected(std::move(site_result).error());
-      auto [specie, fc] = *site_result;
+      auto [specie, fc] = std::move(site_result).value();
       species.push_back(specie);
       auto [a, b, c] = fc;
       frac_coords.row(index++) = Eigen::Vector3<T>{a, b, c};
     }
 
-    return core::structure<T>(dto.lattice.matrix, frac_coords, species);
+    auto lattice = core::lattice_from<T>(dto.lattice.matrix);
+    if (!lattice) return std::unexpected(forward_error(std::move(lattice).error()));
+
+    return core::structure<T>(std::move(lattice).value(), frac_coords, species);
   }
 
   template <class T> std::string structure_adapter<T, structure_format::pymatgen>::format(
       const core::structure<T>& structure, wire_format format) {
-    auto data = write_any(to_pymatgen(structure), format);
+    auto data = write_any(to_pymatgen<T>(structure), format);
     if (!data) throw std::runtime_error{"failed to serialize strucure"};
     return std::move(*data);
   }
@@ -130,11 +158,13 @@ namespace sqsgen::io {
                                                          wire_format format) {
     auto dto = read_any<detail::pymatgen_structure<T>>(data, format);
     if (!dto) return std::unexpected(std::move(dto).error());
-    return dto.and_then(to_structure);
+    return dto.and_then(to_structure<T>);
   }
 
-  template <> struct structure_adapter<float, structure_format::pymatgen>;
-  template <> struct structure_adapter<double, structure_format::pymatgen>;
+#define INST_STRUCTURE_ADAPTER_PYMATGEN(PREC) \
+  template struct structure_adapter<PREC, structure_format::pymatgen>;
+  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_ADAPTER_PYMATGEN)
+#undef INST_STRUCTURE_ADAPTER_PYMATGEN
 }  // namespace sqsgen::io
 
 namespace glz {
@@ -145,6 +175,9 @@ namespace glz {
                       "@class", &S::class_, "charge", &S::charge, "sites", &S::sites);
   };
 
-  template <> struct meta<sqsgen::io::detail::pymatgen_structure<float>>;
-  template <> struct meta<sqsgen::io::detail::pymatgen_structure<double>>;
+#define INST_DETAIL_PYMATGEN_STRUCTURE_META(PREC) \
+  template struct meta<sqsgen::io::detail::pymatgen_structure<PREC>>;
+  SQSGEN_INSTANTIATE_PREC(INST_DETAIL_PYMATGEN_STRUCTURE_META)
+#undef INST_DETAIL_PYMATGEN_STRUCTURE_META
+
 }  // namespace glz

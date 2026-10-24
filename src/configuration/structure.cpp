@@ -21,6 +21,14 @@ namespace sqsgen::configuration {
   namespace core = sqsgen::core;
   namespace io = sqsgen::io;
 
+  template struct structure_config<float>;
+  template struct structure_config<double>;
+
+  template struct structure_config_dto<double, core::array_mode::nested>;
+  template struct structure_config_dto<float, core::array_mode::nested>;
+  template struct structure_config_dto<double, core::array_mode::packed>;
+  template struct structure_config_dto<float, core::array_mode::packed>;
+
   configuration_error forward_error(const std::string& key, io::parser_error err) {
     return {key, err.code, err.msg};
   }
@@ -124,8 +132,10 @@ namespace sqsgen::configuration {
     if (!lattice) return std::unexpected(std::move(lattice).error());
     auto supercell = validate_supercell(input.supercell);
     if (!supercell) return std::unexpected(std::move(supercell).error());
-    return structure_config<T>{std::move(lattice).value(), std::move(coords).value(),
-                               std::move(species).value(), std::move(supercell).value()};
+    return structure_config<T>{
+        core::structure<T>(std::move(lattice).value(), std::move(coords).value(),
+                           std::move(species).value()),
+        std::move(supercell).value()};
   }
 
   result_t<io::structure_format> structure_format_from_path(const std::string& path) {
@@ -218,8 +228,8 @@ namespace sqsgen::configuration {
     auto supercell = validate_supercell(input.supercell);
     if (!supercell) return std::unexpected(std::move(supercell).error());
 
-    return structure_config<T>{std::move(structure->lattice), std::move(structure->frac_coords),
-                               std::move(structure->species), std::move(supercell).value()};
+    return structure_config<T>{core::structure<T>(std::move(structure).value()),
+                               std::move(supercell).value()};
   }
 
   template <class T>
@@ -234,14 +244,30 @@ namespace sqsgen::configuration {
         input);
   }
 
-  template <class T> core::structure<T> structure_config<T>::structure() const {
-    core::structure<T> out(lattice, coords, species);
+  template <class T> core::structure<T> structure_config<T>::make_structure() const {
     if (supercell.has_value()) {
       auto [a, b, c] = supercell.value();
-      return out.supercell(a, b, c);
+      return structure.supercell(a, b, c);
     }
-    return out;
+    return structure;
   }
+
+  template <class T> template <core::array_mode AMode>
+  structure_config_dto<T, AMode> structure_config<T>::to_dto() const {
+    return structure_config_dto<T, AMode>{.structure = structure.template to_dto<AMode>(),
+                                          .supercell = supercell};
+  };
+
+  template <class T> template <core::array_mode AMode>
+  io::result_t<structure_config<T>> structure_config<T>::from_dto(
+      const structure_config_dto<T, AMode>& data) {
+    auto structure = core::structure<T>::template from_dto<AMode>(data.structure);
+    if (!structure) return std::unexpected(std::move(structure).error());
+    return structure_config<T>{
+        .structure = std::move(structure).value(),
+        .supercell = data.supercell,
+    };
+  };
 
   template result_t<structure_config<float>> validate_structure_input(
       const structure_input<float>& input);

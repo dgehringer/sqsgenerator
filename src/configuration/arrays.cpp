@@ -12,6 +12,7 @@
 #include <variant>
 
 #include "sqsgen/core/eigen.h"
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/types.h"
@@ -20,21 +21,6 @@ namespace sqsgen::configuration {
 
   namespace core = sqsgen::core;
   namespace helpers = sqsgen::core::helpers;
-
-  error_code map_error_kind(core::tensor_shape_error::kind kind) {
-    switch (kind) {
-      case (core::tensor_shape_error::kind::empty_dimension):
-        return error_code::not_found;
-      case (core::tensor_shape_error::kind::negative_extent):
-        return error_code::bad_argument;
-      case (core::tensor_shape_error::kind::size_mismatch):
-        return error_code::invalid_size;
-      case (core::tensor_shape_error::kind::ragged):
-        return error_code::bad_argument;
-      default:
-        return error_code::unknown;
-    }
-  }
 
   configuration_error forward_error(const std::string& key, core::tensor_shape_error err) {
     return {key, map_error_kind(err.which), err.message};
@@ -216,23 +202,29 @@ namespace sqsgen::configuration {
         "prefactors", input, default_prefactors<T>, structure, weights, radii);
   }
 
-  // arrays.cpp — bottom, after the bodies
+#define INST_PAIR_WEIGHTS(PREC, SMODE)                                                         \
+  template result_t<pair_weights_t<PREC, SMODE>> validate_pair_weights_input<PREC, SMODE>(     \
+      const pair_weights_input<PREC, SMODE>& input, const structure_t<PREC, SMODE>& structure, \
+      const shell_weights_t<PREC, SMODE>& weights, const shell_radii_t<PREC, SMODE>& radii);
 
-#define INSTANTIATE_VALIDATOR(FN, IN, OUT, T, MODE)                                            \
-  template result_t<OUT<T, MODE>> FN<T, MODE>(const IN<T, MODE>&, const structure_t<T, MODE>&, \
-                                              const shell_weights_t<T, MODE>&,                 \
-                                              const shell_radii_t<T, MODE>&);
+  SQSGEN_INSTANTIATE_PREC_SMODE(INST_PAIR_WEIGHTS)
 
-#define INSTANTIATE_ALL_MODES(FN, IN, OUT)                              \
-  INSTANTIATE_VALIDATOR(FN, IN, OUT, float, sublattice_mode::interact)  \
-  INSTANTIATE_VALIDATOR(FN, IN, OUT, float, sublattice_mode::split)     \
-  INSTANTIATE_VALIDATOR(FN, IN, OUT, double, sublattice_mode::interact) \
-  INSTANTIATE_VALIDATOR(FN, IN, OUT, double, sublattice_mode::split)
+#undef INST_PAIR_WEIGHTS
 
-  INSTANTIATE_ALL_MODES(validate_pair_weights_input, pair_weights_input, pair_weights_t)
-  INSTANTIATE_ALL_MODES(validate_target_objective_input, target_objective_input, target_objective_t)
-  INSTANTIATE_ALL_MODES(validate_prefactors_input, prefactors_input, prefactors_t)
+#define INST_TARGET_OBJECTIVE(PREC, SMODE)                                                         \
+  template result_t<target_objective_t<PREC, SMODE>> validate_target_objective_input<PREC, SMODE>( \
+      const target_objective_input<PREC, SMODE>& input, const structure_t<PREC, SMODE>& structure, \
+      const shell_weights_t<PREC, SMODE>& weights, const shell_radii_t<PREC, SMODE>& radii);
 
-#undef INSTANTIATE_ALL_MODES
-#undef INSTANTIATE_VALIDATOR
+  SQSGEN_INSTANTIATE_PREC_SMODE(INST_TARGET_OBJECTIVE)
+#undef INST_TARGET_OBJECTIVE
+
+#define INST_PREFACTORS(PREC, SMODE)                                                         \
+  template result_t<prefactors_t<PREC, SMODE>> validate_prefactors_input<PREC, SMODE>(       \
+      const prefactors_input<PREC, SMODE>& input, const structure_t<PREC, SMODE>& structure, \
+      const shell_weights_t<PREC, SMODE>& weights, const shell_radii_t<PREC, SMODE>& radii);
+
+  SQSGEN_INSTANTIATE_PREC_SMODE(INST_PREFACTORS)
+#undef INST_PREFACTORS
+
 }  // namespace sqsgen::configuration
