@@ -105,28 +105,5 @@ namespace glz {
     static constexpr auto value = glz::enumerate(naive, peak);
   };
 
-  template <uint32_t Fmt, class T, int N> struct from<Fmt, Eigen::Tensor<T, N>> {
-    template <auto Opts>
-    static void op(Eigen::Tensor<T, N>& value, is_context auto&& ctx, auto&& it, auto&& end) {
-      core::packed_tensor<T, N> packed;
-      parse<Fmt>::template op<Opts>(packed, ctx, it, end);  // format reads the plain struct
-      if (bool(ctx.error)) return;
-      auto tensor = core::tensor_from<T, N>(packed);
-      if (!tensor) {
-        ctx.error = error_code::invalid_variant_array;
-        return;
-      }
-      value = std::move(tensor).value();
-    }
-  };
-
-  template <uint32_t Fmt, class T, int N> struct to<Fmt, Eigen::Tensor<T, N>> {
-    template <auto Opts> static void op(const Eigen::Tensor<T, N>& value, is_context auto&& ctx,
-                                        auto&& b, auto&& ix) noexcept {
-      auto packed = core::tensor_as<core::packed_tensor<T, N>, T, N>(value);
-      serialize<Fmt>::template op<Opts>(packed, ctx, b, ix);
-    }
-  };
-
 }  // namespace glz
 #endif  // SQSGEN_IO_GLAZE_H

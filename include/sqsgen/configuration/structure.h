@@ -20,6 +20,13 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode> using structure_t
       = sublattice_mode_nesting<core::structure<T>, Mode>;
 
+  template <class T, core::array_mode AMode> struct structure_config_dto {
+    core::tensor_representation_t<T, 2, AMode> lattice;
+    core::tensor_representation_t<T, 2, AMode> coords;
+    configuration_t species;
+    std::optional<std::array<int, 3>> supercell;
+  };
+
   template <class T> class structure_config {
   public:
     lattice_t<T> lattice;

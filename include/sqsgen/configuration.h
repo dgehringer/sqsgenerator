@@ -18,6 +18,8 @@
 
 namespace sqsgen::configuration {
 
+  namespace io = sqsgen::io;
+
   template <class T>
     requires std::is_arithmetic_v<T>
   consteval prec arithmethic_to_prec() {
@@ -73,6 +75,8 @@ namespace sqsgen::configuration {
     thread_config_t thread_config;
     max_results_per_objective_t max_results_per_objective;
     seed_t seed;
+
+    std::string dump(io::wire_format fmt);
   };
 
   using configuration_input_variant_t

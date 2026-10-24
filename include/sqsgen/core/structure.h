@@ -58,6 +58,13 @@ namespace sqsgen::core {
 
   }  // namespace detail
 
+  template <class T, array_mode AMode> struct structure_dto {
+    configuration_t species;
+    core::tensor_representation_t<T, 2, AMode> lattice;
+    core::tensor_representation_t<T, 2, AMode> coords;
+    std::size_t num_atoms;
+  };
+
   template <class T> class structure {
   private:
     std::optional<matrix_t<T>> _distance_matrix = std::nullopt;
@@ -102,6 +109,11 @@ namespace sqsgen::core {
     [[nodiscard]] structure supercell(std::size_t a, std::size_t b, std::size_t c) const;
 
     [[nodiscard]] std::size_t size() const { return species.size(); }
+
+    template <array_mode AMode> structure_dto<T, AMode> to_dto() const;
+
+    template <array_mode AMode>
+    static io::result_t<structure<T>> from_dto(const structure_dto<T, AMode>& input);
 
     auto sites() const {
       return ranges::iota_view(static_cast<std::size_t>(0), static_cast<std::size_t>(size()))

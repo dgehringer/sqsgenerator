@@ -92,7 +92,7 @@ namespace sqsgen::core {
     template <class Format> struct tensor_converter {};
 
     template <class T, int N> struct tensor_converter<packed_tensor<T, N>> {
-      packed_tensor<T, N> to(const Eigen::Tensor<T, N>& t) {
+      static packed_tensor<T, N> to(const Eigen::Tensor<T, N>& t) {
         packed_tensor<T, N> out;
         const auto shape = extents(t);
         for (int d = 0; d < N; ++d) out.shape[d] = static_cast<std::int64_t>(shape[d]);
@@ -217,12 +217,19 @@ namespace sqsgen::core {
     return eigen::detail::tensor_converter<Target>::to(t);
   }
 
-  template <class Target, class T> Target tensor_as(const lattice_t<T>& t) {
-    return eigen::detail::tensor_converter<Target>::to(to_tensor(t));
+  template <array_mode Mode, class T, int N>
+  tensor_representation_t<T, N, Mode> tensor_as(const Eigen::Tensor<T, N>& t) {
+    if constexpr (Mode == array_mode::nested) {
+      return tensor_as<nested_t<T, N>>(t);
+    } else if constexpr (Mode == array_mode::packed) {
+      return tensor_as<packed_tensor<T, N>>(t);
+    } else
+      static_assert(Mode == array_mode::nested || Mode == array_mode::packed, "unknown array mode");
   }
 
-  template <class Target, class T> Target tensor_as(const coords_t<T>& t) {
-    return eigen::detail::tensor_converter<Target>::to(to_tensor(t));
+  template <array_mode Mode, class T, int R, int C>
+  tensor_representation_t<T, 2, Mode> tensor_as(const Eigen::Matrix<T, R, C>& t) {
+    return tensor_as<Mode, T, 2>(to_tensor(t));
   }
 
   template <class T>

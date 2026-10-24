@@ -2,6 +2,8 @@
 #ifndef SQSGEN_TYPES_H
 #define SQSGEN_TYPES_H
 
+#include <Eigen/src/Core/util/EmulateArray.h>
+
 #include <Eigen/Core>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <cstdint>
@@ -95,6 +97,9 @@ namespace sqsgen {
   };  // namespace io
 
   namespace core {
+
+    enum class array_mode { nested, packed };
+
     template <class T, int N> struct packed_tensor {
       std::array<std::int64_t, N> shape{};  // extents, one per dimension
       std::vector<T> data{};                // prod(shape) values, flat
@@ -112,6 +117,10 @@ namespace sqsgen {
       static constexpr int rank = N;
       nested_t<T, N> value;
     };
+
+    template <class T, int N, array_mode Mode> using tensor_representation_t
+        = std::conditional_t<Mode == array_mode::nested, nested_t<T, N>, packed_tensor<T, N>>;
+
   };  // namespace core
 
   struct sublattice {

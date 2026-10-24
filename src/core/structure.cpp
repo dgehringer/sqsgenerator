@@ -6,8 +6,10 @@
 
 #include <Eigen/Dense>
 
+#include "sqsgen/core/eigen.h"
 #include "sqsgen/core/helpers/as.h"
 #include "sqsgen/core/helpers/count.h"
+#include "sqsgen/core/helpers/expected.h"
 #include "sqsgen/core/helpers/fold.h"
 #include "sqsgen/core/helpers/hash.h"
 #include "sqsgen/core/helpers/misc.h"
@@ -17,8 +19,6 @@
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
-  namespace ranges = std::ranges;
-  namespace views = ranges::views;
 
   template <class T>
   matrix_t<T> distance_matrix(const lattice_t<T>& lattice, const coords_t<T>& frac_coords) {
@@ -242,6 +242,38 @@ namespace sqsgen::core {
   template <class T> rank_t structure<T>::rank() const {
     return rank_permutation(packed_species());
   }
+
+  template <class T> template <array_mode AMode>
+  structure_dto<T, AMode> structure<T>::to_dto() const {
+    return structure_dto<T, AMode>{.species = species,
+                                   .num_atoms = size(),
+                                   .coords = tensor_as<AMode>(frac_coords),
+                                   .lattice = tensor_as<AMode>(lattice)};
+  };
+
+  template <class T> template <array_mode AMode>
+  io::result_t<structure<T>> structure<T>::from_dto(const structure_dto<T, AMode>& data) {
+    auto lattice_and_coords
+        = helpers::combine(core::lattice_from(data.lattice), core::coords_from(data.coords));
+    if (!lattice_and_coords) return std::unexpected(std::move(lattice_and_coords).error());
+    const auto [lattice, coords] = lattice_and_coords;
+    if (coords.rows() != data.num_atoms)
+      return std::unexpected(io::parser_error{
+          error_code::invalid_size, helpers::format_string("Found %i coords but counted %u sites",
+                                                           coords.rows(), data.num_atoms)});
+    if (data.species != data.num_atoms)
+      return std::unexpected(io::parser_error{
+          error_code::invalid_size, helpers::format_string("Found %u coords but counted %u sites",
+                                                           data.species.size(), data.num_atoms)});
+    for (const auto ordinal : data.species) {
+      if (ordinal > core::KNOWN_ELEMENTS.size() || ordinal < 0)
+        return std::unexpected(
+            io::parser_error{error_code::invalid_size,
+                             helpers::format_string("Unknown atomic element %u", ordinal)});
+    }
+
+    return core::structure<T>(lattice, coords, data.species);
+  };
 
   template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
                                                   const std::map<std::size_t, T>& weights,
