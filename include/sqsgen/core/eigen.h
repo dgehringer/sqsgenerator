@@ -222,9 +222,9 @@ namespace sqsgen::core {
   template <array_mode Mode, class T, int N>
   tensor_representation_t<T, N, Mode> tensor_as(const Eigen::Tensor<T, N>& t) {
     if constexpr (Mode == array_mode::nested) {
-      return tensor_as<nested_t<T, N>>(t);
+      return eigen::detail::tensor_converter<nested_tensor<T, N>>::to(t);
     } else if constexpr (Mode == array_mode::packed) {
-      return tensor_as<packed_tensor<T, N>>(t);
+      return tensor_as<packed_tensor<T, N>, T, N>(t);
     } else
       static_assert(Mode == array_mode::nested || Mode == array_mode::packed, "unknown array mode");
   }

@@ -1,4 +1,5 @@
 
+#include <cstdint>
 #include <glaze/glaze.hpp>
 #include <glaze/json/generic_fwd.hpp>
 #include <optional>
@@ -16,7 +17,7 @@ namespace sqsgen::io {
   namespace detail {
 
     template <class T> using ndarray_payload
-        = std::tuple<std::vector<std::size_t>, std::string, std::vector<T>>;
+        = std::tuple<std::vector<std::uint32_t>, std::string, std::vector<T>>;
 
     template <class T> struct ndarray {
       ndarray_payload<T> __ndarray__;
@@ -42,7 +43,7 @@ namespace sqsgen::io {
   }  // namespace detail
 
   template <class T, class Array> detail::ndarray<T> make_ndarray(std::string dtype,
-                                                                  std::vector<std::size_t> shape,
+                                                                  std::vector<std::uint32_t> shape,
                                                                   const Array& array) {
     return detail::ndarray<T>{detail::ndarray_payload<T>{
         std::move(shape),
@@ -79,7 +80,7 @@ namespace sqsgen::io {
 
   template <class T> detail::ase_structure<T> to_ase(core::structure<T> const& structure) {
     auto filtered = structure.without_vacancies();
-    const auto n = static_cast<std::size_t>(filtered.size());
+    const auto n = static_cast<std::uint32_t>(filtered.size());
 
     // positions = frac_coords * lattice, per row (your existing math, unchanged)
     matrix_t<T> positions(filtered.size(), 3);

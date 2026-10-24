@@ -23,12 +23,16 @@ namespace sqsgen::optimization {
     template <class T, sublattice_mode Mode>
     std::size_t operator()(const sqs_result<T, Mode>& r) const noexcept {
       if constexpr (Mode == sublattice_mode::interact) {
-        return ankerl::unordered_dense::hash<configuration_t>{}(r.configuration);
+        const auto& c = r.configuration;
+        return ankerl::unordered_dense::detail::wyhash::hash(c.data(), c.size());
       } else {
         std::size_t seed = 0;
         ankerl::unordered_dense::hash<configuration_t> hash_one{};
-        for (const auto& sublattice : r.configuration)
-          seed = hash_combine(seed, hash_one(sublattice));
+        for (const auto& sublattice : r.configuration) {
+          auto& c = r.configuration;
+          seed = hash_combine(seed,
+                              ankerl::unordered_dense::detail::wyhash::hash(c.data(), c.size()));
+        }
         return seed;
       }
     }

@@ -52,6 +52,30 @@ namespace sqsgen::io {
     return dto;
   }
 
+  template <class DTO, wire_format Format,
+            glz::opts opts = {.error_on_unknown_keys = false, .error_on_missing_keys = true}>
+  static std::expected<DTO, parser_error> read_format(std::string_view data) {
+    DTO dto{};
+    glz::error_ctx ec;
+
+    if constexpr (Format == wire_format::json) {
+      ec = glz::read_json<opts>(dto, data);
+    } else if constexpr (Format == wire_format::yaml) {
+      ec = glz::read_yaml(dto, data);
+    } else if constexpr (Format == wire_format::cbor) {
+      ec = glz::read_cbor(dto, data);
+    } else if constexpr (Format == wire_format::msgpack) {
+      ec = glz::read_msgpack(dto, data);
+    } else if constexpr (Format == wire_format::beve) {
+      ec = glz::read_beve(dto, data);
+    } else {
+      static_assert(Format == wire_format::json, "unhandled wire_format");
+    }
+
+    if (ec) return std::unexpected(detail::forward_glaze_error(ec, data));
+    return dto;
+  }
+
   template <class DTO>
   static std::expected<std::string, parser_error> write_any(DTO const& dto, wire_format fmt) {
     std::expected<std::string, glz::error_ctx> out;
@@ -75,10 +99,33 @@ namespace sqsgen::io {
     if (!out) return std::unexpected(detail::forward_glaze_error(out.error(), {}));
     return std::move(*out);
   }
+
+  template <class DTO, wire_format Format>
+  static std::expected<std::string, parser_error> write_format(DTO const& dto) {
+    std::expected<std::string, glz::error_ctx> out;
+
+    if constexpr (Format == wire_format::json) {
+      out = glz::write_json(dto);
+    } else if constexpr (Format == wire_format::yaml) {
+      out = glz::write_yaml(dto);
+    } else if constexpr (Format == wire_format::cbor) {
+      out = glz::write_cbor(dto);
+    } else if constexpr (Format == wire_format::msgpack) {
+      out = glz::write_msgpack(dto);
+    } else if constexpr (Format == wire_format::beve) {
+      out = glz::write_beve(dto);
+    } else {
+      static_assert(Format == wire_format::json, "unhandled wire_format");
+    }
+
+    if (!out) return std::unexpected(detail::forward_glaze_error(out.error(), {}));
+    return std::move(*out);
+  }
+
 }  // namespace sqsgen::io
 
 namespace glz {
-  namespace core = sqsgen::core;
+
   template <> struct meta<sqsgen::prec> {
     using enum sqsgen::prec;
     static constexpr auto value = glz::enumerate("single", Single, "double", Double);

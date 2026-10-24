@@ -147,16 +147,16 @@ namespace sqsgen::io {
   }
 
   template <class T> std::string structure_adapter<T, structure_format::pymatgen>::format(
-      const core::structure<T>& structure, wire_format format) {
-    auto data = write_any(to_pymatgen<T>(structure), format);
+      const core::structure<T>& structure) {
+    auto data
+        = write_format<detail::pymatgen_structure<T>, wire_format::json>(to_pymatgen<T>(structure));
     if (!data) throw std::runtime_error{"failed to serialize strucure"};
     return std::move(*data);
   }
 
   template <class T> std::expected<core::structure<T>, parser_error>
-  structure_adapter<T, structure_format::pymatgen>::read(std::string_view data,
-                                                         wire_format format) {
-    auto dto = read_any<detail::pymatgen_structure<T>>(data, format);
+  structure_adapter<T, structure_format::pymatgen>::read(std::string_view data) {
+    auto dto = read_format<detail::pymatgen_structure<T>, wire_format::json>(data);
     if (!dto) return std::unexpected(std::move(dto).error());
     return dto.and_then(to_structure<T>);
   }

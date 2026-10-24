@@ -24,14 +24,15 @@ namespace sqsgen::io {
 
   namespace detail {
 
-    template <ranges::range Range>
+    template <std::ranges::range Range>
       requires std::is_same_v<ranges::range_value_t<Range>, std::string>
     std::string join(Range&& crumbs, std::string const& delimiter = " ") {
       auto csize = ranges::size(crumbs);
       if (csize == 0) return "";
       std::string result;
-      auto total_size
-          = std::accumulate(crumbs | views::transform([](auto&& s) { return s.size(); }), 0);
+      auto total_size = std::ranges::fold_left(
+          crumbs | std::ranges::views::transform([](auto&& s) { return s.size(); }), 0,
+          std::plus<>{});
       result.reserve(total_size + (csize - 1) * delimiter.size());
       for (auto it = ranges::begin(crumbs); it != ranges::end(crumbs); ++it) {
         if (it != ranges::begin(crumbs)) result.append(delimiter);
@@ -57,12 +58,9 @@ namespace sqsgen::io {
   template <class, structure_format> struct structure_adapter {};
 
   template <class T> struct structure_adapter<T, structure_format::pymatgen> {
-    static std::string format(const core::structure<T>& structure,
-                              wire_format format = wire_format::json);
+    static std::string format(const core::structure<T>& structure);
 
-    static std::expected<core::structure<T>, parser_error> read(std::string_view data,
-                                                                wire_format format
-                                                                = wire_format::json);
+    static std::expected<core::structure<T>, parser_error> read(std::string_view data);
   };
 
   template <class T> struct structure_adapter<T, structure_format::sqsgen> {
