@@ -55,7 +55,7 @@ namespace sqsgen::configuration {
             helpers::format_string("%s.%s", path, key), error_code::invalid_size,
             helpers::format_string("There are %zu shells but you specified a shell index of %zu",
                                    num_shells, shell.value())});
-      out.insert(shell.value(), weight);
+      out.emplace(shell.value(), weight);
     }
     return out;
   }
@@ -63,8 +63,7 @@ namespace sqsgen::configuration {
   template <class T> std::map<std::size_t, T> default_shell_weights(std::size_t num_shells) {
     std::map<std::size_t, T> out;
     for (std::size_t index = 1; index < num_shells + 1; ++index)
-      out.insert(index, T(1.0) / static_cast<T>(index));
-
+      out.emplace(index, T(1.0) / static_cast<T>(index));
     return out;
   }
 
@@ -115,4 +114,5 @@ namespace sqsgen::configuration {
 
   SQSGEN_INSTANTIATE_PREC_SMODE(INST_SHELL_WEIGHTS)
 #undef INST_SHELL_WEIGHTS
+
 }  // namespace sqsgen::configuration

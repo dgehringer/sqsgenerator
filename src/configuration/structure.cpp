@@ -9,6 +9,7 @@
 #include <variant>
 
 #include "sqsgen/core/eigen.h"
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/structure.h"
@@ -20,14 +21,6 @@ namespace sqsgen::configuration {
 
   namespace core = sqsgen::core;
   namespace io = sqsgen::io;
-
-  template struct structure_config<float>;
-  template struct structure_config<double>;
-
-  template struct structure_config_dto<double, core::array_mode::nested>;
-  template struct structure_config_dto<float, core::array_mode::nested>;
-  template struct structure_config_dto<double, core::array_mode::packed>;
-  template struct structure_config_dto<float, core::array_mode::packed>;
 
   configuration_error forward_error(const std::string& key, io::parser_error err) {
     return {key, err.code, err.msg};
@@ -269,9 +262,28 @@ namespace sqsgen::configuration {
     };
   };
 
-  template result_t<structure_config<float>> validate_structure_input(
-      const structure_input<float>& input);
-  template result_t<structure_config<double>> validate_structure_input(
-      const structure_input<double>& input);
+#define INST_VALIDATE_STRUCTURE_INPUT(PREC)                                 \
+  template result_t<structure_config<PREC>> validate_structure_input<PREC>( \
+      const structure_input<PREC>&);
+  SQSGEN_INSTANTIATE_PREC(INST_VALIDATE_STRUCTURE_INPUT)
+#undef INST_VALIDATE_STRUCTURE_INPUT
+
+// structure_config struct — PREC only
+#define INST_STRUCTURE_CONFIG(PREC) template struct structure_config<PREC>;
+  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_CONFIG)
+#undef INST_STRUCTURE_CONFIG
+
+// structure_config_dto struct — PREC × AMODE
+#define INST_STRUCTURE_CONFIG_DTO(PREC, AMODE) template struct structure_config_dto<PREC, AMODE>;
+  SQSGEN_INSTANTIATE_PREC_AMODE(INST_STRUCTURE_CONFIG_DTO)
+#undef INST_STRUCTURE_CONFIG_DTO
+
+// structure_config member templates (to_dto/from_dto) — PREC × AMODE
+#define INST_STRUCTURE_CONFIG_METHODS(PREC, AMODE)                                          \
+  template structure_config_dto<PREC, AMODE> structure_config<PREC>::to_dto<AMODE>() const; \
+  template io::result_t<structure_config<PREC>> structure_config<PREC>::from_dto<AMODE>(    \
+      const structure_config_dto<PREC, AMODE>& input);
+  SQSGEN_INSTANTIATE_PREC_AMODE(INST_STRUCTURE_CONFIG_METHODS)
+#undef INST_STRUCTURE_CONFIG_METHODS
 
 };  // namespace sqsgen::configuration

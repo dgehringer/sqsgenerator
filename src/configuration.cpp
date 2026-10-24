@@ -13,6 +13,7 @@
 #include "sqsgen/configuration/shell_weights.h"
 #include "sqsgen/configuration/structure.h"
 #include "sqsgen/core/eigen.h"
+#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/io/glaze.h"
 #include "sqsgen/types.h"
@@ -26,25 +27,6 @@ namespace sqsgen::configuration {
 
   namespace helpers = sqsgen::core::helpers;
   namespace core = sqsgen::core;
-
-  template struct configuration_input<float, sublattice_mode::interact>;
-  template struct configuration_input<float, sublattice_mode::split>;
-  template struct configuration_input<double, sublattice_mode::interact>;
-  template struct configuration_input<double, sublattice_mode::split>;
-
-  template struct configuration<float, sublattice_mode::interact>;
-  template struct configuration<float, sublattice_mode::split>;
-  template struct configuration<double, sublattice_mode::interact>;
-  template struct configuration<double, sublattice_mode::split>;
-
-  template struct configuration_dto<float, sublattice_mode::interact, core::array_mode::nested>;
-  template struct configuration_dto<float, sublattice_mode::split, core::array_mode::nested>;
-  template struct configuration_dto<double, sublattice_mode::interact, core::array_mode::nested>;
-  template struct configuration_dto<double, sublattice_mode::split, core::array_mode::nested>;
-  template struct configuration_dto<float, sublattice_mode::interact, core::array_mode::packed>;
-  template struct configuration_dto<float, sublattice_mode::split, core::array_mode::packed>;
-  template struct configuration_dto<double, sublattice_mode::interact, core::array_mode::packed>;
-  template struct configuration_dto<double, sublattice_mode::split, core::array_mode::packed>;
 
   namespace detail {
     struct configuration_input_meta {
@@ -158,13 +140,13 @@ namespace sqsgen::configuration {
   }
 
   template <core::array_mode AMode, sublattice_mode Mode, class T, int N>
-  sublattice_mode_nesting<core::tensor_representation_t<T, N, AMode>, Mode> to_dto(
+  sublattice_mode_nesting<core::tensor_representation_t<T, N, AMode>, Mode> tensor_to_dto(
       const sublattice_mode_nesting<Eigen::Tensor<T, N>, Mode>& data) {
     if constexpr (Mode == sublattice_mode::interact) {
       return core::tensor_as<AMode>(data);
     } else if constexpr (Mode == sublattice_mode::split) {
       return data | std::ranges::views::transform([](const Eigen::Tensor<T, N>& tensor) {
-               return tensor_as<AMode>(tensor);
+               return core::tensor_as<AMode>(tensor);
              })
              | std::ranges::to<std::vector>();
     } else {
@@ -173,7 +155,7 @@ namespace sqsgen::configuration {
   }
 
   template <core::array_mode AMode, sublattice_mode Mode, class T, int N>
-  io::result_t<sublattice_mode_nesting<Eigen::Tensor<T, N>, Mode>> from_dto(
+  io::result_t<sublattice_mode_nesting<Eigen::Tensor<T, N>, Mode>> tensor_from_dto(
       const sublattice_mode_nesting<core::tensor_representation_t<T, N, AMode>, Mode>& data) {
     if constexpr (Mode == sublattice_mode::interact) {
       auto tensor = core::tensor_from<AMode, T, N>(data);
@@ -207,9 +189,9 @@ namespace sqsgen::configuration {
         .iteration_mode = iteration_mode,
         .shell_radii = shell_radii,
         .shell_weights = shell_weights,
-        .pair_weights = to_dto<AMode, Mode>(pair_weights),
-        .target_objective = to_dto<AMode, Mode>(target_objective),
-        .prefactors = to_dto<AMode, Mode>(prefactors),
+        .pair_weights = tensor_to_dto<AMode, Mode, T, 3>(pair_weights),
+        .target_objective = tensor_to_dto<AMode, Mode, T, 3>(target_objective),
+        .prefactors = tensor_to_dto<AMode, Mode, T, 3>(prefactors),
         .iterations = iterations,
         .chunk_size = chunk_size,
         .keep = keep,
@@ -223,9 +205,9 @@ namespace sqsgen::configuration {
   io::result_t<configuration<T, Mode>> configuration<T, Mode>::from_dto(
       const configuration_dto<T, Mode, AMode>& input) {
     TRY_ASSIGN(structure, structure_config<T>::template from_dto<AMode>(input.structure));
-    TRY_ASSIGN(pair_weights, from_dto<AMode, T, 3>(input.pair_weights));
-    TRY_ASSIGN(target_objective, from_dto<AMode, T, 3>(input.target_objective));
-    TRY_ASSIGN(prefactors, from_dto<AMode, T, 3>(input.prefactors));
+    TRY_ASSIGN(pair_weights, tensor_from_dto<AMode, Mode, T, 3>(input.pair_weights));
+    TRY_ASSIGN(target_objective, tensor_from_dto<AMode, Mode, T, 3>(input.target_objective));
+    TRY_ASSIGN(prefactors, tensor_from_dto<AMode, Mode, T, 3>(input.prefactors));
 
     return configuration<T, Mode>{
         .sublattice_mode = input.sublattice_mode,
@@ -234,14 +216,14 @@ namespace sqsgen::configuration {
         .rtol = input.rtol,
         .bin_width = input.bin_width,
         .peak_isolation = input.peak_isolation,
-        .structure = std::move(structure).value(),
+        .structure = std::move(structure),
         .composition = input.composition,
         .iteration_mode = input.iteration_mode,
         .shell_radii = input.shell_radii,
         .shell_weights = input.shell_weights,
-        .pair_weights = std::move(pair_weights).value(),
-        .target_objective = std::move(target_objective).value(),
-        .prefactors = std::move(prefactors).value(),
+        .pair_weights = std::move(pair_weights),
+        .target_objective = std::move(target_objective),
+        .prefactors = std::move(prefactors),
         .iterations = input.iterations,
         .chunk_size = input.chunk_size,
         .keep = input.keep,
@@ -265,4 +247,25 @@ namespace sqsgen::configuration {
             }},
         input);
   }
+
+#define INST_CONFIGURATION_INPUT(PREC, SMODE) template struct configuration_input<PREC, SMODE>;
+  SQSGEN_INSTANTIATE_PREC_SMODE(INST_CONFIGURATION_INPUT)
+#undef INST_CONFIGURATION_INPUT
+
+#define INST_CONFIGURATION_METHODS(PREC, SMODE, AMODE)                                           \
+  template configuration_dto<PREC, SMODE, AMODE> configuration<PREC, SMODE>::to_dto<AMODE>()     \
+      const;                                                                                     \
+  template io::result_t<configuration<PREC, SMODE>> configuration<PREC, SMODE>::from_dto<AMODE>( \
+      const configuration_dto<PREC, SMODE, AMODE>& input);
+  SQSGEN_INSTANTIATE_PREC_SMODE_AMODE(INST_CONFIGURATION_METHODS)
+#undef INST_CONFIGURATION_METHODS
+
+#define INST_CONFIGURATION(PREC, SMODE) template struct configuration<PREC, SMODE>;
+  SQSGEN_INSTANTIATE_PREC_SMODE(INST_CONFIGURATION)
+#undef INST_CONFIGURATION
+
+#define INST_CONFIGURATION_DTO(PREC, SMODE, AMODE) \
+  template struct configuration_dto<PREC, SMODE, AMODE>;
+  SQSGEN_INSTANTIATE_PREC_SMODE_AMODE(INST_CONFIGURATION_DTO)
+#undef INST_CONFIGURATION_DTO
 };  // namespace sqsgen::configuration
