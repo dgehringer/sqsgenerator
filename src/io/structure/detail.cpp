@@ -30,12 +30,12 @@ namespace sqsgen::io::detail {
     return {angle(0), angle(1), angle(2)};
   }
 
-  inline std::string rjust(const std::string& input, std::size_t width, char fillchar) {
+  std::string rjust(const std::string& input, std::size_t width, char fillchar) {
     if (input.size() >= width) return input;
     return std::string(width - input.size(), fillchar) + input;
   }
 
-  inline std::vector<std::string_view> split(std::string_view str, std::string_view delimeters) {
+  std::vector<std::string_view> split(std::string_view str, std::string_view delimeters) {
     std::vector<std::string_view> res;
     res.reserve(str.length() / 2);
     const char* ptr = str.data();
@@ -87,10 +87,11 @@ namespace sqsgen::io::detail {
     return std::unexpected(parser_error{error_code::unknown, "unknown error"});
   }
 
-#define INST_PARSE_NUMBER(PREC) \
-  template std::expected<PREC, parser_error> parse_number(std::string_view view);
-  SQSGEN_INSTANTIATE_PREC(INST_PARSE_NUMBER)
-#undef INST_PARSE_NUMBER
+  template std::expected<float, parser_error> parse_number(std::string_view);
+  template std::expected<double, parser_error> parse_number(std::string_view);
+  template std::expected<int, parser_error> parse_number(std::string_view);
+  template std::expected<long, parser_error> parse_number(std::string_view);
+  template std::expected<unsigned long, parser_error> parse_number(std::string_view);
 
 #define INST_ANGLES(PREC) template std::array<PREC, 3> angles(lattice_t<PREC> const& m);
   SQSGEN_INSTANTIATE_PREC(INST_ANGLES)

@@ -48,13 +48,14 @@ namespace sqsgen::configuration {
   using thread_config_input = std::optional<
       std::variant<std::optional<std::size_t>, std::vector<std::optional<std::size_t>>>>;
 
-  result_t<iteration_mode> validate_iteration_mode_input(iteration_mode,
+  result_t<iteration_mode> validate_iteration_mode_input(iteration_mode_input,
                                                          const std::vector<sublattice>&);
 
-  result_t<iterations_t> validate_iterations_input(const iterations_input&,
-                                                   const std::vector<sublattice>&, iteration_mode);
+  result_t<iterations_t> validate_iterations_input(const iterations_input& input,
+                                                   iteration_mode mode);
 
-  result_t<chunk_size_t> validate_chunk_size_input(const chunk_size_input&, const iterations_t&);
+  result_t<chunk_size_t> validate_chunk_size_input(const chunk_size_input& input,
+                                                   const iterations_t iterations);
   template <class T> result_t<atol_t<T>> validate_atol_input(const atol_input<T>&);
   template <class T> result_t<rtol_t<T>> validate_rtol_input(const rtol_input<T>&);
 

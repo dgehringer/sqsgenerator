@@ -88,7 +88,7 @@ namespace sqsgen::configuration {
     const structure_t<T, Mode> structure = _structure_config.template for_mode<Mode>(composition);
     TRY_ASSIGN(imode, validate_iteration_mode_input(input.iteration_mode, composition));
     TRY_ASSIGN(seed, validate_seed_input(input.seed, composition, imode));
-    TRY_ASSIGN(iterations, validate_iterations_input(input.iterations, composition, imode));
+    TRY_ASSIGN(iterations, validate_iterations_input(input.iterations, imode));
     TRY_ASSIGN(chunk_size, validate_chunk_size_input(input.chunk_size, iterations));
     TRY_ASSIGN(keep, validate_keep_input(input.keep));
     TRY_ASSIGN(max_results_per_objective,

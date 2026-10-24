@@ -6,7 +6,6 @@
 #define SQSGEN_IO_STRUCTURE_H
 
 #include <expected>
-#include <numeric>
 #include <ranges>
 
 #include "sqsgen/core/structure.h"
@@ -19,7 +18,6 @@
 
 namespace sqsgen::io {
   namespace ranges = std::ranges;
-  namespace views = ranges::views;
   namespace core = sqsgen::core;
 
   namespace detail {

@@ -19,6 +19,7 @@
 
 namespace sqsgen::io {
 
+  namespace views = std::ranges::views;
   namespace helpers = sqsgen::core::helpers;
   namespace core = sqsgen::core;
 

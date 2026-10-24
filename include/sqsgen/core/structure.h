@@ -54,7 +54,7 @@ namespace sqsgen::core {
       };
     };
 
-    inline std::size_t compute_num_species(const configuration_t& configuration);
+    std::size_t compute_num_species(const configuration_t& configuration);
 
   }  // namespace detail
 
@@ -66,9 +66,6 @@ namespace sqsgen::core {
   };
 
   template <class T> class structure {
-  private:
-    std::optional<matrix_t<T>> _distance_matrix = std::nullopt;
-
   public:
     lattice_t<T> lattice;
     coords_t<T> frac_coords;
@@ -90,7 +87,6 @@ namespace sqsgen::core {
         fc.row(index) = sites[index].frac_coords;
       };
       frac_coords = fc;
-      _distance_matrix = std::nullopt;
       num_species = detail::compute_num_species(species);
     }
 
@@ -100,7 +96,7 @@ namespace sqsgen::core {
     structure(lattice_t<T>&& lattice, coords_t<T>&& frac_coords, configuration_t&& species,
               std::array<bool, 3>&& pbc = {true, true, true});
 
-    [[nodiscard]] const matrix_t<T>& distance_matrix();
+    [[nodiscard]] matrix_t<T> distance_matrix() const;
 
     [[nodiscard]] shell_matrix_t shell_matrix(const std::vector<T>& shell_radii,
                                               T atol = std::numeric_limits<T>::epsilon(),
@@ -177,12 +173,14 @@ namespace sqsgen::core {
 
   template <class T>
   std::vector<T> distances_histogram(const structure<T>& structure, T bin_width, T peak_isolation);
+
   template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
                                                   const std::map<std::size_t, T>& weights,
                                                   const configuration_t& configuration);
-  template <class T> cube_t<T> compute_prefactors(const structure<T>& structure,
-                                                  const std::vector<T>& shell_radii,
-                                                  const std::map<std::size_t, T>& weights);
+  template <class T>
+  cube_t<T> compute_prefactors(const structure<T>& structure, const std::vector<T>& shell_radii,
+                               const std::map<std::size_t, T>& weights,
+                               T atol = std::numeric_limits<T>::epsilon(), T rtol = 1e-9);
 
   template <typename T> using site_t = sqsgen::core::detail::site<T>;
 

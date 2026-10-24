@@ -59,7 +59,7 @@ namespace sqsgen::io {
     glz::error_ctx ec;
 
     if constexpr (Format == wire_format::json) {
-      ec = glz::read_json<opts>(dto, data);
+      ec = glz::read<opts>(dto, data);
     } else if constexpr (Format == wire_format::yaml) {
       ec = glz::read_yaml(dto, data);
     } else if constexpr (Format == wire_format::cbor) {

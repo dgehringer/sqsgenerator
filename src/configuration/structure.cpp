@@ -166,8 +166,8 @@ namespace sqsgen::configuration {
     if (!content) return std::unexpected(std::move(content).error());
     if (format == io::structure_format::pymatgen)
       return content.and_then([](auto&& data) -> result_t<core::structure<T>> {
-        auto structure = io::structure_adapter<T, io::structure_format::pymatgen>::read(
-            std::move(data), io::wire_format::json);
+        auto structure
+            = io::structure_adapter<T, io::structure_format::pymatgen>::read(std::move(data));
         if (!structure)
           return std::unexpected(forward_error("structure.path", std::move(structure).error()));
         return std::move(structure).value();

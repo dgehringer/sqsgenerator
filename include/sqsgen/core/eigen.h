@@ -237,17 +237,19 @@ namespace sqsgen::core {
   template <class T>
   std::expected<lattice_t<T>, tensor_shape_error> lattice_from(const packed_tensor<T, 2>& p) {
     return eigen::detail::tensor_converter<packed_tensor<T, 2>>::from(p).and_then(
-        tensor_to_lattice);
+        tensor_to_lattice<T>);
   }
 
   template <class T>
   std::expected<coords_t<T>, tensor_shape_error> coords_from(const packed_tensor<T, 2>& p) {
-    return eigen::detail::tensor_converter<packed_tensor<T, 2>>::from(p).and_then(tensor_to_coords);
+    return eigen::detail::tensor_converter<packed_tensor<T, 2>>::from(p).and_then(
+        tensor_to_coords<T>);
   }
 
   template <class T>
   std::expected<matrix_t<T>, tensor_shape_error> matrix_from(const packed_tensor<T, 2>& p) {
-    return eigen::detail::tensor_converter<packed_tensor<T, 2>>::from(p).and_then(tensor_to_matrix);
+    return eigen::detail::tensor_converter<packed_tensor<T, 2>>::from(p).and_then(
+        tensor_to_matrix<T>);
   }
 
   template <class T, int N>

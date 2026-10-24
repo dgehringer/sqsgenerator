@@ -57,13 +57,8 @@ if (BUILD_WASM)
           SUFFIX ".mjs"
   )
   target_link_libraries(wasm PRIVATE
-          nlohmann_json::nlohmann_json
           absl::hash
-          absl::log
           absl::str_format
-          absl::log_initialize
-          absl::flat_hash_map
-          absl::flat_hash_set
           Eigen3::Eigen
           Boost::multiprecision
           embind
