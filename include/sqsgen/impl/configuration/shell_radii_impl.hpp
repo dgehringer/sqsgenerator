@@ -1,17 +1,21 @@
+//
+// Created by Dominik Gehringer on 02.12.24.
+//
 
-#include "sqsgen/configuration/shell_radii.h"
+#ifndef SQSGEN_IMPL_CONFIGURATION_SHELL_RADII_IMPL_HPP
+#define SQSGEN_IMPL_CONFIGURATION_SHELL_RADII_IMPL_HPP
 
 #include <cmath>
 #include <cstddef>
 #include <expected>
+#include <format>
 #include <ranges>
 #include <stdexcept>
 #include <variant>
 #include <vector>
 
-#include "sqsgen/core/helpers/inst.h"
+#include "sqsgen/configuration/shell_radii.h"
 #include "sqsgen/core/helpers/misc.h"
-#include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/core/structure.h"
@@ -58,15 +62,15 @@ namespace sqsgen::configuration {
       if (helpers::is_close(prev + atol, radius) || radius < prev + atol) {
         return std::unexpected(configuration_error{
             "shell_radii", error_code::bad_argument,
-            helpers::format_string("two shells are too close (not even %f apart) or the second one "
-                                   "is smaller than the first. Those are %f and %f",
-                                   atol, prev, radius)});
+            std::format("two shells are too close (not even {:f} apart) or the second one "
+                        "is smaller than the first. Those are {:f} and {:f}",
+                        atol, prev, radius)});
       }
       out.push_back(radius);
       prev = radius;
     }
     return out;
-  };
+  }
 
   template <class T, sublattice_mode Mode>
   std::expected<shell_radii_t<T, Mode>, configuration_error> validate_shell_radii_input(
@@ -119,10 +123,9 @@ namespace sqsgen::configuration {
                 if (radii.size() != structure.size()) {
                   return std::unexpected(configuration_error{
                       "shell_radii", error_code::invalid_size,
-                      helpers::format_string(
-                          "the number of shell radii vectors (%zu) does not match "
-                          "the number of sublattices (%zu).",
-                          radii.size(), structure.size())});
+                      std::format("the number of shell radii vectors ({}) does not match "
+                                  "the number of sublattices ({}).",
+                                  radii.size(), structure.size())});
                 }
                 output_t out;
                 out.reserve(structure.size());
@@ -139,13 +142,6 @@ namespace sqsgen::configuration {
                     "unhandled sublattice_mode");
   }
 
-#define INST_SHELL_RADII(PREC, SMODE)                                                           \
-  template std::expected<shell_radii_t<PREC, SMODE>, configuration_error>                       \
-  validate_shell_radii_input<PREC, SMODE>(const shell_radii_input<PREC, SMODE>& input,          \
-                                          const structure_t<PREC, SMODE>& structure, PREC atol, \
-                                          PREC rtol, PREC bin_width, PREC peak_isolation);
+}  // namespace sqsgen::configuration
 
-  SQSGEN_INSTANTIATE_PREC_SMODE(INST_SHELL_RADII)
-#undef INST_SHELL_RADII
-
-};  // namespace sqsgen::configuration
+#endif  // SQSGEN_IMPL_CONFIGURATION_SHELL_RADII_IMPL_HPP

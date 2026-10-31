@@ -5,6 +5,7 @@
 #ifndef SQSGEN_CONFIGURATION_SHELL_RADII_H
 #define SQSGEN_CONFIGURATION_SHELL_RADII_H
 
+#include <optional>
 #include <variant>
 #include <vector>
 
@@ -27,5 +28,7 @@ namespace sqsgen::configuration {
       T bin_width, T peak_isolation);
 
 }  // namespace sqsgen::configuration
+
+#include "sqsgen/impl/configuration/shell_radii_impl.hpp"
 
 #endif  // SQSGEN_CONFIGURATION_SHELL_RADII_H

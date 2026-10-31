@@ -5,6 +5,10 @@
 #ifndef SQSGEN_CONFIGURATION_COMPOSITION_H
 #define SQSGEN_CONFIGURATION_COMPOSITION_H
 
+#include <cstddef>
+#include <map>
+#include <optional>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -19,8 +23,16 @@ namespace sqsgen::configuration {
   using composition_spec = std::map<std::string, site_spec>;
   using composition_input = std::variant<std::vector<composition_spec>, composition_spec>;
 
+  struct sublattice_helper {
+    std::optional<indices_t> sites = std::nullopt;
+    composition_t composition;
+  };
+
   result_t<std::vector<sublattice>> validate_composition_input(const composition_input&,
                                                                const configuration_t& conf);
 
 }  // namespace sqsgen::configuration
+
+#include "sqsgen/impl/configuration/composition_impl.hpp"
+
 #endif  // SQSGEN_CONFIGURATION_COMPOSITION_H

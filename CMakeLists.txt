@@ -58,11 +58,40 @@ if (BUILD_WASM)
   )
   target_link_libraries(wasm PRIVATE
           absl::hash
+          absl::log
           absl::str_format
           Eigen3::Eigen
           Boost::multiprecision
           embind
           glaze::glaze
               unordered_dense::unordered_dense
+  )
+else ()
+  message("Building native modules")
+  find_package(absl CONFIG REQUIRED)
+  add_executable(parse
+    cli/parse.cpp
+    src/core/permutation.cpp
+    src/core/structure.cpp
+    src/core/eigen.cpp
+    src/io/structure/sqsgen.cpp
+    src/io/structure/pymatgen.cpp
+    src/io/structure/detail.cpp
+    src/io/structure/vasp.cpp
+    src/io/structure/cif.cpp
+    src/io/structure/pdb.cpp
+    src/io/structure/ase.cpp
+    src/io/glaze.cpp
+    src/optimization/result.cpp
+    src/optimization/result_collection.cpp
+  )
+  target_link_libraries(parse PRIVATE
+          absl::hash
+          absl::log
+          absl::str_format
+          Eigen3::Eigen
+          Boost::multiprecision
+          glaze::glaze
+          unordered_dense::unordered_dense
   )
 endif ()

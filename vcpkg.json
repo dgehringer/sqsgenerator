@@ -10,6 +10,12 @@
     "bshoshany-thread-pool"
   ],
   "features": {
+    "native": {
+      "description": "Native command line tools for SQS generator",
+      "dependencies": [
+        "abseil"
+      ]
+    },
     "python": {
       "description": "Python bindings for SQS generator",
       "dependencies": [

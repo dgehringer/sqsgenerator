@@ -2,6 +2,21 @@
   "version": 2,
   "configurePresets": [
     {
+      "name": "native-debug",
+      "binaryDir": "${sourceDir}/build/native",
+      "generator": "Ninja",
+      "environment": {
+        "VCPKG_ROOT": "${sourceDir}/vcpkg"
+      },
+      "cacheVariables": {
+        "BUILD_WASM": "OFF",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_MANIFEST_FEATURES": "native",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
       "name": "wasm-debug",
       "binaryDir": "${sourceDir}/build/wasm",
       "generator": "Ninja",

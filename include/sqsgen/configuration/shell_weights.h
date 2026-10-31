@@ -5,6 +5,7 @@
 #ifndef SQSGEN_CONFIGURATION_SHELL_WEIGHTS_H
 #define SQSGEN_CONFIGURATION_SHELL_WEIGHTS_H
 
+#include <cstddef>
 #include <map>
 #include <string>
 
@@ -26,5 +27,7 @@ namespace sqsgen::configuration {
       const shell_weights_input<T, Mode>&, const shell_radii_t<T, Mode>& shell_radii);
 
 }  // namespace sqsgen::configuration
+
+#include "sqsgen/impl/configuration/shell_weights_impl.hpp"
 
 #endif  // SQSGEN_CONFIGURATION_SHELL_WEIGHTS_H

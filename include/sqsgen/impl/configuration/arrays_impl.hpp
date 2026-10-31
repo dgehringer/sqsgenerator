@@ -1,19 +1,23 @@
+//
+// Created by Dominik Gehringer on 02.01.25.
+//
 
-#include "sqsgen/configuration/arrays.h"
+#ifndef SQSGEN_IMPL_CONFIGURATION_ARRAYS_IMPL_HPP
+#define SQSGEN_IMPL_CONFIGURATION_ARRAYS_IMPL_HPP
 
 #include <Eigen/Core>
 #include <cassert>
 #include <concepts>
 #include <cstddef>
 #include <expected>
+#include <format>
 #include <ranges>
 #include <string>
 #include <type_traits>
 #include <variant>
 
+#include "sqsgen/configuration/arrays.h"
 #include "sqsgen/core/eigen.h"
-#include "sqsgen/core/helpers/inst.h"
-#include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/types.h"
 
@@ -22,7 +26,7 @@ namespace sqsgen::configuration {
   namespace core = sqsgen::core;
   namespace helpers = sqsgen::core::helpers;
 
-  configuration_error forward_error(const std::string& key, core::tensor_shape_error err) {
+  inline configuration_error forward_error(const std::string& key, core::tensor_shape_error err) {
     return {key, map_error_kind(err.which), err.message};
   }
 
@@ -45,13 +49,12 @@ namespace sqsgen::configuration {
   result_t<cube_t<T>> validate_matrix(const std::string& key, const matrix_t<T>& m,
                                       std::size_t num_shells, std::size_t num_species,
                                       std::optional<std::size_t> index = std::nullopt) {
-    std::string path
-        = index.has_value() ? helpers::format_string("%s.%zu", key, index.value()) : key;
+    std::string path = index.has_value() ? std::format("{}.{}", key, index.value()) : key;
     if (m.rows() != num_species || m.cols() != num_species)
-      return std::unexpected(configuration_error{
-          path, error_code::out_of_range,
-          helpers::format_string("matrix has invalid size %ix%i but expected %ix%i", m.rows(),
-                                 m.cols(), num_species, num_species)});
+      return std::unexpected(
+          configuration_error{path, error_code::out_of_range,
+                              std::format("matrix has invalid size {}x{} but expected {}x{}",
+                                          m.rows(), m.cols(), num_species, num_species)});
     return stack_matrix(m, num_shells);
   }
 
@@ -59,14 +62,13 @@ namespace sqsgen::configuration {
   result_t<cube_t<T>> validate_cube(const std::string& key, const cube_t<T>& c,
                                     std::size_t num_shells, std::size_t num_species,
                                     std::optional<std::size_t> index = std::nullopt) {
-    std::string path
-        = index.has_value() ? helpers::format_string("%s.%zu", key, index.value()) : key;
+    std::string path = index.has_value() ? std::format("{}.{}", key, index.value()) : key;
     const typename cube_t<T>::Dimensions& d = c.dimensions();
     if (d[0] != num_shells || d[1] != num_species || d[2] != num_species)
-      return std::unexpected(configuration_error{
-          path, error_code::out_of_range,
-          helpers::format_string("array has invalid size %ix%ix%i but expected %zux%zux%zu", d[0],
-                                 d[1], d[2], num_shells, num_species, num_species)});
+      return std::unexpected(
+          configuration_error{path, error_code::out_of_range,
+                              std::format("array has invalid size {}x{}x{} but expected {}x{}x{}",
+                                          d[0], d[1], d[2], num_shells, num_species, num_species)});
     return c;
   }
 
@@ -74,8 +76,7 @@ namespace sqsgen::configuration {
   result_t<cube_t<T>> validate_array(const std::string& key, const array_spec<T>& array_spec,
                                      std::size_t num_shells, std::size_t num_species,
                                      std::optional<std::size_t> index = std::nullopt) {
-    std::string path
-        = index.has_value() ? helpers::format_string("%s.%zu", key, index.value()) : key;
+    std::string path = index.has_value() ? std::format("{}.{}", key, index.value()) : key;
     return std::visit(
         helpers::overloaded{
             [&](T scalar) -> result_t<cube_t<T>> {
@@ -152,11 +153,11 @@ namespace sqsgen::configuration {
       if (input.has_value()) {
         const auto& data = input.value();
         if (structure.size() != data.size())
-          return std::unexpected(configuration_error{
-              key, error_code::invalid_size,
-              helpers::format_string("the number of %s arrays (%zu) does not match "
-                                     "the number of sublattices (%zu).",
-                                     key, data.size(), structure.size())});
+          return std::unexpected(
+              configuration_error{key, error_code::invalid_size,
+                                  std::format("the number of {} arrays ({}) does not match "
+                                              "the number of sublattices ({}).",
+                                              key, data.size(), structure.size())});
         for (std::size_t index = 0; index < structure.size(); ++index) {
           auto array = validate_array(key, data[index], weights[index].size(),
                                       structure[index].num_species);
@@ -183,7 +184,7 @@ namespace sqsgen::configuration {
       const shell_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
     return validate_array_input<T, Mode, pair_weights_t, pair_weights_input>(
         "pair_weights", input, default_pair_weights<T>, structure, weights, radii);
-  };
+  }
 
   template <class T, sublattice_mode Mode>
   result_t<target_objective_t<T, Mode>> validate_target_objective_input(
@@ -191,7 +192,7 @@ namespace sqsgen::configuration {
       const shell_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
     return validate_array_input<T, Mode, target_objective_t, target_objective_input>(
         "target_objective", input, default_target_objective<T>, structure, weights, radii);
-  };
+  }
 
   template <class T, sublattice_mode Mode>
   result_t<prefactors_t<T, Mode>> validate_prefactors_input(const prefactors_input<T, Mode>& input,
@@ -202,29 +203,6 @@ namespace sqsgen::configuration {
         "prefactors", input, default_prefactors<T>, structure, weights, radii);
   }
 
-#define INST_PAIR_WEIGHTS(PREC, SMODE)                                                         \
-  template result_t<pair_weights_t<PREC, SMODE>> validate_pair_weights_input<PREC, SMODE>(     \
-      const pair_weights_input<PREC, SMODE>& input, const structure_t<PREC, SMODE>& structure, \
-      const shell_weights_t<PREC, SMODE>& weights, const shell_radii_t<PREC, SMODE>& radii);
-
-  SQSGEN_INSTANTIATE_PREC_SMODE(INST_PAIR_WEIGHTS)
-
-#undef INST_PAIR_WEIGHTS
-
-#define INST_TARGET_OBJECTIVE(PREC, SMODE)                                                         \
-  template result_t<target_objective_t<PREC, SMODE>> validate_target_objective_input<PREC, SMODE>( \
-      const target_objective_input<PREC, SMODE>& input, const structure_t<PREC, SMODE>& structure, \
-      const shell_weights_t<PREC, SMODE>& weights, const shell_radii_t<PREC, SMODE>& radii);
-
-  SQSGEN_INSTANTIATE_PREC_SMODE(INST_TARGET_OBJECTIVE)
-#undef INST_TARGET_OBJECTIVE
-
-#define INST_PREFACTORS(PREC, SMODE)                                                         \
-  template result_t<prefactors_t<PREC, SMODE>> validate_prefactors_input<PREC, SMODE>(       \
-      const prefactors_input<PREC, SMODE>& input, const structure_t<PREC, SMODE>& structure, \
-      const shell_weights_t<PREC, SMODE>& weights, const shell_radii_t<PREC, SMODE>& radii);
-
-  SQSGEN_INSTANTIATE_PREC_SMODE(INST_PREFACTORS)
-#undef INST_PREFACTORS
-
 }  // namespace sqsgen::configuration
+
+#endif  // SQSGEN_IMPL_CONFIGURATION_ARRAYS_IMPL_HPP

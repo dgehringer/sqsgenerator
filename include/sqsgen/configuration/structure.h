@@ -5,9 +5,9 @@
 #ifndef SQSGEN_CONFIGURATION_STRUCTURE_H
 #define SQSGEN_CONFIGURATION_STRUCTURE_H
 
-#include <cstddef>
-#include <expected>
+#include <array>
 #include <optional>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -67,9 +67,10 @@ namespace sqsgen::configuration {
       = std::variant<stucture_definition_input<T>, structure_file_input>;
 
   template <class T>
-  std::expected<structure_config<T>, configuration_error> validate_structure_input(
-      const structure_input<T>&);
+  result_t<structure_config<T>> validate_structure_input(const structure_input<T>&);
 
-};  // namespace sqsgen::configuration
+}  // namespace sqsgen::configuration
+
+#include "sqsgen/impl/configuration/structure_impl.hpp"
 
 #endif  // SQSGEN_CONFIGURATION_STRUCTURE_H

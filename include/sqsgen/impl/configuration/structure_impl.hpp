@@ -1,15 +1,21 @@
+//
+// Created by Dominik Gehringer on 18.11.24.
+//
 
-
-#include "sqsgen/configuration/structure.h"
+#ifndef SQSGEN_IMPL_CONFIGURATION_STRUCTURE_IMPL_HPP
+#define SQSGEN_IMPL_CONFIGURATION_STRUCTURE_IMPL_HPP
 
 #include <array>
 #include <expected>
+#include <filesystem>
+#include <format>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <variant>
 
+#include "sqsgen/configuration/structure.h"
 #include "sqsgen/core/eigen.h"
-#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/structure.h"
@@ -18,11 +24,9 @@
 namespace sqsgen::configuration {
 
   namespace helpers = sqsgen::core::helpers;
-
-  namespace core = sqsgen::core;
   namespace io = sqsgen::io;
 
-  configuration_error forward_error(const std::string& key, io::parser_error err) {
+  inline configuration_error forward_error(const std::string& key, io::parser_error err) {
     return {key, err.code, err.msg};
   }
 
@@ -30,8 +34,8 @@ namespace sqsgen::configuration {
     if (ordinals.size() != num_sites)
       return std::unexpected(configuration_error{
           "structure.species", error_code::invalid_size,
-          helpers::format_string("Number of coordinates (%i) does not match number of species %i",
-                                 num_sites, ordinals.size())});
+          std::format("Number of coordinates ({}) does not match number of species {}", num_sites,
+                      ordinals.size())});
 
     configuration_t conf;
 
@@ -41,8 +45,7 @@ namespace sqsgen::configuration {
       else
         return std::unexpected(configuration_error{
             "structure.species", error_code::out_of_range,
-            helpers::format_string("An atomic element with ordinal number %i is not known to me",
-                                   o)});
+            std::format("An atomic element with ordinal number {} is not known to me", o)});
     }
     return conf;
   }
@@ -52,9 +55,8 @@ namespace sqsgen::configuration {
     if (symbols.size() != num_sites)
       return std::unexpected(configuration_error{
           "structure.species", error_code::invalid_size,
-          helpers::format_string(
-              "Number of coordinates (%u) does not match number of species %u specified", num_sites,
-              symbols.size())});
+          std::format("Number of coordinates ({}) does not match number of species {} specified",
+                      num_sites, symbols.size())});
     configuration_t conf;
     for (const auto& element : symbols)
       if (core::SYMBOL_MAP.contains(element))
@@ -62,8 +64,7 @@ namespace sqsgen::configuration {
       else
         return std::unexpected(configuration_error{
             "structure.species", error_code::out_of_range,
-            helpers::format_string("An atomic element with name \"%s\" is not known to me",
-                                   element)});
+            std::format("An atomic element with name \"{}\" is not known to me", element)});
     return conf;
   }
 
@@ -78,7 +79,7 @@ namespace sqsgen::configuration {
                       species);
   }
 
-  result_t<std::optional<std::array<int, 3>>> validate_supercell(
+  inline result_t<std::optional<std::array<int, 3>>> validate_supercell(
       const std::optional<std::array<int, 3>>& supercell) {
     if (supercell.has_value())
       for (auto amount : supercell.value())
@@ -100,7 +101,7 @@ namespace sqsgen::configuration {
     else
       return std::unexpected(configuration_error{"structure.lattice", error_code::invalid_size,
                                                  "A lattice must be a 3x3 matrix"});
-  };
+  }
 
   template <class T> result_t<coords_t<T>> validate_coords(const core::nested_t<T, 2>& matrix) {
     auto coords = core::coords_from<T>(matrix);
@@ -113,7 +114,7 @@ namespace sqsgen::configuration {
     else
       return std::unexpected(configuration_error{"structure.coords", error_code::invalid_size,
                                                  "A structure must contain at least one site"});
-  };
+  }
 
   template <class T> result_t<structure_config<T>> validate_structure_definition(
       const stucture_definition_input<T>& input) {
@@ -131,7 +132,7 @@ namespace sqsgen::configuration {
         std::move(supercell).value()};
   }
 
-  result_t<io::structure_format> structure_format_from_path(const std::string& path) {
+  inline result_t<io::structure_format> structure_format_from_path(const std::string& path) {
     if (path.ends_with(".pymatgen.json")) return io::structure_format::pymatgen;
 
     if (path.ends_with(".sqs.json")) return io::structure_format::sqsgen;
@@ -140,21 +141,20 @@ namespace sqsgen::configuration {
 
     return std::unexpected(configuration_error{
         "structure.format", error_code::bad_argument,
-        helpers::format_string("Unsupported file extension \"%s\". Currently only .pymatgen.json, "
-                               ".sqs.json, .vasp and .poscar are supported",
-                               path)});
+        std::format("Unsupported file extension \"{}\". Currently only .pymatgen.json, "
+                    ".sqs.json, .vasp and .poscar are supported",
+                    path)});
   }
 
-  result_t<std::string> read_file(const std::string& path) {
+  inline result_t<std::string> read_file(const std::string& path) {
     if (!std::filesystem::exists(path))
       return std::unexpected(
           configuration_error{"structure.path", error_code::bad_argument,
-                              helpers::format_string("The file \"%s\" does not exist", path)});
+                              std::format("The file \"{}\" does not exist", path)});
     std::ifstream ifs(path);
     if (!ifs)
-      return std::unexpected(
-          configuration_error{"structure.path", error_code::bad_argument,
-                              helpers::format_string("Could not open file: %s", path)});
+      return std::unexpected(configuration_error{"structure.path", error_code::bad_argument,
+                                                 std::format("Could not open file: {}", path)});
     std::ostringstream oss;
     oss << ifs.rdbuf();
     return oss.str();
@@ -249,7 +249,7 @@ namespace sqsgen::configuration {
   structure_config_dto<T, AMode> structure_config<T>::to_dto() const {
     return structure_config_dto<T, AMode>{.structure = structure.template to_dto<AMode>(),
                                           .supercell = supercell};
-  };
+  }
 
   template <class T> template <core::array_mode AMode>
   io::result_t<structure_config<T>> structure_config<T>::from_dto(
@@ -260,30 +260,8 @@ namespace sqsgen::configuration {
         .structure = std::move(structure).value(),
         .supercell = data.supercell,
     };
-  };
+  }
 
-#define INST_VALIDATE_STRUCTURE_INPUT(PREC)                                 \
-  template result_t<structure_config<PREC>> validate_structure_input<PREC>( \
-      const structure_input<PREC>&);
-  SQSGEN_INSTANTIATE_PREC(INST_VALIDATE_STRUCTURE_INPUT)
-#undef INST_VALIDATE_STRUCTURE_INPUT
+}  // namespace sqsgen::configuration
 
-// structure_config struct — PREC only
-#define INST_STRUCTURE_CONFIG(PREC) template struct structure_config<PREC>;
-  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_CONFIG)
-#undef INST_STRUCTURE_CONFIG
-
-// structure_config_dto struct — PREC × AMODE
-#define INST_STRUCTURE_CONFIG_DTO(PREC, AMODE) template struct structure_config_dto<PREC, AMODE>;
-  SQSGEN_INSTANTIATE_PREC_AMODE(INST_STRUCTURE_CONFIG_DTO)
-#undef INST_STRUCTURE_CONFIG_DTO
-
-// structure_config member templates (to_dto/from_dto) — PREC × AMODE
-#define INST_STRUCTURE_CONFIG_METHODS(PREC, AMODE)                                          \
-  template structure_config_dto<PREC, AMODE> structure_config<PREC>::to_dto<AMODE>() const; \
-  template io::result_t<structure_config<PREC>> structure_config<PREC>::from_dto<AMODE>(    \
-      const structure_config_dto<PREC, AMODE>& input);
-  SQSGEN_INSTANTIATE_PREC_AMODE(INST_STRUCTURE_CONFIG_METHODS)
-#undef INST_STRUCTURE_CONFIG_METHODS
-
-};  // namespace sqsgen::configuration
+#endif  // SQSGEN_IMPL_CONFIGURATION_STRUCTURE_IMPL_HPP

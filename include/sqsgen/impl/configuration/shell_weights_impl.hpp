@@ -1,44 +1,44 @@
+//
+// Created by Dominik Gehringer on 02.12.24.
+//
 
-#include "sqsgen/configuration/shell_weights.h"
+#ifndef SQSGEN_IMPL_CONFIGURATION_SHELL_WEIGHTS_IMPL_HPP
+#define SQSGEN_IMPL_CONFIGURATION_SHELL_WEIGHTS_IMPL_HPP
 
 #include <cassert>
 #include <cstddef>
+#include <format>
 #include <map>
 #include <optional>
 #include <string>
 
-#include "sqsgen/core/helpers/inst.h"
-#include "sqsgen/core/helpers/string.h"
+#include "sqsgen/configuration/shell_weights.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
 
-  namespace helpers = sqsgen::core::helpers;
-
-  result_t<std::size_t> parse_shell(const std::string& key,
-                                    std::optional<std::size_t> index = std::nullopt) {
-    std::string path = index.has_value()
-                           ? helpers::format_string("shell_weights.%zu", index.value())
-                           : "shell_weights";
+  inline result_t<std::size_t> parse_shell(const std::string& key,
+                                           std::optional<std::size_t> index = std::nullopt) {
+    std::string path
+        = index.has_value() ? std::format("shell_weights.{}", index.value()) : "shell_weights";
     try {
       return static_cast<std::size_t>(std::stoul(key));
     } catch (const std::invalid_argument& e) {
       return std::unexpected(
-          configuration_error{helpers::format_string("%s.%s", path, key), error_code::bad_argument,
-                              helpers::format_string("Could not parse shell index: %s", key)});
+          configuration_error{std::format("{}.{}", path, key), error_code::bad_argument,
+                              std::format("Could not parse shell index: {}", key)});
     } catch (const std::out_of_range& e) {
       return std::unexpected(
-          configuration_error{helpers::format_string("%s.%s", path, key), error_code::out_of_range,
-                              helpers::format_string("Could not parse shell index: %s", key)});
+          configuration_error{std::format("{}.{}", path, key), error_code::out_of_range,
+                              std::format("Could not parse shell index: {}", key)});
     }
   }
 
   template <class T> result_t<std::map<std::size_t, T>> parse_shell_weights(
       const std::map<std::string, T>& weight_input, std::size_t num_shells,
       std::optional<std::size_t> index = std::nullopt) {
-    std::string path = index.has_value()
-                           ? helpers::format_string("shell_weights.%zu", index.value())
-                           : "shell_weights";
+    std::string path
+        = index.has_value() ? std::format("shell_weights.{}", index.value()) : "shell_weights";
     if (weight_input.empty())
       return std::unexpected(
           configuration_error{path, error_code::invalid_size, "shell weights cannot be empty"});
@@ -47,14 +47,14 @@ namespace sqsgen::configuration {
       auto shell = parse_shell(key, index);
       if (!shell) return std::unexpected(std::move(shell).error());
       if (shell.value() == 0)
-        return std::unexpected(configuration_error{
-            helpers::format_string("%s.%s", path, key), error_code::bad_argument,
-            "There is no point in including self-interactions"});
+        return std::unexpected(
+            configuration_error{std::format("{}.{}", path, key), error_code::bad_argument,
+                                "There is no point in including self-interactions"});
       if (shell.value() >= num_shells)
         return std::unexpected(configuration_error{
-            helpers::format_string("%s.%s", path, key), error_code::invalid_size,
-            helpers::format_string("There are %zu shells but you specified a shell index of %zu",
-                                   num_shells, shell.value())});
+            std::format("{}.{}", path, key), error_code::invalid_size,
+            std::format("There are {} shells but you specified a shell index of {}", num_shells,
+                        shell.value())});
       out.emplace(shell.value(), weight);
     }
     return out;
@@ -85,9 +85,9 @@ namespace sqsgen::configuration {
         if (data.size() != shell_radii.size()) {
           return std::unexpected(configuration_error{
               "shell_weights", error_code::invalid_size,
-              helpers::format_string("the number of shell weight definitions (%zu) does not match "
-                                     "the number of sublattices (%zu).",
-                                     data.size(), shell_radii.size())});
+              std::format("the number of shell weight definitions ({}) does not match "
+                          "the number of sublattices ({}).",
+                          data.size(), shell_radii.size())});
         }
         for (std::size_t index = 0; index < num_sublattices; ++index) {
           auto num_shells = shell_radii[index].size() - 1;
@@ -108,11 +108,6 @@ namespace sqsgen::configuration {
                     "unhandled sublattice_mode");
   }
 
-#define INST_SHELL_WEIGHTS(PREC, SMODE)                                                     \
-  template result_t<shell_weights_t<PREC, SMODE>> validate_shell_weight_input<PREC, SMODE>( \
-      const shell_weights_input<PREC, SMODE>&, const shell_radii_t<PREC, SMODE>&);
-
-  SQSGEN_INSTANTIATE_PREC_SMODE(INST_SHELL_WEIGHTS)
-#undef INST_SHELL_WEIGHTS
-
 }  // namespace sqsgen::configuration
+
+#endif  // SQSGEN_IMPL_CONFIGURATION_SHELL_WEIGHTS_IMPL_HPP

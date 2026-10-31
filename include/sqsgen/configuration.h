@@ -7,6 +7,8 @@
 
 #include <expected>
 #include <type_traits>
+#include <variant>
+#include <vector>
 
 #include "sqsgen/configuration/arrays.h"
 #include "sqsgen/configuration/composition.h"
@@ -14,6 +16,7 @@
 #include "sqsgen/configuration/shell_radii.h"
 #include "sqsgen/configuration/shell_weights.h"
 #include "sqsgen/configuration/structure.h"
+#include "sqsgen/core/eigen.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
@@ -26,7 +29,7 @@ namespace sqsgen::configuration {
   consteval prec arithmethic_to_prec() {
     if constexpr (std::is_same_v<T, float>) {
       return prec::Single;
-    } else if constexpr (std::is_same_v<double, double>) {
+    } else if constexpr (std::is_same_v<T, double>) {
       return prec::Double;
     } else
       static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>, "unhandled precision");
@@ -122,6 +125,10 @@ namespace sqsgen::configuration {
                                                                             io::wire_format);
 
   result_t<configuration_variant_t> parse_configuration(const configuration_input_variant_t&);
+
 }  // namespace sqsgen::configuration
+
+#include "sqsgen/impl/configuration/configuration_dto_impl.hpp"
+#include "sqsgen/impl/configuration/configuration_impl.hpp"
 
 #endif  // SQSGEN_CONFIGURATION_H

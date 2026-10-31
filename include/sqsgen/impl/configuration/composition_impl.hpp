@@ -1,20 +1,24 @@
+//
+// Created by Dominik Gehringer on 23.11.24.
+//
 
-
-// #include "sqsgen/configuration/composition.h"
-
-#include "sqsgen/configuration/composition.h"
+#ifndef SQSGEN_IMPL_CONFIGURATION_COMPOSITION_IMPL_HPP
+#define SQSGEN_IMPL_CONFIGURATION_COMPOSITION_IMPL_HPP
 
 #include <cstddef>
 #include <expected>
+#include <format>
+#include <map>
 #include <numeric>
 #include <optional>
 #include <ranges>
+#include <string>
 #include <variant>
 #include <vector>
 
+#include "sqsgen/configuration/composition.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers/misc.h"
-#include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/core/permutation.h"
 #include "sqsgen/core/sorted_vector.h"
@@ -25,18 +29,11 @@ namespace sqsgen::configuration {
   namespace core = sqsgen::core;
   namespace helpers = sqsgen::core::helpers;
 
-  using indices_t = core::sorted_vector<std::size_t>;
-
-  struct sublattice_helper {
-    std::optional<indices_t> sites = std::nullopt;
-    composition_t composition;
-  };
-
-  result_t<indices_t> validate_indices(std::vector<int> const& indices, configuration_t const& conf,
-                                       std::optional<int> index = std::nullopt) {
-    std::string key = index.has_value()
-                          ? helpers::format_string("composition.%i.sites", index.value())
-                          : "composition.sites";
+  inline result_t<indices_t> validate_indices(std::vector<int> const& indices,
+                                              configuration_t const& conf,
+                                              std::optional<int> index = std::nullopt) {
+    std::string key = index.has_value() ? std::format("composition.{}.sites", index.value())
+                                        : "composition.sites";
     indices_t parsed;
     for (auto index : indices)
       if (0 <= index && index < conf.size())
@@ -44,8 +41,8 @@ namespace sqsgen::configuration {
       else
         return std::unexpected(configuration_error{
             key, error_code::out_of_range,
-            helpers::format_string("Invalid index %i, the specified structure contains %i sites",
-                                   index, conf.size())});
+            std::format("Invalid index {}, the specified structure contains {} sites", index,
+                        conf.size())});
     if (parsed.empty())
       return std::unexpected(
           configuration_error{key, error_code::invalid_size, "You cannot specify an empty slice"});
@@ -53,26 +50,24 @@ namespace sqsgen::configuration {
     return parsed;
   }
 
-  result_t<indices_t> validate_species_strings(std::vector<std::string> const& species,
-                                               configuration_t const& conf,
-                                               std::optional<int> index = std::nullopt) {
-    std::string key = index.has_value()
-                          ? helpers::format_string("composition.%i.sites", index.value())
-                          : "composition.sites";
+  inline result_t<indices_t> validate_species_strings(std::vector<std::string> const& species,
+                                                      configuration_t const& conf,
+                                                      std::optional<int> index = std::nullopt) {
+    std::string key = index.has_value() ? std::format("composition.{}.sites", index.value())
+                                        : "composition.sites";
     auto distinct_species = core::count_species(conf);
     core::sorted_vector<specie_t> unique_species;
     for (auto s : species) {
       if (!core::SYMBOL_MAP.contains(s))
         return std::unexpected(configuration_error{
             key, error_code::out_of_range,
-            helpers::format_string("An atomic element with name \"%s\" is not known to me", s)});
+            std::format("An atomic element with name \"{}\" is not known to me", s)});
 
       auto ordinal = core::atom::from_symbol(s).Z;
       if (!distinct_species.contains(ordinal))
         return std::unexpected(configuration_error{
             key, error_code::bad_argument,
-            helpers::format_string(
-                "The specified structure does not contain a site with species \"%s\"", s)});
+            std::format("The specified structure does not contain a site with species \"{}\"", s)});
 
       unique_species.insert(ordinal);
     }
@@ -85,11 +80,10 @@ namespace sqsgen::configuration {
     return indices;
   }
 
-  result_t<indices_t> validate_sites(const site_spec& spec, const configuration_t& conf,
-                                     std::optional<int> index = std::nullopt) {
-    std::string key = index.has_value()
-                          ? helpers::format_string("composition.%i.sites", index.value())
-                          : "composition.sites";
+  inline result_t<indices_t> validate_sites(const site_spec& spec, const configuration_t& conf,
+                                            std::optional<int> index = std::nullopt) {
+    std::string key = index.has_value() ? std::format("composition.{}.sites", index.value())
+                                        : "composition.sites";
     return std::visit(
         helpers::overloaded{[&](const std::vector<int>& indices) -> result_t<indices_t> {
                               return validate_indices(indices, conf, index);
@@ -108,11 +102,11 @@ namespace sqsgen::configuration {
         spec);
   }
 
-  result_t<sublattice_helper> validate_sublattice(const composition_spec& composition_spec,
-                                                  const configuration_t& conf,
-                                                  std::optional<int> index = std::nullopt) {
-    std::string key = index.has_value() ? helpers::format_string("composition.%i", index.value())
-                                        : "composition";
+  inline result_t<sublattice_helper> validate_sublattice(const composition_spec& composition_spec,
+                                                         const configuration_t& conf,
+                                                         std::optional<int> index = std::nullopt) {
+    std::string key
+        = index.has_value() ? std::format("composition.{}", index.value()) : "composition";
     std::optional<indices_t> sites = std::nullopt;
     composition_t composition;
     for (const auto& [symbol, spec] : composition_spec) {
@@ -121,50 +115,49 @@ namespace sqsgen::configuration {
         if (!parsed_sites) return std::unexpected(std::move(parsed_sites).error());
         sites = *parsed_sites;
       }
-      auto symbol_key = helpers::format_string("%s.%s", key, symbol);
+      auto symbol_key = std::format("{}.{}", key, symbol);
       if (!core::SYMBOL_MAP.contains(symbol))
         return std::unexpected(
             configuration_error{symbol_key, error_code::bad_argument,
-                                helpers::format_string("Unknown atomic species \"%s\"", symbol)});
+                                std::format("Unknown atomic species \"{}\"", symbol)});
 
-      auto amount
-          = std::visit(helpers::overloaded{
-                           [&](const std::vector<int>& indices) -> result_t<int> {
-                             return std::unexpected(configuration_error{
-                                 symbol_key, error_code::type_error,
-                                 "Invalid type must be an integer number greater than 0"});
-                           },
-                           [&](const std::vector<std::string>& species) -> result_t<int> {
-                             return std::unexpected(configuration_error{
-                                 symbol_key, error_code::type_error,
-                                 "Invalid type must be an integer number greater than 0"});
-                           },
-                           [&](const std::string& specie) -> result_t<int> {
-                             return std::unexpected(configuration_error{
-                                 symbol_key, error_code::type_error,
-                                 "Invalid type must be an integer number greater than 0"});
-                           },
-                           [&](int v) -> result_t<int> {
-                             if (v < 1)
-                               return std::unexpected(configuration_error{
-                                   symbol_key, error_code::out_of_range,
-                                   helpers::format_string(
-                                       "Number of atoms cannot be negative or zero got: %i", v)});
-                             return v;
-                           }},
-                       spec);
+      auto amount = std::visit(
+          helpers::overloaded{
+              [&](const std::vector<int>& indices) -> result_t<int> {
+                return std::unexpected(
+                    configuration_error{symbol_key, error_code::type_error,
+                                        "Invalid type must be an integer number greater than 0"});
+              },
+              [&](const std::vector<std::string>& species) -> result_t<int> {
+                return std::unexpected(
+                    configuration_error{symbol_key, error_code::type_error,
+                                        "Invalid type must be an integer number greater than 0"});
+              },
+              [&](const std::string& specie) -> result_t<int> {
+                return std::unexpected(
+                    configuration_error{symbol_key, error_code::type_error,
+                                        "Invalid type must be an integer number greater than 0"});
+              },
+              [&](int v) -> result_t<int> {
+                if (v < 1)
+                  return std::unexpected(configuration_error{
+                      symbol_key, error_code::out_of_range,
+                      std::format("Number of atoms cannot be negative or zero got: {}", v)});
+                return v;
+              }},
+          spec);
       if (!amount) return std::unexpected(std::move(amount).error());
       composition[core::atom::from_symbol(symbol).Z] = *amount;
     }
 
-    if (composition.size())
+    if (composition.empty())
       return std::unexpected(configuration_error{key, error_code::invalid_size,
                                                  "You must specify at least a single species"});
 
     return sublattice_helper{sites, composition};
   }
 
-  result_t<sublattice> validate_composition(sublattice_helper&& helper) {
+  inline result_t<sublattice> validate_composition(sublattice_helper&& helper) {
     auto num_sites = helper.sites->size();
     auto values_view = helper.composition | std::ranges::views::values;
     auto distributed_atoms
@@ -172,13 +165,13 @@ namespace sqsgen::configuration {
     if (distributed_atoms != num_sites)
       return std::unexpected(configuration_error{
           "composition", error_code::invalid_size,
-          helpers::format_string("You tried to distribute %zu atoms on a sublattice with %zu sites",
-                                 distributed_atoms, num_sites)});
+          std::format("You tried to distribute {} atoms on a sublattice with {} sites",
+                      distributed_atoms, num_sites)});
     return sublattice{std::move(helper.sites.value()), std::move(helper.composition)};
   }
 
-  result_t<std::vector<sublattice_helper>> parse_sublattice_helpers(const composition_input& input,
-                                                                    const configuration_t& conf) {
+  inline result_t<std::vector<sublattice_helper>> parse_sublattice_helpers(
+      const composition_input& input, const configuration_t& conf) {
     return std::visit(
         helpers::overloaded{
             [&](const composition_spec& spec) -> result_t<std::vector<sublattice_helper>> {
@@ -204,8 +197,8 @@ namespace sqsgen::configuration {
         input);
   }
 
-  result_t<std::vector<sublattice>> validate_composition_input(const composition_input& input,
-                                                               const configuration_t& conf) {
+  inline result_t<std::vector<sublattice>> validate_composition_input(
+      const composition_input& input, const configuration_t& conf) {
     auto helper = parse_sublattice_helpers(input, conf);
     if (!helper) return std::unexpected(std::move(helper).error());
     auto [sublattices_with_site_spec, sublattices_without_site_spec] = helpers::partition(
@@ -221,9 +214,9 @@ namespace sqsgen::configuration {
         if (!inserted) {
           const std::size_t other_index = it->second;
           return std::unexpected(configuration_error{
-              helpers::format_string("composition.%zu", index), error_code::bad_argument,
-              helpers::format_string(
-                  "the atomic site %zu is contained in at least two sublattices (%zu and %zu). "
+              std::format("composition.{}", index), error_code::bad_argument,
+              std::format(
+                  "the atomic site {} is contained in at least two sublattices ({} and {}). "
                   "sublattices must be mutually exclusive",
                   site, index, other_index)});
         }
@@ -262,3 +255,5 @@ namespace sqsgen::configuration {
   }
 
 }  // namespace sqsgen::configuration
+
+#endif  // SQSGEN_IMPL_CONFIGURATION_COMPOSITION_IMPL_HPP

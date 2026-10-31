@@ -39,7 +39,7 @@ namespace sqsgen::configuration {
                                                                 const shell_radii_t<T, Mode>&);
 
   template <class T, sublattice_mode Mode>
-  result_t<pair_weights_t<T, Mode>> validate_target_objective_input(
+  result_t<target_objective_t<T, Mode>> validate_target_objective_input(
       const target_objective_input<T, Mode>&, const structure_t<T, Mode>&,
       const shell_weights_t<T, Mode>&, const shell_radii_t<T, Mode>&);
 
@@ -49,6 +49,8 @@ namespace sqsgen::configuration {
                                                             const shell_weights_t<T, Mode>&,
                                                             const shell_radii_t<T, Mode>&);
 
-};  // namespace sqsgen::configuration
+}  // namespace sqsgen::configuration
+
+#include "sqsgen/impl/configuration/arrays_impl.hpp"
 
 #endif  // SQSGEN_CONFIGURATION_ARRAYS_H
