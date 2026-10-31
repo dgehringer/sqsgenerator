@@ -1,16 +1,22 @@
+//
+// Created by Dominik Gehringer on 04.03.25.
+//
 
+#ifndef SQSGEN_IMPL_IO_STRUCTURE_SQSGEN_IMPL_HPP
+#define SQSGEN_IMPL_IO_STRUCTURE_SQSGEN_IMPL_HPP
 
 #include <expected>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
 
-#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/glaze.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::io {
-
-  namespace core = sqsgen::core;
 
   template <class T> std::string structure_adapter<T, structure_format::sqsgen>::format(
       const core::structure<T>& structure, wire_format format) {
@@ -26,9 +32,6 @@ namespace sqsgen::io {
     return dto.and_then(core::structure<T>::template from_dto<core::array_mode::packed>);
   }
 
-#define INST_STRUCTURE_ADAPTER_SQSGEN(PREC) \
-  template struct structure_adapter<PREC, structure_format::sqsgen>;
-  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_ADAPTER_SQSGEN)
-#undef INST_STRUCTURE_ADAPTER_SQSGEN
+}  // namespace sqsgen::io
 
-};  // namespace sqsgen::io
+#endif  // SQSGEN_IMPL_IO_STRUCTURE_SQSGEN_IMPL_HPP

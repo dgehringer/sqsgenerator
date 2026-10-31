@@ -16,4 +16,6 @@ namespace sqsgen::core {
   bool next_permutation(configuration_t::iterator start, configuration_t::iterator end);
 }  // namespace sqsgen::core
 
+#include "sqsgen/impl/core/permutation_impl.hpp"
+
 #endif  // SQSGEN_CORE_PERMUTATION_HPP

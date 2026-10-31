@@ -1,13 +1,22 @@
+//
+// Created by Dominik Gehringer on 04.03.25.
+//
 
+#ifndef SQSGEN_IMPL_IO_STRUCTURE_ASE_IMPL_HPP
+#define SQSGEN_IMPL_IO_STRUCTURE_ASE_IMPL_HPP
+
+#include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <ctime>
 #include <glaze/glaze.hpp>
 #include <glaze/json/generic_fwd.hpp>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <vector>
 
-#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/glaze.h"
 #include "sqsgen/io/structure.h"
@@ -36,10 +45,6 @@ namespace sqsgen::io {
       ase_array<T> pbc;
       ase_array<T> positions;
     };
-
-#define INST_ASE_STRUCTURE(PREC) template struct ase_structure<PREC>;
-    SQSGEN_INSTANTIATE_PREC(INST_ASE_STRUCTURE)
-#undef INST_ASE_STRUCTURE
   }  // namespace detail
 
   template <class T, class Array> detail::ndarray<T> make_ndarray(std::string dtype,
@@ -60,7 +65,7 @@ namespace sqsgen::io {
         detail::ndarray_payload<T>{{std::size(pbc)}, "bool", std::move(data)}};
   }
 
-  double years_since_2000() {
+  inline double years_since_2000() {
     // January 1, 2000 00:00:00 UTC
     std::tm timeinfo = {};
     timeinfo.tm_year = 100;  // Year since 1900
@@ -84,7 +89,7 @@ namespace sqsgen::io {
 
     // positions = frac_coords * lattice, per row (your existing math, unchanged)
     matrix_t<T> positions(filtered.size(), 3);
-    for (Eigen::Index i = 0; i < filtered.size(); ++i)
+    for (std::size_t i = 0; i < filtered.size(); ++i)
       positions.row(i) = filtered.frac_coords.row(i) * filtered.lattice;
 
     detail::ase_structure<T> out;
@@ -110,11 +115,6 @@ namespace sqsgen::io {
     return std::move(*data);
   }
 
-#define INST_STRUCTURE_ADAPTER_ASE(PREC) \
-  template struct structure_adapter<PREC, structure_format::ase>;
-  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_ADAPTER_ASE)
-#undef INST_STRUCTURE_ADAPTER_ASE
-
 }  // namespace sqsgen::io
 
 namespace glz {
@@ -122,9 +122,6 @@ namespace glz {
     using N = sqsgen::io::detail::ndarray<T>;
     static constexpr auto value = glz::object("__ndarray__", &N::__ndarray__);
   };
-
-#define INST_DETAIL_NDARRAY(PREC) template struct meta<sqsgen::io::detail::ndarray<PREC>>;
-  SQSGEN_INSTANTIATE_PREC(INST_DETAIL_NDARRAY)
-#undef INST_DETAIL_NDARRAY
-
 }  // namespace glz
+
+#endif  // SQSGEN_IMPL_IO_STRUCTURE_ASE_IMPL_HPP

@@ -10,7 +10,6 @@
 #include <expected>
 #include <format>
 #include <ranges>
-#include <stdexcept>
 #include <variant>
 #include <vector>
 
@@ -26,23 +25,29 @@ namespace sqsgen::configuration {
   namespace helpers = sqsgen::core::helpers;
 
   template <class T> T round_digits(T value, int n) {
-    T multiplier = std::pow(10.0, n);
+    const T multiplier = static_cast<T>(std::pow(T{10}, n));
     return std::round(value * multiplier) / multiplier;
   }
 
-  template <class T> int digits(T val) {
+  // A tolerance is expected in the open interval (0, 1); the number of significant digits is
+  // -log10(val). Returns an error instead of throwing, so the failure can cross the module
+  // boundary as a result_t.
+  template <class T> result_t<int> digits(T val) {
     auto num_digits = -static_cast<int>(std::round(std::log10(val)));
-    if (num_digits <= 0) throw std::invalid_argument("a tolerance must be between 0 and 1");
+    if (num_digits <= 0)
+      return std::unexpected(configuration_error{"shell_radii", error_code::bad_argument,
+                                                 "a tolerance must be between 0 and 1"});
     return num_digits;
   }
 
   template <class T> result_t<std::vector<T>> validate_radii(const std::vector<T>& radii, T atol) {
     auto num_digits = digits(atol);
+    if (!num_digits) return std::unexpected(std::move(num_digits).error());
     if (radii.empty())
       return std::unexpected(configuration_error{"shell_radii", error_code::invalid_size,
                                                  "shell radii vector cannot be empty"});
     core::sorted_vector<T> unique_radii(radii | std::ranges::views::transform([=](auto shell) {
-                                          return round_digits<T>(shell, num_digits);
+                                          return round_digits<T>(shell, num_digits.value());
                                         }));
 
     if (helpers::is_close<T>(unique_radii.front(), 0.0)) {
@@ -80,24 +85,24 @@ namespace sqsgen::configuration {
         = input.value_or(shell_radii_detection::peak);
     if constexpr (Mode == sublattice_mode::interact) {
       return std::visit(
-          helpers::overloaded{[&](shell_radii_detection mode)
-                                  -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
-                                if (mode == shell_radii_detection::naive) {
-                                  return core::distances_naive(structure, atol, rtol);
-                                }
-                                if (mode == shell_radii_detection::peak) {
-                                  return core::distances_histogram(structure, bin_width,
-                                                                   peak_isolation);
-                                }
-                                throw std::invalid_argument("Unknown shell detection mode");
-                              },
-                              [&](const std::vector<T>& radii)
-                                  -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
-                                auto shell_radii = validate_radii<T>(radii, atol);
-                                if (!shell_radii)
-                                  return std::unexpected(std::move(shell_radii).error());
-                                return std::move(shell_radii).value();
-                              }},
+          helpers::overloaded{
+              [&](shell_radii_detection mode)
+                  -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
+                if (mode == shell_radii_detection::naive) {
+                  return core::distances_naive(structure, atol, rtol);
+                }
+                if (mode == shell_radii_detection::peak) {
+                  return core::distances_histogram(structure, bin_width, peak_isolation);
+                }
+                return std::unexpected(configuration_error{"shell_radii", error_code::unknown,
+                                                           "Unknown shell detection mode"});
+              },
+              [&](const std::vector<T>& radii)
+                  -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
+                auto shell_radii = validate_radii<T>(radii, atol);
+                if (!shell_radii) return std::unexpected(std::move(shell_radii).error());
+                return std::move(shell_radii).value();
+              }},
           input_or_default);
     } else if constexpr (Mode == sublattice_mode::split) {
       using output_t = shell_radii_t<T, Mode>;

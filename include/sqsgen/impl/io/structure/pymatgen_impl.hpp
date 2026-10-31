@@ -1,5 +1,13 @@
+//
+// Created by Dominik Gehringer on 04.03.25.
+//
+
+#ifndef SQSGEN_IMPL_IO_STRUCTURE_PYMATGEN_IMPL_HPP
+#define SQSGEN_IMPL_IO_STRUCTURE_PYMATGEN_IMPL_HPP
+
 #include <array>
 #include <expected>
+#include <format>
 #include <glaze/glaze.hpp>
 #include <glaze/json/generic_fwd.hpp>
 #include <stdexcept>
@@ -9,8 +17,6 @@
 
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/eigen.h"
-#include "sqsgen/core/helpers/inst.h"
-#include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/glaze.h"
 #include "sqsgen/io/structure.h"
@@ -18,8 +24,6 @@
 
 namespace sqsgen::io {
 
-  namespace core = sqsgen::core;
-  namespace helpers = sqsgen::core::helpers;
   namespace detail {
     template <class T> struct pymatgen_species {
       std::string element;
@@ -49,29 +53,13 @@ namespace sqsgen::io {
       T charge{0};
       std::vector<pymatgen_site<T>> sites;
     };
-
-#define INST_DETAIL_PYMATGEN_SPECIES(PREC) template struct pymatgen_species<PREC>;
-    SQSGEN_INSTANTIATE_PREC(INST_DETAIL_PYMATGEN_SPECIES)
-#undef INST_DETAIL_PYMATGEN_SPECIES
-
-#define INST_DETAIL_PYMATGEN_LATTICE(PREC) template struct pymatgen_lattice<PREC>;
-    SQSGEN_INSTANTIATE_PREC(INST_DETAIL_PYMATGEN_LATTICE)
-#undef INST_DETAIL_PYMATGEN_LATTICE
-
-#define INST_DETAIL_PYMATGEN_SITE(PREC) template struct pymatgen_site<PREC>;
-    SQSGEN_INSTANTIATE_PREC(INST_DETAIL_PYMATGEN_SITE)
-#undef INST_DETAIL_PYMATGEN_SITE
-
-#define INST_DETAIL_PYMATGEN_STRUCTURE(PREC) template struct pymatgen_structure<PREC>;
-    SQSGEN_INSTANTIATE_PREC(INST_DETAIL_PYMATGEN_STRUCTURE)
-#undef INST_DETAIL_PYMATGEN_STRUCTURE
   }  // namespace detail
 
   template <class T> std::array<T, 3> to_array(const Eigen::Matrix<T, 3, 1>& v) {
     return {v(0), v(1), v(2)};
   }
 
-  parser_error forward_error(core::tensor_shape_error err) {
+  inline parser_error forward_error(core::tensor_shape_error err) {
     return {map_error_kind(err.which), err.message};
   }
 
@@ -98,7 +86,7 @@ namespace sqsgen::io {
       return detail::pymatgen_site<T>{
           .abc = to_array<T>(site.frac_coords),
           .xyz = to_array<T>(filtered.lattice.transpose() * site.frac_coords),
-          .label = helpers::format_string("%s%i", site.atom().symbol, site.index),
+          .label = std::format("{}{}", site.atom().symbol, site.index),
           .species = {detail::pymatgen_species<T>{site.atom().symbol, 1}}};
     };
     for (auto&& site : filtered.sites()) out.sites.push_back(make_site(site));
@@ -109,14 +97,13 @@ namespace sqsgen::io {
   std::expected<std::pair<specie_t, std::array<T, 3>>, parser_error> convert_site(
       const detail::pymatgen_site<T>& site) {
     if (site.species.size() != 1)
-      return std::unexpected(
-          parser_error{error_code::out_of_range,
-                       helpers::format_string("Cannot handle site with more than one species %u",
-                                              site.species.size())});
+      return std::unexpected(parser_error{
+          error_code::out_of_range,
+          std::format("Cannot handle site with more than one species {}", site.species.size())});
     auto specie = site.species.front();
     if (!core::SYMBOL_MAP.contains(specie.element))
-      return std::unexpected(parser_error{
-          error_code::out_of_range, helpers::format_string("Unkown species %s", specie.element)});
+      return std::unexpected(
+          parser_error{error_code::out_of_range, std::format("Unkown species {}", specie.element)});
     return std::make_pair(core::atom::from_symbol(specie.element).Z, site.abc);
   }
 
@@ -141,7 +128,7 @@ namespace sqsgen::io {
     }
 
     auto lattice = core::lattice_from<T>(dto.lattice.matrix);
-    if (!lattice) return std::unexpected(forward_error(std::move(lattice).error()));
+    if (!lattice) return std::unexpected(sqsgen::io::forward_error(std::move(lattice).error()));
 
     return core::structure<T>(std::move(lattice).value(), frac_coords, species);
   }
@@ -161,10 +148,6 @@ namespace sqsgen::io {
     return dto.and_then(to_structure<T>);
   }
 
-#define INST_STRUCTURE_ADAPTER_PYMATGEN(PREC) \
-  template struct structure_adapter<PREC, structure_format::pymatgen>;
-  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_ADAPTER_PYMATGEN)
-#undef INST_STRUCTURE_ADAPTER_PYMATGEN
 }  // namespace sqsgen::io
 
 namespace glz {
@@ -174,10 +157,6 @@ namespace glz {
         = glz::object("properties", &S::properties, "lattice", &S::lattice, "@module", &S::module,
                       "@class", &S::class_, "charge", &S::charge, "sites", &S::sites);
   };
-
-#define INST_DETAIL_PYMATGEN_STRUCTURE_META(PREC) \
-  template struct meta<sqsgen::io::detail::pymatgen_structure<PREC>>;
-  SQSGEN_INSTANTIATE_PREC(INST_DETAIL_PYMATGEN_STRUCTURE_META)
-#undef INST_DETAIL_PYMATGEN_STRUCTURE_META
-
 }  // namespace glz
+
+#endif  // SQSGEN_IMPL_IO_STRUCTURE_PYMATGEN_IMPL_HPP

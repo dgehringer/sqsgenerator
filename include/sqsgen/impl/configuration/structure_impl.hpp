@@ -12,6 +12,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <variant>
 
 #include "sqsgen/configuration/structure.h"
@@ -31,7 +32,7 @@ namespace sqsgen::configuration {
   }
 
   result_t<configuration_t> validate_ordinals(const std::vector<int>& ordinals, auto num_sites) {
-    if (ordinals.size() != num_sites)
+    if (std::cmp_not_equal(ordinals.size(), num_sites))
       return std::unexpected(configuration_error{
           "structure.species", error_code::invalid_size,
           std::format("Number of coordinates ({}) does not match number of species {}", num_sites,
@@ -52,7 +53,7 @@ namespace sqsgen::configuration {
 
   result_t<configuration_t> validate_symbols(const std::vector<std::string>& symbols,
                                              auto num_sites) {
-    if (symbols.size() != num_sites)
+    if (std::cmp_not_equal(symbols.size(), num_sites))
       return std::unexpected(configuration_error{
           "structure.species", error_code::invalid_size,
           std::format("Number of coordinates ({}) does not match number of species {} specified",

@@ -89,4 +89,13 @@ namespace sqsgen::io {
   };
 
 }  // namespace sqsgen::io
+
+#include "sqsgen/impl/io/structure/ase_impl.hpp"
+#include "sqsgen/impl/io/structure/cif_impl.hpp"
+#include "sqsgen/impl/io/structure/detail_impl.hpp"
+#include "sqsgen/impl/io/structure/pdb_impl.hpp"
+#include "sqsgen/impl/io/structure/poscar_impl.hpp"
+#include "sqsgen/impl/io/structure/pymatgen_impl.hpp"
+#include "sqsgen/impl/io/structure/sqsgen_impl.hpp"
+
 #endif  // SQSGEN_IO_STRUCTURE_H

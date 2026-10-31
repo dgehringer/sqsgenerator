@@ -14,6 +14,7 @@
 #include <ranges>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 #include "sqsgen/configuration/arrays.h"
@@ -50,7 +51,7 @@ namespace sqsgen::configuration {
                                       std::size_t num_shells, std::size_t num_species,
                                       std::optional<std::size_t> index = std::nullopt) {
     std::string path = index.has_value() ? std::format("{}.{}", key, index.value()) : key;
-    if (m.rows() != num_species || m.cols() != num_species)
+    if (std::cmp_not_equal(m.rows(), num_species) || std::cmp_not_equal(m.cols(), num_species))
       return std::unexpected(
           configuration_error{path, error_code::out_of_range,
                               std::format("matrix has invalid size {}x{} but expected {}x{}",
@@ -64,7 +65,8 @@ namespace sqsgen::configuration {
                                     std::optional<std::size_t> index = std::nullopt) {
     std::string path = index.has_value() ? std::format("{}.{}", key, index.value()) : key;
     const typename cube_t<T>::Dimensions& d = c.dimensions();
-    if (d[0] != num_shells || d[1] != num_species || d[2] != num_species)
+    if (std::cmp_not_equal(d[0], num_shells) || std::cmp_not_equal(d[1], num_species)
+        || std::cmp_not_equal(d[2], num_species))
       return std::unexpected(
           configuration_error{path, error_code::out_of_range,
                               std::format("array has invalid size {}x{}x{} but expected {}x{}x{}",

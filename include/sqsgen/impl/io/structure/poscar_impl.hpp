@@ -1,18 +1,30 @@
+//
+// Created by Dominik Gehringer on 04.03.25.
+//
+
+#ifndef SQSGEN_IMPL_IO_STRUCTURE_POSCAR_IMPL_HPP
+#define SQSGEN_IMPL_IO_STRUCTURE_POSCAR_IMPL_HPP
 
 #include <algorithm>
 #include <cmath>
 #include <expected>
+#include <format>
+#include <map>
 #include <numeric>
+#include <ranges>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <tuple>
 #include <variant>
 #include <vector>
 
-#include "sqsgen/core/helpers/as.h"
+#include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers/expected.h"
-#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/core/helpers/misc.h"
-#include "sqsgen/core/helpers/string.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/core/permutation.h"
+#include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/structure.h"
 #include "sqsgen/types.h"
@@ -21,19 +33,17 @@ namespace sqsgen::io {
 
   namespace views = std::ranges::views;
   namespace helpers = sqsgen::core::helpers;
-  namespace core = sqsgen::core;
 
-  template <class T> using result_t = std::expected<T, parser_error>;
   template <class T> using row_t = Eigen::Vector3<T>;
   using tokens_t = std::vector<std::string_view>;
 
-  std::expected<configuration_t, parser_error> parse_species_decl(tokens_t const& tokens) {
+  inline std::expected<configuration_t, parser_error> parse_species_decl(tokens_t const& tokens) {
     configuration_t species{};
     for (const auto& symbol : tokens) {
       auto sym = std::string{symbol};
       if (!core::SYMBOL_MAP.contains(sym))
-        return std::unexpected(parser_error{
-            error_code::out_of_range, helpers::format_string("Unknown element \"%s\"", symbol)});
+        return std::unexpected(
+            parser_error{error_code::out_of_range, std::format("Unknown element \"{}\"", symbol)});
       species.push_back(core::atom::from_symbol(sym).Z);
     }
 
@@ -46,7 +56,8 @@ namespace sqsgen::io {
     return species;
   }
 
-  std::expected<std::vector<int>, parser_error> parse_species_amount(tokens_t const& tokens) {
+  inline std::expected<std::vector<int>, parser_error> parse_species_amount(
+      tokens_t const& tokens) {
     std::vector<int> result;
     for (const auto& token : tokens) {
       auto amount = detail::parse_number<int>(token);
@@ -71,10 +82,9 @@ namespace sqsgen::io {
             return row_t<T>{sa, sb, sc};
           });
     } else
-      return std::unexpected(
-          parser_error{error_code::out_of_range,
-                       helpers::format_string("A vector row must contain three entries, but got %u",
-                                              tokens.size())});
+      return std::unexpected(parser_error{
+          error_code::out_of_range,
+          std::format("A vector row must contain three entries, but got {}", tokens.size())});
   }
 
   template <class T>
@@ -87,15 +97,13 @@ namespace sqsgen::io {
           [](auto&& scale) -> std::variant<T, row_t<T>> { return scale; });
     return std::unexpected(parser_error{
         error_code::invalid_size,
-        helpers::format_string("Scaling must be a single float or a triplet of floats, but got %u",
-                               tokens.size())});
+        std::format("Scaling must be a single float or a triplet of floats, but got {}",
+                    tokens.size())});
   }
 
   template <class T> std::string structure_adapter<T, structure_format::poscar>::format(
       const core::structure<T>& structure) {
     auto filtered = structure.without_vacancies();
-    // one coordinate line holds about 72 characters, to be safe we multiply by two
-    constexpr absl::string_view row_format = "%23.16f %23.16f %23.16f";
     auto sorted = filtered.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
     auto unique_species = core::sorted_vector<specie_t>{sorted.species};
     auto num_species = core::count_species(sorted.species);
@@ -103,17 +111,18 @@ namespace sqsgen::io {
     std::string result;
     result.reserve(filtered.size() * 144);
 
-    const auto println = [&result](std::string const& line) {
-      result.append(helpers::format_string("%s\n", line));
+    const auto println
+        = [&result](std::string const& line) { result.append(std::format("{}\n", line)); };
+    // one coordinate line holds about 72 characters
+    const auto format_row = [&](auto&& row) {
+      return std::format("{:23.16f} {:23.16f} {:23.16f}", row(0), row(1), row(2));
     };
-    const auto format_row
-        = [&](auto&& row) { return helpers::format_string(row_format, row(0), row(1), row(2)); };
 
     const auto z_to_symbol = [](auto&& z) { return core::atom::from_z(z).symbol; };
     // generate first line
     std::string composition_string
         = detail::join(unique_species | views::transform([&](auto&& s) {
-                         return helpers::format_string("%s%i", z_to_symbol(s), num_species[s]);
+                         return std::format("{}{}", z_to_symbol(s), num_species[s]);
                        }),
                        "");
     println(composition_string);
@@ -125,27 +134,25 @@ namespace sqsgen::io {
 
     std::string species_amount = detail::join(
         views::values(num_species)
-            | views::transform([](auto&& amount) { return helpers::format_string("%i", amount); }),
+            | views::transform([](auto&& amount) { return std::format("{}", amount); }),
         " ");
     println(species_amount);
     println("Direct");
     for (auto const& site : sorted.sites())
-      println(
-          helpers::format_string("%s %s", format_row(site.frac_coords), z_to_symbol(site.specie)));
+      println(std::format("{} {}", format_row(site.frac_coords), z_to_symbol(site.specie)));
     result.shrink_to_fit();
     return result;
   }
 
   template <class T> std::expected<core::structure<T>, parser_error>
   structure_adapter<T, structure_format::poscar>::read(std::string const& input) {
-    using result_t = std::expected<core::structure<T>, parser_error>;
     std::istringstream ss(input);
     std::string_view contents{ss.view()};
 
-    std::map<int, tokens_t> lines = helpers::as<std::map>{}(
-        detail::split(contents, "\n") | views::transform([lineno = 0](auto&& s) mutable {
-          return std::make_pair(lineno++, detail::split(s, " \t"));
-        }));
+    auto lines = detail::split(contents, "\n") | views::transform([lineno = 0](auto&& s) mutable {
+                   return std::make_pair(lineno++, detail::split(s, " \t"));
+                 })
+                 | std::ranges::to<std::map<int, tokens_t>>();
 
     // find the line which start with "Direct" or "Cartesian"
     const auto get_coords_line = [&]() -> std::expected<int, parser_error> {
@@ -160,7 +167,7 @@ namespace sqsgen::io {
     const auto get_line = [&](int l) -> std::expected<tokens_t, parser_error> {
       if (lines.contains(l)) return {lines[l]};
       return std::unexpected(
-          parser_error{error_code::out_of_range, helpers::format_string("Line %i not found", l)});
+          parser_error{error_code::out_of_range, std::format("Line {} not found", l)});
     };
 
     const auto get_row = [&](int l) -> std::expected<row_t<T>, parser_error> {
@@ -232,8 +239,6 @@ namespace sqsgen::io {
         });
   }
 
-#define INST_STRUCTURE_ADAPTER_POSCAR(PREC) \
-  template struct structure_adapter<PREC, structure_format::poscar>;
-  SQSGEN_INSTANTIATE_PREC(INST_STRUCTURE_ADAPTER_POSCAR)
-#undef INST_STRUCTURE_ADAPTER_POSCAR
 }  // namespace sqsgen::io
+
+#endif  // SQSGEN_IMPL_IO_STRUCTURE_POSCAR_IMPL_HPP

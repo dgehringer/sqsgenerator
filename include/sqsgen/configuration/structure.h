@@ -34,7 +34,7 @@ namespace sqsgen::configuration {
     [[nodiscard]] core::structure<T> make_structure() const;
 
     template <sublattice_mode Mode>
-    structure_t<T, Mode> for_mode(const std::vector<sublattice>& composition) {
+    structure_t<T, Mode> for_mode(const std::vector<sublattice>& composition) const {
       if constexpr (Mode == sublattice_mode::interact) {
         return make_structure();
       } else if constexpr (Mode == sublattice_mode::split) {

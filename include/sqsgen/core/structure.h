@@ -7,25 +7,18 @@
 
 #include <Eigen/Dense>
 #include <cstddef>
+#include <format>
+#include <ranges>
 
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers/as.h"
+#include "sqsgen/core/structure_utils.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
 
   namespace ranges = std::ranges;
   namespace views = ranges::views;
-
-  template <class T>
-  matrix_t<T> distance_matrix(const lattice_t<T>& lattice, const coords_t<T>& frac_coords);
-
-  template <class T> shell_matrix_t shell_matrix(const matrix_t<T>& distance_matrix,
-                                                 const std::vector<T>& dists, T atol, T rtol);
-
-  template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
-                                                  const std::map<std::size_t, T>& weights,
-                                                  const configuration_t& configuration);
 
   struct atom_pair {
     std::size_t i;
@@ -78,11 +71,11 @@ namespace sqsgen::core {
     template <ranges::input_range R>
       requires std::is_same_v<ranges::range_value_t<R>, sqsgen::core::detail::site<T>>
     structure(const lattice_t<T>& lattice, R&& r) : lattice(lattice) {
-      auto sites = helpers::as<std::vector>{}(r);
+      auto sites = r | ranges::to<std::vector>();
       if (sites.empty()) throw std::invalid_argument("Cannot create a structure without atoms");
       coords_t<T> fc(sites.size(), 3);
       species.resize(sites.size());
-      for (auto index = 0; index < sites.size(); ++index) {
+      for (std::size_t index = 0; index < sites.size(); ++index) {
         species[index] = sites[index].specie;
         fc.row(index) = sites[index].frac_coords;
       };
@@ -121,11 +114,11 @@ namespace sqsgen::core {
 
     template <class Fn>
     std::tuple<structure<T>, std::vector<std::size_t>> sorted_with_indices(Fn&& fn) const {
-      auto s = helpers::as<std::vector>{}(sites());
+      auto s = sites() | ranges::to<std::vector>();
       std::sort(s.begin(), s.end(), std::forward<Fn>(fn));
-      return std::make_tuple(
-          structure(lattice, s),
-          helpers::as<std::vector>{}(s | views::transform([](auto site) { return site.index; })));
+      return std::make_tuple(structure(lattice, s), s | views::transform([](auto site) {
+                                                      return site.index;
+                                                    }) | ranges::to<std::vector>());
     }
 
     template <class Fn> auto sorted(Fn&& fn) const {
@@ -151,7 +144,7 @@ namespace sqsgen::core {
       auto sites = std::vector<sqsgen::core::detail::site<T>>{};
       for (auto index : r) {
         if (index >= size() || index < 0)
-          throw std::out_of_range(format_string("index out of range 0 <= %i < %i", index, size()));
+          throw std::out_of_range(std::format("index out of range 0 <= {} < {}", index, size()));
         sites.push_back(sqsgen::core::detail::site<T>{static_cast<std::size_t>(index),
                                                       species[index],
                                                       Eigen::Vector3<T>(frac_coords.row(index))});
@@ -167,23 +160,10 @@ namespace sqsgen::core {
     [[nodiscard]] rank_t rank() const;
   };
 
-  template <class T> std::vector<T> distances_naive(const structure<T>& structure,
-                                                    T atol = std::numeric_limits<T>::epsilon(),
-                                                    T rtol = 1e-9);
-
-  template <class T>
-  std::vector<T> distances_histogram(const structure<T>& structure, T bin_width, T peak_isolation);
-
-  template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
-                                                  const std::map<std::size_t, T>& weights,
-                                                  const configuration_t& configuration);
-  template <class T>
-  cube_t<T> compute_prefactors(const structure<T>& structure, const std::vector<T>& shell_radii,
-                               const std::map<std::size_t, T>& weights,
-                               T atol = std::numeric_limits<T>::epsilon(), T rtol = 1e-9);
-
   template <typename T> using site_t = sqsgen::core::detail::site<T>;
 
 }  // namespace sqsgen::core
+
+#include "sqsgen/impl/core/structure/structure_impl.hpp"
 
 #endif  // SQSGEN_CORE_STRUCTURE_H

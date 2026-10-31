@@ -13,6 +13,7 @@
 #include <optional>
 #include <ranges>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -36,7 +37,7 @@ namespace sqsgen::configuration {
                                         : "composition.sites";
     indices_t parsed;
     for (auto index : indices)
-      if (0 <= index && index < conf.size())
+      if (0 <= index && std::cmp_less(index, conf.size()))
         parsed.insert(static_cast<size_t>(index));
       else
         return std::unexpected(configuration_error{
@@ -72,8 +73,8 @@ namespace sqsgen::configuration {
       unique_species.insert(ordinal);
     }
     indices_t indices;
-    for (auto i = 0; i < conf.size(); ++i)
-      if (unique_species.contains(conf.at(i))) indices.insert(static_cast<std::size_t>(i));
+    for (std::size_t i = 0; i < conf.size(); ++i)
+      if (unique_species.contains(conf.at(i))) indices.insert(i);
     if (indices.empty())
       return std::unexpected(configuration_error{key, error_code::invalid_size,
                                                  "Cannot use an empty sublattice definition"});
@@ -123,17 +124,17 @@ namespace sqsgen::configuration {
 
       auto amount = std::visit(
           helpers::overloaded{
-              [&](const std::vector<int>& indices) -> result_t<int> {
+              [&](const std::vector<int>&) -> result_t<int> {
                 return std::unexpected(
                     configuration_error{symbol_key, error_code::type_error,
                                         "Invalid type must be an integer number greater than 0"});
               },
-              [&](const std::vector<std::string>& species) -> result_t<int> {
+              [&](const std::vector<std::string>&) -> result_t<int> {
                 return std::unexpected(
                     configuration_error{symbol_key, error_code::type_error,
                                         "Invalid type must be an integer number greater than 0"});
               },
-              [&](const std::string& specie) -> result_t<int> {
+              [&](const std::string&) -> result_t<int> {
                 return std::unexpected(
                     configuration_error{symbol_key, error_code::type_error,
                                         "Invalid type must be an integer number greater than 0"});

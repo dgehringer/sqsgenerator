@@ -39,16 +39,7 @@ if (BUILD_WASM)
     src/configuration/composition.cpp
     src/configuration/shell_radii.cpp
     src/configuration/shell_weights.cpp
-    src/core/permutation.cpp
-    src/core/structure.cpp
     src/core/eigen.cpp
-    src/io/structure/sqsgen.cpp
-    src/io/structure/pymatgen.cpp
-    src/io/structure/detail.cpp
-    src/io/structure/vasp.cpp
-    src/io/structure/cif.cpp
-    src/io/structure/pdb.cpp
-    src/io/structure/ase.cpp
     src/io/glaze.cpp
     src/optimization/result.cpp
     src/optimization/result_collection.cpp
@@ -71,16 +62,7 @@ else ()
   find_package(absl CONFIG REQUIRED)
   add_executable(parse
     cli/parse.cpp
-    src/core/permutation.cpp
-    src/core/structure.cpp
     src/core/eigen.cpp
-    src/io/structure/sqsgen.cpp
-    src/io/structure/pymatgen.cpp
-    src/io/structure/detail.cpp
-    src/io/structure/vasp.cpp
-    src/io/structure/cif.cpp
-    src/io/structure/pdb.cpp
-    src/io/structure/ase.cpp
     src/io/glaze.cpp
     src/optimization/result.cpp
     src/optimization/result_collection.cpp
@@ -94,4 +76,5 @@ else ()
           glaze::glaze
           unordered_dense::unordered_dense
   )
+  target_compile_options(parse PRIVATE -Wall -Wextra)
 endif ()
