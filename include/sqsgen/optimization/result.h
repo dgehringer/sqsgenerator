@@ -34,6 +34,19 @@ namespace sqsgen::optimization {
   template <class T> using pair_sro_t = std::map<pair_key, T>;
   template <class T> using triplet_sro_t = std::map<triplet_key, T>;
 
+  // Converts the dense, symmetrized SRO cube into a sparse map with canonical keys.
+  //
+  //   alpha^{s}_{xi eta} = alpha^{s}_{eta xi}   (symmetric in the species)
+  //
+  // Only the canonical half xi <= eta is stored, so each unordered species pair
+  // appears exactly once per shell.
+  //
+  // sro: dense cube indexed (s, xi, eta), shape (num_shells, K, K)
+  template <class T> pair_sro_t<T> to_pair_sro(const pair_tensor_t<T>& sro);
+
+  template <class T>
+  std::vector<pair_sro_t<T>> to_pair_sro(const std::vector<pair_tensor_t<T>>& sro);
+
   template <class T, sublattice_mode Mode> struct sqs_result {
     sublattice_mode_nesting<T, Mode> objective;
     sublattice_mode_nesting<configuration_t, Mode> configuration;

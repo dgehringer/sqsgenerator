@@ -35,6 +35,10 @@ namespace sqsgen {
 
   template <class T> using cube_t = Eigen::Tensor<T, 3>;
 
+  template <class T> using pair_tensor_t = Eigen::Tensor<T, 3>;
+
+  template <class T> using triplet_tensor_t = Eigen::Tensor<T, 4>;
+
   template <class T, class U>
     requires std::is_integral_v<T> && std::is_integral_v<U>
   using index_mapping_t = std::pair<std::map<T, U>, std::map<U, T>>;
