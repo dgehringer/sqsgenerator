@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <format>
 #include <ranges>
+#include <utility>
 
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers/as.h"
@@ -143,7 +144,9 @@ namespace sqsgen::core {
     structure sliced(R&& r) const {
       auto sites = std::vector<sqsgen::core::detail::site<T>>{};
       for (auto index : r) {
-        if (index >= size() || index < 0)
+        bool out_of_range = std::cmp_greater_equal(index, size());
+        if constexpr (std::is_signed_v<V>) out_of_range = out_of_range || index < V{0};
+        if (out_of_range)
           throw std::out_of_range(std::format("index out of range 0 <= {} < {}", index, size()));
         sites.push_back(sqsgen::core::detail::site<T>{static_cast<std::size_t>(index),
                                                       species[index],

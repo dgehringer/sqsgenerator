@@ -1,94 +1,72 @@
-cmake_minimum_required(VERSION 3.27)
+# Unit tests (Catch2).
+#
+# Included via add_subdirectory() from the top-level CMakeLists when BUILD_TESTS=ON.
+# Configure/build with the dedicated preset:
+#
+#   cmake --preset native-tests
+#   cmake --build build/tests
+#   ctest --test-dir build/tests --output-on-failure
+#
+# The C++ standard, include directories and the vcpkg toolchain are inherited
+# from the parent project; do not redefine them here.
 
-project(sqsgenerator-tests LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    message(STATUS "Detected clang: adding -fexperimental-library")
-    add_compile_options(-fexperimental-library)
-endif ()
-
+find_package(Catch2 3 CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
-find_package(absl CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(boost_multiprecision REQUIRED CONFIG)
+find_package(boost_multiprecision CONFIG REQUIRED)
+find_package(unordered_dense CONFIG REQUIRED)
+find_package(glaze CONFIG REQUIRED)
+find_package(absl CONFIG REQUIRED)
 find_path(BS_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
 
+include(Catch)
 
-set(PROJECT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
-set(SQSGEN_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
-set(SQSGEN_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
-set(SQSGEN_TEST_SOURCE_DIR ${CMAKE_SOURCE_DIR})
-include_directories(${SQSGEN_INCLUDE_DIR} ${BS_THREAD_POOL_INCLUDE_DIRS})
-
-find_package(GTest CONFIG REQUIRED)
-file(GLOB tests "${SQSGEN_TEST_SOURCE_DIR}/*.cpp")
-list(REMOVE_ITEM tests "${SQSGEN_TEST_SOURCE_DIR}/main.cpp")
-
-
-include_directories(${SQSGEN_INCLUDE_DIR})
-
-list(APPEND SQSGEN_TEST_LIBS "nlohmann_json::nlohmann_json")
-list(APPEND SQSGEN_TEST_LIBS "GTest::gtest_main")
-list(APPEND SQSGEN_TEST_LIBS
+set(SQSGEN_DEP_LIBS
+        Eigen3::Eigen
+        Boost::multiprecision
+        nlohmann_json::nlohmann_json
+        glaze::glaze
+        unordered_dense::unordered_dense
+        absl::hash
         absl::log
         absl::str_format
-        absl::log_initialize
-        absl::hash
-        absl::raw_hash_map
-        absl::raw_hash_set
-        absl::flat_hash_map
-        absl::flat_hash_set
-        Eigen3::Eigen
 )
 
-message(STATUS "SQSGEN_TEST_LIBS=${SQSGEN_TEST_LIBS}")
-
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    add_compile_options(-fexperimental-library)
-endif ()
-
-if (MSVC)
-    add_compile_options(/permissive-)
-endif ()
-
-enable_testing()
-
-add_executable(test_permutation
-        "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
-        "${SQSGEN_TEST_SOURCE_DIR}/test_permutation.cpp"
+# The library is not fully header-only yet: a couple of translation units
+# (Eigen tensor error mapping, glaze registration) still ship as .cpp. Compile
+# them once here and link them into the tests that need the configuration /
+# structure machinery, mirroring what the `parse` target links.
+add_library(sqsgen_support STATIC
+        ${CMAKE_SOURCE_DIR}/src/core/eigen.cpp
+        ${CMAKE_SOURCE_DIR}/src/io/glaze.cpp
 )
-target_link_libraries(test_permutation ${SQSGEN_TEST_LIBS})
-add_test(NAME test_permutation COMMAND test_permutation)
+target_include_directories(sqsgen_support PUBLIC
+        ${CMAKE_SOURCE_DIR}/include ${BS_THREAD_POOL_INCLUDE_DIRS})
+target_link_libraries(sqsgen_support PUBLIC ${SQSGEN_DEP_LIBS})
 
-add_executable(test_structure
-        "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
-        "${SQSGEN_TEST_SOURCE_DIR}/test_structure.cpp"
-        helpers.h
-)
+set(SQSGEN_TEST_LIBS Catch2::Catch2WithMain sqsgen_support ${SQSGEN_DEP_LIBS})
 
-target_link_libraries(test_structure ${SQSGEN_TEST_LIBS})
-add_test(NAME test_structure COMMAND test_structure)
+# Declare a Catch2 test executable from one or more sources and register it with CTest.
+function(sqsgen_add_test name)
+    add_executable(${name} ${ARGN})
+    target_include_directories(${name} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${BS_THREAD_POOL_INCLUDE_DIRS})
+    target_link_libraries(${name} PRIVATE ${SQSGEN_TEST_LIBS})
+    target_compile_options(${name} PRIVATE -Wall -Wextra)
+    catch_discover_tests(${name})
+endfunction()
+
+sqsgen_add_test(test_permutation test_permutation.cpp)
+
+sqsgen_add_test(test_configuration test_configuration.cpp)
+target_compile_definitions(test_configuration PRIVATE
+        SQSGEN_TEST_CASES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/cases")
+
+sqsgen_add_test(test_result test_result.cpp)
+sqsgen_add_test(test_result_collection test_result_collection.cpp)
+
+sqsgen_add_test(test_structure test_structure.cpp)
 add_custom_command(TARGET test_structure POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${SQSGEN_TEST_SOURCE_DIR}/assets $<TARGET_FILE_DIR:test_structure>/assets)
-
-
-add_executable(test_shuffle
-        "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
-        "${SQSGEN_TEST_SOURCE_DIR}/test_shuffle.cpp"
-        helpers.h
-)
-target_link_libraries(test_shuffle ${SQSGEN_TEST_LIBS})
-add_test(NAME test_shuffle COMMAND test_shuffle)
-
-
-add_executable(test_parser
-        "${SQSGEN_TEST_SOURCE_DIR}/main.cpp"
-        "${SQSGEN_TEST_SOURCE_DIR}/test_parser.cpp"
-)
-target_link_libraries(test_parser ${SQSGEN_TEST_LIBS})
-add_test(NAME test_parser COMMAND test_parser)
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:test_structure>/assets)

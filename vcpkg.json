@@ -36,7 +36,7 @@
         "boost-multiprecision",
         "nlohmann-json",
         "bshoshany-thread-pool",
-        "gtest",
+        "catch2",
         "abseil"
       ]
     },

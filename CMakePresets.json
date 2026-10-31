@@ -17,6 +17,22 @@
       }
     },
     {
+      "name": "native-tests",
+      "binaryDir": "${sourceDir}/build/tests",
+      "generator": "Ninja",
+      "environment": {
+        "VCPKG_ROOT": "${sourceDir}/vcpkg"
+      },
+      "cacheVariables": {
+        "BUILD_WASM": "OFF",
+        "BUILD_TESTS": "ON",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_MANIFEST_FEATURES": "tests",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
       "name": "wasm-debug",
       "binaryDir": "${sourceDir}/build/wasm",
       "generator": "Ninja",

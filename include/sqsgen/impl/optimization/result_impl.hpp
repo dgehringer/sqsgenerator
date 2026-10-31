@@ -1,7 +1,9 @@
+#ifndef SQSGEN_IMPL_OPTIMIZATION_RESULT_IMPL_HPP
+#define SQSGEN_IMPL_OPTIMIZATION_RESULT_IMPL_HPP
+
+#include <numeric>
 
 #include "sqsgen/optimization/result.h"
-
-#include "sqsgen/core/helpers/inst.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::optimization {
@@ -17,8 +19,6 @@ namespace sqsgen::optimization {
     }
   }
 
-#define INST_SQS_RESULT(PREC, SMODE) template struct sqs_result<PREC, SMODE>;
-  SQSGEN_INSTANTIATE_PREC_SMODE(INST_SQS_RESULT)
-#undef INST_SQS_RESULT
+}  // namespace sqsgen::optimization
 
-};  // namespace sqsgen::optimization
+#endif  // SQSGEN_IMPL_OPTIMIZATION_RESULT_IMPL_HPP

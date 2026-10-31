@@ -1,9 +1,12 @@
-
-#include "sqsgen/optimization/result_collection.h"
+#ifndef SQSGEN_IMPL_OPTIMIZATION_RESULT_COLLECTION_IMPL_HPP
+#define SQSGEN_IMPL_OPTIMIZATION_RESULT_COLLECTION_IMPL_HPP
 
 #include <limits>
+#include <memory>
+#include <mutex>
+#include <utility>
 
-#include "sqsgen/core/helpers/inst.h"
+#include "sqsgen/optimization/result_collection.h"
 
 namespace sqsgen::optimization {
 
@@ -55,6 +58,7 @@ namespace sqsgen::optimization {
     }
     return total;
   }
+
   template <class T, sublattice_mode Mode>
   std::vector<std::pair<T, std::vector<typename sqs_result_collection<T, Mode>::result_t>>>
   sqs_result_collection<T, Mode>::snapshot() const {
@@ -69,15 +73,14 @@ namespace sqsgen::optimization {
   }
 
   template <class T, sublattice_mode Mode>
-  sqs_result_collection<T, Mode>::bucket* sqs_result_collection<T, Mode>::bucket_for(T key) {
+  typename sqs_result_collection<T, Mode>::bucket* sqs_result_collection<T, Mode>::bucket_for(
+      T key) {
     std::scoped_lock lock(structure_mutex_);
     auto it = buckets_.find(key);
     if (it == buckets_.end()) it = buckets_.emplace(key, std::make_unique<bucket>()).first;
     return it->second.get();
   }
 
-#define INST_SQS_RESULT_COLLECTION(PREC, SMODE) template struct sqs_result_collection<PREC, SMODE>;
-  SQSGEN_INSTANTIATE_PREC_SMODE(INST_SQS_RESULT_COLLECTION)
-#undef INST_SQS_RESULT
+}  // namespace sqsgen::optimization
 
-};  // namespace sqsgen::optimization
+#endif  // SQSGEN_IMPL_OPTIMIZATION_RESULT_COLLECTION_IMPL_HPP

@@ -27,12 +27,9 @@ namespace sqsgen::optimization {
         return ankerl::unordered_dense::detail::wyhash::hash(c.data(), c.size());
       } else {
         std::size_t seed = 0;
-        ankerl::unordered_dense::hash<configuration_t> hash_one{};
-        for (const auto& sublattice : r.configuration) {
-          auto& c = r.configuration;
-          seed = hash_combine(seed,
-                              ankerl::unordered_dense::detail::wyhash::hash(c.data(), c.size()));
-        }
+        for (const auto& sublattice : r.configuration)
+          seed = hash_combine(seed, ankerl::unordered_dense::detail::wyhash::hash(
+                                        sublattice.data(), sublattice.size()));
         return seed;
       }
     }
@@ -44,5 +41,7 @@ namespace sqsgen::optimization {
     }
   };
 };  // namespace sqsgen::optimization
+
+#include "sqsgen/impl/optimization/result_impl.hpp"
 
 #endif

@@ -41,8 +41,6 @@ if (BUILD_WASM)
     src/configuration/shell_weights.cpp
     src/core/eigen.cpp
     src/io/glaze.cpp
-    src/optimization/result.cpp
-    src/optimization/result_collection.cpp
   )
   set_target_properties(wasm PROPERTIES
           SUFFIX ".mjs"
@@ -64,8 +62,6 @@ else ()
     cli/parse.cpp
     src/core/eigen.cpp
     src/io/glaze.cpp
-    src/optimization/result.cpp
-    src/optimization/result_collection.cpp
   )
   target_link_libraries(parse PRIVATE
           absl::hash
@@ -77,4 +73,10 @@ else ()
           unordered_dense::unordered_dense
   )
   target_compile_options(parse PRIVATE -Wall -Wextra)
+endif ()
+
+option(BUILD_TESTS "Build the unit test suite (Catch2)" OFF)
+if (BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
 endif ()

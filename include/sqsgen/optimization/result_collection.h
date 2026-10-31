@@ -45,4 +45,6 @@ namespace sqsgen::optimization {
 
 };  // namespace sqsgen::optimization
 
+#include "sqsgen/impl/optimization/result_collection_impl.hpp"
+
 #endif
