@@ -1,5 +1,9 @@
 //
-// Created by Dominik Gehringer on 04.03.25.
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Dominik Gehringer
+//
+// This file is part of sqsgenerator, distributed under the MIT License.
+// See the LICENSE file in the project root for full license information.
 //
 
 #ifndef SQSGEN_IMPL_IO_STRUCTURE_POSCAR_IMPL_HPP
