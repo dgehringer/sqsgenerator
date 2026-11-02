@@ -20,6 +20,7 @@
 namespace sqsgen {
 
   using specie_t = std::uint_fast8_t;
+  using shell_t = std::uint32_t;
   using rank_t = boost::multiprecision::cpp_int;
   using configuration_t = std::vector<specie_t>;
 

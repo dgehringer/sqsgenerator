@@ -61,6 +61,50 @@ namespace sqsgen::optimization {
     }
   }
 
+  // Converts the dense, symmetrized triplet SRO tensor into a sparse map with canonical keys.
+  //
+  //   key: sorted shells s1 <= s2 <= s3 of class c, species (x1, x2, x3) in matching order.
+  //   A cell is canonical iff species are ordered within equal shells:
+  //     s1 == s2  =>  x1 <= x2,     s2 == s3  =>  x2 <= x3
+  //
+  // beta:    dense tensor indexed (c, x1, x2, x3), shape (num_classes, K, K, K)
+  // classes: classes[c] = sorted shells of class c
+  template <class T>
+  triplet_sro_t<T> to_triplet_sro(const triplet_tensor_t<T>& beta,
+                                  const std::vector<std::array<std::uint32_t, 3>>& classes) {
+    const auto num_classes = static_cast<std::size_t>(beta.dimension(0));
+    const auto num_species = static_cast<std::size_t>(beta.dimension(1));
+    assert(classes.size() == num_classes && "class table must match the tensor");
+
+    triplet_sro_t<T> out;
+    for (std::size_t c = 0; c < num_classes; ++c) {
+      const auto& s = classes[c];
+      for (std::size_t x1 = 0; x1 < num_species; ++x1)
+        for (std::size_t x2 = 0; x2 < num_species; ++x2)
+          for (std::size_t x3 = 0; x3 < num_species; ++x3) {
+            // skip non-canonical orderings of interchangeable atoms
+            if (s[0] == s[1] && x1 > x2) continue;
+            if (s[1] == s[2] && x2 > x3) continue;
+            out.emplace(triplet_key{s,
+                                    {static_cast<specie_t>(x1), static_cast<specie_t>(x2),
+                                     static_cast<specie_t>(x3)}},
+                        beta(c, x1, x2, x3));
+          }
+    }
+    return out;
+  }
+
+  template <class T> std::vector<triplet_sro_t<T>> to_triplet_sro(
+      const std::vector<triplet_tensor_t<T>>& beta,
+      const std::vector<std::vector<std::array<std::uint32_t, 3>>>& classes) {
+    assert(beta.size() == classes.size());
+    std::vector<triplet_sro_t<T>> out;
+    out.reserve(beta.size());
+    for (std::size_t i = 0; i < beta.size(); ++i)
+      out.push_back(to_triplet_sro(beta[i], classes[i]));
+    return out;
+  }
+
   struct sqs_result_hash {
     template <class T, sublattice_mode Mode>
     std::size_t operator()(const sqs_result<T, Mode>& r) const noexcept {

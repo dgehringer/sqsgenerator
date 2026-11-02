@@ -34,32 +34,34 @@ namespace sqsgen::optimization {
   template <class T> using pair_sro_t = std::map<pair_key, T>;
   template <class T> using triplet_sro_t = std::map<triplet_key, T>;
 
-  // Converts the dense, symmetrized SRO cube into a sparse map with canonical keys.
-  //
-  //   alpha^{s}_{xi eta} = alpha^{s}_{eta xi}   (symmetric in the species)
-  //
-  // Only the canonical half xi <= eta is stored, so each unordered species pair
-  // appears exactly once per shell.
-  //
-  // sro: dense cube indexed (s, xi, eta), shape (num_shells, K, K)
   template <class T> pair_sro_t<T> to_pair_sro(const pair_tensor_t<T>& sro);
 
   template <class T>
   std::vector<pair_sro_t<T>> to_pair_sro(const std::vector<pair_tensor_t<T>>& sro);
 
+  template <class T>
+  triplet_sro_t<T> to_triplet_sro(const triplet_tensor_t<T>& beta,
+                                  const std::vector<std::array<std::uint32_t, 3>>& classes);
+
+  template <class T> std::vector<triplet_sro_t<T>> to_triplet_sro(
+      const std::vector<triplet_tensor_t<T>>& beta,
+      const std::vector<std::vector<std::array<std::uint32_t, 3>>>& classes);
+
+  template <class T, sublattice_mode Mode, class Sro> struct order_result {
+    sublattice_mode_nesting<T, Mode> objective{};
+    sublattice_mode_nesting<Sro, Mode> sro;
+  };
+
   template <class T, sublattice_mode Mode> struct sqs_result {
-    sublattice_mode_nesting<T, Mode> objective;
     sublattice_mode_nesting<configuration_t, Mode> configuration;
-    std::optional<sublattice_mode_nesting<pair_sro_t<T>, Mode>> pair_sro;
-    std::optional<sublattice_mode_nesting<triplet_sro_t<T>, Mode>> triplet_sro;
+    std::optional<order_result<T, Mode, pair_sro_t<T>>> pairs;
+    std::optional<order_result<T, Mode, triplet_sro_t<T>>> triplets;
 
     bool operator==(const sqs_result& o) const { return configuration == o.configuration; }
 
     [[nodiscard]] T total_objective() const;
   };
 
-  // Hashes sqs_result by its configuration only (consistent with operator==).
-  // Definition lives in impl/optimization/result_impl.hpp.
   struct sqs_result_hash;
 
 };  // namespace sqsgen::optimization
