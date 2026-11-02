@@ -12,16 +12,12 @@
 #include <cstddef>
 #include <limits>
 #include <map>
-#include <ranges>
 #include <vector>
 
 #include "sqsgen/core/eigen.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
-
-  namespace ranges = std::ranges;
-  namespace views = ranges::views;
 
   // forward declaration; the full definition lives in sqsgen/core/structure.h
   template <class T> class structure;

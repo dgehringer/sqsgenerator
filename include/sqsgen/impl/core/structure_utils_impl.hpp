@@ -22,7 +22,6 @@
 #include <utility>
 #include <vector>
 
-#include "sqsgen/core/eigen.h"
 #include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/helpers/fold.h"
 #include "sqsgen/core/helpers/misc.h"
