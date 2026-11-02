@@ -25,12 +25,6 @@ namespace sqsgen::core {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  struct atom_pair {
-    std::size_t i;
-    std::size_t j;
-    std::size_t shell;
-  };
-
   template <class T> class structure;
 
   namespace detail {
@@ -158,9 +152,6 @@ namespace sqsgen::core {
       }
       return structure(lattice, sites);
     }
-
-    auto pairs(const std::vector<T>& radii, const std::map<std::size_t, T>& weights,
-               bool pack = true, T atol = std::numeric_limits<T>::epsilon(), T rtol = 1.0e-9);
 
     [[nodiscard]] configuration_t packed_species() const;
 

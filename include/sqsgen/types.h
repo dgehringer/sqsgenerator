@@ -19,22 +19,21 @@
 
 namespace sqsgen {
 
-  using specie_t = std::uint_fast8_t;
+  using specie_t = std::uint8_t;
+  using site_t = std::uint32_t;
+  using count_t = std::uint32_t;
+  using triplet_class_t = std::uint32_t;
   using shell_t = std::uint32_t;
   using rank_t = boost::multiprecision::cpp_int;
   using configuration_t = std::vector<specie_t>;
 
   template <class T> using sorted_vector = sqsgen::core::sorted_vector<T>;
 
-  template <class T> using counter = std::map<T, size_t>;
-
   template <class T> using lattice_t = Eigen::Matrix<T, 3, 3>;
 
   template <class T> using coords_t = Eigen::Matrix<T, Eigen::Dynamic, 3>;
 
   template <class T> using matrix_t = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-
-  template <class T> using cube_t = Eigen::Tensor<T, 3>;
 
   template <class T> using pair_tensor_t = Eigen::Tensor<T, 3>;
 
@@ -68,6 +67,11 @@ namespace sqsgen {
     not_found,
     parsing,
     type_error
+  };
+
+  struct sublattice {
+    sorted_vector<site_t> sites;
+    composition_t composition;
   };
 
   template <class T, sublattice_mode Mode> using sublattice_mode_nesting
@@ -128,10 +132,26 @@ namespace sqsgen {
 
   };  // namespace core
 
-  struct sublattice {
-    sorted_vector<std::size_t> sites;
-    composition_t composition;
-  };
+  namespace optimization {
+    struct pair {
+      site_t i, j;
+      shell_t shell;
+    };
+    using pair_list_t = std::vector<pair>;
+
+    // one triangle: three sites and its class.
+    // Sites are ordered so that the shells of their OPPOSITE edges are sorted:
+    //   sites[0] is opposite the shortest edge s1, sites[2] opposite the longest s3,
+    //   with s1 <= s2 <= s3 = classes[c]
+    struct triplet {
+      std::array<site_t, 3> sites;
+      triplet_class_t c;
+    };
+    using triplet_list_t = std::vector<triplet>;
+
+    // class table: c -> sorted shells (s1, s2, s3)
+    using triplet_class_mapping_t = std::vector<std::array<shell_t, 3>>;
+  }  // namespace optimization
 
   enum Timing {
     TIMING_UNDEFINED = -1,
