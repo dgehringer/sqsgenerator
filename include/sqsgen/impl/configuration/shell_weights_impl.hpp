@@ -38,9 +38,11 @@ namespace sqsgen::configuration {
     }
   }
 
-  template <class T> result_t<std::map<std::size_t, T>> parse_shell_weights(
-      const std::map<std::string, T>& weight_input, std::size_t num_shells,
-      std::optional<std::size_t> index = std::nullopt) {
+  template <class T>
+  result_t<std::map<shell_t, T>> parse_shell_weights(const std::map<std::string, T>& weight_input,
+                                                     std::size_t num_shells,
+                                                     std::optional<std::size_t> index
+                                                     = std::nullopt) {
     std::string path
         = index.has_value() ? std::format("shell_weights.{}", index.value()) : "shell_weights";
     if (weight_input.empty())
@@ -64,7 +66,7 @@ namespace sqsgen::configuration {
     return out;
   }
 
-  template <class T> std::map<std::size_t, T> default_shell_weights(std::size_t num_shells) {
+  template <class T> std::map<shell_t, T> default_shell_weights(std::size_t num_shells) {
     std::map<std::size_t, T> out;
     for (std::size_t index = 1; index < num_shells + 1; ++index)
       out.emplace(index, T(1.0) / static_cast<T>(index));

@@ -24,7 +24,7 @@ namespace sqsgen::configuration {
       = std::optional<sublattice_mode_nesting<shell_weight_spec<T>, Mode>>;
 
   template <class T, sublattice_mode Mode> using shell_weights_t
-      = sublattice_mode_nesting<std::map<std::size_t, T>, Mode>;
+      = sublattice_mode_nesting<std::map<shell_t, T>, Mode>;
 
   template <class T, sublattice_mode Mode>
   result_t<shell_weights_t<T, Mode>> validate_shell_weight_input(
