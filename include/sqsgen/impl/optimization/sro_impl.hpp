@@ -1,4 +1,13 @@
+//
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Dominik Gehringer
+//
+// This file is part of sqsgenerator, distributed under the MIT License.
+// See the LICENSE file in the project root for full license information.
+//
 
+#ifndef SQSGEN_IMPL_OPTIMIZATION_SRO_IMPL_HPP
+#define SQSGEN_IMPL_OPTIMIZATION_SRO_IMPL_HPP
 
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/optimization/sro.h"
@@ -48,19 +57,13 @@ namespace sqsgen::optimization {
     return scaled;
   }
 
-  void count_pairs(pair_tensor_t<count_t>& counts, const pair_list_t& pairs,
-                   const configuration_t& species) {
+  inline void count_pairs(pair_tensor_t<count_t>& counts, const pair_list_t& pairs,
+                          const configuration_t& species) {
     counts.setConstant(0);
     for (const pair& p : pairs) ++counts(p.shell, species[p.i], species[p.j]);
   }
 
-  // Pair objective in the hot path:
-  //
-  //   O = sum_s sum_{xi <= eta} | A^s_{xi eta} + N^s_{xi eta} * B^s_{xi eta} |
-  //
-  //   N^s_{xi eta} = bonds(s, xi, eta) + bonds(s, eta, xi)   for xi < eta  (pair list stores each
-  //   bond once) N^s_{xi xi}  = bonds(s, xi, xi) A, B: precomputed coefficients (see
-  //   pair_objective_coefficients), read at the canonical cell xi <= eta
+  // Objective, canonical-cell summation; see compute_pair_objective in sro.h for the formula.
   template <class T> T compute_pair_objective(const pair_tensor_t<count_t>& bonds,
                                               const pair_objective_coefficients<T>& coeffs) {
     const Eigen::Index num_shells = bonds.dimension(0);
@@ -82,17 +85,8 @@ namespace sqsgen::optimization {
     return objective;
   }
 
-  // Builds the list of triangles whose three edges all lie in selected shells,
-  // plus the class table (class index c -> sorted shells).
-  //
-  //   For a triangle with sites (a, b, c), the shell "opposite" a is the shell of edge (b, c).
-  //   Sites are stored ordered by their opposite shell:  s1 <= s2 <= s3
-  //   (ties broken by site index, only for determinism; the objective symmetrizes them anyway).
-  //
-  //   class of a triangle = (s1, s2, s3)   [user shell numbers]
-  //   class index c       = position of (s1, s2, s3) among all occurring classes, sorted
-  //
-  // Each triangle is stored once.
+  // Builds the triangle list and class table; see make_triplet_list in sro.h for the contract.
+  // For a triangle with sites (a, b, c), the shell "opposite" a is the shell of edge (b, c).
   template <class T> std::pair<triplet_list_t, triplet_class_mapping_t> make_triplet_list(
       const core::structure<T>& structure, const std::vector<T>& radii,
       const std::map<shell_t, T>& weights, T atol, T rtol) {
@@ -154,19 +148,15 @@ namespace sqsgen::optimization {
     return {std::move(triplets), std::move(classes)};
   }
 
-  // Counts triangles per class and species triple.
-  //
-  //   N^c(x1, x2, x3) = number of triangles of class c whose sites, in stored order,
-  //                     carry the species (x1, x2, x3)
-  //
-  // Each triangle is stored once, with its sites in canonical geometric order
-  // (sites[0] opposite the shortest edge, sites[2] opposite the longest).
-  // No symmetrization here: interchangeable orderings are summed later in the objective.
-  void count_triplets(triplet_tensor_t<count_t>& counts, const triplet_list_t& triplets,
-                      const configuration_t& species) {
+  // sites[0] is opposite the shortest edge, sites[2] opposite the longest;
+  // see count_triplets in sro.h for the contract.
+  inline void count_triplets(triplet_tensor_t<count_t>& counts, const triplet_list_t& triplets,
+                             const configuration_t& species) {
     counts.setConstant(0);
     for (const triplet& t : triplets)
       ++counts(t.c, species[t.sites[0]], species[t.sites[1]], species[t.sites[2]]);
   }
 
 }  // namespace sqsgen::optimization
+
+#endif  // SQSGEN_IMPL_OPTIMIZATION_SRO_IMPL_HPP
