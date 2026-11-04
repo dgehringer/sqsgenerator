@@ -60,6 +60,27 @@ Consequences:
 - Each physical/model quantity gets its own documented function; state the
   equation in a comment above it.
 
+## Documentation / docstrings
+
+Document the API where it is declared, following common Doxygen conventions.
+
+- **Place docstrings on the declaration in the public header**, not on the
+  definition in the `*_impl.hpp` / `.cpp`. The contract then lives in one place,
+  next to the signature a caller reads. Implementation files carry only ordinary
+  `//` comments explaining the non-obvious *how* (algorithm steps, invariants,
+  numerical caveats); never duplicate the API docstring there.
+- **Use Doxygen syntax:** a `/** ... */` block (or `///` lines) with `@brief`,
+  `@tparam`, `@param`, `@return`. Use `///<` for a trailing member comment.
+- **Lead with a one-line `@brief`;** add detail in following sentences only when
+  it is not obvious from the name and the types.
+- **Document intent, not the signature.** State units, ownership, preconditions,
+  valid ranges, and `@throws` / error behavior. Do not write `@param n the n`.
+- **State the governing equation** for a physical/model quantity in the docstring
+  (this is where the "document each quantity" rule just above lands).
+- **Mark output parameters** (buffers written in place, common on the hot path):
+  say they are reset and filled, since the return-value rule (F.20) is relaxed there.
+- Keep internal `detail::` helpers lightly documented; a short `//` line is enough.
+
 ## C++ Core Guidelines
 
 Follow the [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines).
