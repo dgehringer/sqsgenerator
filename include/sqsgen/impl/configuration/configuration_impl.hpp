@@ -104,8 +104,6 @@ namespace sqsgen::configuration {
     SQSGEN_TRY_ASSIGN(shell_weights,
                       validate_shell_weight_input<T, Mode>(input.shell_weights, shell_radii));
 
-    SQSGEN_TRY_ASSIGN(prefactors, validate_prefactors_input<T, Mode>(input.prefactors, structure,
-                                                                     shell_weights, shell_radii));
     SQSGEN_TRY_ASSIGN(pair_weights, validate_pair_weights_input<T, Mode>(
                                         input.pair_weights, structure, shell_weights, shell_radii));
 
@@ -127,7 +125,6 @@ namespace sqsgen::configuration {
         .shell_weights = std::move(shell_weights),
         .pair_weights = std::move(pair_weights),
         .target_objective = std::move(target_objective),
-        .prefactors = std::move(prefactors),
         .iterations = iterations,
         .chunk_size = chunk_size,
         .keep = keep,

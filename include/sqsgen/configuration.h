@@ -77,7 +77,6 @@ namespace sqsgen::configuration {
     shell_weights_t<T, Mode> shell_weights;
     sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> pair_weights;
     sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> target_objective;
-    sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> prefactors;
     iterations_t iterations;
     chunk_size_t chunk_size;
     keep_t keep;
@@ -100,7 +99,6 @@ namespace sqsgen::configuration {
     shell_weights_t<T, Mode> shell_weights;
     pair_weights_t<T, Mode> pair_weights;
     target_objective_t<T, Mode> target_objective;
-    prefactors_t<T, Mode> prefactors;
     iterations_t iterations;
     chunk_size_t chunk_size;
     keep_t keep;

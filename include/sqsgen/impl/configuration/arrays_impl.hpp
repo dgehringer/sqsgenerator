@@ -35,8 +35,8 @@ namespace sqsgen::configuration {
     return {key, map_error_kind(err.which), err.message};
   }
 
-  template <class T> cube_t<T> stack_matrix(const matrix_t<T>& m, std::size_t num_shells) {
-    cube_t<T> result(num_shells, m.rows(), m.cols());
+  template <class T> pair_tensor_t<T> stack_matrix(const matrix_t<T>& m, std::size_t num_shells) {
+    pair_tensor_t<T> result(num_shells, m.rows(), m.cols());
     for (Eigen::Index s = 0; s < static_cast<Eigen::Index>(num_shells); ++s)
       for (Eigen::Index xi = 0; xi < m.rows(); ++xi)
         for (Eigen::Index eta = 0; eta < m.cols(); ++eta) result(s, xi, eta) = m(xi, eta);
@@ -44,16 +44,16 @@ namespace sqsgen::configuration {
   }
 
   template <class T>
-  cube_t<T> stack_scalar(T value, std::size_t num_shells, std::size_t num_species) {
-    cube_t<T> result(num_shells, num_species, num_species);
+  pair_tensor_t<T> stack_scalar(T value, std::size_t num_shells, std::size_t num_species) {
+    pair_tensor_t<T> result(num_shells, num_species, num_species);
     result.setConstant(value);
     return result;
   }
 
   template <class T>
-  result_t<cube_t<T>> validate_matrix(const std::string& key, const matrix_t<T>& m,
-                                      std::size_t num_shells, std::size_t num_species,
-                                      std::optional<std::size_t> index = std::nullopt) {
+  result_t<pair_tensor_t<T>> validate_matrix(const std::string& key, const matrix_t<T>& m,
+                                             std::size_t num_shells, std::size_t num_species,
+                                             std::optional<std::size_t> index = std::nullopt) {
     std::string path = index.has_value() ? std::format("{}.{}", key, index.value()) : key;
     if (std::cmp_not_equal(m.rows(), num_species) || std::cmp_not_equal(m.cols(), num_species))
       return std::unexpected(
@@ -64,11 +64,11 @@ namespace sqsgen::configuration {
   }
 
   template <class T>
-  result_t<cube_t<T>> validate_cube(const std::string& key, const cube_t<T>& c,
-                                    std::size_t num_shells, std::size_t num_species,
-                                    std::optional<std::size_t> index = std::nullopt) {
+  result_t<pair_tensor_t<T>> validate_cube(const std::string& key, const pair_tensor_t<T>& c,
+                                           std::size_t num_shells, std::size_t num_species,
+                                           std::optional<std::size_t> index = std::nullopt) {
     std::string path = index.has_value() ? std::format("{}.{}", key, index.value()) : key;
-    const typename cube_t<T>::Dimensions& d = c.dimensions();
+    const typename pair_tensor_t<T>::Dimensions& d = c.dimensions();
     if (std::cmp_not_equal(d[0], num_shells) || std::cmp_not_equal(d[1], num_species)
         || std::cmp_not_equal(d[2], num_species))
       return std::unexpected(
@@ -79,21 +79,21 @@ namespace sqsgen::configuration {
   }
 
   template <class T>
-  result_t<cube_t<T>> validate_array(const std::string& key, const array_spec<T>& array_spec,
-                                     std::size_t num_shells, std::size_t num_species,
-                                     std::optional<std::size_t> index = std::nullopt) {
+  result_t<pair_tensor_t<T>> validate_array(const std::string& key, const array_spec<T>& array_spec,
+                                            std::size_t num_shells, std::size_t num_species,
+                                            std::optional<std::size_t> index = std::nullopt) {
     std::string path = index.has_value() ? std::format("{}.{}", key, index.value()) : key;
     return std::visit(
         helpers::overloaded{
-            [&](T scalar) -> result_t<cube_t<T>> {
+            [&](T scalar) -> result_t<pair_tensor_t<T>> {
               return stack_scalar(scalar, num_shells, num_species);
             },
-            [&](const core::nested_t<T, 2>& data) -> result_t<cube_t<T>> {
+            [&](const core::nested_t<T, 2>& data) -> result_t<pair_tensor_t<T>> {
               auto matrix = core::matrix_from<T>(data);
               if (!matrix) return std::unexpected(forward_error(path, std::move(matrix).error()));
               return validate_matrix(key, matrix.value(), num_shells, num_species, index);
             },
-            [&](const core::nested_t<T, 3>& data) -> result_t<cube_t<T>> {
+            [&](const core::nested_t<T, 3>& data) -> result_t<pair_tensor_t<T>> {
               auto tensor = core::tensor_from<T, 3>(data);
               if (!tensor) return std::unexpected(forward_error(path, std::move(tensor).error()));
               return validate_cube(key, tensor.value(), num_shells, num_species, index);
@@ -101,7 +101,7 @@ namespace sqsgen::configuration {
         array_spec);
   }
 
-  template <class T> result_t<cube_t<T>> default_pair_weights(
+  template <class T> result_t<pair_tensor_t<T>> default_pair_weights(
       const structure_t<T, sublattice_mode::interact>& structure,
       const shell_weights_t<T, sublattice_mode::interact>& weights,
       const shell_radii_t<T, sublattice_mode::interact>&) {
@@ -112,18 +112,11 @@ namespace sqsgen::configuration {
                            num_shells);
   }
 
-  template <class T> result_t<cube_t<T>> default_target_objective(
+  template <class T> result_t<pair_tensor_t<T>> default_target_objective(
       const structure_t<T, sublattice_mode::interact>& structure,
       const shell_weights_t<T, sublattice_mode::interact>& weights,
       const shell_radii_t<T, sublattice_mode::interact>&) {
     return stack_scalar<T>(T(0.0), weights.size(), structure.num_species);
-  }
-
-  template <class T> result_t<cube_t<T>> default_prefactors(
-      const structure_t<T, sublattice_mode::interact>& structure,
-      const shell_weights_t<T, sublattice_mode::interact>& weights,
-      const shell_radii_t<T, sublattice_mode::interact>& radii) {
-    return core::compute_prefactors(structure, radii, weights);
   }
 
   template <class Fn, class T, class Element>
@@ -198,15 +191,6 @@ namespace sqsgen::configuration {
       const shell_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
     return validate_array_input<T, Mode, target_objective_t, target_objective_input>(
         "target_objective", input, default_target_objective<T>, structure, weights, radii);
-  }
-
-  template <class T, sublattice_mode Mode>
-  result_t<prefactors_t<T, Mode>> validate_prefactors_input(const prefactors_input<T, Mode>& input,
-                                                            const structure_t<T, Mode>& structure,
-                                                            const shell_weights_t<T, Mode>& weights,
-                                                            const shell_radii_t<T, Mode>& radii) {
-    return validate_array_input<T, Mode, prefactors_t, prefactors_input>(
-        "prefactors", input, default_prefactors<T>, structure, weights, radii);
   }
 
 }  // namespace sqsgen::configuration
