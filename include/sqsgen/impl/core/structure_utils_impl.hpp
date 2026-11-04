@@ -14,7 +14,6 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
-#include <format>
 #include <limits>
 #include <map>
 #include <ranges>
@@ -22,13 +21,10 @@
 #include <utility>
 #include <vector>
 
-#include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/helpers/fold.h"
 #include "sqsgen/core/helpers/misc.h"
-#include "sqsgen/core/permutation.h"
 #include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/core/structure_utils.h"
-#include "sqsgen/log.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -132,71 +128,6 @@ namespace sqsgen::core {
                               structure.pbc);
   }
 
-  template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
-                                                  const std::map<std::size_t, T>& weights,
-                                                  const configuration_t& configuration) {
-    using namespace helpers;
-    if (weights.empty()) throw std::out_of_range("no coordination shells selected");
-    auto neighbors = count(shell_matrix.reshaped());
-    for (const auto& [shell, count] : neighbors) {
-      auto atoms_per_shell{static_cast<T>(count) / static_cast<T>(configuration.size())};
-      if (atoms_per_shell < 1)
-        log::warn(std::format(
-            R"(The coordination shell {} contains no or only one lattice position(s). Increase either "atol" or "rtol" or set the "shell_radii" parameter manually)",
-            shell));
-      if (!is_close(atoms_per_shell, static_cast<T>(static_cast<std::size_t>(atoms_per_shell))))
-        log::warn(std::format(
-            "The coordination shell {} does not contain an integer number of sites. I hope you "
-            "know what you are doing",
-            count));
-      neighbors[shell] = atoms_per_shell;
-    }
-
-    auto shell_map = index_map<std::size_t>(weights | views::elements<0>);
-    auto conf_map = index_map<std::size_t>(configuration);
-
-    auto hist = core::count_species(configuration);
-    auto num_sites{configuration.size()};
-    auto num_species{static_cast<long>(hist.size())};
-    auto num_shells{weights.size()};
-
-    Eigen::Tensor<T, 3> prefactors(num_shells, num_species, num_species);
-
-    for (std::size_t s = 0; s < num_shells; s++) {
-      const auto neighbor_count = neighbors[shell_map[s]];
-      if (neighbor_count > 0) {
-        T M_i{static_cast<T>(neighbor_count)};
-        for (auto a = 0; a < num_species; a++) {
-          T x_a{static_cast<T>(hist[conf_map[a]]) / static_cast<T>(num_sites)};
-          for (auto b = a; b < num_species; b++) {
-            T x_b{static_cast<T>(hist[conf_map[b]]) / static_cast<T>(num_sites)};
-            T prefactor{T(1.0) / (M_i * x_a * x_b * static_cast<T>(num_sites))};
-            prefactors(s, a, b) = prefactor;
-            prefactors(s, b, a) = prefactor;
-          }
-        }
-      } else {
-        log::warn(std::format(
-            "The coordination shell {} contains no sites. This shell will not contribute to the "
-            "objective function and can be removed from the \"shell_weights\" parameter",
-            shell_map[s]));
-        for (auto a = 0; a < num_species; a++)
-          for (auto b = a; b < num_species; b++) {
-            prefactors(s, a, b) = 0;
-            prefactors(s, b, a) = 0;
-          }
-      }
-    }
-    return prefactors;
-  }
-
-  template <class T>
-  cube_t<T> compute_prefactors(const structure<T>& structure, const std::vector<T>& shell_radii,
-                               const std::map<std::size_t, T>& weights, T atol, T rtol) {
-    return compute_prefactors(shell_matrix<T>(structure.distance_matrix(), shell_radii, atol, rtol),
-                              weights, structure.species);
-  }
-
   template <class T> std::vector<T> distances_naive(const structure<T>& structure, T atol, T rtol) {
     using namespace sqsgen::core::helpers;
     sorted_vector<T> dists(structure.distance_matrix().reshaped());
@@ -213,10 +144,10 @@ namespace sqsgen::core {
   template <class T>
   std::vector<T> distances_histogram(const structure<T>& structure, T bin_width, T peak_isolation) {
     using namespace helpers;
-    auto distances
-        = structure.distance_matrix().reshaped()
-          | views::filter([](auto dist) { return dist > 0.0 && !is_close<T>(dist, 0.0); })
-          | ranges::to<std::vector>();
+    auto distances = structure.distance_matrix().reshaped()
+                     | std::ranges::views::filter(
+                         [](auto dist) { return dist > 0.0 && !is_close<T>(dist, 0.0); })
+                     | ranges::to<std::vector>();
     std::sort(distances.begin(), distances.end());
     T min_dist{distances.front()}, max_dist{distances.back()};
 
@@ -241,7 +172,8 @@ namespace sqsgen::core {
     }
     // make sure our histogramm contains the same number of distances as the corresponding input
     // vector
-    assert(fold_left(views::elements<1>(freqs) | views::transform([&](auto v) { return v.size(); }),
+    assert(fold_left(std::ranges::views::elements<1>(freqs)
+                         | std::ranges::views::transform([&](auto v) { return v.size(); }),
                      0, std::plus{})
            == distances.size());
     const auto get_freq

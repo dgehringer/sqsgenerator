@@ -31,15 +31,6 @@ namespace sqsgen::core {
   template <class T> structure<T> supercell(const structure<T>& structure, std::size_t a,
                                             std::size_t b, std::size_t c);
 
-  template <class T> cube_t<T> compute_prefactors(const shell_matrix_t& shell_matrix,
-                                                  const std::map<std::size_t, T>& weights,
-                                                  const configuration_t& configuration);
-
-  template <class T>
-  cube_t<T> compute_prefactors(const structure<T>& structure, const std::vector<T>& shell_radii,
-                               const std::map<std::size_t, T>& weights,
-                               T atol = std::numeric_limits<T>::epsilon(), T rtol = 1e-9);
-
   template <class T> std::vector<T> distances_naive(const structure<T>& structure,
                                                     T atol = std::numeric_limits<T>::epsilon(),
                                                     T rtol = 1e-9);
