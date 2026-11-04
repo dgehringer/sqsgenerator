@@ -5,15 +5,15 @@
 #ifndef SQSGEN_CORE_HELPERS_COUNT_H
 #define SQSGEN_CORE_HELPERS_COUNT_H
 
+#include <cstddef>
+#include <map>
 #include <ranges>
 
-#include "sqsgen/types.h"
-
 namespace sqsgen::core::helpers {
-  namespace ranges = std::ranges;
 
-  template <ranges::range R, class T = ranges::range_value_t<R>> counter<T> count(R&& r) {
-    counter<T> result{};
+  template <std::ranges::range R, class T = std::ranges::range_value_t<R>>
+  std::map<T, std::size_t> count(R&& r) {
+    std::map<T, std::size_t> result{};
     for (auto e : r) {
       if (result.contains(e))
         ++result[e];
