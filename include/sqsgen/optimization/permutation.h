@@ -28,8 +28,6 @@ namespace sqsgen::optimization {
   std::span<specie_t> view(configuration_t& configuration, site_range r);
   std::span<const specie_t> view(const configuration_t& configuration, site_range r);
 
-  // ---------------------------------------------------------------- random numbers
-
   struct rng {
     std::uint64_t state;
   };
@@ -65,6 +63,6 @@ namespace sqsgen::optimization {
 
 }  // namespace sqsgen::optimization
 
-#include "sqsgen/impl/permutation/permutation_impl.hpp"
+#include "sqsgen/impl/optimization/permutation_impl.hpp"
 
 #endif  // SQSGEN_OPTIMIZATION_PERMUTATION_H

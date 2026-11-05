@@ -9,8 +9,9 @@
 #include <utility>
 
 #include "sqsgen/core/helpers/rapidhash.h"
+#include "sqsgen/optimization/permutation.h"
 
-namespace sqsgen::core {
+namespace sqsgen::optimization {
 
   // ---------------------------------------------------------------- layout
 
@@ -55,8 +56,6 @@ namespace sqsgen::core {
     assert(r.begin <= r.end && r.end <= configuration.size());
     return std::span<const specie_t>(configuration).subspan(r.begin, r.end - r.begin);
   }
-
-  // ---------------------------------------------------------------- random numbers
 
   inline std::uint64_t next_u64(rng& g) {
     g.state += rapid_secret[0];
@@ -177,6 +176,6 @@ namespace sqsgen::core {
     return std::next_permutation(range.begin(), range.end());
   }
 
-}  // namespace sqsgen::core
+}  // namespace sqsgen::optimization
 
 #endif  // SQSGEN_IMPL_OPTIMIZATION_PERMUTATION_IMPL_HPP

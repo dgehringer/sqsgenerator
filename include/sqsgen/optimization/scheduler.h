@@ -2,7 +2,7 @@
 #define SQSGEN_OPTIMIZATION_SCHEDULER_H
 
 #include <cstdint>
-#include <numeric_limits>
+#include <limits>
 #include <optional>
 
 // Hands out packages of the iteration range [0, total).
@@ -10,7 +10,7 @@
 //   - without MPI: threads call next() directly (under a mutex, once per package)
 //   - with MPI:    the head calls next() on behalf of the requesting rank
 
-namespace sqsgen::core {
+namespace sqsgen::optimization {
 
   // iterations [start, start + size)
   struct package {
@@ -40,14 +40,14 @@ namespace sqsgen::core {
 
     explicit scheduler(scheduler_settings s);
 
-    std::optional<package> next(const report& r);
+    template <class T> std::optional<package> next(const report<T>& r);
 
     void stop();
 
     bool finished() const;
   };
 
-}  // namespace sqsgen::core
+}  // namespace sqsgen::optimization
 
 #include "sqsgen/impl/scheduler/scheduler_impl.hpp"
 

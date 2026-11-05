@@ -11,9 +11,9 @@
 
 #include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/helpers/misc.h"
-#include "sqsgen/core/permutation.h"
 #include "sqsgen/log.h"
 #include "sqsgen/optimization/prefactors.h"
+#include "sqsgen/types.h"
 
 namespace sqsgen::optimization {
 

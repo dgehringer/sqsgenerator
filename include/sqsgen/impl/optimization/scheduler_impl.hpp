@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "sqsgen/optimization/scheduler.h"
+
 namespace sqsgen::optimization {
 
   namespace detail {
@@ -37,7 +39,7 @@ namespace sqsgen::optimization {
   //                                               near the end everyone gets a fair share)
   //   4. blocks:         n = multiple of B, at least B, at most R
   // Starts stay multiples of B, because every package except the last is a multiple of B.
-  inline std::optional<package> scheduler::next(const report& r) {
+  template <class T> inline std::optional<package> scheduler::next(const report<T>& r) {
     if (r.stop) stop();
     if (finished()) return std::nullopt;
 
