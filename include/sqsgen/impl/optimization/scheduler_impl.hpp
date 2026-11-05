@@ -32,13 +32,7 @@ namespace sqsgen::optimization {
     assert(settings.target_seconds > 0.0);
   }
 
-  // Package size, step by step:
-  //   1. from the rate:  n = rate * tau         (one block if no rate measured yet)
-  //   2. ramp-up:        n <= 2 * done           (the first rates come from small, noisy packages)
-  //   3. tail:           n <= ceil(R / (2 C))    (R remaining iterations, C consumers:
-  //                                               near the end everyone gets a fair share)
-  //   4. blocks:         n = multiple of B, at least B, at most R
-  // Starts stay multiples of B, because every package except the last is a multiple of B.
+  // Package size clamped in four steps; see scheduler::next in scheduler.h.
   template <class T> inline std::optional<package> scheduler::next(const report<T>& r) {
     if (r.stop) stop();
     if (finished()) return std::nullopt;

@@ -40,6 +40,19 @@ namespace sqsgen::optimization {
 
     explicit scheduler(scheduler_settings s);
 
+    /**
+     * @brief Hand out the next package of iterations, or nullopt once finished.
+     *
+     * The package size n is clamped in four steps:
+     *   1. from the rate:  n = rate * tau        (one block B if no rate measured yet)
+     *   2. ramp-up:        n <= 2 * done          (early rates come from small, noisy packages)
+     *   3. tail:           n <= ceil(R / (2 C))   (R remaining, C consumers: a fair end share)
+     *   4. blocks:         n = multiple of B, at least B, at most R
+     * Package starts stay multiples of B, since every package except the last is a multiple of B.
+     *
+     * @param r  The reporting consumer's last result (rate, work done, stop flag).
+     * @return The next package, or std::nullopt once the range is exhausted or stop() was called.
+     */
     std::optional<package> next(const report& r);
 
     void stop();

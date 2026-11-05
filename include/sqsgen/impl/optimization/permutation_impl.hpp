@@ -113,8 +113,7 @@ namespace sqsgen::optimization {
     return hist;
   }
 
-  // L! / prod_s h_s!, built incrementally: adding the k-th copy of a species at length n
-  // multiplies by n / k. Every intermediate value is a multinomial, so each division is exact.
+  // incremental build keeps each division exact; see num_permutations in permutation.h.
   inline rank_t num_permutations(std::span<const std::size_t> hist) {
     rank_t total{1};
     std::size_t n = 0;
@@ -130,10 +129,7 @@ namespace sqsgen::optimization {
     return num_permutations(species_histogram(range));
   }
 
-  // rank = sum over positions p of sum over j < x_p of perm(S_p with j in front)
-  //   S_p = suffix starting at p
-  //   perm(S with j in front) = perm(S) h_j / |S| = perm(S without x_p) h_j / h_{x_p}
-  // suffix = perm(suffix after p), updated by perm(S_p) = perm(S_{p+1}) |S_p| / h_{x_p}
+  // back-to-front accumulation of suffix permutation counts; see rank in permutation.h.
   inline rank_t rank(std::span<const specie_t> range) {
     const std::size_t L = range.size();
     std::vector<std::size_t> hist(L == 0 ? 0 : std::size_t{std::ranges::max(range)} + 1, 0);
@@ -149,9 +145,7 @@ namespace sqsgen::optimization {
     return result;
   }
 
-  // at position p, the arrangements starting with species s are
-  //   block_s = total * h_s / remaining
-  // skip whole blocks until r falls into one, then fix s at p and continue inside that block
+  // block-skipping over arrangements by leading species; see unrank in permutation.h.
   inline void unrank(std::span<specie_t> range, rank_t r) {
     auto hist = species_histogram(range);
     rank_t total = num_permutations(hist);
