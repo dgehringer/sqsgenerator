@@ -19,14 +19,14 @@
 
 namespace sqsgen::optimization {
 
-  // Converts the dense, symmetrized SRO cube into a sparse map with canonical keys.
+  // Converts the dense, symmetrized SRO tensor into a sparse map with canonical keys.
   //
   //   alpha^{s}_{xi eta} = alpha^{s}_{eta xi}   (symmetric in the species)
   //
   // Only the canonical half xi <= eta is stored, so each unordered species pair
   // appears exactly once per shell.
   //
-  // sro: dense cube indexed (s, xi, eta), shape (num_shells, K, K)
+  // sro: dense tensor indexed (s, xi, eta), shape (num_shells, K, K)
   template <class T> pair_sro_t<T> to_pair_sro(const pair_tensor_t<T>& sro) {
     const auto num_shells = static_cast<std::size_t>(sro.dimension(0));
     const auto num_species = static_cast<std::size_t>(sro.dimension(1));
@@ -41,12 +41,12 @@ namespace sqsgen::optimization {
     return out;
   }
 
-  // Split mode: one cube per sublattice -> one map per sublattice.
+  // Split mode: one tensor per sublattice -> one map per sublattice.
   template <class T>
   std::vector<pair_sro_t<T>> to_pair_sro(const std::vector<pair_tensor_t<T>>& sro) {
     std::vector<pair_sro_t<T>> out;
     out.reserve(sro.size());
-    for (const auto& cube : sro) out.push_back(to_pair_sro(cube));
+    for (const auto& tensor : sro) out.push_back(to_pair_sro(tensor));
     return out;
   }
 
