@@ -23,9 +23,7 @@
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/eigen.h"
 #include "sqsgen/core/helpers/expected.h"
-#include "sqsgen/core/helpers/hash.h"
 #include "sqsgen/core/helpers/misc.h"
-#include "sqsgen/core/permutation.h"
 #include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/core/structure_utils.h"
@@ -45,15 +43,6 @@ namespace sqsgen::core {
     }
     template <class T> bool site<T>::operator==(const site& other) const {
       return specie == other.specie && frac_coords == other.frac_coords;
-    }
-
-    template <class T> std::size_t site<T>::hasher::operator()(const site& s) const {
-      std::size_t res = 0;
-      helpers::hash_combine(res, s.specie);
-      helpers::hash_combine(res, s.frac_coords(0));
-      helpers::hash_combine(res, s.frac_coords(1));
-      helpers::hash_combine(res, s.frac_coords(2));
-      return res;
     }
 
     inline std::size_t compute_num_species(const configuration_t& configuration) {
@@ -130,24 +119,6 @@ namespace sqsgen::core {
 
   template <class T> structure<T> structure<T>::without_vacancies() const {
     return filtered([](auto site) { return site.specie != 0; });
-  }
-
-  template <class T> auto structure<T>::pairs(const std::vector<T>& radii,
-                                              const std::map<std::size_t, T>& weights, bool pack,
-                                              T atol, T rtol) {
-    using namespace helpers;
-    auto [shell_map, reverse_map] = make_index_mapping<std::size_t>(weights | views::elements<0>);
-    std::vector<atom_pair> pairs;
-    pairs.reserve(size() * size() / 2);
-    auto sm = shell_matrix(radii, atol, rtol);
-    for (std::size_t i = 0; i < size(); ++i) {
-      for (std::size_t j = i + 1; j < size(); ++j) {
-        if (!weights.contains(sm(i, j))) continue;
-        pairs.push_back({i, j, static_cast<std::size_t>(pack ? shell_map[sm(i, j)] : sm(i, j))});
-      }
-    }
-    pairs.shrink_to_fit();
-    return std::make_tuple(pairs, shell_map, reverse_map);
   }
 
   template <class T> configuration_t structure<T>::packed_species() const {

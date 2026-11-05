@@ -21,7 +21,6 @@
 #include <utility>
 #include <vector>
 
-#include "sqsgen/core/helpers/fold.h"
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/core/structure_utils.h"

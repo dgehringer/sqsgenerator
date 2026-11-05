@@ -16,7 +16,6 @@
 #include <utility>
 
 #include "sqsgen/core/atom.h"
-#include "sqsgen/core/helpers/as.h"
 #include "sqsgen/core/structure_utils.h"
 #include "sqsgen/types.h"
 
@@ -41,9 +40,6 @@ namespace sqsgen::core {
       bool operator<(const site& other) const;
 
       bool operator==(const site& other) const;
-      struct hasher {
-        std::size_t operator()(const site& s) const;
-      };
     };
 
     std::size_t compute_num_species(const configuration_t& configuration);

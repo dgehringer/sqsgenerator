@@ -45,6 +45,9 @@
       "dependencies": [
         "abseil"
       ]
+    },
+    "mpi": {
+      "description": "Distributed (MPI) support for SQS generator"
     }
   }
 }
