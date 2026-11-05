@@ -1,5 +1,5 @@
-#ifndef SQSGEN_MPI_MPI_SOURCE_H
-#define SQSGEN_MPI_MPI_SOURCE_H
+#ifndef SQSGEN_OPTIMIZATION_MPI_MPI_SOURCE_H
+#define SQSGEN_OPTIMIZATION_MPI_MPI_SOURCE_H
 
 #include <mpi.h>
 
@@ -83,4 +83,4 @@ namespace sqsgen::optimization::mpi {
 
 #include "sqsgen/impl/mpi/mpi_source_impl.hpp"
 
-#endif  // SQSGEN_MPI_MPI_SOURCE_H
+#endif  // SQSGEN_OPTIMIZATION_MPI_MPI_SOURCE_H
