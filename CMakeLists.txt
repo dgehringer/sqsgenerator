@@ -19,6 +19,14 @@ add_compile_definitions(
         SQSGEN_MAJOR_VERSION=${VERSION_MAJOR}
 )
 
+option(BUILD_MPI "Build the distributed (MPI) target (C API only)" OFF)
+
+# MPI is not available for Emscripten/WASM: never build the two together.
+if (BUILD_WASM AND BUILD_MPI)
+  message(FATAL_ERROR
+          "BUILD_WASM and BUILD_MPI are mutually exclusive: MPI is not supported for WASM/Emscripten builds")
+endif ()
+
 find_package(glaze CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -73,6 +81,17 @@ else ()
           unordered_dense::unordered_dense
   )
   target_compile_options(parse PRIVATE -Wall -Wextra)
+endif ()
+
+if (BUILD_MPI)
+  message("Building MPI module")
+  set(MPI_CXX_SKIP_MPICXX ON)
+  find_package(MPI REQUIRED)
+  add_executable(mpi
+    mpi/main.cpp
+  )
+  target_link_libraries(mpi PRIVATE MPI::MPI_CXX)
+  target_compile_options(mpi PRIVATE -Wall -Wextra)
 endif ()
 
 option(BUILD_TESTS "Build the unit test suite (Catch2)" OFF)
