@@ -5,15 +5,13 @@
 #include <glaze/beve.hpp>
 #include <string>
 
+#include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/optimization/mpi/mpi_source.h"
 
 namespace sqsgen::optimization::mpi {
 
-  namespace detail {
-    template <class... Fs> struct overloaded : Fs... {
-      using Fs::operator()...;
-    };
-  }  // namespace detail
+  namespace optimization = sqsgen::optimization;
+  namespace helpers = sqsgen::core::helpers;
 
   template <class Msg> void send(const Msg& message, int destination, MPI_Comm comm) {
     std::string buffer;
@@ -65,7 +63,7 @@ namespace sqsgen::optimization::mpi {
       const auto reply = receive<to_worker_msg>(head, comm);
 
       std::optional<optimization::package> package;
-      std::visit(detail::overloaded{
+      std::visit(helpers::overloaded{
                      [&](const package_msg& m) {
                        optimization::atomic_min(gate, static_cast<T>(m.best));
                        package = m.package;
