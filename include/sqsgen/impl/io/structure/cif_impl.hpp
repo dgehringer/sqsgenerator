@@ -15,7 +15,7 @@
 #include <string>
 
 #include "sqsgen/core/atom.h"
-#include "sqsgen/core/permutation.h"
+#include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/io/structure.h"
@@ -23,12 +23,14 @@
 
 namespace sqsgen::io {
 
+  namespace helpers = sqsgen::core::helpers;
+
   template <class T> std::string structure_adapter<T, io::structure_format::cif>::format(
       const core::structure<T>& structure) {
     auto filtered = structure.without_vacancies();
     auto sorted = filtered.sorted([](auto&& a, auto&& b) { return a.specie < b.specie; });
     auto unique_species = core::sorted_vector<specie_t>{sorted.species};
-    auto num_species = core::count_species(sorted.species);
+    auto num_species = helpers::count(sorted.species);
     const auto z_to_symbol = [](auto&& z) { return core::atom::from_z(z).symbol; };
     std::string result;
     result.reserve(filtered.size() * 144);

@@ -23,9 +23,9 @@
 
 #include "sqsgen/configuration/composition.h"
 #include "sqsgen/core/atom.h"
+#include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/variant.h"
-#include "sqsgen/core/permutation.h"
 #include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/types.h"
 
@@ -60,7 +60,7 @@ namespace sqsgen::configuration {
                                                       std::optional<int> index = std::nullopt) {
     std::string key = index.has_value() ? std::format("composition.{}.sites", index.value())
                                         : "composition.sites";
-    auto distinct_species = core::count_species(conf);
+    auto distinct_species = helpers::count(conf);
     core::sorted_vector<specie_t> unique_species;
     for (auto s : species) {
       if (!core::SYMBOL_MAP.contains(s))
@@ -172,7 +172,8 @@ namespace sqsgen::configuration {
           "composition", error_code::invalid_size,
           std::format("You tried to distribute {} atoms on a sublattice with {} sites",
                       distributed_atoms, num_sites)});
-    return sublattice{std::move(helper.sites.value()), std::move(helper.composition)};
+    return sublattice{core::sorted_vector<site_t>(helper.sites.value()),
+                      std::move(helper.composition)};
   }
 
   inline result_t<std::vector<sublattice_helper>> parse_sublattice_helpers(

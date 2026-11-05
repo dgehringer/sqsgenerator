@@ -11,17 +11,34 @@
 
 #include <algorithm>
 #include <format>
+#include <functional>
 #include <limits>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <vector>
 
 #include "sqsgen/configuration/misc.h"
 #include "sqsgen/core/helpers/misc.h"
-#include "sqsgen/core/permutation.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
+
+  namespace detail {
+    template <std::ranges::forward_range R, class T = std::ranges::range_value_t<R>>
+    rank_t num_permutations(R&& freqs) {
+      const auto factorial = [](T k) -> rank_t {
+        return std::ranges::fold_left(std::views::iota(T{1}, k + 1), rank_t{1},
+                                      [](rank_t acc, T i) -> rank_t { return acc * i; });
+      };
+      const T num_atoms = std::ranges::fold_left(freqs, T{0}, std::plus<T>{});
+      const rank_t denominator
+          = std::ranges::fold_left(freqs | std::views::transform(factorial), rank_t{1},
+                                   [](rank_t acc, rank_t f) -> rank_t { return acc * f; });
+      return factorial(num_atoms) / denominator;
+    }
+
+  }  // namespace detail
 
   namespace helpers = sqsgen::core::helpers;
 
@@ -48,7 +65,8 @@ namespace sqsgen::configuration {
           return std::unexpected(configuration_error{
               "iteration_mode", error_code::bad_argument,
               "In \"systematic\" iteration mode only one sublattice is allowed"});
-        auto iterations = core::num_permutations(composition.front().composition);
+        auto iterations
+            = detail::num_permutations(composition.front().composition | std::views::values);
         if (iterations > std::numeric_limits<std::uint64_t>::max()) {
           return std::unexpected(configuration_error{
               "iteration_mode", error_code::bad_argument,

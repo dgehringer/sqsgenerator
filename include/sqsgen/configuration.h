@@ -53,7 +53,6 @@ namespace sqsgen::configuration {
     shell_weights_input<T, Mode> shell_weights;
     pair_weights_input<T, Mode> pair_weights;
     target_objective_input<T, Mode> target_objective;
-    prefactors_input<T, Mode> prefactors;
     iterations_input iterations;
     chunk_size_input chunk_size;
     keep_input keep;
