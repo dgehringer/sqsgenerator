@@ -19,8 +19,8 @@ namespace sqsgen::optimization {
   };
 
   // what a consumer (thread or rank) knows after its last package
-  template <class T> struct report {
-    T best{std::numeric_limits<T>::infinity()};
+  struct report {
+    double best{std::numeric_limits<double>::infinity()};
     std::optional<double> rate{std::nullopt};
     std::uint64_t done{0};
     bool stop{false};
@@ -40,7 +40,7 @@ namespace sqsgen::optimization {
 
     explicit scheduler(scheduler_settings s);
 
-    template <class T> std::optional<package> next(const report<T>& r);
+    std::optional<package> next(const report& r);
 
     void stop();
 
