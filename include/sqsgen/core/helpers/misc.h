@@ -4,12 +4,10 @@
 #define SQSGEN_CORE_HELPERS_MISC_H
 
 #include <functional>
+#include <map>
 #include <ranges>
 #include <utility>
 #include <vector>
-
-#include "sqsgen/core/helpers/as.h"
-#include "sqsgen/types.h"
 
 namespace sqsgen::core::helpers {
 
@@ -18,7 +16,6 @@ namespace sqsgen::core::helpers {
   std::pair<std::vector<T>, std::vector<T>> partition(Predicate&& predicate, R&& r) {
     std::pair<std::vector<T>, std::vector<T>> out;
 
-    // size hint only when the range can give one cheaply
     if constexpr (std::ranges::sized_range<R>) {
       const auto n = std::ranges::size(r);
       out.first.reserve(n);
@@ -35,7 +32,7 @@ namespace sqsgen::core::helpers {
     return out;
   }
 
-  template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
+  template <class U, std::ranges::input_range R, class T = std::ranges::range_value_t<R>>
     requires std::is_integral_v<U>
   std::map<U, T> index_map(R&& r) {
     auto elements = as<sorted_vector>{}(r);
@@ -63,9 +60,9 @@ namespace sqsgen::core::helpers {
   }
 
   // both directions: { reversed (T->U), forward (U->T) }
-  template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
+  template <class U, std::ranges::input_range R, class T = std::ranges::range_value_t<R>>
     requires std::is_integral_v<U>
-  index_mapping_t<T, U> make_index_mapping(R&& r) {
+  std::pair<std::map<U, T>, std::map<T, U>> make_index_mapping(R&& r) {
     std::map<U, T> forward_map = index_map<U>(std::forward<R>(r));
     return index_mapping_t<T, U>(reversed_index_map(forward_map), forward_map);
   }
