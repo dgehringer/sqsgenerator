@@ -19,14 +19,8 @@
 
 namespace sqsgen::optimization {
 
-  // Converts the dense, symmetrized SRO tensor into a sparse map with canonical keys.
-  //
-  //   alpha^{s}_{xi eta} = alpha^{s}_{eta xi}   (symmetric in the species)
-  //
-  // Only the canonical half xi <= eta is stored, so each unordered species pair
-  // appears exactly once per shell.
-  //
-  // sro: dense tensor indexed (s, xi, eta), shape (num_shells, K, K)
+  // Stores only the canonical half xi <= eta (input is symmetric in the species);
+  // see to_pair_sro in result.h for the contract.
   template <class T> pair_sro_t<T> to_pair_sro(const pair_tensor_t<T>& sro) {
     const auto num_shells = static_cast<std::size_t>(sro.dimension(0));
     const auto num_species = static_cast<std::size_t>(sro.dimension(1));
@@ -61,14 +55,8 @@ namespace sqsgen::optimization {
     }
   }
 
-  // Converts the dense, symmetrized triplet SRO tensor into a sparse map with canonical keys.
-  //
-  //   key: sorted shells s1 <= s2 <= s3 of class c, species (x1, x2, x3) in matching order.
-  //   A cell is canonical iff species are ordered within equal shells:
-  //     s1 == s2  =>  x1 <= x2,     s2 == s3  =>  x2 <= x3
-  //
-  // beta:    dense tensor indexed (c, x1, x2, x3), shape (num_classes, K, K, K)
-  // classes: classes[c] = sorted shells of class c
+  // Skips species orderings that are non-canonical within equal shells;
+  // see to_triplet_sro in result.h for the contract.
   template <class T>
   triplet_sro_t<T> to_triplet_sro(const triplet_tensor_t<T>& beta,
                                   const std::vector<std::array<std::uint32_t, 3>>& classes) {
