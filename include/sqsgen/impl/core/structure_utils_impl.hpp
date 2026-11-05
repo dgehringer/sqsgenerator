@@ -130,7 +130,7 @@ namespace sqsgen::core {
   template <class T> std::vector<T> distances_naive(const structure<T>& structure, T atol, T rtol) {
     using namespace sqsgen::core::helpers;
     sorted_vector<T> dists(structure.distance_matrix().reshaped());
-    auto reduced = fold_left(dists, std::vector<T>{T(0)}, [&](auto&& vec, auto dist) {
+    auto reduced = std::ranges::fold_left(dists, std::vector<T>{T(0)}, [&](auto&& vec, auto dist) {
       if (is_close(vec.back(), dist, atol, rtol))
         vec[vec.size() - 1] = 0.5 * (dist + vec.back());
       else
@@ -171,9 +171,10 @@ namespace sqsgen::core {
     }
     // make sure our histogramm contains the same number of distances as the corresponding input
     // vector
-    assert(fold_left(std::ranges::views::elements<1>(freqs)
-                         | std::ranges::views::transform([&](auto v) { return v.size(); }),
-                     0, std::plus{})
+    assert(std::ranges::fold_left(
+               std::ranges::views::elements<1>(freqs)
+                   | std::ranges::views::transform([&](auto v) { return v.size(); }),
+               std::size_t{0}, std::plus{})
            == distances.size());
     const auto get_freq
         = [&](auto i) { return freqs.contains(i) ? freqs.at(i) : std::vector<T>{}; };

@@ -48,7 +48,7 @@ namespace sqsgen::configuration {
     if (weight_input.empty())
       return std::unexpected(
           configuration_error{path, error_code::invalid_size, "shell weights cannot be empty"});
-    std::map<std::size_t, T> out;
+    std::map<shell_t, T> out;
     for (const auto& [key, weight] : weight_input) {
       auto shell = parse_shell(key, index);
       if (!shell) return std::unexpected(std::move(shell).error());
@@ -61,15 +61,15 @@ namespace sqsgen::configuration {
             std::format("{}.{}", path, key), error_code::invalid_size,
             std::format("There are {} shells but you specified a shell index of {}", num_shells,
                         shell.value())});
-      out.emplace(shell.value(), weight);
+      out.emplace(static_cast<shell_t>(shell.value()), weight);
     }
     return out;
   }
 
   template <class T> std::map<shell_t, T> default_shell_weights(std::size_t num_shells) {
-    std::map<std::size_t, T> out;
+    std::map<shell_t, T> out;
     for (std::size_t index = 1; index < num_shells + 1; ++index)
-      out.emplace(index, T(1.0) / static_cast<T>(index));
+      out.emplace(static_cast<shell_t>(index), T(1.0) / static_cast<T>(index));
     return out;
   }
 
