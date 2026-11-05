@@ -3,6 +3,7 @@
 #ifndef SQSGEN_CORE_HELPERS_MISC_H
 #define SQSGEN_CORE_HELPERS_MISC_H
 
+#include <algorithm>
 #include <functional>
 #include <map>
 #include <ranges>
@@ -35,25 +36,29 @@ namespace sqsgen::core::helpers {
   template <class U, std::ranges::input_range R, class T = std::ranges::range_value_t<R>>
     requires std::is_integral_v<U>
   std::map<U, T> index_map(R&& r) {
-    auto elements = as<sorted_vector>{}(r);
+    // collect the values, then sort them and drop duplicates
+    std::vector<T> elements;
+    if constexpr (std::ranges::sized_range<R>) elements.reserve(std::ranges::size(r));
+    for (auto&& e : r) elements.emplace_back(std::forward<decltype(e)>(e));
     std::sort(elements.begin(), elements.end());
-    U index = 0;
+    elements.erase(std::unique(elements.begin(), elements.end()), elements.end());
+
+    // number the unique values 0, 1, 2, ...
     std::map<U, T> result;
-    std::transform(elements.begin(), elements.end(), std::inserter(result, result.begin()),
-                   [&](auto const& val) { return std::make_pair(index++, val); });
+    U index = 0;
+    for (auto const& value : elements) result.emplace(index++, value);
     return result;
   }
 
   template <class T, class U>
     requires std::is_integral_v<U>
   std::map<T, U> reversed_index_map(std::map<U, T> const& m) {
-    return as<std::map>{}(m | std::ranges::views::transform([](auto const& item) {
-                            auto const& [k, v] = item;
-                            return std::make_pair(v, k);
-                          }));
+    std::map<T, U> result;
+    for (auto const& [k, v] : m) result.emplace(v, k);
+    return result;
   }
 
-  template <class U, ranges::input_range R, class T = ranges::range_value_t<R>>
+  template <class U, std::ranges::input_range R, class T = std::ranges::range_value_t<R>>
     requires std::is_integral_v<U>
   std::map<T, U> reversed_index_map(R&& r) {
     return reversed_index_map(index_map<U>(std::forward<R>(r)));
