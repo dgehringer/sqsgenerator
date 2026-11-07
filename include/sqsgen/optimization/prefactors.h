@@ -71,8 +71,8 @@ namespace sqsgen::optimization {
    * @return Prefactor tensor indexed (class, x1, x2, x3).
    */
   template <class T>
-  triplet_tensor_t<T> compute_triplet_prefactors(const triplet_list_t& triplets,
-                                                 const triplet_class_mapping_t& classes,
+  triplet_tensor_t<T> compute_triplet_prefactors(const core::triplet_list_t& triplets,
+                                                 const core::triplet_class_mapping_t& classes,
                                                  const configuration_t& configuration);
 
 }  // namespace sqsgen::optimization

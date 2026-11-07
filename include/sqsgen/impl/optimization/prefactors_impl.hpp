@@ -139,12 +139,12 @@ namespace sqsgen::optimization {
   // m and the product of mole fractions are invariant under permutations inside a group,
   // so every member of Pi_c(xi, eta, zeta) gets the same value as the canonical tuple.
   template <class T>
-  triplet_tensor_t<T> compute_triplet_prefactors(const triplet_list_t& triplets,
-                                                 const triplet_class_mapping_t& classes,
+  triplet_tensor_t<T> compute_triplet_prefactors(const core::triplet_list_t& triplets,
+                                                 const core::triplet_class_mapping_t& classes,
                                                  const configuration_t& configuration) {
     // n_c (not in the hot path, so std::size_t)
     std::vector<std::size_t> triangles(classes.size(), 0);
-    for (const triplet& t : triplets) ++triangles[t.c];
+    for (const core::triplet& t : triplets) ++triangles[t.c];
 
     const auto x = detail::mole_fractions<T>(configuration);
     const auto num_classes = static_cast<Eigen::Index>(classes.size());

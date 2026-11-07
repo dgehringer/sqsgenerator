@@ -14,6 +14,7 @@
 #include <format>
 #include <map>
 #include <optional>
+#include <span>
 #include <string>
 
 #include "sqsgen/configuration/pair_weights.h"
@@ -50,7 +51,7 @@ namespace sqsgen::configuration {
           configuration_error{path, error_code::invalid_size, "shell weights cannot be empty"});
     std::map<shell_t, T> out;
     for (const auto& [key, weight] : weight_input) {
-      auto shell = parse_shell(key, index);
+      auto shell = parse_weight(key, index);
       if (!shell) return std::unexpected(std::move(shell).error());
       if (shell.value() == 0)
         return std::unexpected(
@@ -82,9 +83,9 @@ namespace sqsgen::configuration {
     if constexpr (Mode == sublattice_mode::interact) {
       auto num_shells = shell_radii.size() - 1;
       if (!input.has_value())
-        return default_shell_weights<T>(num_shells);
+        return default_pair_weights<T>(shell_radii);
       else
-        return parse_shell_weights(input.value(), num_shells);
+        return parse_pair_weights(input.value(), num_shells);
     } else if constexpr (Mode == sublattice_mode::split) {
       auto num_sublattices = shell_radii.size();
       pair_weights_t<T, Mode> out;
@@ -100,15 +101,14 @@ namespace sqsgen::configuration {
         }
         for (std::size_t index = 0; index < num_sublattices; ++index) {
           auto num_shells = shell_radii[index].size() - 1;
-          auto validated = parse_shell_weights(data[index], num_shells, std::make_optional(index));
+          auto validated = parse_pair_weights(data[index], num_shells, std::make_optional(index));
           if (!validated) return std::unexpected(std::move(validated).error());
           out.push_back(std::move(validated).value());
         }
       } else {
         for (const auto& shell_radii_vector : shell_radii) {
           assert(shell_radii_vector.size() >= 1 && "checked upstream in shell_radii validator");
-          auto num_shells = shell_radii_vector.size() - 1;
-          out.push_back(default_shell_weights<T>(num_shells));
+          out.push_back(default_pair_weights<T>(shell_radii_vector));
         }
       }
       return out;

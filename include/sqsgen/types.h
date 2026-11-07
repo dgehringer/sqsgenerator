@@ -5,6 +5,7 @@
 #include <Eigen/src/Core/util/EmulateArray.h>
 
 #include <Eigen/Core>
+#include <array>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <cstdint>
 #include <expected>
@@ -130,28 +131,29 @@ namespace sqsgen {
     template <class T, int N, array_mode Mode> using tensor_representation_t
         = std::conditional_t<Mode == array_mode::nested, nested_t<T, N>, packed_tensor<T, N>>;
 
-  };  // namespace core
-
-  namespace optimization {
     struct pair {
       site_t i, j;
       shell_t shell;
     };
     using pair_list_t = std::vector<pair>;
 
-    // one triangle: three sites and its class.
-    // Sites are ordered so that the shells of their OPPOSITE edges are sorted:
-    //   sites[0] is opposite the shortest edge s1, sites[2] opposite the longest s3,
-    //   with s1 <= s2 <= s3 = classes[c]
+    /**
+     * @brief One triangle: three sites and its class index.
+     *
+     * The sites are ordered so that the shells of their opposite edges are sorted:
+     * sites[0] is opposite the shortest edge (s1), sites[2] opposite the longest (s3),
+     * with s1 <= s2 <= s3 being the shell tuple of class @c c (see triplet_class_mapping_t).
+     */
     struct triplet {
       std::array<site_t, 3> sites;
       triplet_class_t c;
     };
     using triplet_list_t = std::vector<triplet>;
 
-    // class table: c -> sorted shells (s1, s2, s3)
+    /// Class table: maps a dense class index c to its sorted shell tuple (s1 <= s2 <= s3).
     using triplet_class_mapping_t = std::vector<std::array<shell_t, 3>>;
-  }  // namespace optimization
+
+  };  // namespace core
 
   enum Timing {
     TIMING_UNDEFINED = -1,
