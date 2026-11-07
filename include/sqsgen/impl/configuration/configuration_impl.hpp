@@ -102,11 +102,11 @@ namespace sqsgen::configuration {
                       validate_shell_radii_input<T, Mode>(input.shell_radii, structure, atol, rtol,
                                                           bin_width, peak_isolation));
     SQSGEN_TRY_ASSIGN(pair_weights,
-                      validate_shell_weight_input<T, Mode>(input.pair_weights, shell_radii));
+                      validate_pair_weights_input<T, Mode>(input.pair_weights, shell_radii));
 
     SQSGEN_TRY_ASSIGN(pair_sro_weights,
-                      validate_pair_weights_input<T, Mode>(input.pair_sro_weights, structure,
-                                                           pair_weights, shell_radii));
+                      validate_pair_sro_weights_input<T, Mode>(input.pair_sro_weights, structure,
+                                                               pair_weights, shell_radii));
 
     SQSGEN_TRY_ASSIGN(target_objective,
                       validate_target_objective_input<T, Mode>(input.target_objective, structure,

@@ -101,7 +101,7 @@ namespace sqsgen::configuration {
         array_spec);
   }
 
-  template <class T> result_t<pair_tensor_t<T>> default_pair_weights(
+  template <class T> result_t<pair_tensor_t<T>> default_pair_sro_weights(
       const structure_t<T, sublattice_mode::interact>& structure,
       const pair_weights_t<T, sublattice_mode::interact>& weights,
       const shell_radii_t<T, sublattice_mode::interact>&) {
@@ -178,11 +178,11 @@ namespace sqsgen::configuration {
   }
 
   template <class T, sublattice_mode Mode>
-  result_t<pair_weights_sro_t<T, Mode>> validate_pair_weights_input(
+  result_t<pair_weights_sro_t<T, Mode>> validate_pair_sro_weights_input(
       const pair_weights_sro_input<T, Mode>& input, const structure_t<T, Mode>& structure,
       const pair_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
     return validate_array_input<T, Mode, pair_weights_sro_t, pair_weights_sro_input>(
-        "pair_sro_weights", input, default_pair_weights<T>, structure, weights, radii);
+        "pair_sro_weights", input, default_pair_sro_weights<T>, structure, weights, radii);
   }
 
   template <class T, sublattice_mode Mode>

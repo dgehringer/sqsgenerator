@@ -50,9 +50,8 @@ namespace sqsgen::configuration {
   using keep_input = std::optional<std::size_t>;
   using keep_t = std::size_t;
 
-  using thread_config_t = std::vector<std::optional<std::size_t>>;
-  using thread_config_input = std::optional<
-      std::variant<std::optional<std::size_t>, std::vector<std::optional<std::size_t>>>>;
+  using thread_config_input = std::optional<std::size_t>;  // missing or null = auto
+  using thread_config_t = std::optional<std::size_t>;
 
   namespace defaults {
     static constexpr prec prec_default = prec::Single;

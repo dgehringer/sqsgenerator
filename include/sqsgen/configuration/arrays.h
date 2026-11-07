@@ -32,7 +32,7 @@ namespace sqsgen::configuration {
       = std::optional<sublattice_mode_nesting<array_spec<T>, Mode>>;
 
   template <class T, sublattice_mode Mode>
-  result_t<pair_weights_sro_t<T, Mode>> validate_pair_weights_input(
+  result_t<pair_weights_sro_t<T, Mode>> validate_pair_sro_weights_input(
       const pair_weights_sro_input<T, Mode>&, const structure_t<T, Mode>&,
       const pair_weights_t<T, Mode>&, const shell_radii_t<T, Mode>&);
 

@@ -21,8 +21,8 @@
 
 namespace sqsgen::configuration {
 
-  inline result_t<std::size_t> parse_shell(const std::string& key,
-                                           std::optional<std::size_t> index = std::nullopt) {
+  inline result_t<std::size_t> parse_weight(const std::string& key,
+                                            std::optional<std::size_t> index = std::nullopt) {
     std::string path
         = index.has_value() ? std::format("pair_weights.{}", index.value()) : "pair_weights";
     try {
@@ -39,10 +39,10 @@ namespace sqsgen::configuration {
   }
 
   template <class T>
-  result_t<std::map<shell_t, T>> parse_shell_weights(const std::map<std::string, T>& weight_input,
-                                                     std::size_t num_shells,
-                                                     std::optional<std::size_t> index
-                                                     = std::nullopt) {
+  result_t<std::map<shell_t, T>> parse_pair_weights(const std::map<std::string, T>& weight_input,
+                                                    std::size_t num_shells,
+                                                    std::optional<std::size_t> index
+                                                    = std::nullopt) {
     std::string path
         = index.has_value() ? std::format("pair_weights.{}", index.value()) : "pair_weights";
     if (weight_input.empty())
@@ -66,15 +66,18 @@ namespace sqsgen::configuration {
     return out;
   }
 
-  template <class T> std::map<shell_t, T> default_shell_weights(std::size_t num_shells) {
+  // w_i = r_1 / r_i for every shell in shell_radii (index 0 = the site itself, r_0 = 0)
+  template <class T> std::map<shell_t, T> default_pair_weights(std::span<const T> shell_radii) {
+    assert(shell_radii.size() >= 2 && shell_radii[0] == T{0} && shell_radii[1] > T{0});
+    const T r_1 = shell_radii[1];
     std::map<shell_t, T> out;
-    for (std::size_t index = 1; index < num_shells + 1; ++index)
-      out.emplace(static_cast<shell_t>(index), T(1.0) / static_cast<T>(index));
+    for (std::size_t i = 1; i < shell_radii.size(); ++i)
+      out.emplace(static_cast<shell_t>(i), r_1 / shell_radii[i]);
     return out;
   }
 
   template <class T, sublattice_mode Mode>
-  result_t<pair_weights_t<T, Mode>> validate_shell_weight_input(
+  result_t<pair_weights_t<T, Mode>> validate_pair_weights_input(
       const pair_weights_input<T, Mode>& input, const shell_radii_t<T, Mode>& shell_radii) {
     if constexpr (Mode == sublattice_mode::interact) {
       auto num_shells = shell_radii.size() - 1;

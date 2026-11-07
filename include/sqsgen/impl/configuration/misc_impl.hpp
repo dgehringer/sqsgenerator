@@ -185,8 +185,11 @@ namespace sqsgen::configuration {
     return defaults::max_results_per_objective_default;
   }
 
-  inline result_t<thread_config_t> validate_thread_config_input(const thread_config_input&) {
-    return thread_config_t(1, std::nullopt);
+  result_t<thread_config_t> validate_thread_config_input(const thread_config_input& input) {
+    if (input && *input == 0)
+      return std::unexpected(configuration_error{"thread_config", error_code::invalid_size,
+                                                 "must be > 0 or null (auto)"});
+    return input;
   }
 
 }  // namespace sqsgen::configuration
