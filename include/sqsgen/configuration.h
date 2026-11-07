@@ -51,7 +51,7 @@ namespace sqsgen::configuration {
     iteration_mode iteration_mode;
     shell_radii_input<T, Mode> shell_radii;
     shell_weights_input<T, Mode> shell_weights;
-    pair_weights_input<T, Mode> pair_weights;
+    pair_weights_sro_input<T, Mode> pair_sro_weights;
     target_objective_input<T, Mode> target_objective;
     iterations_input iterations;
     chunk_size_input chunk_size;
@@ -74,7 +74,7 @@ namespace sqsgen::configuration {
     iteration_mode iteration_mode;
     shell_radii_t<T, Mode> shell_radii;
     shell_weights_t<T, Mode> shell_weights;
-    sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> pair_weights;
+    sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> pair_sro_weights;
     sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> target_objective;
     iterations_t iterations;
     chunk_size_t chunk_size;
@@ -96,7 +96,7 @@ namespace sqsgen::configuration {
     iteration_mode iteration_mode;
     shell_radii_t<T, Mode> shell_radii;
     shell_weights_t<T, Mode> shell_weights;
-    pair_weights_t<T, Mode> pair_weights;
+    pair_weights_sro_t<T, Mode> pair_sro_weights;
     target_objective_t<T, Mode> target_objective;
     iterations_t iterations;
     chunk_size_t chunk_size;

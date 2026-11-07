@@ -80,7 +80,7 @@ namespace sqsgen::configuration {
         .iteration_mode = iteration_mode,
         .shell_radii = shell_radii,
         .shell_weights = shell_weights,
-        .pair_weights = tensor_to_dto<AMode, Mode, T, 3>(pair_weights),
+        .pair_sro_weights = tensor_to_dto<AMode, Mode, T, 3>(pair_sro_weights),
         .target_objective = tensor_to_dto<AMode, Mode, T, 3>(target_objective),
         .iterations = iterations,
         .chunk_size = chunk_size,
@@ -95,7 +95,7 @@ namespace sqsgen::configuration {
   io::result_t<configuration<T, Mode>> configuration<T, Mode>::from_dto(
       const configuration_dto<T, Mode, AMode>& input) {
     SQSGEN_TRY_ASSIGN(structure, structure_config<T>::template from_dto<AMode>(input.structure));
-    SQSGEN_TRY_ASSIGN(pair_weights, tensor_from_dto<AMode, Mode, T, 3>(input.pair_weights));
+    SQSGEN_TRY_ASSIGN(pair_sro_weights, tensor_from_dto<AMode, Mode, T, 3>(input.pair_sro_weights));
     SQSGEN_TRY_ASSIGN(target_objective, tensor_from_dto<AMode, Mode, T, 3>(input.target_objective));
     SQSGEN_TRY_ASSIGN(prefactors, tensor_from_dto<AMode, Mode, T, 3>(input.prefactors));
 
@@ -111,7 +111,7 @@ namespace sqsgen::configuration {
         .iteration_mode = input.iteration_mode,
         .shell_radii = input.shell_radii,
         .shell_weights = input.shell_weights,
-        .pair_weights = std::move(pair_weights),
+        .pair_sro_weights = std::move(pair_sro_weights),
         .target_objective = std::move(target_objective),
         .iterations = input.iterations,
         .chunk_size = input.chunk_size,

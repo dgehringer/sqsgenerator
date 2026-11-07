@@ -178,11 +178,11 @@ namespace sqsgen::configuration {
   }
 
   template <class T, sublattice_mode Mode>
-  result_t<pair_weights_t<T, Mode>> validate_pair_weights_input(
-      const pair_weights_input<T, Mode>& input, const structure_t<T, Mode>& structure,
+  result_t<pair_weights_sro_t<T, Mode>> validate_pair_weights_input(
+      const pair_weights_sro_input<T, Mode>& input, const structure_t<T, Mode>& structure,
       const shell_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
-    return validate_array_input<T, Mode, pair_weights_t, pair_weights_input>(
-        "pair_weights", input, default_pair_weights<T>, structure, weights, radii);
+    return validate_array_input<T, Mode, pair_weights_sro_t, pair_weights_sro_input>(
+        "pair_sro_weights", input, default_pair_weights<T>, structure, weights, radii);
   }
 
   template <class T, sublattice_mode Mode>
