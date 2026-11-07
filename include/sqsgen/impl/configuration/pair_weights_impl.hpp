@@ -6,8 +6,8 @@
 // See the LICENSE file in the project root for full license information.
 //
 
-#ifndef SQSGEN_IMPL_CONFIGURATION_SHELL_WEIGHTS_IMPL_HPP
-#define SQSGEN_IMPL_CONFIGURATION_SHELL_WEIGHTS_IMPL_HPP
+#ifndef SQSGEN_IMPL_CONFIGURATION_PAIR_WEIGHTS_IMPL_HPP
+#define SQSGEN_IMPL_CONFIGURATION_PAIR_WEIGHTS_IMPL_HPP
 
 #include <cassert>
 #include <cstddef>
@@ -16,7 +16,7 @@
 #include <optional>
 #include <string>
 
-#include "sqsgen/configuration/shell_weights.h"
+#include "sqsgen/configuration/pair_weights.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
@@ -24,7 +24,7 @@ namespace sqsgen::configuration {
   inline result_t<std::size_t> parse_shell(const std::string& key,
                                            std::optional<std::size_t> index = std::nullopt) {
     std::string path
-        = index.has_value() ? std::format("shell_weights.{}", index.value()) : "shell_weights";
+        = index.has_value() ? std::format("pair_weights.{}", index.value()) : "pair_weights";
     try {
       return static_cast<std::size_t>(std::stoul(key));
     } catch (const std::invalid_argument& e) {
@@ -44,7 +44,7 @@ namespace sqsgen::configuration {
                                                      std::optional<std::size_t> index
                                                      = std::nullopt) {
     std::string path
-        = index.has_value() ? std::format("shell_weights.{}", index.value()) : "shell_weights";
+        = index.has_value() ? std::format("pair_weights.{}", index.value()) : "pair_weights";
     if (weight_input.empty())
       return std::unexpected(
           configuration_error{path, error_code::invalid_size, "shell weights cannot be empty"});
@@ -74,8 +74,8 @@ namespace sqsgen::configuration {
   }
 
   template <class T, sublattice_mode Mode>
-  result_t<shell_weights_t<T, Mode>> validate_shell_weight_input(
-      const shell_weights_input<T, Mode>& input, const shell_radii_t<T, Mode>& shell_radii) {
+  result_t<pair_weights_t<T, Mode>> validate_shell_weight_input(
+      const pair_weights_input<T, Mode>& input, const shell_radii_t<T, Mode>& shell_radii) {
     if constexpr (Mode == sublattice_mode::interact) {
       auto num_shells = shell_radii.size() - 1;
       if (!input.has_value())
@@ -84,13 +84,13 @@ namespace sqsgen::configuration {
         return parse_shell_weights(input.value(), num_shells);
     } else if constexpr (Mode == sublattice_mode::split) {
       auto num_sublattices = shell_radii.size();
-      shell_weights_t<T, Mode> out;
+      pair_weights_t<T, Mode> out;
       out.reserve(num_sublattices);
       if (input.has_value()) {
         const auto& data = input.value();
         if (data.size() != shell_radii.size()) {
           return std::unexpected(configuration_error{
-              "shell_weights", error_code::invalid_size,
+              "pair_weights", error_code::invalid_size,
               std::format("the number of shell weight definitions ({}) does not match "
                           "the number of sublattices ({}).",
                           data.size(), shell_radii.size())});
@@ -116,4 +116,4 @@ namespace sqsgen::configuration {
 
 }  // namespace sqsgen::configuration
 
-#endif  // SQSGEN_IMPL_CONFIGURATION_SHELL_WEIGHTS_IMPL_HPP
+#endif  // SQSGEN_IMPL_CONFIGURATION_PAIR_WEIGHTS_IMPL_HPP
