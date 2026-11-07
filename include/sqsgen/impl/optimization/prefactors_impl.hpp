@@ -49,7 +49,7 @@ namespace sqsgen::optimization {
         if (M_i == T{0})
           log::warn(std::format(
               "The coordination shell {} contains no sites. This shell will not contribute to "
-              "the objective function and can be removed from the \"shell_weights\" parameter",
+              "the objective function and can be removed from the \"pair_weights\" parameter",
               shell));
         else if (M_i < T{1})
           log::warn(std::format(

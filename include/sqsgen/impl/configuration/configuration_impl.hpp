@@ -101,16 +101,16 @@ namespace sqsgen::configuration {
     SQSGEN_TRY_ASSIGN(shell_radii,
                       validate_shell_radii_input<T, Mode>(input.shell_radii, structure, atol, rtol,
                                                           bin_width, peak_isolation));
-    SQSGEN_TRY_ASSIGN(shell_weights,
-                      validate_shell_weight_input<T, Mode>(input.shell_weights, shell_radii));
+    SQSGEN_TRY_ASSIGN(pair_weights,
+                      validate_shell_weight_input<T, Mode>(input.pair_weights, shell_radii));
 
     SQSGEN_TRY_ASSIGN(pair_sro_weights,
                       validate_pair_weights_input<T, Mode>(input.pair_sro_weights, structure,
-                                                           shell_weights, shell_radii));
+                                                           pair_weights, shell_radii));
 
     SQSGEN_TRY_ASSIGN(target_objective,
                       validate_target_objective_input<T, Mode>(input.target_objective, structure,
-                                                               shell_weights, shell_radii));
+                                                               pair_weights, shell_radii));
     SQSGEN_TRY_ASSIGN(thread_config, validate_thread_config_input(input.thread_config));
     return configuration<T, Mode>{
         .sublattice_mode = Mode,
@@ -123,7 +123,7 @@ namespace sqsgen::configuration {
         .composition = std::move(composition),
         .iteration_mode = imode,
         .shell_radii = std::move(shell_radii),
-        .shell_weights = std::move(shell_weights),
+        .pair_weights = std::move(pair_weights),
         .pair_sro_weights = std::move(pair_sro_weights),
         .target_objective = std::move(target_objective),
         .iterations = iterations,

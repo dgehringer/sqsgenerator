@@ -279,12 +279,12 @@ namespace sqsgen {
       using namespace sqsgen::core::helpers;
       if constexpr (Mode == SUBLATTICE_MODE_INTERACT) {
         auto c = opt_configs.front();
-        return core::sqs_result_factory<T, Mode>::empty(c.structure.size(), c.shell_weights.size(),
+        return core::sqs_result_factory<T, Mode>::empty(c.structure.size(), c.pair_weights.size(),
                                                         c.sorted.num_species);
       } else if constexpr (Mode == SUBLATTICE_MODE_SPLIT) {
         return core::sqs_result_factory<T, Mode>::empty(
             opt_configs | views::transform([](auto&& c) { return c.species_packed.size(); }),
-            opt_configs | views::transform([](auto&& c) { return c.shell_weights.size(); }),
+            opt_configs | views::transform([](auto&& c) { return c.pair_weights.size(); }),
             opt_configs | views::transform([](auto&& c) { return c.sorted.num_species; }));
       }
       throw std::invalid_argument("invalid lattice mode");
@@ -315,11 +315,11 @@ namespace sqsgen {
       auto num_sublattices = this->opt_configs.size();
       auto pairs{this->transpose_setting([](auto&& c) { return c.pairs; })};
       auto prefactors{this->transpose_setting([](auto&& c) { return c.prefactors; })};
-      auto pair_weights{this->transpose_setting([](auto&& c) { return c.pair_weights; })};
+      auto pair_weights{this->transpose_setting([](auto&& c) { return c.pair_sro_weights; })};
       auto target_objective{this->transpose_setting([](auto&& c) { return c.target_objective; })};
       auto shuffler{this->transpose_setting([](auto&& c) { return c.shuffler; })};
       auto species_packed{this->transpose_setting([](auto&& c) { return c.species_packed; })};
-      auto num_shells{this->transpose_setting([](auto&& c) { return c.shell_weights.size(); })};
+      auto num_shells{this->transpose_setting([](auto&& c) { return c.pair_weights.size(); })};
       auto num_species{this->transpose_setting([](auto&& c) { return c.sorted.num_species; })};
 
       auto keep = this->config.keep;
@@ -363,11 +363,11 @@ namespace sqsgen {
         iterations_t iterations{rend - rstart};
 
         auto bonds{this->transpose_setting([](auto&& c) {
-          return cube_t<std::size_t>(c.shell_weights.size(), c.sorted.num_species,
+          return cube_t<std::size_t>(c.pair_weights.size(), c.sorted.num_species,
                                      c.sorted.num_species);
         })};
         auto sro{this->transpose_setting([](auto&& c) {
-          return cube_t<T>(c.shell_weights.size(), c.sorted.num_species, c.sorted.num_species);
+          return cube_t<T>(c.pair_weights.size(), c.sorted.num_species, c.sorted.num_species);
         })};
         auto objective = this->transpose_setting([](auto&&) { return T(0); });
         auto species{species_packed};

@@ -12,8 +12,8 @@
 #include <optional>
 #include <variant>
 
+#include "sqsgen/configuration/pair_weights.h"
 #include "sqsgen/configuration/shell_radii.h"
-#include "sqsgen/configuration/shell_weights.h"
 #include "sqsgen/configuration/structure.h"
 #include "sqsgen/types.h"
 
@@ -34,12 +34,12 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode>
   result_t<pair_weights_sro_t<T, Mode>> validate_pair_weights_input(
       const pair_weights_sro_input<T, Mode>&, const structure_t<T, Mode>&,
-      const shell_weights_t<T, Mode>&, const shell_radii_t<T, Mode>&);
+      const pair_weights_t<T, Mode>&, const shell_radii_t<T, Mode>&);
 
   template <class T, sublattice_mode Mode>
   result_t<target_objective_t<T, Mode>> validate_target_objective_input(
       const target_objective_input<T, Mode>&, const structure_t<T, Mode>&,
-      const shell_weights_t<T, Mode>&, const shell_radii_t<T, Mode>&);
+      const pair_weights_t<T, Mode>&, const shell_radii_t<T, Mode>&);
 
 }  // namespace sqsgen::configuration
 

@@ -103,7 +103,7 @@ namespace sqsgen::configuration {
 
   template <class T> result_t<pair_tensor_t<T>> default_pair_weights(
       const structure_t<T, sublattice_mode::interact>& structure,
-      const shell_weights_t<T, sublattice_mode::interact>& weights,
+      const pair_weights_t<T, sublattice_mode::interact>& weights,
       const shell_radii_t<T, sublattice_mode::interact>&) {
     Eigen::Index num_species = static_cast<Eigen::Index>(structure.num_species);
     Eigen::Index num_shells = static_cast<Eigen::Index>(weights.size());
@@ -114,18 +114,18 @@ namespace sqsgen::configuration {
 
   template <class T> result_t<pair_tensor_t<T>> default_target_objective(
       const structure_t<T, sublattice_mode::interact>& structure,
-      const shell_weights_t<T, sublattice_mode::interact>& weights,
+      const pair_weights_t<T, sublattice_mode::interact>& weights,
       const shell_radii_t<T, sublattice_mode::interact>&) {
     return stack_scalar<T>(T(0.0), weights.size(), structure.num_species);
   }
 
   template <class Fn, class T, class Element>
   concept DefaultFn = std::invocable<Fn, const structure_t<T, sublattice_mode::interact>&,
-                                     const shell_weights_t<T, sublattice_mode::interact>&,
+                                     const pair_weights_t<T, sublattice_mode::interact>&,
                                      const shell_radii_t<T, sublattice_mode::interact>&>
                       && std::convertible_to<
                           std::invoke_result_t<Fn, const structure_t<T, sublattice_mode::interact>&,
-                                               const shell_weights_t<T, sublattice_mode::interact>&,
+                                               const pair_weights_t<T, sublattice_mode::interact>&,
                                                const shell_radii_t<T, sublattice_mode::interact>&>,
                           result_t<Element>>;
 
@@ -135,7 +135,7 @@ namespace sqsgen::configuration {
   result_t<Out<T, Mode>> validate_array_input(const std::string& key, const In<T, Mode>& input,
                                               Fn&& default_fn,
                                               const structure_t<T, Mode>& structure,
-                                              const shell_weights_t<T, Mode>& weights,
+                                              const pair_weights_t<T, Mode>& weights,
                                               const shell_radii_t<T, Mode>& radii) {
     if constexpr (Mode == sublattice_mode::interact) {
       if (input.has_value()) {
@@ -180,7 +180,7 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode>
   result_t<pair_weights_sro_t<T, Mode>> validate_pair_weights_input(
       const pair_weights_sro_input<T, Mode>& input, const structure_t<T, Mode>& structure,
-      const shell_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
+      const pair_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
     return validate_array_input<T, Mode, pair_weights_sro_t, pair_weights_sro_input>(
         "pair_sro_weights", input, default_pair_weights<T>, structure, weights, radii);
   }
@@ -188,7 +188,7 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode>
   result_t<target_objective_t<T, Mode>> validate_target_objective_input(
       const target_objective_input<T, Mode>& input, const structure_t<T, Mode>& structure,
-      const shell_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
+      const pair_weights_t<T, Mode>& weights, const shell_radii_t<T, Mode>& radii) {
     return validate_array_input<T, Mode, target_objective_t, target_objective_input>(
         "target_objective", input, default_target_objective<T>, structure, weights, radii);
   }

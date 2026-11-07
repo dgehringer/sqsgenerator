@@ -17,8 +17,8 @@
 #include "sqsgen/configuration/arrays.h"
 #include "sqsgen/configuration/composition.h"
 #include "sqsgen/configuration/misc.h"
+#include "sqsgen/configuration/pair_weights.h"
 #include "sqsgen/configuration/shell_radii.h"
-#include "sqsgen/configuration/shell_weights.h"
 #include "sqsgen/configuration/structure.h"
 #include "sqsgen/core/eigen.h"
 #include "sqsgen/types.h"
@@ -50,7 +50,7 @@ namespace sqsgen::configuration {
     composition_input composition;
     iteration_mode iteration_mode;
     shell_radii_input<T, Mode> shell_radii;
-    shell_weights_input<T, Mode> shell_weights;
+    pair_weights_input<T, Mode> pair_weights;
     pair_weights_sro_input<T, Mode> pair_sro_weights;
     target_objective_input<T, Mode> target_objective;
     iterations_input iterations;
@@ -73,7 +73,7 @@ namespace sqsgen::configuration {
     std::vector<sublattice> composition;
     iteration_mode iteration_mode;
     shell_radii_t<T, Mode> shell_radii;
-    shell_weights_t<T, Mode> shell_weights;
+    pair_weights_t<T, Mode> pair_weights;
     sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> pair_sro_weights;
     sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> target_objective;
     iterations_t iterations;
@@ -95,7 +95,7 @@ namespace sqsgen::configuration {
     std::vector<sublattice> composition;
     iteration_mode iteration_mode;
     shell_radii_t<T, Mode> shell_radii;
-    shell_weights_t<T, Mode> shell_weights;
+    pair_weights_t<T, Mode> pair_weights;
     pair_weights_sro_t<T, Mode> pair_sro_weights;
     target_objective_t<T, Mode> target_objective;
     iterations_t iterations;
