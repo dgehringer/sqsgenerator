@@ -153,6 +153,22 @@ namespace sqsgen {
     /// Class table: maps a dense class index c to its sorted shell tuple (s1 <= s2 <= s3).
     using triplet_class_mapping_t = std::vector<std::array<shell_t, 3>>;
 
+    struct pair_key {
+      std::uint32_t shell;
+      std::array<specie_t, 2> species;
+      auto operator<=>(const pair_key&) const = default;
+    };
+
+    /// Canonical triplet key: sorted shells (s1 <= s2 <= s3) with the species in matching order.
+    struct triplet_key {
+      std::array<std::uint32_t, 3> shells;
+      std::array<specie_t, 3> species;
+      auto operator<=>(const triplet_key&) const = default;
+    };
+
+    template <class T> using pair_sro_t = std::map<pair_key, T>;
+    template <class T> using triplet_sro_t = std::map<triplet_key, T>;
+
   };  // namespace core
 
   enum Timing {
