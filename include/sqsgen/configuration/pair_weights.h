@@ -11,24 +11,27 @@
 
 #include <cstddef>
 #include <map>
-#include <string>
 
 #include "sqsgen/configuration/shell_radii.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
 
-  template <class T> using pair_weight_spec = std::map<std::string, T>;
+  template <class T> struct pair_weight_input {
+    shell_t shell;
+    T weight;
+  };
 
-  template <class T, sublattice_mode Mode> using pair_weights_input
-      = std::optional<sublattice_mode_nesting<pair_weight_spec<T>, Mode>>;
+  template <class T, sublattice_mode Mode> using pair_weights_input = std::optional<
+      sublattice_mode_nesting<std::optional<std::vector<pair_weight_input<T>>>, Mode>>;
 
   template <class T, sublattice_mode Mode> using pair_weights_t
       = sublattice_mode_nesting<std::map<shell_t, T>, Mode>;
 
   template <class T, sublattice_mode Mode>
   result_t<pair_weights_t<T, Mode>> validate_pair_weights_input(
-      const pair_weights_input<T, Mode>&, const shell_radii_t<T, Mode>& shell_radii);
+      const pair_weights_input<T, Mode>&,
+      const sublattice_mode_nesting<std::vector<T>, Mode>& shell_radii);
 
 }  // namespace sqsgen::configuration
 
