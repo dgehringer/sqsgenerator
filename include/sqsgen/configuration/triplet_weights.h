@@ -20,8 +20,13 @@
 namespace sqsgen::configuration {
   using shell_triple = std::array<shell_t, 3>;
 
+  template <class T> struct triplet_weight_input {
+    shell_triple shells;  // any order, when reading it from user input
+    T weight;
+  };
+
   template <class T, sublattice_mode Mode> using triplet_weights_input = std::optional<
-      sublattice_mode_nesting<std::optional<std::vector<std::tuple<shell_triple, T>>>, Mode>>;
+      sublattice_mode_nesting<std::optional<std::vector<triplet_weight_input<T>>>, Mode>>;
 
   template <class T, sublattice_mode Mode> using triplet_weights_t
       = sublattice_mode_nesting<std::map<shell_triple, T>, Mode>;
