@@ -1,5 +1,24 @@
+//
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Dominik Gehringer
+//
+// This file is part of sqsgenerator, distributed under the MIT License.
+// See the LICENSE file in the project root for full license information.
+//
 
+#ifndef SQSGEN_IMPL_CONFIGURATION_TRIPLET_WEIGHTS_IMPL_HPP
+#define SQSGEN_IMPL_CONFIGURATION_TRIPLET_WEIGHTS_IMPL_HPP
+
+#include <algorithm>
+#include <cstddef>
 #include <format>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <vector>
 
 #include "sqsgen/configuration/triplet_weights.h"
 #include "sqsgen/types.h"
@@ -75,3 +94,5 @@ namespace sqsgen::configuration {
     }
   }
 }  // namespace sqsgen::configuration
+
+#endif  // SQSGEN_IMPL_CONFIGURATION_TRIPLET_WEIGHTS_IMPL_HPP
