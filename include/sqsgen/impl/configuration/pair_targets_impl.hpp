@@ -16,12 +16,13 @@
 #include <vector>
 
 #include "sqsgen/configuration/pair_targets.h"
-#include "sqsgen/core/helpers/expected.h"
+#include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/impl/configuration/shared_impl.hpp"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
 
+  namespace core = sqsgen::core;
   namespace helpers = sqsgen::core::helpers;
 
   namespace detail {
@@ -30,20 +31,6 @@ namespace sqsgen::configuration {
 
     inline configuration_error pair_targets_error(error_code code, std::string message) {
       return configuration_error{std::string(pair_targets_key), code, std::move(message)};
-    }
-
-    // distinct atomic numbers of a structure, sorted
-    template <class T> std::vector<specie_t> distinct_species(const core::structure<T>& structure) {
-      std::vector<specie_t> species(structure.species.begin(), structure.species.end());
-      std::ranges::sort(species);
-      const auto [first, last] = std::ranges::unique(species);
-      species.erase(first, last);
-      return species;
-    }
-
-    // alpha = 1 - N f with N >= 0, so alpha <= 1 for every configuration
-    template <class T> bool is_reachable_alpha(T alpha) {
-      return std::isfinite(alpha) && alpha <= T{1};
     }
 
     // Pair targets of one (sub)lattice as a sparse map; missing entries mean target 0.
@@ -65,14 +52,14 @@ namespace sqsgen::configuration {
 
       if (!input.has_value()) return pair_sro_t<T>{};  // every target 0
 
-      const std::vector<specie_t> present = distinct_species(structure);
+      const core::sorted_vector<specie_t> present(structure.species);
       const auto selected_shells = weights | std::views::keys;
 
       // symbol or atomic number -> atomic number that occurs in the (sub)lattice
       const auto resolve = [&](const specie_input& s) -> result_t<specie_t> {
         return validate_species(pair_targets_key, s, where)
             .and_then([&](specie_t z) -> result_t<specie_t> {
-              if (!std::ranges::binary_search(present, z))
+              if (!present.contains(z))
                 return std::unexpected(pair_targets_error(
                     error_code::not_found,
                     std::format("{}species {} does not occur in the composition", where, z)));
@@ -82,7 +69,7 @@ namespace sqsgen::configuration {
 
       // one number: every selected shell, every species pair xi <= eta
       const auto for_everything = [&](T alpha) -> result {
-        if (!is_reachable_alpha(alpha))
+        if (!std::isfinite(alpha))
           return fail(std::format("target {} must be finite and <= 1", alpha));
         pair_sro_t<T> out;
         for (const shell_t shell : selected_shells)

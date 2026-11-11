@@ -5,6 +5,7 @@
 #include <Eigen/src/Core/util/EmulateArray.h>
 
 #include <Eigen/Core>
+#include <algorithm>
 #include <array>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <cstdint>
@@ -157,13 +158,27 @@ namespace sqsgen {
       shell_t shell;
       std::array<specie_t, 2> species;
       auto operator<=>(const pair_key&) const = default;
+      pair_key(const std::array<specie_t, 2>& s) {
+        this->species = {std::min(s[0], s[1]), std::max(s[0], s[1])};
+      }
     };
 
     /// Canonical triplet key: sorted shells (s1 <= s2 <= s3) with the species in matching order.
     struct triplet_key {
-      std::array<std::uint32_t, 3> shells;
+      std::array<shell_t, 3> shells;
       std::array<specie_t, 3> species;
       auto operator<=>(const triplet_key&) const = default;
+
+      triplet_key(const std::array<shell_t, 3>& shells, const std::array<specie_t, 3>& species) {
+        std::array<std::pair<shell_t, specie_t>, 3> corners{{
+            {shells[0], species[0]},
+            {shells[1], species[1]},
+            {shells[2], species[2]},
+        }};
+        std::ranges::sort(corners);
+        this->shells = {corners[0].first, corners[1].first, corners[2].first};
+        this->species = {corners[0].second, corners[1].second, corners[2].second};
+      }
     };
 
   };  // namespace core
