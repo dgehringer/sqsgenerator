@@ -1,10 +1,27 @@
+//
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Dominik Gehringer
+//
+// This file is part of sqsgenerator, distributed under the MIT License.
+// See the LICENSE file in the project root for full license information.
+//
+
+#ifndef SQSGEN_CONFIGURATION_PAIR_TARGETS_H
+#define SQSGEN_CONFIGURATION_PAIR_TARGETS_H
+
+#include <array>
+#include <optional>
+#include <string>
+#include <variant>
+#include <vector>
 
 #include "sqsgen/configuration/pair_weights.h"
+#include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
 
-  using specie_input = std::variant<int, std::string>;
+  using specie_input = std::variant<int, std::string>;  // atomic number or chemical symbol
 
   template <class T> struct pair_target_input {
     std::optional<shell_t> shell;  // std::nullopt = all shells
@@ -26,3 +43,7 @@ namespace sqsgen::configuration {
       const pair_weights_t<T, Mode>& weights);
 
 }  // namespace sqsgen::configuration
+
+#include "sqsgen/impl/configuration/pair_targets_impl.hpp"
+
+#endif  // SQSGEN_CONFIGURATION_PAIR_TARGETS_H

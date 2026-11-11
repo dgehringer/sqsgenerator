@@ -1,13 +1,25 @@
+//
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Dominik Gehringer
+//
+// This file is part of sqsgenerator, distributed under the MIT License.
+// See the LICENSE file in the project root for full license information.
+//
+
 #ifndef SQSGEN_IMPL_CONFIGURATION_SHARED_IMPL_HPP
 #define SQSGEN_IMPL_CONFIGURATION_SHARED_IMPL_HPP
 
+#include <expected>
+#include <format>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <variant>
 
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/types.h"
+
 namespace sqsgen::configuration {
 
   namespace helpers = sqsgen::core::helpers;
@@ -43,4 +55,4 @@ namespace sqsgen::configuration {
   }  // namespace detail
 }  // namespace sqsgen::configuration
 
-#endif
+#endif  // SQSGEN_IMPL_CONFIGURATION_SHARED_IMPL_HPP

@@ -9,13 +9,16 @@
 #ifndef SQSGEN_IMPL_CONFIGURATION_PAIR_WEIGHTS_IMPL_HPP
 #define SQSGEN_IMPL_CONFIGURATION_PAIR_WEIGHTS_IMPL_HPP
 
-#include <cassert>
 #include <cstddef>
+#include <expected>
 #include <format>
 #include <map>
 #include <optional>
-#include <span>
+#include <set>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include "sqsgen/configuration/pair_weights.h"
 #include "sqsgen/types.h"

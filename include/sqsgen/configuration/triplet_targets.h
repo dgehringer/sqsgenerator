@@ -1,9 +1,26 @@
+//
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Dominik Gehringer
+//
+// This file is part of sqsgenerator, distributed under the MIT License.
+// See the LICENSE file in the project root for full license information.
+//
+
+#ifndef SQSGEN_CONFIGURATION_TRIPLET_TARGETS_H
+#define SQSGEN_CONFIGURATION_TRIPLET_TARGETS_H
+
+#include <array>
+#include <optional>
+#include <string>
+#include <variant>
+#include <vector>
+
 #include "sqsgen/configuration/triplet_weights.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
-  using shell_triple = std::array<shell_t, 3>;
+
   using specie_input = std::variant<int, std::string>;
 
   template <class T> struct triplet_target_input {
@@ -26,3 +43,7 @@ namespace sqsgen::configuration {
       const triplet_weights_t<T, Mode>& weights);
 
 }  // namespace sqsgen::configuration
+
+#include "sqsgen/impl/configuration/triplet_targets_impl.hpp"
+
+#endif  // SQSGEN_CONFIGURATION_TRIPLET_TARGETS_H

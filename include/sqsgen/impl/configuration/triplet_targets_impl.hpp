@@ -1,3 +1,11 @@
+//
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Dominik Gehringer
+//
+// This file is part of sqsgenerator, distributed under the MIT License.
+// See the LICENSE file in the project root for full license information.
+//
+
 #ifndef SQSGEN_IMPL_CONFIGURATION_TRIPLET_TARGETS_IMPL_HPP
 #define SQSGEN_IMPL_CONFIGURATION_TRIPLET_TARGETS_IMPL_HPP
 
