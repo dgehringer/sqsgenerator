@@ -16,17 +16,20 @@
 #include <vector>
 
 #include "sqsgen/configuration/pair_targets.h"
+#include "sqsgen/core/helpers/expected.h"
 #include "sqsgen/impl/configuration/shared_impl.hpp"
+#include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
+
+  namespace helpers = sqsgen::core::helpers;
 
   namespace detail {
 
     inline constexpr std::string_view pair_targets_key = "pair_targets";
 
-    inline configuration_error pair_targets_error(std::string message) {
-      return configuration_error{std::string(pair_targets_key), error_code::bad_argument,
-                                 std::move(message)};
+    inline configuration_error pair_targets_error(error_code code, std::string message) {
+      return configuration_error{std::string(pair_targets_key), code, std::move(message)};
     }
 
     // distinct atomic numbers of a structure, sorted
@@ -56,8 +59,8 @@ namespace sqsgen::configuration {
         const core::structure<T>& structure, const std::map<shell_t, T>& weights,
         std::string_view where) {
       using result = result_t<pair_sro_t<T>>;
-      const auto fail = [&](std::string message) -> result {
-        return std::unexpected(pair_targets_error(std::format("{}{}", where, message)));
+      const auto fail = [&](error_code code, std::string message) -> result {
+        return std::unexpected(pair_targets_error(code, std::format("{}{}", where, message)));
       };
 
       if (!input.has_value()) return pair_sro_t<T>{};  // every target 0
@@ -71,6 +74,7 @@ namespace sqsgen::configuration {
             .and_then([&](specie_t z) -> result_t<specie_t> {
               if (!std::ranges::binary_search(present, z))
                 return std::unexpected(pair_targets_error(
+                    error_code::not_found,
                     std::format("{}species {} does not occur in the composition", where, z)));
               return z;
             });
@@ -91,7 +95,8 @@ namespace sqsgen::configuration {
 
       // list of entries
       const auto from_entries = [&](const std::vector<pair_target_input<T>>& entries) -> result {
-        if (entries.empty()) return fail("must not be empty; omit the key for targets of 0");
+        if (entries.empty())
+          return fail(error_code::invalid_size, "must not be empty; omit the key for targets of 0");
 
         pair_sro_t<T> out;
         std::map<std::array<specie_t, 2>, T> for_all_shells;  // entries without shell
@@ -102,25 +107,25 @@ namespace sqsgen::configuration {
           auto eta = resolve(entry.species[1]);
           if (!eta) return std::unexpected(std::move(eta.error()));
 
-          std::array<specie_t, 2> species{*xi, *eta};
+          std::array<specie_t, 2> species{std::move(xi).value(), std::move(eta).value()};
           std::ranges::sort(species);  // canonical: xi <= eta
           const std::string name = std::format("{}-{}", species[0], species[1]);
 
-          if (!is_reachable_alpha(entry.alpha))
-            return fail(std::format("target of {} must be finite and <= 1", name));
-
           if (!entry.shell.has_value()) {
             if (!for_all_shells.emplace(species, entry.alpha).second)
-              return fail(std::format("{} without shell is listed more than once", name));
+              return fail(error_code::bad_argument,
+                          std::format("{} without shell is listed more than once", name));
             continue;
           }
 
           const shell_t shell = entry.shell.value();
           if (!weights.contains(shell))
-            return fail(std::format("{} in shell {}: shell {} is not selected in pair_weights",
+            return fail(error_code::not_found,
+                        std::format("{} in shell {}: shell {} is not selected in pair_weights",
                                     name, shell, shell));
           if (!out.emplace(core::pair_key{.shell = shell, .species = species}, entry.alpha).second)
-            return fail(std::format("{} in shell {} is listed more than once", name, shell));
+            return fail(error_code::not_found,
+                        std::format("{} in shell {} is listed more than once", name, shell));
         }
 
         // entries without shell: every selected shell, unless an entry with that shell exists
