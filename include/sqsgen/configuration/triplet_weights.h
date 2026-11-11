@@ -12,7 +12,6 @@
 #include <array>
 #include <map>
 #include <optional>
-#include <tuple>
 #include <vector>
 
 #include "sqsgen/types.h"
