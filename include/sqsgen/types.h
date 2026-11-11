@@ -154,7 +154,7 @@ namespace sqsgen {
     using triplet_class_mapping_t = std::vector<std::array<shell_t, 3>>;
 
     struct pair_key {
-      std::uint32_t shell;
+      shell_t shell;
       std::array<specie_t, 2> species;
       auto operator<=>(const pair_key&) const = default;
     };
@@ -166,10 +166,10 @@ namespace sqsgen {
       auto operator<=>(const triplet_key&) const = default;
     };
 
-    template <class T> using pair_sro_t = std::map<pair_key, T>;
-    template <class T> using triplet_sro_t = std::map<triplet_key, T>;
-
   };  // namespace core
+
+  template <class T> using pair_sro_t = std::map<core::pair_key, T>;
+  template <class T> using triplet_sro_t = std::map<core::triplet_key, T>;
 
   enum Timing {
     TIMING_UNDEFINED = -1,

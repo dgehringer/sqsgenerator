@@ -20,10 +20,10 @@ namespace sqsgen::optimization {
 
   namespace core = sqsgen::core;
 
-  template <class T> core::pair_sro_t<T> to_pair_sro(const pair_tensor_t<T>& sro);
+  template <class T> pair_sro_t<T> to_pair_sro(const pair_tensor_t<T>& sro);
 
   template <class T>
-  std::vector<core::pair_sro_t<T>> to_pair_sro(const std::vector<pair_tensor_t<T>>& sro);
+  std::vector<pair_sro_t<T>> to_pair_sro(const std::vector<pair_tensor_t<T>>& sro);
 
   /**
    * @brief Convert a dense, symmetrized triplet-SRO tensor into a sparse canonical map.
@@ -38,8 +38,8 @@ namespace sqsgen::optimization {
    * @return Map from triplet_key{shells, {x1, x2, x3}} to the SRO value.
    */
   template <class T>
-  core::triplet_sro_t<T> to_triplet_sro(const triplet_tensor_t<T>& beta,
-                                        const std::vector<std::array<shell_t, 3>>& classes);
+  triplet_sro_t<T> to_triplet_sro(const triplet_tensor_t<T>& beta,
+                                  const std::vector<std::array<shell_t, 3>>& classes);
 
   /**
    * @brief Split-mode overload: convert one triplet-SRO tensor per sublattice.
@@ -49,7 +49,7 @@ namespace sqsgen::optimization {
    * @param classes  The class table for each sublattice (classes[i] matches beta[i]).
    * @return One canonical map per sublattice, in the same order.
    */
-  template <class T> std::vector<core::triplet_sro_t<T>> to_triplet_sro(
+  template <class T> std::vector<triplet_sro_t<T>> to_triplet_sro(
       const std::vector<triplet_tensor_t<T>>& beta,
       const std::vector<std::vector<std::array<std::uint32_t, 3>>>& classes);
 
@@ -60,8 +60,8 @@ namespace sqsgen::optimization {
 
   template <class T, sublattice_mode Mode> struct sqs_result {
     sublattice_mode_nesting<configuration_t, Mode> configuration;
-    std::optional<order_result<T, Mode, core::pair_sro_t<T>>> pairs;
-    std::optional<order_result<T, Mode, core::triplet_sro_t<T>>> triplets;
+    std::optional<order_result<T, Mode, pair_sro_t<T>>> pairs;
+    std::optional<order_result<T, Mode, triplet_sro_t<T>>> triplets;
 
     bool operator==(const sqs_result& o) const { return configuration == o.configuration; }
 

@@ -32,9 +32,9 @@ namespace sqsgen::core {
     double mass;                          /**< The mass of the atoms in atomic units */
     double en;                            /**< Electronegativity */
 
-    template <std::integral T> static atom from_z(T ordinal);
+    template <std::integral T> static std::optional<atom> from_z(T ordinal);
 
-    static atom from_symbol(std::string const& symbol);
+    static std::optional<atom> from_symbol(std::string const& symbol);
 
   private:
     explicit atom(detail::atom_record const& record);

@@ -11,6 +11,7 @@
 
 #include <array>
 #include <format>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -154,15 +155,13 @@ namespace sqsgen::core {
 
   inline const std::unordered_map<std::string, specie_t> SYMBOL_MAP{detail::make_symbol_map()};
 
-  template <std::integral T> atom atom::from_z(T ordinal) {
-    if (ordinal > KNOWN_ELEMENTS.size() || ordinal < 0)
-      throw std::out_of_range("Element is out of range");
+  template <std::integral T> std::optional<atom> atom::from_z(T ordinal) {
+    if (ordinal > KNOWN_ELEMENTS.size() || ordinal < 0) return std::nullopt;
     return atom(KNOWN_ELEMENTS[ordinal]);
   }
 
-  inline atom atom::from_symbol(std::string const& symbol) {
-    if (!SYMBOL_MAP.contains(symbol))
-      throw std::out_of_range(std::format("Unknown element \"{}\"", symbol));
+  inline std::optional<atom> atom::from_symbol(std::string const& symbol) {
+    if (!SYMBOL_MAP.contains(symbol)) return std::nullopt;
     return from_z(SYMBOL_MAP.at(symbol));
   }
 
