@@ -31,12 +31,17 @@ namespace sqsgen::configuration {
       return configuration_error{"pair_weights", code, std::move(message)};
     }
 
-    // Pair weights of one (sub)lattice: selected shells with weights w_i > 0.
-    //   no input -> every shell of shell_radii, w_i = r_1 / r_i
-    //   input    -> exactly the listed shells; error if a shell does not exist,
-    //               is listed twice, or has a negative weight. Shells with w = 0 are dropped.
-    // shell_radii[0] = 0 is the site itself, shell 1 is the nearest-neighbour shell.
-    // where: prefix for error messages ("" or "sublattice i: ")
+    /**
+     * @brief Pair weights of one (sub)lattice: the selected shells with weights w_i > 0.
+     *
+     * Without input every shell of @p shell_radii gets the default w_i = r_1 / r_i; otherwise
+     * exactly the listed shells are kept. A shell that does not exist, is listed twice, or has a
+     * negative weight is an error; shells with weight 0 are dropped.
+     *
+     * @param input       Per-shell weights, or std::nullopt to use the defaults.
+     * @param shell_radii Shell radii; index 0 is the site itself, shell 1 the nearest neighbour.
+     * @param where       Prefix for error messages ("" or "sublattice i: ").
+     */
     template <class T> result_t<std::map<shell_t, T>> validate_pair_weights(
         const std::optional<std::vector<pair_weight_input<T>>>& input,
         const std::vector<T>& shell_radii, std::string_view where) {
@@ -50,7 +55,6 @@ namespace sqsgen::configuration {
 
       std::map<shell_t, T> out;
 
-      // defaults: w_i = r_1 / r_i
       if (!input) {
         const T r_1 = shell_radii[1];
         for (std::size_t i = 1; i <= num_shells; ++i)

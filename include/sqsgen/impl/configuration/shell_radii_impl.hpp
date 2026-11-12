@@ -33,9 +33,12 @@ namespace sqsgen::configuration {
     return std::round(value * multiplier) / multiplier;
   }
 
-  // A tolerance is expected in the open interval (0, 1); the number of significant digits is
-  // -log10(val). Returns an error instead of throwing, so the failure can cross the module
-  // boundary as a result_t.
+  /**
+   * @brief Number of significant digits of a tolerance: -log10(@p val).
+   *
+   * @p val is expected in the open interval (0, 1). Returns an error instead of throwing, so the
+   * failure can cross the module boundary as a result_t.
+   */
   template <class T> result_t<int> digits(T val) {
     auto num_digits = -static_cast<int>(std::round(std::log10(val)));
     if (num_digits <= 0)

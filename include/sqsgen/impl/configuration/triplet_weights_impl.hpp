@@ -37,16 +37,21 @@ namespace sqsgen::configuration {
       return configuration_error{"triplet_weights", code, std::move(message)};
     }
 
-    // Triplet weights of one (sub)lattice: selected classes with weights w_c > 0.
-    //   no input -> every class that occurs, w_c = r_1 / d_c = r_1 / r_{s3}
-    //               (s1 <= s2 <= s3, so s3 is the shell of the longest edge)
-    //   input    -> exactly the listed classes; error if a shell does not exist, the class
-    //               does not occur in the structure, it is listed twice, or the weight is
-    //               negative. Classes with w = 0 are dropped.
-    // triplet_classes: every class occurring within the shell radii, sorted
-    //                  (as returned by make_triplet_list over all shells)
-    // shell_radii[0] = 0 is the site itself, shell 1 is the nearest-neighbour shell.
-    // where: prefix for error messages ("" or "sublattice i: ")
+    /**
+     * @brief Triplet weights of one (sub)lattice: the selected classes with weights w_c > 0.
+     *
+     * Without input every class that occurs gets the default w_c = r_1 / r_{s3} (with
+     * s1 <= s2 <= s3, so s3 is the shell of the longest edge); otherwise exactly the listed
+     * classes are kept. A non-existent shell, a class that does not occur in the structure, a
+     * class listed twice, or a negative weight is an error; classes with weight 0 are dropped.
+     *
+     * @param input           Per-class weights, or std::nullopt to use the defaults.
+     * @param triplet_classes Every class occurring within the shell radii, sorted
+     *                        (as returned by make_triplet_list over all shells).
+     * @param shell_radii     Shell radii; index 0 is the site itself, shell 1 the nearest
+     * neighbour.
+     * @param where           Prefix for error messages ("" or "sublattice i: ").
+     */
     template <class T> result_t<std::map<shell_triple, T>> validate_triplet_weights(
         const std::optional<std::vector<triplet_weight_input<T>>>& input,
         const core::triplet_class_mapping_t& triplet_classes, const std::vector<T>& shell_radii,
@@ -61,7 +66,6 @@ namespace sqsgen::configuration {
 
       std::map<shell_triple, T> out;
 
-      // defaults: w_c = r_1 / r_{s3}
       if (!input) {
         const T r_1 = shell_radii[1];
         for (const auto& shells : triplet_classes)

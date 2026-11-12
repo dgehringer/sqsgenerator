@@ -41,14 +41,20 @@ namespace sqsgen::configuration {
       return configuration_error{std::string(pair_targets_key), code, std::move(message)};
     }
 
-    // Pair targets of one (sub)lattice as a sparse map; missing entries mean target 0.
-    //   no input -> empty map (every target 0)
-    //   number   -> that target for every selected shell and every species pair xi <= eta
-    //   list     -> listed entries; an entry without shell applies to every selected shell,
-    //               an entry with shell overrides it for that shell
-    // Only shells selected in the pair weights can carry a target.
-    // Keys are canonical: species sorted by atomic number (xi <= eta), real shell numbers.
-    // where: prefix for error messages ("" or "sublattice i: ")
+    /**
+     * @brief Pair targets of one (sub)lattice as a sparse map; missing entries mean target 0.
+     *
+     * No input yields an empty map (every target 0). A single number applies that target to every
+     * selected shell and every species pair xi <= eta. A list sets the listed entries; an entry
+     * without a shell applies to every selected shell, an entry with a shell overrides it there.
+     * Only shells selected in the pair weights can carry a target. Keys are canonical: species
+     * sorted by atomic number (xi <= eta), with real shell numbers.
+     *
+     * @param input     The target spec: nothing, a single number, or a list of entries.
+     * @param structure The (sub)lattice structure, for the species that occur.
+     * @param weights   Selected pair weights; only their shells may carry a target.
+     * @param where     Prefix for error messages ("" or "sublattice i: ").
+     */
     template <class T> result_t<pair_sro_t<T>> validate_pair_targets(
         const std::optional<std::variant<T, std::vector<pair_target_input<T>>>>& input,
         const core::structure<T>& structure, const std::map<shell_t, T>& weights,
@@ -88,7 +94,6 @@ namespace sqsgen::configuration {
         return out;
       };
 
-      // list of entries
       const auto from_entries = [&](const std::vector<pair_target_input<T>>& entries) -> result {
         if (entries.empty())
           return fail(error_code::invalid_size, "must not be empty; omit the key for targets of 0");

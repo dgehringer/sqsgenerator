@@ -80,7 +80,6 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode>
   result_t<configuration<T, Mode>> parse_configuration_internal(
       const configuration_input<T, Mode>& input) {
-    // the first thing we need is structure and composition
     SQSGEN_TRY_ASSIGN(_structure_config, validate_structure_input<T>(input.structure));
 
     SQSGEN_TRY_ASSIGN(

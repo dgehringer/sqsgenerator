@@ -38,10 +38,13 @@ namespace sqsgen::configuration {
       return configuration_error{std::string(triplet_targets_key), code, std::move(message)};
     }
 
-    // Canonical form of a triangle: the three corners as (opposite shell, species) pairs,
-    // sorted by shell, then by species. Corners with equal opposite shell are interchangeable,
-    // so sorting their species makes every equivalent spelling give the same key
-    // (same rule as make_triplet_list).
+    /**
+     * @brief Canonical key of a triangle: its three (opposite shell, species) corners, sorted.
+     *
+     * Sorting by shell then species makes every equivalent spelling give the same key: corners
+     * with equal opposite shell are interchangeable, so sorting their species collapses them
+     * (the same rule as make_triplet_list).
+     */
     inline core::triplet_key canonical_triplet(const shell_triple& shells,
                                                const std::array<specie_t, 3>& species) {
       std::array<std::pair<shell_t, specie_t>, 3> corners{{
@@ -62,13 +65,19 @@ namespace sqsgen::configuration {
                          key.species[0], key.species[1], key.species[2]);
     }
 
-    // Triplet targets of one (sub)lattice as a sparse map; missing entries mean target 0.
-    //   no input -> empty map (every target 0)
-    //   number   -> that target for every selected class and every canonical species tuple
-    //   list     -> listed entries; the class (sorted shells) must be selected in
-    //               triplet_weights
-    // Keys are canonical (canonical_triplet), with real shell numbers and atomic numbers.
-    // where: prefix for error messages ("" or "sublattice i: ")
+    /**
+     * @brief Triplet targets of one (sub)lattice as a sparse map; missing entries mean target 0.
+     *
+     * No input yields an empty map (every target 0). A single number applies that target to every
+     * selected class and every canonical species tuple. A list sets the listed entries; each
+     * entry's class (its sorted shells) must be selected in triplet_weights. Keys are canonical
+     * (see canonical_triplet), with real shell numbers and atomic numbers.
+     *
+     * @param input     The target spec: nothing, a single number, or a list of entries.
+     * @param structure The (sub)lattice structure, for the species that occur.
+     * @param weights   Selected triplet weights; only their classes may carry a target.
+     * @param where     Prefix for error messages ("" or "sublattice i: ").
+     */
     template <class T> result_t<triplet_sro_t<T>> validate_triplet_targets(
         const std::optional<std::variant<T, std::vector<triplet_target_input<T>>>>& input,
         const core::structure<T>& structure, const std::map<shell_triple, T>& weights,
