@@ -118,10 +118,11 @@ namespace sqsgen::configuration {
       if (symbol == "sites") {
         auto parsed_sites = validate_sites(spec, conf, index);
         if (!parsed_sites) return std::unexpected(std::move(parsed_sites).error());
-        sites = *parsed_sites;
+        sites = std::move(parsed_sites).value();
       }
       auto symbol_key = std::format("{}.{}", key, symbol);
-      if (!core::SYMBOL_MAP.contains(symbol))
+      auto atom = core::atom::from_symbol(symbol);
+      if (!atom.has_value())
         return std::unexpected(
             configuration_error{symbol_key, error_code::bad_argument,
                                 std::format("Unknown atomic species \"{}\"", symbol)});
@@ -152,7 +153,7 @@ namespace sqsgen::configuration {
               }},
           spec);
       if (!amount) return std::unexpected(std::move(amount).error());
-      composition[core::atom::from_symbol(symbol).Z] = *amount;
+      composition[atom.value().Z] = std::move(amount).value();
     }
 
     if (composition.empty())
@@ -256,6 +257,22 @@ namespace sqsgen::configuration {
           .composition = std::move(sublattices_without_site_spec.front().composition)});
       if (!validated) return std::unexpected(std::move(validated).error());
       out.emplace_back(std::move(validated).value());
+    }
+    return out;
+  }
+
+  inline composition_input to_composition_input(const std::vector<sublattice>& composition) {
+    std::vector<composition_spec> out;
+    out.reserve(composition.size());
+    for (const auto& sl : composition) {
+      composition_spec spec;
+      std::vector<int> sites(sl.sites.begin(), sl.sites.end());
+      spec.emplace("sites", site_spec{std::move(sites)});
+      for (const auto& [z, count] : sl.composition) {
+        const auto atom = core::atom::from_z(z);
+        spec.emplace(atom ? atom->symbol : std::to_string(z), site_spec{static_cast<int>(count)});
+      }
+      out.push_back(std::move(spec));
     }
     return out;
   }

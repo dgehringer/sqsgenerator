@@ -42,6 +42,9 @@ namespace sqsgen::configuration {
       const sublattice_mode_nesting<core::structure<T>, Mode>& present,
       const pair_weights_t<T, Mode>& weights);
 
+  template <class T, sublattice_mode Mode>
+  pair_targets_input<T, Mode> to_pair_targets_input(const pair_targets_t<T, Mode>& targets);
+
 }  // namespace sqsgen::configuration
 
 #include "sqsgen/impl/configuration/pair_targets_impl.hpp"

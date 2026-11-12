@@ -64,8 +64,8 @@ namespace sqsgen::configuration {
                       num_sites, symbols.size())});
     configuration_t conf;
     for (const auto& element : symbols)
-      if (core::SYMBOL_MAP.contains(element))
-        conf.push_back(core::atom::from_symbol(element).Z);
+      if (const auto atom = core::atom::from_symbol(element); atom)
+        conf.push_back(atom.value().Z);
       else
         return std::unexpected(configuration_error{
             "structure.species", error_code::out_of_range,
@@ -240,6 +240,16 @@ namespace sqsgen::configuration {
             [&](const structure_file_input& input) { return validate_structure_file<T>(input); },
         },
         input);
+  }
+
+  template <class T> structure_input<T> to_structure_input(const structure_config<T>& config) {
+    const core::structure<T>& s = config.structure;
+    std::vector<int> species(s.species.begin(), s.species.end());
+    return stucture_definition_input<T>{
+        core::tensor_as<core::array_mode::nested, T>(s.lattice),
+        core::tensor_as<core::array_mode::nested, T>(s.frac_coords),
+        std::variant<std::vector<std::string>, std::vector<int>>{std::move(species)},
+        config.supercell};
   }
 
   template <class T> core::structure<T> structure_config<T>::make_structure() const {

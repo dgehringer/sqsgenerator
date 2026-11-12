@@ -170,6 +170,34 @@ namespace sqsgen::configuration {
     };
   }
 
+  template <class T, sublattice_mode Mode>
+  configuration_input<T, Mode> configuration<T, Mode>::to_input() const {
+    return configuration_input<T, Mode>{
+        .sublattice_mode = sublattice_mode,
+        .prec = prec,
+        .atol = atol,
+        .rtol = rtol,
+        .pairs = pairs,
+        .triplets = triplets,
+        .bin_width = bin_width,
+        .peak_isolation = peak_isolation,
+        .structure = to_structure_input<T>(structure),
+        .composition = to_composition_input(composition),
+        .iteration_mode = iteration_mode,
+        .shell_radii = to_shell_radii_input<T, Mode>(shell_radii),
+        .pair_weights = to_pair_weights_input<T, Mode>(pair_weights),
+        .pair_targets = to_pair_targets_input<T, Mode>(pair_targets),
+        .triplet_weights = to_triplet_weights_input<T, Mode>(triplet_weights),
+        .triplet_targets_input = to_triplet_targets_input<T, Mode>(triplet_targets),
+        .iterations = iterations,
+        .chunk_size = chunk_size,
+        .keep = keep,
+        .thread_config = thread_config,
+        .max_results_per_objective = max_results_per_objective,
+        .seed = seed,
+    };
+  }
+
   inline result_t<configuration_variant_t> parse_configuration(
       const configuration_input_variant_t& input) {
     return std::visit(

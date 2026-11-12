@@ -141,6 +141,23 @@ namespace sqsgen::configuration {
         detail::distribute<Mode>(input, detail::num_sublattices<Mode>(weights)), present, weights);
   }
 
+  template <class T, sublattice_mode Mode> triplet_targets_input<T, Mode> to_triplet_targets_input(
+      const triplet_targets_t<T, Mode>& targets) {
+    const auto one = [](const triplet_sro_t<T>& sro)
+        -> std::optional<std::variant<T, std::vector<triplet_target_input<T>>>> {
+      std::vector<triplet_target_input<T>> out;
+      out.reserve(sro.size());
+      for (const auto& [key, beta] : sro)
+        out.push_back(triplet_target_input<T>{key.shells,
+                                              {specie_input{static_cast<int>(key.species[0])},
+                                               specie_input{static_cast<int>(key.species[1])},
+                                               specie_input{static_cast<int>(key.species[2])}},
+                                              beta});
+      return out;
+    };
+    return triplet_targets_input<T, Mode>{detail::map_sublattices<Mode>(targets, one)};
+  }
+
 }  // namespace sqsgen::configuration
 
 #endif  // SQSGEN_IMPL_CONFIGURATION_TRIPLET_TARGETS_IMPL_HPP

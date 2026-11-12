@@ -124,6 +124,18 @@ namespace sqsgen::configuration {
         triplet_classes, shell_radii);
   }
 
+  template <class T, sublattice_mode Mode> triplet_weights_input<T, Mode> to_triplet_weights_input(
+      const triplet_weights_t<T, Mode>& weights) {
+    const auto one = [](const std::map<shell_triple, T>& w)
+        -> std::optional<std::vector<triplet_weight_input<T>>> {
+      std::vector<triplet_weight_input<T>> out;
+      out.reserve(w.size());
+      for (const auto& [shells, weight] : w) out.push_back(triplet_weight_input<T>{shells, weight});
+      return out;
+    };
+    return triplet_weights_input<T, Mode>{detail::map_sublattices<Mode>(weights, one)};
+  }
+
 }  // namespace sqsgen::configuration
 
 #endif  // SQSGEN_IMPL_CONFIGURATION_TRIPLET_WEIGHTS_IMPL_HPP

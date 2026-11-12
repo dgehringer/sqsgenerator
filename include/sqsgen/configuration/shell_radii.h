@@ -31,6 +31,9 @@ namespace sqsgen::configuration {
       const shell_radii_input<T, Mode>&, const structure_t<T, Mode>& structure, T atol, T rtol,
       T bin_width, T peak_isolation);
 
+  template <class T, sublattice_mode Mode>
+  shell_radii_input<T, Mode> to_shell_radii_input(const shell_radii_t<T, Mode>& radii);
+
 }  // namespace sqsgen::configuration
 
 #include "sqsgen/impl/configuration/shell_radii_impl.hpp"

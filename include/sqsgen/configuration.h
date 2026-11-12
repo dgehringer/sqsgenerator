@@ -66,32 +66,6 @@ namespace sqsgen::configuration {
     seed_input seed;
   };
 
-  template <class T, sublattice_mode Mode, core::array_mode AMode = core::array_mode::nested>
-  struct configuration_dto {
-    sqsgen::sublattice_mode sublattice_mode;
-    sqsgen::prec prec;
-    atol_t<T> atol;
-    rtol_t<T> rtol;
-    bool pairs;
-    bool triplets;
-    bin_width_t<T> bin_width;
-    peak_isolation_t<T> peak_isolation;
-    structure_config_dto<T, AMode> structure;
-    std::vector<sublattice> composition;
-    iteration_mode iteration_mode;
-    shell_radii_t<T, Mode> shell_radii;
-    pair_weights_t<T, Mode> pair_weights;
-    pair_targets_t<T, Mode> pair_targets;
-    triplet_weights_t<T, Mode> triplet_weights;
-    triplet_targets_t<T, Mode> triplet_targets;
-    iterations_t iterations;
-    chunk_size_t chunk_size;
-    keep_t keep;
-    thread_config_t thread_config;
-    max_results_per_objective_t max_results_per_objective;
-    seed_t seed;
-  };
-
   template <class T, sublattice_mode Mode> struct configuration {
     sqsgen::sublattice_mode sublattice_mode = Mode;
     sqsgen::prec prec = arithmethic_to_prec<T>();
@@ -137,7 +111,6 @@ namespace sqsgen::configuration {
 
 }  // namespace sqsgen::configuration
 
-#include "sqsgen/impl/configuration/configuration_dto_impl.hpp"
 #include "sqsgen/impl/configuration/configuration_impl.hpp"
 
 #endif  // SQSGEN_CONFIGURATION_H

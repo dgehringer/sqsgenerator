@@ -33,6 +33,9 @@ namespace sqsgen::configuration {
       const pair_weights_input<T, Mode>&,
       const sublattice_mode_nesting<std::vector<T>, Mode>& shell_radii);
 
+  template <class T, sublattice_mode Mode>
+  pair_weights_input<T, Mode> to_pair_weights_input(const pair_weights_t<T, Mode>& weights);
+
 }  // namespace sqsgen::configuration
 
 #include "sqsgen/impl/configuration/pair_weights_impl.hpp"

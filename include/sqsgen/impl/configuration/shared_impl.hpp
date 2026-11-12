@@ -16,7 +16,9 @@
 #include <ranges>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <variant>
+#include <vector>
 
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/helpers/variant.h"
@@ -70,6 +72,22 @@ namespace sqsgen::configuration {
           if (!one) return std::unexpected(std::move(one.error()));
           out.push_back(std::move(one.value()));
         }
+        return out;
+      }
+    }
+
+    // Apply fn to each sublattice of a sublattice_mode_nesting, keeping the nesting shape:
+    // interact -> fn(data); split -> one fn(element) per sublattice. The inverse direction of
+    // lift(): turns validated per-sublattice data back into per-sublattice inputs.
+    template <sublattice_mode Mode, class Data, class Fn>
+    auto map_sublattices(const Data& data, Fn&& fn) {
+      if constexpr (Mode == sublattice_mode::interact) {
+        return fn(data);
+      } else {
+        using out_t = std::invoke_result_t<Fn&, const std::ranges::range_value_t<Data>&>;
+        std::vector<out_t> out;
+        out.reserve(std::ranges::size(data));
+        for (const auto& element : data) out.push_back(fn(element));
         return out;
       }
     }

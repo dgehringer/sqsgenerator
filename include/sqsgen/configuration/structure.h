@@ -73,6 +73,8 @@ namespace sqsgen::configuration {
   template <class T>
   result_t<structure_config<T>> validate_structure_input(const structure_input<T>&);
 
+  template <class T> structure_input<T> to_structure_input(const structure_config<T>& config);
+
 }  // namespace sqsgen::configuration
 
 #include "sqsgen/impl/configuration/structure_impl.hpp"

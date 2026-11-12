@@ -53,6 +53,9 @@ namespace sqsgen::configuration {
       const sublattice_mode_nesting<core::triplet_class_mapping_t, Mode>& triplet_classes,
       const sublattice_mode_nesting<std::vector<T>, Mode>& shell_radii);
 
+  template <class T, sublattice_mode Mode> triplet_weights_input<T, Mode> to_triplet_weights_input(
+      const triplet_weights_t<T, Mode>& weights);
+
 }  // namespace sqsgen::configuration
 
 #include "sqsgen/impl/configuration/triplet_weights_impl.hpp"

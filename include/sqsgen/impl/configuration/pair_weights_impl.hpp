@@ -105,6 +105,18 @@ namespace sqsgen::configuration {
         detail::distribute<Mode>(input, detail::num_sublattices<Mode>(shell_radii)), shell_radii);
   }
 
+  template <class T, sublattice_mode Mode>
+  pair_weights_input<T, Mode> to_pair_weights_input(const pair_weights_t<T, Mode>& weights) {
+    const auto one
+        = [](const std::map<shell_t, T>& w) -> std::optional<std::vector<pair_weight_input<T>>> {
+      std::vector<pair_weight_input<T>> out;
+      out.reserve(w.size());
+      for (const auto& [shell, weight] : w) out.push_back(pair_weight_input<T>{shell, weight});
+      return out;
+    };
+    return pair_weights_input<T, Mode>{detail::map_sublattices<Mode>(weights, one)};
+  }
+
 }  // namespace sqsgen::configuration
 
 #endif  // SQSGEN_IMPL_CONFIGURATION_PAIR_WEIGHTS_IMPL_HPP

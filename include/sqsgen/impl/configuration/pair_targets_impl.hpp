@@ -156,6 +156,22 @@ namespace sqsgen::configuration {
         detail::distribute<Mode>(input, detail::num_sublattices<Mode>(weights)), present, weights);
   }
 
+  template <class T, sublattice_mode Mode>
+  pair_targets_input<T, Mode> to_pair_targets_input(const pair_targets_t<T, Mode>& targets) {
+    const auto one = [](const pair_sro_t<T>& sro)
+        -> std::optional<std::variant<T, std::vector<pair_target_input<T>>>> {
+      std::vector<pair_target_input<T>> out;
+      out.reserve(sro.size());
+      for (const auto& [key, alpha] : sro)
+        out.push_back(pair_target_input<T>{std::make_optional(key.shell),
+                                           {specie_input{static_cast<int>(key.species[0])},
+                                            specie_input{static_cast<int>(key.species[1])}},
+                                           alpha});
+      return out;
+    };
+    return pair_targets_input<T, Mode>{detail::map_sublattices<Mode>(targets, one)};
+  }
+
 }  // namespace sqsgen::configuration
 
 #endif  // SQSGEN_IMPL_CONFIGURATION_PAIR_TARGETS_IMPL_HPP

@@ -154,6 +154,12 @@ namespace sqsgen::configuration {
                     "unhandled sublattice_mode");
   }
 
+  template <class T, sublattice_mode Mode>
+  shell_radii_input<T, Mode> to_shell_radii_input(const shell_radii_t<T, Mode>& radii) {
+    return shell_radii_input<T, Mode>{
+        std::variant<shell_radii_detection, shell_radii_spec<T, Mode>>{radii}};
+  }
+
 }  // namespace sqsgen::configuration
 
 #endif  // SQSGEN_IMPL_CONFIGURATION_SHELL_RADII_IMPL_HPP

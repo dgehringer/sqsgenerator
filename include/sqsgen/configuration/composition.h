@@ -35,6 +35,8 @@ namespace sqsgen::configuration {
   result_t<std::vector<sublattice>> validate_composition_input(const composition_input&,
                                                                const configuration_t& conf);
 
+  composition_input to_composition_input(const std::vector<sublattice>& composition);
+
 }  // namespace sqsgen::configuration
 
 #include "sqsgen/impl/configuration/composition_impl.hpp"
