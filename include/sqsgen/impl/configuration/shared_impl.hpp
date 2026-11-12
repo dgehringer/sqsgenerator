@@ -9,9 +9,11 @@
 #ifndef SQSGEN_IMPL_CONFIGURATION_SHARED_IMPL_HPP
 #define SQSGEN_IMPL_CONFIGURATION_SHARED_IMPL_HPP
 
+#include <cstddef>
 #include <expected>
 #include <format>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -25,6 +27,68 @@ namespace sqsgen::configuration {
   namespace helpers = sqsgen::core::helpers;
 
   namespace detail {
+
+    namespace traits {
+      template <class A, sublattice_mode Mode> struct per_sublattice {
+        using type = A;
+      };
+      template <class A> struct per_sublattice<A, sublattice_mode::split> {
+        using type = std::ranges::range_value_t<A>;
+      };
+      template <class A, sublattice_mode Mode> using per_sublattice_t =
+          typename per_sublattice<A, Mode>::type;
+    }  // namespace traits
+
+    template <sublattice_mode Mode, class Fn, class... Args>
+    using lifted_t = result_t<sublattice_mode_nesting<
+        typename std::invoke_result_t<Fn&, std::optional<std::string_view>,
+                                      const traits::per_sublattice_t<Args, Mode>&...>::value_type,
+        Mode>>;
+
+    template <sublattice_mode Mode, class Fn, class... Args>
+    lifted_t<Mode, Fn, Args...> lift(std::string_view key, Fn&& fn, const Args&... args) {
+      static_assert(sizeof...(Args) > 0, "lift needs at least one argument");
+      if constexpr (Mode == sublattice_mode::interact) {
+        return fn(std::nullopt, args...);
+      } else {
+        const std::array<std::size_t, sizeof...(Args)> sizes{std::ranges::size(args)...};
+        if (!std::ranges::all_of(sizes, [&](std::size_t s) { return s == sizes[0]; })) {
+          std::string listed;
+          for (const std::size_t s : sizes)
+            listed += std::format("{}{}", listed.empty() ? "" : ", ", s);
+          return std::unexpected(configuration_error{
+              std::string(key), error_code::invalid_size,
+              std::format("inputs differ in the number of sublattices ({})", listed)});
+        }
+
+        typename lifted_t<Mode, Fn, Args...>::value_type out;
+        out.reserve(sizes[0]);
+        for (std::size_t i = 0; i < sizes[0]; ++i) {
+          // `where` must outlive the call: fn receives a string_view into it
+          const std::string where = std::format("sublattice {}: ", i);
+          auto one = fn(std::optional<std::string_view>{where}, args[i]...);
+          if (!one) return std::unexpected(std::move(one.error()));
+          out.push_back(std::move(one.value()));
+        }
+        return out;
+      }
+    }
+
+    template <sublattice_mode Mode, class A> std::size_t num_sublattices(const A& a) {
+      if constexpr (Mode == sublattice_mode::interact)
+        return 1;
+      else
+        return std::ranges::size(a);
+    }
+
+    template <sublattice_mode Mode, class Input>
+    typename Input::value_type distribute(const Input& input, std::size_t num_sublattices) {
+      using nested = typename Input::value_type;
+      if constexpr (Mode == sublattice_mode::interact)
+        return input.value_or(std::nullopt);
+      else
+        return input.value_or(nested(num_sublattices));
+    }
 
     inline result_t<specie_t> validate_species(std::string_view key,
                                                const std::variant<int, std::string>& input,

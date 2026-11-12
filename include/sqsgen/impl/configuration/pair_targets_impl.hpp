@@ -56,12 +56,13 @@ namespace sqsgen::configuration {
      * @param where     Prefix for error messages ("" or "sublattice i: ").
      */
     template <class T> result_t<pair_sro_t<T>> validate_pair_targets(
+        std::optional<std::string_view> where,
         const std::optional<std::variant<T, std::vector<pair_target_input<T>>>>& input,
-        const core::structure<T>& structure, const std::map<shell_t, T>& weights,
-        std::string_view where) {
+        const core::structure<T>& structure, const std::map<shell_t, T>& weights) {
       using result = result_t<pair_sro_t<T>>;
       const auto fail = [&](error_code code, std::string message) -> result {
-        return std::unexpected(pair_targets_error(code, std::format("{}{}", where, message)));
+        return std::unexpected(
+            pair_targets_error(code, std::format("{}{}", where.value_or(""), message)));
       };
 
       if (!input.has_value()) return pair_sro_t<T>{};  // every target 0
@@ -74,9 +75,10 @@ namespace sqsgen::configuration {
         return validate_species(pair_targets_key, s, where)
             .and_then([&](specie_t z) -> result_t<specie_t> {
               if (!present.contains(z))
-                return std::unexpected(pair_targets_error(
-                    error_code::not_found,
-                    std::format("{}species {} does not occur in the composition", where, z)));
+                return std::unexpected(
+                    pair_targets_error(error_code::not_found,
+                                       std::format("{}species {} does not occur in the composition",
+                                                   where.value_or(""), z)));
               return z;
             });
       };
@@ -146,32 +148,11 @@ namespace sqsgen::configuration {
       const pair_targets_input<T, Mode>& input,
       const sublattice_mode_nesting<core::structure<T>, Mode>& present,
       const pair_weights_t<T, Mode>& weights) {
-    if constexpr (Mode == sublattice_mode::interact) {
-      // key missing or null -> every target 0
-      return detail::validate_pair_targets<T>(input.value_or(std::nullopt), present, weights, "");
-    } else {
-      // split: one entry per sublattice; key missing -> targets 0 everywhere,
-      // entry null -> targets 0 for that sublattice
-      const std::size_t num_sublattices = weights.size();
-      if (present.size() != num_sublattices)
-        return std::unexpected(detail::pair_targets_error(std::format(
-            "{} structures, but {} pair weight maps", present.size(), num_sublattices)));
-      if (input.has_value() && input.value().size() != num_sublattices)
-        return std::unexpected(
-            detail::pair_targets_error(std::format("{} entries given, but there are {} sublattices",
-                                                   input.value().size(), num_sublattices)));
-
-      pair_targets_t<T, Mode> out;
-      out.reserve(num_sublattices);
-      for (std::size_t i = 0; i < num_sublattices; ++i) {
-        auto targets = detail::validate_pair_targets<T>(
-            input.has_value() ? input.value()[i] : std::nullopt, present[i], weights[i],
-            std::format("sublattice {}: ", i));
-        if (!targets) return std::unexpected(std::move(targets.error()));
-        out.push_back(std::move(targets.value()));
-      }
-      return out;
-    }
+    return lift<Mode>(
+        detail::pair_targets_key,
+        [](std::optional<std::string_view> where, const auto& in, const auto& structure,
+           const auto& w) { return detail::validate_pair_targets<T>(in, structure, w, where); },
+        detail::distribute<Mode>(input, detail::num_sublattices<Mode>(weights)), present, weights);
   }
 
 }  // namespace sqsgen::configuration
