@@ -38,27 +38,6 @@ namespace sqsgen::configuration {
       return configuration_error{std::string(triplet_targets_key), code, std::move(message)};
     }
 
-    /**
-     * @brief Canonical key of a triangle: its three (opposite shell, species) corners, sorted.
-     *
-     * Sorting by shell then species makes every equivalent spelling give the same key: corners
-     * with equal opposite shell are interchangeable, so sorting their species collapses them
-     * (the same rule as make_triplet_list).
-     */
-    inline core::triplet_key canonical_triplet(const shell_triple& shells,
-                                               const std::array<specie_t, 3>& species) {
-      std::array<std::pair<shell_t, specie_t>, 3> corners{{
-          {shells[0], species[0]},
-          {shells[1], species[1]},
-          {shells[2], species[2]},
-      }};
-      std::ranges::sort(corners);
-      return core::triplet_key{
-          .shells = {corners[0].first, corners[1].first, corners[2].first},
-          .species = {corners[0].second, corners[1].second, corners[2].second},
-      };
-    }
-
     // "(1, 1, 2)/(13, 13, 26)" for error messages
     inline std::string to_string(const core::triplet_key& key) {
       return std::format("({}, {}, {})/({}, {}, {})", key.shells[0], key.shells[1], key.shells[2],
@@ -71,20 +50,21 @@ namespace sqsgen::configuration {
      * No input yields an empty map (every target 0). A single number applies that target to every
      * selected class and every canonical species tuple. A list sets the listed entries; each
      * entry's class (its sorted shells) must be selected in triplet_weights. Keys are canonical
-     * (see canonical_triplet), with real shell numbers and atomic numbers.
+     * (the triplet_key constructor sorts the corners), with real shell numbers and atomic numbers.
      *
+     * @param where     Error-message prefix, or std::nullopt for none (set by lift()).
      * @param input     The target spec: nothing, a single number, or a list of entries.
      * @param structure The (sub)lattice structure, for the species that occur.
      * @param weights   Selected triplet weights; only their classes may carry a target.
-     * @param where     Prefix for error messages ("" or "sublattice i: ").
      */
     template <class T> result_t<triplet_sro_t<T>> validate_triplet_targets(
+        std::optional<std::string_view> where,
         const std::optional<std::variant<T, std::vector<triplet_target_input<T>>>>& input,
-        const core::structure<T>& structure, const std::map<shell_triple, T>& weights,
-        std::string_view where) {
+        const core::structure<T>& structure, const std::map<shell_triple, T>& weights) {
       using result = result_t<triplet_sro_t<T>>;
       const auto fail = [&](error_code code, std::string message) -> result {
-        return std::unexpected(triplet_targets_error(code, std::format("{}{}", where, message)));
+        return std::unexpected(
+            triplet_targets_error(code, std::format("{}{}", where.value_or(""), message)));
       };
 
       if (!input.has_value()) return triplet_sro_t<T>{};  // every target 0
@@ -98,13 +78,12 @@ namespace sqsgen::configuration {
               if (!present.contains(z))
                 return std::unexpected(triplet_targets_error(
                     error_code::not_found,
-                    std::format("{}species {} does not occur in the composition", where, z)));
+                    std::format("{}species {} does not occur in the composition",
+                                where.value_or(""), z)));
               return z;
             });
       };
 
-      // one number: every selected class, every species tuple; tuples that are equivalent
-      // under the class symmetry collapse to one canonical key (emplace keeps the first)
       const auto for_everything = [&](T beta) -> result {
         if (!std::isfinite(beta))
           return fail(error_code::bad_argument, std::format("target {} must be finite", beta));
@@ -113,7 +92,7 @@ namespace sqsgen::configuration {
           for (const specie_t xi : present)
             for (const specie_t eta : present)
               for (const specie_t zeta : present)
-                out.emplace(canonical_triplet(shells, {xi, eta, zeta}), beta);
+                out.emplace(core::triplet_key{shells, {xi, eta, zeta}}, beta);
         return out;
       };
 
@@ -130,16 +109,17 @@ namespace sqsgen::configuration {
             species[k] = z.value();
           }
 
-          const core::triplet_key key = canonical_triplet(entry.shells, species);
+          const core::triplet_key key{entry.shells, species};
           const std::string name = to_string(key);
 
           if (!weights.contains(key.shells))
-            return fail(std::format("{}: class ({}, {}, {}) is not selected in triplet_weights",
+            return fail(error_code::not_found,
+                        std::format("{}: class ({}, {}, {}) is not selected in triplet_weights",
                                     name, key.shells[0], key.shells[1], key.shells[2]));
           if (!std::isfinite(entry.beta))
-            return fail(std::format("target of {} must be finite", name));
+            return fail(error_code::bad_argument, std::format("target of {} must be finite", name));
           if (!out.emplace(key, entry.beta).second)
-            return fail(std::format("{} is listed more than once", name));
+            return fail(error_code::bad_argument, std::format("{} is listed more than once", name));
         }
         return out;
       };
@@ -154,33 +134,11 @@ namespace sqsgen::configuration {
       const triplet_targets_input<T, Mode>& input,
       const sublattice_mode_nesting<core::structure<T>, Mode>& present,
       const triplet_weights_t<T, Mode>& weights) {
-    if constexpr (Mode == sublattice_mode::interact) {
-      // key missing or null -> every target 0
-      return detail::validate_triplet_targets<T>(input.value_or(std::nullopt), present, weights,
-                                                 "");
-    } else {
-      // split: one entry per sublattice; key missing -> targets 0 everywhere,
-      // entry null -> targets 0 for that sublattice
-      const std::size_t num_sublattices = weights.size();
-      if (present.size() != num_sublattices)
-        return std::unexpected(detail::triplet_targets_error(std::format(
-            "{} structures, but {} triplet weight maps", present.size(), num_sublattices)));
-      if (input.has_value() && input.value().size() != num_sublattices)
-        return std::unexpected(detail::triplet_targets_error(
-            std::format("{} entries given, but there are {} sublattices", input.value().size(),
-                        num_sublattices)));
-
-      triplet_targets_t<T, Mode> out;
-      out.reserve(num_sublattices);
-      for (std::size_t i = 0; i < num_sublattices; ++i) {
-        auto targets = detail::validate_triplet_targets<T>(
-            input.has_value() ? input.value()[i] : std::nullopt, present[i], weights[i],
-            std::format("sublattice {}: ", i));
-        if (!targets) return std::unexpected(std::move(targets.error()));
-        out.push_back(std::move(targets.value()));
-      }
-      return out;
-    }
+    return detail::lift<Mode>(
+        detail::triplet_targets_key,
+        [](std::optional<std::string_view> where, const auto& in, const auto& structure,
+           const auto& w) { return detail::validate_triplet_targets<T>(where, in, structure, w); },
+        detail::distribute<Mode>(input, detail::num_sublattices<Mode>(weights)), present, weights);
   }
 
 }  // namespace sqsgen::configuration

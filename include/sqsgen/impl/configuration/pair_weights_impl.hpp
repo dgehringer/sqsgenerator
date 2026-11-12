@@ -14,13 +14,14 @@
 #include <format>
 #include <map>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
 #include "sqsgen/configuration/pair_weights.h"
+#include "sqsgen/core/sorted_vector.h"
+#include "sqsgen/impl/configuration/shared_impl.hpp"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
@@ -38,19 +39,22 @@ namespace sqsgen::configuration {
      * exactly the listed shells are kept. A shell that does not exist, is listed twice, or has a
      * negative weight is an error; shells with weight 0 are dropped.
      *
+     * @param where       Error-message prefix, or std::nullopt for none (set by lift()).
      * @param input       Per-shell weights, or std::nullopt to use the defaults.
      * @param shell_radii Shell radii; index 0 is the site itself, shell 1 the nearest neighbour.
-     * @param where       Prefix for error messages ("" or "sublattice i: ").
      */
     template <class T> result_t<std::map<shell_t, T>> validate_pair_weights(
+        std::optional<std::string_view> where,
         const std::optional<std::vector<pair_weight_input<T>>>& input,
-        const std::vector<T>& shell_radii, std::string_view where) {
+        const std::vector<T>& shell_radii) {
       using result = result_t<std::map<shell_t, T>>;
       const auto fail = [&](error_code code, std::string message) -> result {
-        return std::unexpected(pair_weights_error(code, std::format("{}{}", where, message)));
+        return std::unexpected(
+            pair_weights_error(code, std::format("{}{}", where.value_or(""), message)));
       };
 
-      if (shell_radii.size() < 2) return fail("no coordination shells available");
+      if (shell_radii.size() < 2)
+        return fail(error_code::invalid_size, "no coordination shells available");
       const std::size_t num_shells = shell_radii.size() - 1;
 
       std::map<shell_t, T> out;
@@ -62,18 +66,22 @@ namespace sqsgen::configuration {
         return out;
       }
 
-      if (input->empty()) return fail("must not be empty; omit the key to use the defaults");
+      if (input->empty())
+        return fail(error_code::invalid_size,
+                    "must not be empty; omit the key to use the defaults");
 
-      std::set<shell_t> seen;
+      core::sorted_vector<shell_t> seen;
       for (const auto& [shell, weight] : *input) {
-        if (shell == 0) return fail("shell 0 is the site itself, the first shell is 1");
+        if (shell == 0)
+          return fail(error_code::bad_argument, "shell 0 is the site itself, the first shell is 1");
         if (shell > num_shells)
           return fail(
               error_code::not_found,
               std::format("shell {} does not exist, there are {} shells", shell, num_shells));
-        if (!seen.insert(shell).second)
+        if (seen.contains(shell))
           return fail(error_code::bad_argument,
                       std::format("shell {} is listed more than once", shell));
+        seen.insert(shell);
         if (!(weight >= T{0}))  // also rejects NaN
           return fail(error_code::out_of_range,
                       std::format("weight of shell {} must be >= 0", shell));
@@ -89,28 +97,12 @@ namespace sqsgen::configuration {
   result_t<pair_weights_t<T, Mode>> validate_pair_weights_input(
       const pair_weights_input<T, Mode>& input,
       const sublattice_mode_nesting<std::vector<T>, Mode>& shell_radii) {
-    if constexpr (Mode == sublattice_mode::interact) {
-      // key missing or null -> defaults
-      return detail::validate_pair_weights<T>(input ? *input : std::nullopt, shell_radii, "");
-    } else {
-      // split: one entry per sublattice; key missing -> defaults everywhere,
-      // entry null -> defaults for that sublattice
-      const std::size_t num_sublattices = shell_radii.size();
-      if (input && input->size() != num_sublattices)
-        return std::unexpected(detail::pair_weights_error(
-            error_code::invalid_size, std::format("{} entries given, but there are {} sublattices",
-                                                  input->size(), num_sublattices)));
-
-      pair_weights_t<T, Mode> out;
-      out.reserve(num_sublattices);
-      for (std::size_t i = 0; i < num_sublattices; ++i) {
-        auto weights = detail::validate_pair_weights<T>(
-            input ? (*input)[i] : std::nullopt, shell_radii[i], std::format("sublattice {}: ", i));
-        if (!weights) return std::unexpected(std::move(weights.error()));
-        out.push_back(std::move(*weights));
-      }
-      return out;
-    }
+    return detail::lift<Mode>(
+        "pair_weights",
+        [](std::optional<std::string_view> where, const auto& in, const auto& radii) {
+          return detail::validate_pair_weights<T>(where, in, radii);
+        },
+        detail::distribute<Mode>(input, detail::num_sublattices<Mode>(shell_radii)), shell_radii);
   }
 
 }  // namespace sqsgen::configuration

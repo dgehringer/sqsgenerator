@@ -50,10 +50,10 @@ namespace sqsgen::configuration {
      * Only shells selected in the pair weights can carry a target. Keys are canonical: species
      * sorted by atomic number (xi <= eta), with real shell numbers.
      *
+     * @param where     Error-message prefix, or std::nullopt for none (set by lift()).
      * @param input     The target spec: nothing, a single number, or a list of entries.
      * @param structure The (sub)lattice structure, for the species that occur.
      * @param weights   Selected pair weights; only their shells may carry a target.
-     * @param where     Prefix for error messages ("" or "sublattice i: ").
      */
     template <class T> result_t<pair_sro_t<T>> validate_pair_targets(
         std::optional<std::string_view> where,
@@ -86,13 +86,13 @@ namespace sqsgen::configuration {
       // one number: every selected shell, every species pair xi <= eta
       const auto for_everything = [&](T alpha) -> result {
         if (!std::isfinite(alpha))
-          return fail(std::format("target {} must be finite and <= 1", alpha));
+          return fail(error_code::bad_argument,
+                      std::format("target {} must be finite and <= 1", alpha));
         pair_sro_t<T> out;
         for (const shell_t shell : selected_shells)
           for (std::size_t i = 0; i < present.size(); ++i)
             for (std::size_t j = i; j < present.size(); ++j)
-              out.emplace(core::pair_key{.shell = shell, .species = {present[i], present[j]}},
-                          alpha);
+              out.emplace(core::pair_key{shell, {present.at(i), present.at(j)}}, alpha);
         return out;
       };
 
@@ -109,31 +109,32 @@ namespace sqsgen::configuration {
           auto eta = resolve(entry.species[1]);
           if (!eta) return std::unexpected(std::move(eta.error()));
 
-          std::array<specie_t, 2> species{std::move(xi).value(), std::move(eta).value()};
-          std::ranges::sort(species);  // canonical: xi <= eta
-          const std::string name = std::format("{}-{}", species[0], species[1]);
+          // the pair_key constructor stores the species in canonical order (xi <= eta); reuse that
+          // ordering for the "all shells" bucket and the error name so they match the stored keys
+          const core::pair_key key{entry.shell.value_or(shell_t{0}),
+                                   {std::move(xi).value(), std::move(eta).value()}};
+          const std::string name = std::format("{}-{}", key.species[0], key.species[1]);
 
           if (!entry.shell.has_value()) {
-            if (!for_all_shells.emplace(species, entry.alpha).second)
+            if (!for_all_shells.emplace(key.species, entry.alpha).second)
               return fail(error_code::bad_argument,
                           std::format("{} without shell is listed more than once", name));
             continue;
           }
 
-          const shell_t shell = entry.shell.value();
-          if (!weights.contains(shell))
+          if (!weights.contains(key.shell))
             return fail(error_code::not_found,
                         std::format("{} in shell {}: shell {} is not selected in pair_weights",
-                                    name, shell, shell));
-          if (!out.emplace(core::pair_key{.shell = shell, .species = species}, entry.alpha).second)
+                                    name, key.shell, key.shell));
+          if (!out.emplace(key, entry.alpha).second)
             return fail(error_code::not_found,
-                        std::format("{} in shell {} is listed more than once", name, shell));
+                        std::format("{} in shell {} is listed more than once", name, key.shell));
         }
 
         // entries without shell: every selected shell, unless an entry with that shell exists
         for (const auto& [species, alpha] : for_all_shells)
           for (const shell_t shell : selected_shells)
-            out.try_emplace(core::pair_key{.shell = shell, .species = species}, alpha);
+            out.try_emplace(core::pair_key{shell, species}, alpha);
 
         return out;
       };
@@ -148,10 +149,10 @@ namespace sqsgen::configuration {
       const pair_targets_input<T, Mode>& input,
       const sublattice_mode_nesting<core::structure<T>, Mode>& present,
       const pair_weights_t<T, Mode>& weights) {
-    return lift<Mode>(
+    return detail::lift<Mode>(
         detail::pair_targets_key,
         [](std::optional<std::string_view> where, const auto& in, const auto& structure,
-           const auto& w) { return detail::validate_pair_targets<T>(in, structure, w, where); },
+           const auto& w) { return detail::validate_pair_targets<T>(where, in, structure, w); },
         detail::distribute<Mode>(input, detail::num_sublattices<Mode>(weights)), present, weights);
   }
 

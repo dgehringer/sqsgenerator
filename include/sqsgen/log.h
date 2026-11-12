@@ -78,7 +78,6 @@ namespace sqsgen::log {
     detail::global().sink.load(std::memory_order_relaxed)(l, message);
   }
 
-  // one pair per level: plain message, or format string + arguments
   inline void trace(std::string_view message) { write(level::trace, message); }
   inline void debug(std::string_view message) { write(level::debug, message); }
   inline void info(std::string_view message) { write(level::info, message); }

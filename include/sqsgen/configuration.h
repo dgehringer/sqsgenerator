@@ -14,12 +14,14 @@
 #include <variant>
 #include <vector>
 
-#include "sqsgen/configuration/arrays.h"
 #include "sqsgen/configuration/composition.h"
 #include "sqsgen/configuration/misc.h"
+#include "sqsgen/configuration/pair_targets.h"
 #include "sqsgen/configuration/pair_weights.h"
 #include "sqsgen/configuration/shell_radii.h"
 #include "sqsgen/configuration/structure.h"
+#include "sqsgen/configuration/triplet_targets.h"
+#include "sqsgen/configuration/triplet_weights.h"
 #include "sqsgen/core/eigen.h"
 #include "sqsgen/types.h"
 
@@ -48,11 +50,12 @@ namespace sqsgen::configuration {
     peak_isolation_input<T> peak_isolation;
     structure_input<T> structure;
     composition_input composition;
-    iteration_mode iteration_mode;
+    std::optional<iteration_mode> iteration_mode;
     shell_radii_input<T, Mode> shell_radii;
     pair_weights_input<T, Mode> pair_weights;
-    pair_weights_sro_input<T, Mode> pair_sro_weights;
-    target_objective_input<T, Mode> target_objective;
+    pair_targets_input<T, Mode> pair_targets;
+    triplet_weights_input<T, Mode> triplet_weights;
+    triplet_targets_input<T, Mode> triplet_targets_input;
     iterations_input iterations;
     chunk_size_input chunk_size;
     keep_input keep;
@@ -96,8 +99,9 @@ namespace sqsgen::configuration {
     iteration_mode iteration_mode;
     shell_radii_t<T, Mode> shell_radii;
     pair_weights_t<T, Mode> pair_weights;
-    pair_weights_sro_t<T, Mode> pair_sro_weights;
-    target_objective_t<T, Mode> target_objective;
+    pair_targets_t<T, Mode> pair_targets;
+    triplet_weights_t<T, Mode> triplet_weights;
+    triplet_targets_t<T, Mode> triplet_targets;
     iterations_t iterations;
     chunk_size_t chunk_size;
     keep_t keep;

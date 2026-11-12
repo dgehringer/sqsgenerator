@@ -158,9 +158,10 @@ namespace sqsgen {
       shell_t shell;
       std::array<specie_t, 2> species;
       auto operator<=>(const pair_key&) const = default;
-      pair_key(const std::array<specie_t, 2>& s) {
-        this->species = {std::min(s[0], s[1]), std::max(s[0], s[1])};
-      }
+
+      pair_key(shell_t shell, const std::array<specie_t, 2>& species)
+          : shell(shell),
+            species{std::min(species[0], species[1]), std::max(species[0], species[1])} {}
     };
 
     /// Canonical triplet key: sorted shells (s1 <= s2 <= s3) with the species in matching order.
