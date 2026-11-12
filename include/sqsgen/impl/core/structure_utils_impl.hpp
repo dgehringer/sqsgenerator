@@ -153,7 +153,6 @@ namespace sqsgen::core {
 
     auto num_edges{static_cast<std::size_t>((max_dist - min_dist) / bin_width) + 2};
 
-    // for some reason ranges::to<std::vector> does not work here
     auto edges = std::vector<T>(num_edges);
     for (std::size_t i = 0; i < num_edges; i++) edges[i] = min_dist + static_cast<T>(i) * bin_width;
 

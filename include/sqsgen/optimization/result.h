@@ -18,8 +18,6 @@
 
 namespace sqsgen::optimization {
 
-  namespace core = sqsgen::core;
-
   template <class T> pair_sro_t<T> to_pair_sro(const pair_tensor_t<T>& sro);
 
   template <class T>

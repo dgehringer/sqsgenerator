@@ -42,10 +42,12 @@ namespace sqsgen::configuration {
   }
 
   template <class T, sublattice_mode Mode> struct configuration_input {
-    sublattice_mode sublattice_mode;
-    prec prec;
+    sqsgen::sublattice_mode sublattice_mode;
+    sqsgen::prec prec;
     atol_input<T> atol;
     rtol_input<T> rtol;
+    std::optional<bool> pairs;
+    std::optional<bool> triplets;
     bin_width_input<T> bin_width;
     peak_isolation_input<T> peak_isolation;
     structure_input<T> structure;
@@ -66,10 +68,12 @@ namespace sqsgen::configuration {
 
   template <class T, sublattice_mode Mode, core::array_mode AMode = core::array_mode::nested>
   struct configuration_dto {
-    sublattice_mode sublattice_mode;
-    prec prec;
+    sqsgen::sublattice_mode sublattice_mode;
+    sqsgen::prec prec;
     atol_t<T> atol;
     rtol_t<T> rtol;
+    bool pairs;
+    bool triplets;
     bin_width_t<T> bin_width;
     peak_isolation_t<T> peak_isolation;
     structure_config_dto<T, AMode> structure;
@@ -77,8 +81,9 @@ namespace sqsgen::configuration {
     iteration_mode iteration_mode;
     shell_radii_t<T, Mode> shell_radii;
     pair_weights_t<T, Mode> pair_weights;
-    sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> pair_sro_weights;
-    sublattice_mode_nesting<core::tensor_representation_t<T, 3, AMode>, Mode> target_objective;
+    pair_targets_t<T, Mode> pair_targets;
+    triplet_weights_t<T, Mode> triplet_weights;
+    triplet_targets_t<T, Mode> triplet_targets;
     iterations_t iterations;
     chunk_size_t chunk_size;
     keep_t keep;
@@ -88,10 +93,12 @@ namespace sqsgen::configuration {
   };
 
   template <class T, sublattice_mode Mode> struct configuration {
-    sublattice_mode sublattice_mode = Mode;
-    prec prec = arithmethic_to_prec<T>();
+    sqsgen::sublattice_mode sublattice_mode = Mode;
+    sqsgen::prec prec = arithmethic_to_prec<T>();
     atol_t<T> atol;
     rtol_t<T> rtol;
+    bool pairs;
+    bool triplets;
     bin_width_t<T> bin_width;
     peak_isolation_t<T> peak_isolation;
     structure_config<T> structure;
@@ -109,10 +116,7 @@ namespace sqsgen::configuration {
     max_results_per_objective_t max_results_per_objective;
     seed_t seed;
 
-    template <core::array_mode AMode> configuration_dto<T, Mode, AMode> to_dto() const;
-
-    template <core::array_mode AMode> static io::result_t<configuration<T, Mode>> from_dto(
-        const configuration_dto<T, Mode, AMode>& input);
+    configuration_input<T, Mode> to_input() const;
   };
 
   using configuration_input_variant_t

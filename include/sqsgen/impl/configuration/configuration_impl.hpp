@@ -12,9 +12,14 @@
 #include <expected>
 #include <optional>
 #include <variant>
+#include <vector>
 
 #include "sqsgen/configuration.h"
+#include "sqsgen/configuration/pair_targets.h"
+#include "sqsgen/configuration/pair_weights.h"
+#include "sqsgen/configuration/triplet_weights.h"
 #include "sqsgen/core/helpers/variant.h"
+#include "sqsgen/core/structure_utils.h"
 #include "sqsgen/io/glaze.h"
 #include "sqsgen/types.h"
 
@@ -52,6 +57,25 @@ namespace sqsgen::configuration {
       if (!parsed) return std::unexpected(std::move(parsed).error());
       return std::move(parsed).value();
     }
+
+    template <class T, sublattice_mode Mode>
+    sublattice_mode_nesting<core::triplet_class_mapping_t, Mode> compute_triplet_classes(
+        const sublattice_mode_nesting<core::structure<T>, Mode>& structures,
+        const shell_radii_t<T, Mode>& radii, const pair_weights_t<T, Mode>& weights, T atol,
+        T rtol) {
+      if constexpr (Mode == sublattice_mode::interact) {
+        return std::get<1>(core::make_triplet_list(structures, radii, weights, atol, rtol));
+      } else if constexpr (Mode == sublattice_mode::split) {
+        // agent: replace this comment with a assert, that all inputs have same size was checked
+        // upstream
+        std::vector<core::triplet_class_mapping_t> out;
+        out.reserve(structures.size());
+        for (std::size_t i = 0; i < structures.size(); ++i)
+          out.push_back(std::move(std::get<1>(
+              core::make_triplet_list(structures[i], radii[i], weights[i], atol, rtol))));
+        return out;
+      }
+    }
   }  // namespace detail
 
   inline std::expected<configuration_input_variant_t, io::parser_error> read_input(
@@ -80,6 +104,11 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode>
   result_t<configuration<T, Mode>> parse_configuration_internal(
       const configuration_input<T, Mode>& input) {
+    bool pairs = input.pairs.value_or(true);
+    bool triplets = input.triplets.value_or(false);
+    if (!pairs && !triplets)
+      return std::unexpected(configuration_error{"triplets", error_code::bad_argument,
+                                                 "You cannot have no pairs and no triplets"});
     SQSGEN_TRY_ASSIGN(_structure_config, validate_structure_input<T>(input.structure));
 
     SQSGEN_TRY_ASSIGN(
@@ -103,19 +132,25 @@ namespace sqsgen::configuration {
     SQSGEN_TRY_ASSIGN(pair_weights,
                       validate_pair_weights_input<T, Mode>(input.pair_weights, shell_radii));
 
-    SQSGEN_TRY_ASSIGN(pair_sro_weights,
-                      validate_pair_sro_weights_input<T, Mode>(input.pair_sro_weights, structure,
-                                                               pair_weights, shell_radii));
+    SQSGEN_TRY_ASSIGN(pair_targets, validate_pair_targets_input<T, Mode>(input.pair_targets,
+                                                                         structure, pair_weights));
 
-    SQSGEN_TRY_ASSIGN(target_objective,
-                      validate_target_objective_input<T, Mode>(input.target_objective, structure,
-                                                               pair_weights, shell_radii));
+    auto triplet_classes = detail::compute_triplet_classes<T, Mode>(structure, shell_radii,
+                                                                    pair_weights, atol, rtol);
+    SQSGEN_TRY_ASSIGN(triplet_weights, validate_triplet_weights_input<T, Mode>(
+                                           input.triplet_weights, triplet_classes, shell_radii));
+
+    SQSGEN_TRY_ASSIGN(triplet_targets,
+                      validate_triplet_targets_input<T, Mode>(input.triplet_targets_input,
+                                                              structure, triplet_weights));
     SQSGEN_TRY_ASSIGN(thread_config, validate_thread_config_input(input.thread_config));
     return configuration<T, Mode>{
         .sublattice_mode = Mode,
         .prec = arithmethic_to_prec<T>(),
         .atol = atol,
         .rtol = rtol,
+        .pairs = pairs,
+        .triplets = triplets,
         .bin_width = bin_width,
         .peak_isolation = peak_isolation,
         .structure = std::move(_structure_config),
@@ -123,8 +158,9 @@ namespace sqsgen::configuration {
         .iteration_mode = imode,
         .shell_radii = std::move(shell_radii),
         .pair_weights = std::move(pair_weights),
-        .pair_sro_weights = std::move(pair_sro_weights),
-        .target_objective = std::move(target_objective),
+        .pair_targets = std::move(pair_targets),
+        .triplet_weights = std::move(triplet_weights),
+        .triplet_targets = std::move(triplet_targets),
         .iterations = iterations,
         .chunk_size = chunk_size,
         .keep = keep,
