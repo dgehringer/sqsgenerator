@@ -13,6 +13,7 @@
 #include <array>
 #include <cstddef>
 #include <format>
+#include <functional>
 #include <limits>
 #include <map>
 #include <stdexcept>
@@ -38,11 +39,22 @@ namespace sqsgen::core {
     }
 
     template <class T> bool site<T>::operator<(const site& other) const {
-      return specie < other.specie && frac_coords(0) < other.frac_coords(0)
-             && frac_coords(1) < other.frac_coords(1) && frac_coords(2) < other.frac_coords(2);
+      return std::tie(specie, frac_coords(0), frac_coords(1), frac_coords(2)) < std::tie(
+                 other.specie, other.frac_coords(0), other.frac_coords(1), other.frac_coords(2));
     }
     template <class T> bool site<T>::operator==(const site& other) const {
       return specie == other.specie && frac_coords == other.frac_coords;
+    }
+
+    template <class T> std::size_t site<T>::hasher::operator()(const site& s) const {
+      std::size_t seed = std::hash<specie_t>{}(s.specie);
+      const auto combine = [&seed](T value) {
+        seed ^= std::hash<T>{}(value) + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
+      };
+      combine(s.frac_coords(0));
+      combine(s.frac_coords(1));
+      combine(s.frac_coords(2));
+      return seed;
     }
 
     inline std::size_t compute_num_species(const configuration_t& configuration) {

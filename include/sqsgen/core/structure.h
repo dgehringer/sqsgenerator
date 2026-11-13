@@ -40,6 +40,10 @@ namespace sqsgen::core {
       bool operator<(const site& other) const;
 
       bool operator==(const site& other) const;
+
+      struct hasher {
+        std::size_t operator()(const site& s) const;
+      };
     };
 
     std::size_t compute_num_species(const configuration_t& configuration);
