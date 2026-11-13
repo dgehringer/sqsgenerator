@@ -94,7 +94,7 @@ if (BUILD_MPI)
   target_compile_options(mpi PRIVATE -Wall -Wextra)
 endif ()
 
-option(BUILD_TESTS "Build the unit test suite (Catch2)" OFF)
+option(BUILD_TESTS "Build the unit test suite" OFF)
 if (BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
