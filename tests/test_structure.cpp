@@ -42,7 +42,7 @@ namespace sqsgen::testing {
   struct structure_data {
     core::nested_t<double, 2> lattice;
     core::nested_t<double, 2> frac_coords;
-    std::vector<std::string> species;
+    std::vector<int> species;
     std::array<bool, 3> pbc;
   };
 
@@ -68,6 +68,15 @@ namespace sqsgen::testing {
     configuration_t species;
     species.reserve(symbols.size());
     for (const auto& symbol : symbols) species.push_back(core::atom::from_symbol(symbol).value().Z);
+    return core::structure<double>(core::lattice_from<double>(lattice).value(),
+                                   core::coords_from<double>(frac_coords).value(),
+                                   std::move(species));
+  }
+
+  core::structure<double> make_structure(const core::nested_t<double, 2>& lattice,
+                                         const core::nested_t<double, 2>& frac_coords,
+                                         const std::vector<int>& ordinals) {
+    configuration_t species(ordinals.begin(), ordinals.end());
     return core::structure<double>(core::lattice_from<double>(lattice).value(),
                                    core::coords_from<double>(frac_coords).value(),
                                    std::move(species));
@@ -114,7 +123,8 @@ namespace sqsgen::testing {
     const auto test_case = read_asset<supercell_case>("case1.supercell.json");
     auto source = make_structure(test_case.structure.lattice, test_case.structure.frac_coords,
                                  test_case.structure.species);
-    auto reference = source;
+    auto reference = make_structure(test_case.supercell.lattice, test_case.supercell.frac_coords,
+                                    test_case.supercell.species);
     auto [a, b, c] = test_case.shape;
     auto computed = source.supercell(a, b, c);
 
