@@ -1,7 +1,3 @@
-//
-// Permutation ranking/unranking tests (ported to Catch2).
-//
-
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
 
