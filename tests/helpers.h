@@ -1,13 +1,5 @@
-//
-// Shared test utilities for the Catch2 suite.
-//
-// A handful of matrix/vector comparison helpers built on Catch2's floating-point
-// matchers. Approximate comparisons use Catch::Approx (margin = absolute
-// tolerance, epsilon = relative tolerance), which replaces the former
-// core::helpers::is_close checks.
-//
-
 #ifndef SQSGEN_TESTS_HELPERS_H
+
 #define SQSGEN_TESTS_HELPERS_H
 
 #include <Eigen/Core>
