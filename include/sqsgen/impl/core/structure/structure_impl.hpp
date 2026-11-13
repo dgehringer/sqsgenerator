@@ -48,9 +48,8 @@ namespace sqsgen::core {
 
     template <class T> std::size_t site<T>::hasher::operator()(const site& s) const {
       std::size_t seed = std::hash<specie_t>{}(s.specie);
-      const auto combine = [&seed](T value) {
-        seed ^= std::hash<T>{}(value) + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
-      };
+      const auto combine
+          = [&seed](T value) { seed = helpers::hash_combine(seed, std::hash<T>{}(value)); };
       combine(s.frac_coords(0));
       combine(s.frac_coords(1));
       combine(s.frac_coords(2));

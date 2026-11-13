@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <numeric>
 
+#include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/optimization/result.h"
 #include "sqsgen/types.h"
 
@@ -104,16 +105,10 @@ namespace sqsgen::optimization {
       } else {
         std::size_t seed = 0;
         for (const auto& sublattice : r.configuration)
-          seed = hash_combine(seed, ankerl::unordered_dense::detail::wyhash::hash(
-                                        sublattice.data(), sublattice.size()));
+          seed = core::helpers::hash_combine(seed, ankerl::unordered_dense::detail::wyhash::hash(
+                                                       sublattice.data(), sublattice.size()));
         return seed;
       }
-    }
-
-  private:
-    // 64-bit hash combine (boost-style, golden-ratio constant)
-    static std::size_t hash_combine(std::size_t seed, std::size_t value) noexcept {
-      return seed ^ (value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2));
     }
   };
 

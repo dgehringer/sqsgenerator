@@ -4,6 +4,8 @@
 #define SQSGEN_CORE_HELPERS_MISC_H
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <ranges>
@@ -81,6 +83,13 @@ namespace sqsgen::core::helpers {
 
   template <class T> bool is_close(T a, T b, T atol = 1.0e-5, T rtol = 1.0e-3) {
     return std::abs(a - b) <= (atol + rtol * std::abs(b));
+  }
+
+  inline constexpr std::uint64_t golden_ratio_u64 = 0x9e3779b97f4a7c15ULL;
+
+  // Boost-style 64-bit hash combine.
+  inline std::size_t hash_combine(std::size_t seed, std::size_t value) {
+    return seed ^ (value + golden_ratio_u64 + (seed << 6) + (seed >> 2));
   }
 
   template <class T> T absolute(T a) { return a > 0 ? a : -a; }
