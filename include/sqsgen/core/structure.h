@@ -92,7 +92,7 @@ namespace sqsgen::core {
 
     [[nodiscard]] shell_matrix_t shell_matrix(const std::vector<T>& shell_radii,
                                               T atol = std::numeric_limits<T>::epsilon(),
-                                              T rtol = 1.0e-9);
+                                              T rtol = 1.0e-9) const;
 
     [[nodiscard]] structure supercell(std::size_t a, std::size_t b, std::size_t c) const;
 

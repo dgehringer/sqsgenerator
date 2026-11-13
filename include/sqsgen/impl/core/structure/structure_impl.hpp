@@ -91,8 +91,8 @@ namespace sqsgen::core {
     return core::distance_matrix<T>(lattice, frac_coords);
   }
 
-  template <class T>
-  shell_matrix_t structure<T>::shell_matrix(const std::vector<T>& shell_radii, T atol, T rtol) {
+  template <class T> shell_matrix_t structure<T>::shell_matrix(const std::vector<T>& shell_radii,
+                                                               T atol, T rtol) const {
     return core::shell_matrix(distance_matrix(), shell_radii, atol, rtol);
   }
 
