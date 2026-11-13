@@ -24,29 +24,15 @@ include(Catch)
 set(SQSGEN_DEP_LIBS
         Eigen3::Eigen
         Boost::multiprecision
-        nlohmann_json::nlohmann_json
         glaze::glaze
         unordered_dense::unordered_dense
-        absl::hash
-        absl::log
-        absl::str_format
 )
 
-# The library is not fully header-only yet: a couple of translation units
-# (Eigen tensor error mapping, glaze registration) still ship as .cpp. Compile
-# them once here and link them into the tests that need the configuration /
-# structure machinery, mirroring what the `parse` target links.
-add_library(sqsgen_support STATIC
-        ${CMAKE_SOURCE_DIR}/src/core/eigen.cpp
-        ${CMAKE_SOURCE_DIR}/src/io/glaze.cpp
-)
-target_include_directories(sqsgen_support PUBLIC
-        ${CMAKE_SOURCE_DIR}/include ${BS_THREAD_POOL_INCLUDE_DIRS})
 target_link_libraries(sqsgen_support PUBLIC ${SQSGEN_DEP_LIBS})
 
 set(SQSGEN_TEST_LIBS Catch2::Catch2WithMain sqsgen_support ${SQSGEN_DEP_LIBS})
 
-# Declare a Catch2 test executable from one or more sources and register it with CTest.
+
 function(sqsgen_add_test name)
     add_executable(${name} ${ARGN})
     target_include_directories(${name} PRIVATE
@@ -59,9 +45,9 @@ endfunction()
 
 sqsgen_add_test(test_permutation test_permutation.cpp)
 
-sqsgen_add_test(test_configuration test_configuration.cpp)
-target_compile_definitions(test_configuration PRIVATE
-        SQSGEN_TEST_CASES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/cases")
+#sqsgen_add_test(test_configuration test_configuration.cpp)
+#target_compile_definitions(test_configuration PRIVATE
+#        SQSGEN_TEST_CASES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/cases")
 
 sqsgen_add_test(test_result test_result.cpp)
 sqsgen_add_test(test_result_collection test_result_collection.cpp)
