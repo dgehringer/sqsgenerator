@@ -22,8 +22,10 @@ namespace sqsgen::optimization {
 
   namespace core = sqsgen::core;
 
-  // Stores only the canonical half xi <= eta (input is symmetric in the species);
-  // see to_pair_sro in result.h for the contract.
+  /**
+   * Stores only the canonical half xi <= eta (input is symmetric in the species);
+   * see to_pair_sro in result.h for the contract.
+   */
   template <class T> pair_sro_t<T> to_pair_sro(const pair_tensor_t<T>& sro) {
     const auto num_shells = static_cast<std::size_t>(sro.dimension(0));
     const auto num_species = static_cast<std::size_t>(sro.dimension(1));
@@ -58,8 +60,10 @@ namespace sqsgen::optimization {
     }
   }
 
-  // Skips species orderings that are non-canonical within equal shells;
-  // see to_triplet_sro in result.h for the contract.
+  /**
+   * Skips species orderings that are non-canonical within equal shells;
+   * see to_triplet_sro in result.h for the contract.
+   */
   template <class T>
   triplet_sro_t<T> to_triplet_sro(const triplet_tensor_t<T>& beta,
                                   const std::vector<std::array<shell_t, 3>>& classes) {

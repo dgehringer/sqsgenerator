@@ -15,8 +15,10 @@ namespace sqsgen::optimization {
       return std::max(block_size, (x / block_size) * block_size);
     }
 
-    // iterations that take about tau seconds at the given rate: rate * tau, capped at limit
-    // (computed in double, so the cap avoids overflow when converting back)
+    /**
+     * iterations that take about tau seconds at the given rate: rate * tau, capped at limit
+     * (computed in double, so the cap avoids overflow when converting back)
+     */
     inline std::uint64_t size_from_rate(double rate, double tau, std::uint64_t limit) {
       const double wanted = rate * tau;
       if (!(wanted > 0.0)) return 0;

@@ -66,8 +66,10 @@ namespace sqsgen::optimization {
     return objective;
   }
 
-  // sites[0] is opposite the shortest edge, sites[2] opposite the longest;
-  // see count_triplets in sro.h for the contract.
+  /**
+   * sites[0] is opposite the shortest edge, sites[2] opposite the longest;
+   * see count_triplets in sro.h for the contract.
+   */
   inline void count_triplets(triplet_tensor_t<count_t>& counts,
                              const core::triplet_list_t& triplets, const configuration_t& species) {
     counts.setConstant(0);
