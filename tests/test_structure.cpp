@@ -18,10 +18,12 @@
 #include <vector>
 
 #include "helpers.h"
+#include "sqsgen/configuration.h"
 #include "sqsgen/core/atom.h"
 #include "sqsgen/core/eigen.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/core/structure_utils.h"
+#include "sqsgen/optimization/prefactors.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::testing {
@@ -167,12 +169,13 @@ namespace sqsgen::testing {
   }
 
   TEST_CASE("prefactors invert to fcc coordination numbers", "[structure][prefactors]") {
+    configuration_t conf{1, 1, 1, 1};
     auto fcc_one_species = core::structure<double>{lattice_t<double>::Identity(),
                                                    coords_t<double>{{0.0, 0.0, 0.0},
                                                                     {0.0, 0.5, 0.5},
                                                                     {0.5, 0.0, 0.5},
                                                                     {0.5, 0.5, 0.0}},
-                                                   configuration_t{1, 1, 1, 1}}
+                                                   conf}
                                .supercell(3, 3, 3);
 
     auto dists = core::distances_naive(fcc_one_species);
@@ -186,9 +189,10 @@ namespace sqsgen::testing {
       return static_cast<std::size_t>((1.0 / prefactor)
                                       / static_cast<double>(fcc_one_species.size()));
     };
-
-    auto f
-        = core::compute_prefactors(fcc_one_species.shell_matrix(dists), w, fcc_one_species.species);
+    const auto shell_radii = core::distances_histogram(
+        fcc_one_species, configuration::defaults::bin_width_default<double>,
+        configuration::defaults::peak_isolation_default<double>);
+    auto f = optimization::compute_pair_prefactors<double>(fcc_one_species, shell_radii, w);
     std::vector prefactors(f.data(), f.data() + f.size());
     helpers::assert_vector_equal(
         prefactors | views::transform(coordination_number) | ranges::to<std::vector<std::size_t>>(),

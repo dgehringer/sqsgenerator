@@ -35,7 +35,7 @@ namespace sqsgen::core {
   namespace detail {
 
     template <class T> [[nodiscard]] sqsgen::core::atom site<T>::atom() const {
-      return atom::from_z(specie);
+      return atom::from_z(specie).value();
     }
 
     template <class T> bool site<T>::operator<(const site& other) const {

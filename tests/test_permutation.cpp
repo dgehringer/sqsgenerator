@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
 
-#include "sqsgen/core/permutation.h"
+#include "sqsgen/optimization/permutation.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::testing {
@@ -29,21 +29,34 @@ namespace sqsgen::testing {
 
     const std::vector<configuration_t> last_permutations{empty, conf_last_2, conf_last_16,
                                                          conf_last_24, conf_same_20};
+
   }  // namespace
 
+  rank_t compute_permutations(const std::vector<specie_t>& s) {
+    return optimization::num_permutations(std::span<const specie_t>(s));
+  }
+
+  rank_t rank_permutation(const std::vector<specie_t>& s) {
+    return optimization::rank(std::span<const specie_t>(s));
+  }
+
+  void unrank_permutation(std::vector<specie_t>& s, rank_t r) {
+    optimization::unrank(std::span<specie_t>(s), r);
+  }
+
   TEST_CASE("num_permutations of the empty configuration is 1", "[permutation]") {
-    REQUIRE(num_permutations(empty) == rank_t{1});
+    REQUIRE(compute_permutations(empty) == rank_t{1});
   }
 
   TEST_CASE("num_permutations counts distinct multiset permutations", "[permutation]") {
-    REQUIRE(num_permutations(conf_first_2) == rank_t{2});
-    REQUIRE(num_permutations(conf_last_2) == rank_t{2});
-    REQUIRE(num_permutations(conf_first_16) == rank_t{12870});
-    REQUIRE(num_permutations(conf_last_16) == rank_t{12870});
-    REQUIRE(num_permutations(conf_first_24) == rank_t{9465511770});
-    REQUIRE(num_permutations(conf_last_24) == rank_t{9465511770});
-    REQUIRE(num_permutations(conf_diff_20) == rank_t{"2432902008176640000"});
-    REQUIRE(num_permutations(conf_same_20) == rank_t{1});
+    REQUIRE(compute_permutations(conf_first_2) == rank_t{2});
+    REQUIRE(compute_permutations(conf_last_2) == rank_t{2});
+    REQUIRE(compute_permutations(conf_first_16) == rank_t{12870});
+    REQUIRE(compute_permutations(conf_last_16) == rank_t{12870});
+    REQUIRE(compute_permutations(conf_first_24) == rank_t{9465511770});
+    REQUIRE(compute_permutations(conf_last_24) == rank_t{9465511770});
+    REQUIRE(compute_permutations(conf_diff_20) == rank_t{"2432902008176640000"});
+    REQUIRE(compute_permutations(conf_same_20) == rank_t{1});
   }
 
   TEST_CASE("the first permutation ranks to 1", "[permutation]") {
@@ -53,7 +66,7 @@ namespace sqsgen::testing {
 
   TEST_CASE("the last permutation ranks to num_permutations", "[permutation]") {
     for (const configuration_t& conf : last_permutations)
-      REQUIRE(rank_permutation(conf) == num_permutations(conf));
+      REQUIRE(rank_permutation(conf) == compute_permutations(conf));
   }
 
   TEST_CASE("unranking rank 1 yields the first permutation", "[permutation]") {
@@ -68,15 +81,15 @@ namespace sqsgen::testing {
   TEST_CASE("unranking the last rank yields the last permutation", "[permutation]") {
     for (const configuration_t& conf : last_permutations) {
       configuration_t out(conf);
-      unrank_permutation(out, num_permutations(conf));
+      unrank_permutation(out, compute_permutations(conf));
       REQUIRE(conf == out);
-      REQUIRE(rank_permutation(out) == num_permutations(conf));
+      REQUIRE(rank_permutation(out) == compute_permutations(conf));
     }
   }
 
   TEST_CASE("rank and unrank are inverse across the whole orbit", "[permutation]") {
     configuration_t out(conf_first_16);
-    const rank_t total = num_permutations(conf_first_16);
+    const rank_t total = compute_permutations(conf_first_16);
     for (rank_t i = 1; i <= total; ++i) {
       unrank_permutation(out, i);
       REQUIRE(rank_permutation(out) == i);
@@ -85,7 +98,7 @@ namespace sqsgen::testing {
 
   TEST_CASE("next_permutation walks the orbit in rank order", "[permutation]") {
     configuration_t output(conf_first_16), helper(conf_first_16);
-    const rank_t total = num_permutations(conf_first_16);
+    const rank_t total = compute_permutations(conf_first_16);
     for (rank_t i = 1; i < total; ++i) {
       unrank_permutation(helper, i);
       REQUIRE(output == helper);
@@ -93,7 +106,7 @@ namespace sqsgen::testing {
       REQUIRE(result);
       REQUIRE(rank_permutation(output) == i + 1);
     }
-    REQUIRE(rank_permutation(output) == num_permutations(output));
+    REQUIRE(rank_permutation(output) == compute_permutations(output));
   }
 
 }  // namespace sqsgen::testing

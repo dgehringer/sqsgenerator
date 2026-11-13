@@ -3,8 +3,8 @@
 #define SQSGEN_CORE_EIGEN_H
 
 #include <expected>
+#include <format>
 
-#include "sqsgen/core/helpers/string.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::core {
@@ -183,10 +183,9 @@ namespace sqsgen::core {
   template <class T>
   std::expected<lattice_t<T>, tensor_shape_error> tensor_to_lattice(const Eigen::Tensor<T, 2>& t) {
     if (t.dimension(0) != 3 || t.dimension(1) != 3)
-      return std::unexpected(
-          tensor_shape_error{tensor_shape_error::kind::size_mismatch,
-                             helpers::format_string("lattice must be 3×3, got %ix%i",
-                                                    t.dimension(0), t.dimension(1))});
+      return std::unexpected(tensor_shape_error{
+          tensor_shape_error::kind::size_mismatch,
+          std::format("lattice must be 3×3, got {}x{}", t.dimension(0), t.dimension(1))});
     lattice_t<T> out;
     for (int i = 0; i < 3; ++i)
       for (int j = 0; j < 3; ++j) out(i, j) = t(i, j);
@@ -198,7 +197,7 @@ namespace sqsgen::core {
     if (t.dimension(1) != 3)
       return std::unexpected(tensor_shape_error{
           tensor_shape_error::kind::size_mismatch,
-          helpers::format_string("coordinates must have 3 columns, got %i", t.dimension(1))});
+          std::format("coordinates must have 3 columns, got {}", t.dimension(1))});
 
     coords_t<T> out(t.dimension(0), 3);
     for (Eigen::Index i = 0; i < t.dimension(0); ++i)

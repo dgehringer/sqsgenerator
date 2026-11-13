@@ -28,29 +28,19 @@ set(SQSGEN_DEP_LIBS
         unordered_dense::unordered_dense
 )
 
-target_link_libraries(sqsgen_support PUBLIC ${SQSGEN_DEP_LIBS})
-
-set(SQSGEN_TEST_LIBS Catch2::Catch2WithMain sqsgen_support ${SQSGEN_DEP_LIBS})
+set(SQSGEN_TEST_LIBS Catch2::Catch2WithMain ${SQSGEN_DEP_LIBS})
 
 
 function(sqsgen_add_test name)
   add_executable(${name} ${ARGN})
   target_include_directories(${name} PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}
-            ${BS_THREAD_POOL_INCLUDE_DIRS})
+            ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(${name} PRIVATE ${SQSGEN_TEST_LIBS})
   target_compile_options(${name} PRIVATE -Wall -Wextra)
   catch_discover_tests(${name})
 endfunction()
 
 sqsgen_add_test(test_permutation test_permutation.cpp)
-
-#sqsgen_add_test(test_configuration test_configuration.cpp)
-#target_compile_definitions(test_configuration PRIVATE
-#        SQSGEN_TEST_CASES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/cases")
-
-sqsgen_add_test(test_result test_result.cpp)
-sqsgen_add_test(test_result_collection test_result_collection.cpp)
 
 sqsgen_add_test(test_structure test_structure.cpp)
 add_custom_command(TARGET test_structure POST_BUILD

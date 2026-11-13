@@ -9,6 +9,8 @@
 #ifndef SQSGEN_IMPL_OPTIMIZATION_PREFACTORS_IMPL_HPP
 #define SQSGEN_IMPL_OPTIMIZATION_PREFACTORS_IMPL_HPP
 
+#include <cstddef>
+
 #include "sqsgen/core/helpers/count.h"
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/log.h"
@@ -21,9 +23,8 @@ namespace sqsgen::optimization {
 
   namespace detail {
 
-    // x_xi = (number of sites with species xi) / N, indexed by packed species
     template <class T> std::vector<T> mole_fractions(const configuration_t& configuration) {
-      auto hist = core::count_species(configuration);
+      std::map<specie_t, std::size_t> hist = helpers::count(configuration);
       auto conf_map = helpers::index_map<std::size_t>(configuration);  // packed index -> species
       const auto num_sites = static_cast<T>(configuration.size());
       std::vector<T> x(hist.size());
@@ -32,9 +33,6 @@ namespace sqsgen::optimization {
       return x;
     }
 
-    // Coordination number M_i of each selected shell:
-    //   M_i = (number of shell matrix entries equal to i) / N
-    // The shell matrix is symmetric, so each pair appears twice: #entries = N M_i.
     template <class T>
     std::map<shell_t, T> coordination_numbers(const shell_matrix_t& shell_matrix,
                                               const std::map<shell_t, T>& weights,
@@ -65,15 +63,20 @@ namespace sqsgen::optimization {
       return coordination;
     }
 
-    // m_{xi eta} = 2 - delta_{xi eta}
-    // (number of ways to put the species on the two ends of a pair)
+    /**
+     * @brief Pair multiplicity m_{xi,eta} = 2 - delta_{xi,eta}.
+     *
+     * The number of ways to put the species on the two ends of a pair.
+     */
     constexpr int pair_multiplicity(specie_t xi, specie_t eta) { return xi == eta ? 1 : 2; }
 
-    // m_c^{xi eta zeta} = |Pi_c(xi, eta, zeta)|
-    //   = product over groups of interchangeable positions of the number of
-    //     distinct orderings of the species inside the group.
-    // Positions 1, 2, 3 are ordered by opposite shell s1 <= s2 <= s3; positions with
-    // equal opposite shell are interchangeable.
+    /**
+     * @brief Triplet multiplicity m_c^{xi,eta,zeta} = |Pi_c(xi, eta, zeta)|.
+     *
+     * The product over groups of interchangeable positions of the number of distinct orderings
+     * of the species inside the group. Positions 1, 2, 3 are ordered by opposite shell
+     * s1 <= s2 <= s3; positions with equal opposite shell are interchangeable.
+     */
     constexpr int triplet_multiplicity(const std::array<shell_t, 3>& shells, specie_t xi,
                                        specie_t eta, specie_t zeta) {
       const bool equal_12 = shells[0] == shells[1];
@@ -90,8 +93,11 @@ namespace sqsgen::optimization {
 
   }  // namespace detail
 
-  // Pair prefactors; see compute_pair_prefactors in prefactors.h for the formula.
-  // Shell index s is the compact index of the selected shells (same order as the pair list).
+  /**
+   * @brief Pair prefactors; see compute_pair_prefactors in prefactors.h for the formula.
+   *
+   * Shell index s is the compact index of the selected shells (same order as the pair list).
+   */
   template <class T>
   pair_tensor_t<T> compute_pair_prefactors(const shell_matrix_t& shell_matrix,
                                            const std::map<shell_t, T>& weights,
@@ -113,7 +119,7 @@ namespace sqsgen::optimization {
 
     for (Eigen::Index s = 0; s < num_shells; ++s) {
       const T M_i = coordination.at(static_cast<shell_t>(shell_map.at(s)));
-      if (M_i == T{0}) continue;  // already warned
+      if (M_i == T{0}) continue;
       for (Eigen::Index xi = 0; xi < num_species; ++xi)
         for (Eigen::Index eta = xi; eta < num_species; ++eta) {
           const T m = static_cast<T>(
@@ -135,14 +141,16 @@ namespace sqsgen::optimization {
         structure.species);
   }
 
-  // Triplet prefactors; see compute_triplet_prefactors in prefactors.h for the formula.
-  // m and the product of mole fractions are invariant under permutations inside a group,
-  // so every member of Pi_c(xi, eta, zeta) gets the same value as the canonical tuple.
+  /**
+   * @brief Triplet prefactors; see compute_triplet_prefactors in prefactors.h for the formula.
+   *
+   * m and the product of mole fractions are invariant under permutations inside a group, so every
+   * member of Pi_c(xi, eta, zeta) gets the same value as the canonical tuple.
+   */
   template <class T>
   triplet_tensor_t<T> compute_triplet_prefactors(const core::triplet_list_t& triplets,
                                                  const core::triplet_class_mapping_t& classes,
                                                  const configuration_t& configuration) {
-    // n_c (not in the hot path, so std::size_t)
     std::vector<std::size_t> triangles(classes.size(), 0);
     for (const core::triplet& t : triplets) ++triangles[t.c];
 

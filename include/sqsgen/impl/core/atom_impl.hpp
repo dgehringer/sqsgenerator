@@ -156,8 +156,8 @@ namespace sqsgen::core {
   inline const std::unordered_map<std::string, specie_t> SYMBOL_MAP{detail::make_symbol_map()};
 
   template <std::integral T> std::optional<atom> atom::from_z(T ordinal) {
-    if (ordinal > KNOWN_ELEMENTS.size() || ordinal < 0) return std::nullopt;
-    return atom(KNOWN_ELEMENTS[ordinal]);
+    if (ordinal > static_cast<T>(KNOWN_ELEMENTS.size()) || ordinal < T{0}) return std::nullopt;
+    return std::make_optional(atom(KNOWN_ELEMENTS[ordinal]));
   }
 
   inline std::optional<atom> atom::from_symbol(std::string const& symbol) {

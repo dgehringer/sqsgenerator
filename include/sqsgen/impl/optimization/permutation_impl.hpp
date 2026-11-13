@@ -130,7 +130,6 @@ namespace sqsgen::optimization {
     return num_permutations(species_histogram(range));
   }
 
-  // back-to-front accumulation of suffix permutation counts; see rank in permutation.h.
   inline rank_t rank(std::span<const specie_t> range) {
     const std::size_t L = range.size();
     std::vector<std::size_t> hist(L == 0 ? 0 : std::size_t{std::ranges::max(range)} + 1, 0);
