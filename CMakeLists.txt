@@ -47,8 +47,6 @@ if (BUILD_WASM)
     src/configuration/composition.cpp
     src/configuration/shell_radii.cpp
     src/configuration/shell_weights.cpp
-    src/core/eigen.cpp
-    src/io/glaze.cpp
   )
   set_target_properties(wasm PROPERTIES
           SUFFIX ".mjs"
@@ -68,8 +66,6 @@ else ()
   find_package(absl CONFIG REQUIRED)
   add_executable(parse
     cli/parse.cpp
-    src/core/eigen.cpp
-    src/io/glaze.cpp
   )
   target_link_libraries(parse PRIVATE
           absl::hash

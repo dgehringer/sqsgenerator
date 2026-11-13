@@ -44,11 +44,11 @@ namespace sqsgen::io {
   inline std::expected<configuration_t, parser_error> parse_species_decl(tokens_t const& tokens) {
     configuration_t species{};
     for (const auto& symbol : tokens) {
-      auto sym = std::string{symbol};
-      if (!core::SYMBOL_MAP.contains(sym))
+      auto atom = core::atom::from_symbol(std::string{symbol});
+      if (!atom)
         return std::unexpected(
             parser_error{error_code::out_of_range, std::format("Unknown element \"{}\"", symbol)});
-      species.push_back(core::atom::from_symbol(sym).Z);
+      species.push_back(atom.value().Z);
     }
 
     if (species.size() == 0)

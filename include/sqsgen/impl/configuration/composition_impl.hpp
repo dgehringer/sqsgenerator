@@ -63,12 +63,13 @@ namespace sqsgen::configuration {
     auto distinct_species = helpers::count(conf);
     core::sorted_vector<specie_t> unique_species;
     for (auto s : species) {
-      if (!core::SYMBOL_MAP.contains(s))
+      auto atom = core::atom::from_symbol(s);
+      if (!atom)
         return std::unexpected(configuration_error{
             key, error_code::out_of_range,
             std::format("An atomic element with name \"{}\" is not known to me", s)});
 
-      auto ordinal = core::atom::from_symbol(s).Z;
+      auto ordinal = atom.value().Z;
       if (!distinct_species.contains(ordinal))
         return std::unexpected(configuration_error{
             key, error_code::bad_argument,

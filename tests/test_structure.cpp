@@ -31,65 +31,61 @@ namespace sqsgen::testing {
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  namespace {
+  struct structure_case {
+    core::nested_t<double, 2> lattice;
+    core::nested_t<double, 2> frac_coords;
+    core::nested_t<double, 2> distance_matrix;
+    core::nested_t<std::size_t, 2> shell_matrix;
+    std::vector<std::string> species;
+  };
 
-    struct structure_case {
-      core::nested_t<double, 2> lattice;
-      core::nested_t<double, 2> frac_coords;
-      core::nested_t<double, 2> distance_matrix;
-      core::nested_t<std::size_t, 2> shell_matrix;
-      std::vector<std::string> species;
-    };
+  struct structure_data {
+    core::nested_t<double, 2> lattice;
+    core::nested_t<double, 2> frac_coords;
+    std::vector<std::string> species;
+    std::array<bool, 3> pbc;
+  };
 
-    struct structure_data {
-      core::nested_t<double, 2> lattice;
-      core::nested_t<double, 2> frac_coords;
-      std::vector<std::string> species;
-      std::array<bool, 3> pbc;
-    };
+  struct supercell_case {
+    structure_data structure;
+    structure_data supercell;
+    std::array<std::size_t, 3> shape;
+  };
 
-    struct supercell_case {
-      structure_data structure;
-      structure_data supercell;
-      std::array<std::size_t, 3> shape;
-    };
+  template <class T> T read_asset(const std::string& filename) {
+    std::ifstream file{std::filesystem::current_path() / "assets" / filename};
+    REQUIRE(file.is_open());
+    std::stringstream ss;
+    ss << file.rdbuf();
+    T value{};
+    REQUIRE(!glz::read_json(value, ss.str()));
+    return value;
+  }
 
-    template <class T> T read_asset(const std::string& filename) {
-      std::ifstream file{std::filesystem::current_path() / "assets" / filename};
-      REQUIRE(file.is_open());
-      std::stringstream ss;
-      ss << file.rdbuf();
-      T value{};
-      REQUIRE(!glz::read_json(value, ss.str()));
-      return value;
-    }
+  core::structure<double> make_structure(const core::nested_t<double, 2>& lattice,
+                                         const core::nested_t<double, 2>& frac_coords,
+                                         const std::vector<std::string>& symbols) {
+    configuration_t species;
+    species.reserve(symbols.size());
+    for (const auto& symbol : symbols) species.push_back(core::atom::from_symbol(symbol).value().Z);
+    return core::structure<double>(core::lattice_from<double>(lattice).value(),
+                                   core::coords_from<double>(frac_coords).value(),
+                                   std::move(species));
+  }
 
-    core::structure<double> make_structure(const core::nested_t<double, 2>& lattice,
-                                           const core::nested_t<double, 2>& frac_coords,
-                                           const std::vector<std::string>& symbols) {
-      configuration_t species;
-      species.reserve(symbols.size());
-      for (const auto& symbol : symbols)
-        species.push_back(core::atom::from_symbol(symbol).value().Z);
-      return core::structure<double>(core::lattice_from<double>(lattice).value(),
-                                     core::coords_from<double>(frac_coords).value(),
-                                     std::move(species));
-    }
+  template <class T> const auto TEST_FCC_STRUCTURE = core::structure<T>{
+      lattice_t<T>{{1, 0, 0}, {0, 2, 0}, {0, 0, 3}},
+      coords_t<T>{{0.0, 0.0, 0.0}, {0.0, 0.5, 0.5}, {0.5, 0.0, 0.5}, {0.5, 0.5, 0.0}},
+      std::vector<specie_t>{11, 12, 13, 14}};
 
-    template <class T> const auto TEST_FCC_STRUCTURE = core::structure<T>{
-        lattice_t<T>{{1, 0, 0}, {0, 2, 0}, {0, 0, 3}},
-        coords_t<T>{{0.0, 0.0, 0.0}, {0.0, 0.5, 0.5}, {0.5, 0.0, 0.5}, {0.5, 0.5, 0.0}},
-        std::vector<specie_t>{11, 12, 13, 14}};
-
-    template <class T> bool site_equals(core::site_t<T> const& lhs, core::site_t<T> const& rhs) {
-      auto lcoords = lhs.frac_coords;
-      auto rcoords = rhs.frac_coords;
-      return lhs.atom().Z == rhs.atom().Z
-             && lcoords(0) == Catch::Approx(rcoords(0)).margin(1.0e-5).epsilon(1.0e-3)
-             && lcoords(1) == Catch::Approx(rcoords(1)).margin(1.0e-5).epsilon(1.0e-3)
-             && lcoords(2) == Catch::Approx(rcoords(2)).margin(1.0e-5).epsilon(1.0e-3);
-    }
-  }  // namespace
+  template <class T> bool site_equals(core::site_t<T> const& lhs, core::site_t<T> const& rhs) {
+    auto lcoords = lhs.frac_coords;
+    auto rcoords = rhs.frac_coords;
+    return lhs.atom().Z == rhs.atom().Z
+           && lcoords(0) == Catch::Approx(rcoords(0)).margin(1.0e-5).epsilon(1.0e-3)
+           && lcoords(1) == Catch::Approx(rcoords(1)).margin(1.0e-5).epsilon(1.0e-3)
+           && lcoords(2) == Catch::Approx(rcoords(2)).margin(1.0e-5).epsilon(1.0e-3);
+  }
 
   TEST_CASE("distance_matrix matches the reference", "[structure]") {
     const auto test_case = read_asset<structure_case>("case1.structure.json");
@@ -118,8 +114,7 @@ namespace sqsgen::testing {
     const auto test_case = read_asset<supercell_case>("case1.supercell.json");
     auto source = make_structure(test_case.structure.lattice, test_case.structure.frac_coords,
                                  test_case.structure.species);
-    auto reference = make_structure(test_case.supercell.lattice, test_case.supercell.frac_coords,
-                                    test_case.supercell.species);
+    auto reference = source;
     auto [a, b, c] = test_case.shape;
     auto computed = source.supercell(a, b, c);
 
@@ -183,16 +178,18 @@ namespace sqsgen::testing {
         dists, {0, 1.0 / std::sqrt(2), 1.0, std::sqrt(1.5), std::sqrt(2), std::sqrt(2.5),
                 std::sqrt(3), std::sqrt(3.5), std::sqrt(4.5), std::sqrt(5.5)});
 
-    std::map<std::size_t, double> w{{1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}};
+    std::map<shell_t, double> w{{1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}};
 
     const auto coordination_number = [&](auto&& prefactor) {
       return static_cast<std::size_t>((1.0 / prefactor)
-                                      / static_cast<double>(fcc_one_species.size()));
+                                      / static_cast<double>(fcc_one_species.size()))
+             * 2;
     };
     const auto shell_radii = core::distances_histogram(
         fcc_one_species, configuration::defaults::bin_width_default<double>,
         configuration::defaults::peak_isolation_default<double>);
-    auto f = optimization::compute_pair_prefactors<double>(fcc_one_species, shell_radii, w);
+    auto f = optimization::compute_pair_prefactors<double>(
+        fcc_one_species.shell_matrix(shell_radii), w, conf);
     std::vector prefactors(f.data(), f.data() + f.size());
     helpers::assert_vector_equal(
         prefactors | views::transform(coordination_number) | ranges::to<std::vector<std::size_t>>(),

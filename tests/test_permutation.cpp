@@ -59,38 +59,38 @@ namespace sqsgen::testing {
     REQUIRE(compute_permutations(conf_same_20) == rank_t{1});
   }
 
-  TEST_CASE("the first permutation ranks to 1", "[permutation]") {
+  TEST_CASE("the first permutation ranks to 0", "[permutation]") {
     for (const configuration_t& conf : first_permutations)
-      REQUIRE(rank_permutation(conf) == rank_t{1});
+      REQUIRE(rank_permutation(conf) == rank_t{0});
   }
 
-  TEST_CASE("the last permutation ranks to num_permutations", "[permutation]") {
+  TEST_CASE("the last permutation ranks to num_permutations - 1", "[permutation]") {
     for (const configuration_t& conf : last_permutations)
-      REQUIRE(rank_permutation(conf) == compute_permutations(conf));
+      REQUIRE(rank_permutation(conf) == compute_permutations(conf) - 1);
   }
 
-  TEST_CASE("unranking rank 1 yields the first permutation", "[permutation]") {
+  TEST_CASE("unranking rank 0 yields the first permutation", "[permutation]") {
     for (const configuration_t& conf : first_permutations) {
       configuration_t out(conf);
-      unrank_permutation(out, rank_t{1});
+      unrank_permutation(out, rank_t{0});
       REQUIRE(conf == out);
-      REQUIRE(rank_permutation(out) == rank_t{1});
+      REQUIRE(rank_permutation(out) == rank_t{0});
     }
   }
 
   TEST_CASE("unranking the last rank yields the last permutation", "[permutation]") {
     for (const configuration_t& conf : last_permutations) {
       configuration_t out(conf);
-      unrank_permutation(out, compute_permutations(conf));
+      unrank_permutation(out, compute_permutations(conf) - 1);
       REQUIRE(conf == out);
-      REQUIRE(rank_permutation(out) == compute_permutations(conf));
+      REQUIRE(rank_permutation(out) == compute_permutations(conf) - 1);
     }
   }
 
   TEST_CASE("rank and unrank are inverse across the whole orbit", "[permutation]") {
     configuration_t out(conf_first_16);
     const rank_t total = compute_permutations(conf_first_16);
-    for (rank_t i = 1; i <= total; ++i) {
+    for (rank_t i = 0; i < total; ++i) {
       unrank_permutation(out, i);
       REQUIRE(rank_permutation(out) == i);
     }
@@ -99,14 +99,14 @@ namespace sqsgen::testing {
   TEST_CASE("next_permutation walks the orbit in rank order", "[permutation]") {
     configuration_t output(conf_first_16), helper(conf_first_16);
     const rank_t total = compute_permutations(conf_first_16);
-    for (rank_t i = 1; i < total; ++i) {
+    for (rank_t i = 0; i < total - 1; ++i) {
       unrank_permutation(helper, i);
       REQUIRE(output == helper);
       const bool result = next_permutation(output.begin(), output.end());
       REQUIRE(result);
       REQUIRE(rank_permutation(output) == i + 1);
     }
-    REQUIRE(rank_permutation(output) == compute_permutations(output));
+    REQUIRE(rank_permutation(output) == compute_permutations(output) - 1);
   }
 
 }  // namespace sqsgen::testing
