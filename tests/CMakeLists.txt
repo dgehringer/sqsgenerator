@@ -34,13 +34,13 @@ set(SQSGEN_TEST_LIBS Catch2::Catch2WithMain sqsgen_support ${SQSGEN_DEP_LIBS})
 
 
 function(sqsgen_add_test name)
-    add_executable(${name} ${ARGN})
-    target_include_directories(${name} PRIVATE
+  add_executable(${name} ${ARGN})
+  target_include_directories(${name} PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}
             ${BS_THREAD_POOL_INCLUDE_DIRS})
-    target_link_libraries(${name} PRIVATE ${SQSGEN_TEST_LIBS})
-    target_compile_options(${name} PRIVATE -Wall -Wextra)
-    catch_discover_tests(${name})
+  target_link_libraries(${name} PRIVATE ${SQSGEN_TEST_LIBS})
+  target_compile_options(${name} PRIVATE -Wall -Wextra)
+  catch_discover_tests(${name})
 endfunction()
 
 sqsgen_add_test(test_permutation test_permutation.cpp)
