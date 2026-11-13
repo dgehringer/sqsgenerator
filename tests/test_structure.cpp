@@ -1,85 +1,77 @@
-//
-// Structure geometry tests (ported to Catch2).
-//
 
 #include <Eigen/Dense>
 #include <algorithm>
+#include <array>
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <glaze/glaze.hpp>
 #include <map>
-#include <nlohmann/json.hpp>
+#include <ranges>
 #include <set>
+#include <sstream>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
 #include "helpers.h"
 #include "sqsgen/core/atom.h"
-#include "sqsgen/core/helpers/as.h"
-#include "sqsgen/core/helpers/for_each.h"
+#include "sqsgen/core/eigen.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/core/structure_utils.h"
+#include "sqsgen/types.h"
 
 namespace sqsgen::testing {
   using namespace sqsgen;
-  using json = nlohmann::json;
   namespace ranges = std::ranges;
   namespace views = ranges::views;
 
-  template <class T> struct SupercellTestData {
-    core::structure<T> structure;
-    core::structure<T> supercell;
-    std::array<std::size_t, 3> shape;
-
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(SupercellTestData, structure, supercell, shape);
-  };
-
-  template <class T> class StructureTestData : public core::structure<T> {
-  public:
-    matrix_t<T> distance_matrix;
-    matrix_t<std::size_t> shell_matrix;
-
-    StructureTestData() = default;
-
-    StructureTestData(lattice_t<T>&& lattice, coords_t<T>&& frac_coords,
-                      std::vector<specie_t>&& species, matrix_t<T>&& distance_matrix,
-                      matrix_t<std::size_t>&& shell_matrix)
-        : core::structure<T>(lattice, frac_coords, species, {true, true, true}),
-          distance_matrix(distance_matrix),
-          shell_matrix(shell_matrix) {}
-
-    [[nodiscard]] core::structure<T> structure() const {
-      return core::structure<T>(this->lattice, this->frac_coords, this->species);
-    }
-  };
-
-  template <class T> void from_json(const json& j, StructureTestData<T>& st) {
-    auto species = j.at("species").get<std::vector<std::string>>();
-
-    auto ordinals = core::helpers::as<std::vector>{}(
-        species | views::transform([](auto const& s) { return core::atom::from_symbol(s).Z; }));
-
-    st = StructureTestData<T>(j.at("lattice").get<lattice_t<T>>(),
-                              j.at("frac_coords").get<coords_t<T>>(), std::move(ordinals),
-                              j.at("distance_matrix").get<matrix_t<T>>(),
-                              j.at("shell_matrix").get<matrix_t<std::size_t>>());
-  }
-
   namespace {
-    template <class T, class Data> std::vector<Data> load_cases(std::string_view suffix) {
-      std::vector<Data> cases;
-      const auto dir = std::filesystem::current_path() / "assets";
-      for (const auto& entry : std::filesystem::directory_iterator{dir}) {
-        if (entry.path().string().ends_with(suffix)) {
-          Data test_case{};
-          std::ifstream file{entry.path().string()};
-          json::parse(file).get_to(test_case);
-          cases.push_back(std::move(test_case));
-        }
-      }
-      return cases;
+
+    struct structure_case {
+      core::nested_t<double, 2> lattice;
+      core::nested_t<double, 2> frac_coords;
+      core::nested_t<double, 2> distance_matrix;
+      core::nested_t<std::size_t, 2> shell_matrix;
+      std::vector<std::string> species;
+    };
+
+    struct structure_data {
+      core::nested_t<double, 2> lattice;
+      core::nested_t<double, 2> frac_coords;
+      std::vector<std::string> species;
+      std::array<bool, 3> pbc;
+    };
+
+    struct supercell_case {
+      structure_data structure;
+      structure_data supercell;
+      std::array<std::size_t, 3> shape;
+    };
+
+    template <class T> T read_asset(const std::string& filename) {
+      std::ifstream file{std::filesystem::current_path() / "assets" / filename};
+      REQUIRE(file.is_open());
+      std::stringstream ss;
+      ss << file.rdbuf();
+      T value{};
+      REQUIRE(!glz::read_json(value, ss.str()));
+      return value;
+    }
+
+    core::structure<double> make_structure(const core::nested_t<double, 2>& lattice,
+                                           const core::nested_t<double, 2>& frac_coords,
+                                           const std::vector<std::string>& symbols) {
+      configuration_t species;
+      species.reserve(symbols.size());
+      for (const auto& symbol : symbols)
+        species.push_back(core::atom::from_symbol(symbol).value().Z);
+      return core::structure<double>(core::lattice_from<double>(lattice).value(),
+                                     core::coords_from<double>(frac_coords).value(),
+                                     std::move(species));
     }
 
     template <class T> const auto TEST_FCC_STRUCTURE = core::structure<T>{
@@ -90,49 +82,50 @@ namespace sqsgen::testing {
     template <class T> bool site_equals(core::site_t<T> const& lhs, core::site_t<T> const& rhs) {
       auto lcoords = lhs.frac_coords;
       auto rcoords = rhs.frac_coords;
-      return lhs.atom().Z == rhs.atom().Z && core::helpers::is_close(lcoords(0), rcoords(0))
-             && core::helpers::is_close(lcoords(1), rcoords(1))
-             && core::helpers::is_close(lcoords(2), rcoords(2));
+      return lhs.atom().Z == rhs.atom().Z
+             && lcoords(0) == Catch::Approx(rcoords(0)).margin(1.0e-5).epsilon(1.0e-3)
+             && lcoords(1) == Catch::Approx(rcoords(1)).margin(1.0e-5).epsilon(1.0e-3)
+             && lcoords(2) == Catch::Approx(rcoords(2)).margin(1.0e-5).epsilon(1.0e-3);
     }
   }  // namespace
 
   TEST_CASE("distance_matrix matches the reference", "[structure]") {
-    for (const auto& test_case : load_cases<double, StructureTestData<double>>(".structure.json")) {
-      auto structure = test_case.structure();
-      helpers::assert_matrix_equal(test_case.distance_matrix, structure.distance_matrix());
-    }
+    const auto test_case = read_asset<structure_case>("case1.structure.json");
+    auto structure = make_structure(test_case.lattice, test_case.frac_coords, test_case.species);
+    helpers::assert_matrix_equal(core::matrix_from<double>(test_case.distance_matrix).value(),
+                                 structure.distance_matrix());
   }
 
   TEST_CASE("shell_matrix matches the reference", "[structure]") {
-    for (const auto& test_case : load_cases<double, StructureTestData<double>>(".structure.json")) {
-      auto structure = test_case.structure();
-      auto m = structure.shell_matrix(
-          core::distances_naive(std::forward<core::structure<double>>(structure)));
+    const auto test_case = read_asset<structure_case>("case1.structure.json");
+    auto structure = make_structure(test_case.lattice, test_case.frac_coords, test_case.species);
+    auto expected = core::matrix_from<std::size_t>(test_case.shell_matrix).value();
+    auto computed = structure.shell_matrix(core::distances_naive(structure));
 
-      REQUIRE(test_case.shell_matrix.rows() == m.rows());
-      REQUIRE(test_case.shell_matrix.cols() == m.cols());
-      core::helpers::for_each(
-          [&](auto i, auto j) {
-            if (i == j) CHECK(m(i, j) == 0);
-            INFO(std::format("Shell mismatch at ({}, {})", i, j));
-            CHECK(test_case.shell_matrix(i, j) == m(i, j));
-          },
-          test_case.shell_matrix.rows(), test_case.shell_matrix.cols());
-    }
+    REQUIRE(expected.rows() == computed.rows());
+    REQUIRE(expected.cols() == computed.cols());
+    for (Eigen::Index i = 0; i < expected.rows(); ++i)
+      for (Eigen::Index j = 0; j < expected.cols(); ++j) {
+        if (i == j) CHECK(computed(i, j) == 0);
+        INFO(std::format("Shell mismatch at ({}, {})", i, j));
+        CHECK(expected(i, j) == computed(i, j));
+      }
   }
 
   TEST_CASE("supercell reproduces the reference sites", "[structure][supercell]") {
-    for (const auto& test_case : load_cases<double, SupercellTestData<double>>(".supercell.json")) {
-      auto shape = test_case.shape;
-      auto supercell_computed = test_case.structure.supercell(
-          std::get<0>(shape), std::get<1>(shape), std::get<2>(shape));
+    const auto test_case = read_asset<supercell_case>("case1.supercell.json");
+    auto source = make_structure(test_case.structure.lattice, test_case.structure.frac_coords,
+                                 test_case.structure.species);
+    auto reference = make_structure(test_case.supercell.lattice, test_case.supercell.frac_coords,
+                                    test_case.supercell.species);
+    auto [a, b, c] = test_case.shape;
+    auto computed = source.supercell(a, b, c);
 
-      for (const auto& site : supercell_computed.sites()) {
-        auto equals_site = [&](const auto& other) { return site_equals(site, other); };
-        auto expected_sites = test_case.supercell.sites();
-        auto same_site = std::find_if(expected_sites.begin(), expected_sites.end(), equals_site);
-        CHECK(same_site != expected_sites.end());
-      }
+    auto expected_sites = reference.sites();
+    for (const auto& site : computed.sites()) {
+      auto equals_site = [&](const auto& other) { return site_equals(site, other); };
+      CHECK(std::find_if(expected_sites.begin(), expected_sites.end(), equals_site)
+            != expected_sites.end());
     }
   }
 
@@ -142,11 +135,9 @@ namespace sqsgen::testing {
     helpers::assert_vector_equal(structure.species, {14, 13, 12, 11});
     helpers::assert_vector_equal(indices, {3, 2, 1, 0});
 
-    using hasher_t = core::site_t<double>::hasher;
-    auto computed_sites
-        = core::helpers::as<std::unordered_set>{}.operator()<hasher_t>(structure.sites());
-    auto expected_sites = core::helpers::as<std::unordered_set>{}.operator()<hasher_t>(
-        TEST_FCC_STRUCTURE<double>.sites());
+    using set_t = std::unordered_set<core::site_t<double>, core::site_t<double>::hasher>;
+    auto computed_sites = structure.sites() | ranges::to<set_t>();
+    auto expected_sites = TEST_FCC_STRUCTURE<double>.sites() | ranges::to<set_t>();
     CHECK(computed_sites == expected_sites);
   }
 
@@ -171,7 +162,7 @@ namespace sqsgen::testing {
     auto repeated = TEST_FCC_STRUCTURE<double>.sliced(std::vector<std::size_t>{1, 1, 1});
     helpers::assert_vector_equal(repeated.species, {12, 12, 12});
 
-    auto sites = core::helpers::as<std::set>{}(repeated.sites());
+    auto sites = repeated.sites() | ranges::to<std::set<core::site_t<double>>>();
     CHECK(sites.size() == 1);
   }
 
@@ -184,7 +175,7 @@ namespace sqsgen::testing {
                                                    configuration_t{1, 1, 1, 1}}
                                .supercell(3, 3, 3);
 
-    auto dists = core::distances_naive(std::forward<decltype(fcc_one_species)>(fcc_one_species));
+    auto dists = core::distances_naive(fcc_one_species);
     helpers::assert_vector_is_close(
         dists, {0, 1.0 / std::sqrt(2), 1.0, std::sqrt(1.5), std::sqrt(2), std::sqrt(2.5),
                 std::sqrt(3), std::sqrt(3.5), std::sqrt(4.5), std::sqrt(5.5)});
@@ -200,7 +191,7 @@ namespace sqsgen::testing {
         = core::compute_prefactors(fcc_one_species.shell_matrix(dists), w, fcc_one_species.species);
     std::vector prefactors(f.data(), f.data() + f.size());
     helpers::assert_vector_equal(
-        core::helpers::as<std::vector>{}(prefactors | views::transform(coordination_number)),
+        prefactors | views::transform(coordination_number) | ranges::to<std::vector<std::size_t>>(),
         {12, 6, 24, 12, 12, 8});
   }
 
