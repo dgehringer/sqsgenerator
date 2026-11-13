@@ -8,14 +8,7 @@
 #include <algorithm>
 #include <string_view>
 
-#include "absl/strings/str_format.h"
-
 namespace sqsgen::core::helpers {
-
-  template <class... Args>
-  std::string format_string(const absl::FormatSpec<Args...>& fmt, Args&&... args) {
-    return absl::StrFormat(fmt, std::forward<Args>(args)...);
-  }
 
   template <size_t N> struct string_literal {
     static constexpr size_t length = N;
