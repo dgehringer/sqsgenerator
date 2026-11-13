@@ -105,10 +105,11 @@ namespace sqsgen::io {
           error_code::out_of_range,
           std::format("Cannot handle site with more than one species {}", site.species.size())});
     auto specie = site.species.front();
-    if (!core::SYMBOL_MAP.contains(specie.element))
+    auto atom = core::atom::from_symbol(specie.element);
+    if (!atom)
       return std::unexpected(
           parser_error{error_code::out_of_range, std::format("Unkown species {}", specie.element)});
-    return std::make_pair(core::atom::from_symbol(specie.element).Z, site.abc);
+    return std::make_pair(atom.value().Z, site.abc);
   }
 
   template <class T> std::expected<core::structure<T>, parser_error> to_structure(
