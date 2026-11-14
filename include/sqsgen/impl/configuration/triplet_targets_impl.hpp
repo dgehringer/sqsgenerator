@@ -38,12 +38,6 @@ namespace sqsgen::configuration {
       return configuration_error{std::string(triplet_targets_key), code, std::move(message)};
     }
 
-    // "(1, 1, 2)/(13, 13, 26)" for error messages
-    inline std::string to_string(const core::triplet_key& key) {
-      return std::format("({}, {}, {})/({}, {}, {})", key.shells[0], key.shells[1], key.shells[2],
-                         key.species[0], key.species[1], key.species[2]);
-    }
-
     /**
      * @brief Triplet targets of one (sub)lattice as a sparse map; missing entries mean target 0.
      *
