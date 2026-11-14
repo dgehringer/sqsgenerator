@@ -15,10 +15,12 @@
 #include <vector>
 
 #include "sqsgen/configuration/composition.h"
+#include "sqsgen/configuration/energy_objective.h"
 #include "sqsgen/configuration/misc.h"
 #include "sqsgen/configuration/pair_targets.h"
 #include "sqsgen/configuration/pair_weights.h"
 #include "sqsgen/configuration/shell_radii.h"
+#include "sqsgen/configuration/sro_objective.h"
 #include "sqsgen/configuration/structure.h"
 #include "sqsgen/configuration/triplet_targets.h"
 #include "sqsgen/configuration/triplet_weights.h"
@@ -41,6 +43,12 @@ namespace sqsgen::configuration {
       static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>, "unhandled precision");
   }
 
+  template <class T, sublattice_mode Mode> using objective_t
+      = std::variant<sro_objective<T, Mode>, energy_objective<T, Mode>>;
+
+  template <class T, sublattice_mode Mode> using objective_input
+      = std::optional<std::variant<sro_objective_input<T, Mode>, energy_objective_input<T, Mode>>>;
+
   template <class T, sublattice_mode Mode> struct configuration_input {
     sqsgen::sublattice_mode sublattice_mode;
     sqsgen::prec prec;
@@ -52,13 +60,9 @@ namespace sqsgen::configuration {
     peak_isolation_input<T> peak_isolation;
     structure_input<T> structure;
     composition_input composition;
-    std::optional<iteration_mode> iteration_mode;
     shell_radii_input<T, Mode> shell_radii;
-    pair_weights_input<T, Mode> pair_weights;
-    pair_targets_input<T, Mode> pair_targets;
-    triplet_weights_input<T, Mode> triplet_weights;
-    triplet_targets_input<T, Mode> triplet_targets_input;
-    iterations_input iterations;
+    iteration_input iteration;           // replaces iteration_mode, iterations, seed
+    objective_input<T, Mode> objective;  // replaces pairs, triplets, the four lists
     chunk_size_input chunk_size;
     keep_input keep;
     thread_config_input thread_config;
@@ -77,13 +81,9 @@ namespace sqsgen::configuration {
     peak_isolation_t<T> peak_isolation;
     structure_config<T> structure;
     std::vector<sublattice> composition;
-    iteration_mode iteration_mode;
     shell_radii_t<T, Mode> shell_radii;
-    pair_weights_t<T, Mode> pair_weights;
-    pair_targets_t<T, Mode> pair_targets;
-    triplet_weights_t<T, Mode> triplet_weights;
-    triplet_targets_t<T, Mode> triplet_targets;
-    iterations_t iterations;
+    iteration_t iteration;
+    objective_t<T, Mode> objective;
     chunk_size_t chunk_size;
     keep_t keep;
     thread_config_t thread_config;
