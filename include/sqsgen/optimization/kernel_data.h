@@ -19,21 +19,15 @@
 
 #include "sqsgen/configuration.h"
 #include "sqsgen/optimization/permutation.h"
+#include "sqsgen/optimization/sro.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::optimization {
 
   namespace configuration = sqsgen::configuration;
 
-  // One term of the objective:  s * |A + N B|
-  //   sro:    A = omega (target - 1),  B = omega f,  s = 1   (omega >= 0, lambda and 1/W folded in)
-  //   energy: A = 0,                   B = |J|,      s = sign(J)
-  // s = 0 marks a term that does not contribute (omega = 0 or J = 0).
-  template <class Tensor> struct objective_terms {
-    Tensor A;
-    Tensor B;
-    Tensor s;
-  };
+  // objective_terms (the per-cell A, B, s of one objective term) lives in
+  // sqsgen/optimization/sro.h, next to the evaluator (compute_pair_objective) that consumes it.
 
   // pairs of one lattice
   template <class T> struct pair_data {
@@ -134,5 +128,6 @@ namespace sqsgen::optimization {
 }  // namespace sqsgen::optimization
 
 #include "sqsgen/impl/optimization/kernel_data_impl.hpp"
+#include "sqsgen/impl/optimization/make_kernel_data_impl.hpp"
 
 #endif  // SQSGEN_OPTIMIZATION_KERNEL_DATA_H
