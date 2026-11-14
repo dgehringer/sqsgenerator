@@ -53,7 +53,7 @@ namespace sqsgen::configuration {
   }
 
   template <class T, sublattice_mode Mode> result_t<sro_objective<T, Mode>> validate_sro_input(
-      const sro_input<T, Mode>& input,
+      const sro_objective_input<T, Mode>& input,
       const sublattice_mode_nesting<core::structure<T>, Mode>& structure,
       const sublattice_mode_nesting<core::triplet_class_mapping_t, Mode>& triplet_classes,
       const shell_radii_t<T, Mode>& shell_radii) {

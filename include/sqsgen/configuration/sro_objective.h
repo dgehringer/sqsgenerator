@@ -51,14 +51,15 @@ namespace sqsgen::configuration {
     triplet_targets_input<T, Mode> targets;
     static sro_triplets_input empty() { return {std::nullopt, std::nullopt}; }
   };
-  template <class T, sublattice_mode Mode> struct sro_input {
+  template <class T, sublattice_mode Mode> struct sro_objective_input {
     std::optional<sro_pairs_input<T, Mode>> pairs;
     std::optional<sro_triplets_input<T, Mode>> triplets;
     std::optional<T> lambda;
-    static sro_input<T, Mode> empty() {
-      return sro_input<T, Mode>{.pairs = std::move(sro_pairs_input<T, Mode>::empty()),
-                                .triplets = std::move(sro_triplets_input<T, Mode>::empty()),
-                                .lambda = std::nullopt};
+    static sro_objective_input<T, Mode> empty() {
+      return sro_objective_input<T, Mode>{
+          .pairs = std::move(sro_pairs_input<T, Mode>::empty()),
+          .triplets = std::move(sro_triplets_input<T, Mode>::empty()),
+          .lambda = std::nullopt};
     }
   };
 
@@ -75,10 +76,17 @@ namespace sqsgen::configuration {
       const shell_radii_t<T, Mode>& shell_radii);
 
   template <class T, sublattice_mode Mode> result_t<sro_objective<T, Mode>> validate_sro_input(
-      const sro_input<T, Mode>& input,
+      const sro_objective_input<T, Mode>& input,
       const sublattice_mode_nesting<core::structure<T>, Mode>& structure,
       const sublattice_mode_nesting<core::triplet_class_mapping_t, Mode>& triplet_classes,
       const shell_radii_t<T, Mode>& shell_radii);
+
+  template <class T, sublattice_mode Mode>
+  sro_pairs_input<T, Mode> to_sro_pairs_input(const sro_pairs<T, Mode>&);
+  template <class T, sublattice_mode Mode>
+  sro_triplets_input<T, Mode> to_sro_triplets_input(const sro_triplets<T, Mode>&);
+  template <class T, sublattice_mode Mode>
+  sro_objective_input<T, Mode> to_sro_objective_input(const sro_objective<T, Mode>&);
 
 }  // namespace sqsgen::configuration
 
