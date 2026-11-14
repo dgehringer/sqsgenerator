@@ -67,8 +67,6 @@ namespace sqsgen::configuration {
             triplet_targets_error(code, std::format("{}{}", where.value_or(""), message)));
       };
 
-      if (!input.has_value()) return triplet_sro_t<T>{};  // every target 0
-
       const core::sorted_vector<specie_t> present(structure.species);
 
       // symbol or atomic number -> atomic number that occurs in the (sub)lattice
@@ -123,7 +121,7 @@ namespace sqsgen::configuration {
         }
         return out;
       };
-
+      if (!input.has_value()) return for_everything(T{0.0});
       return std::visit(helpers::overloaded{for_everything, from_entries}, input.value());
     }
 
