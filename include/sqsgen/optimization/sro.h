@@ -24,8 +24,13 @@ namespace sqsgen::optimization {
    * (shell, species_i, species_j).
    */
   template <class T> struct pair_objective_coefficients {
-    pair_tensor_t<T> a;  ///< Constant term per cell: scaled_pair_weights * (alpha_target - 1).
-    pair_tensor_t<T> b;  ///< Count coefficient per cell: scaled_pair_weights * prefactors.
+    pair_tensor_t<T> a;
+    pair_tensor_t<T> b;
+  };
+
+  template <class T> struct triplet_objective_coefficients {
+    triplet_tensor_t<T> a;
+    triplet_tensor_t<T> b;
   };
 
   /**
@@ -56,21 +61,25 @@ namespace sqsgen::optimization {
                                                    const pair_tensor_t<T>& alpha_target,
                                                    const pair_tensor_t<T>& prefactors);
 
-  /**
-   * @brief Group a structure's atoms by sublattice into contiguous index blocks.
-   *
-   * Reorders the sites so that every sublattice of @p composition occupies one
-   * contiguous half-open index range, which lets the shuffler permute each
-   * sublattice independently.
-   *
-   * @tparam T  Floating-point scalar type.
-   * @param structure    Structure to reorder.
-   * @param composition  Sublattices; each lists the site indices it owns.
-   * @return Tuple of (reordered structure, per-sublattice [lower, upper) bounds,
-   *         the permutation mapping the new site order back to the original indices).
-   */
-  template <class T> auto compute_shuffling_bounds(core::structure<T> const& structure,
-                                                   std::vector<sublattice> const& composition);
+  template <class T>
+  triplet_objective_coefficients<T> triplet_coefficients(const triplet_tensor_t<T>&)
+
+      /**
+       * @brief Group a structure's atoms by sublattice into contiguous index blocks.
+       *
+       * Reorders the sites so that every sublattice of @p composition occupies one
+       * contiguous half-open index range, which lets the shuffler permute each
+       * sublattice independently.
+       *
+       * @tparam T  Floating-point scalar type.
+       * @param structure    Structure to reorder.
+       * @param composition  Sublattices; each lists the site indices it owns.
+       * @return Tuple of (reordered structure, per-sublattice [lower, upper) bounds,
+       *         the permutation mapping the new site order back to the original indices).
+       */
+      template <class T>
+      auto compute_shuffling_bounds(core::structure<T> const& structure,
+                                    std::vector<sublattice> const& composition);
 
   /**
    * @brief Count the bonds of a configuration into a dense per-cell tensor. (Hot path.)
