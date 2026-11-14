@@ -136,9 +136,8 @@ namespace sqsgen::optimization {
                                                               const std::vector<T>& shell_radii,
                                                               const std::map<shell_t, T>& weights,
                                                               T atol, T rtol) {
-    return compute_pair_prefactors(
-        shell_matrix<T>(structure.distance_matrix(), shell_radii, atol, rtol), weights,
-        structure.species);
+    return compute_pair_prefactors(structure.shell_matrix(shell_radii, atol, rtol), weights,
+                                   structure.species);
   }
 
   /**
