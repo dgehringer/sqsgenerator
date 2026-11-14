@@ -1,0 +1,53 @@
+{
+  "prec": "double",
+  "sublattice_mode": "interact",
+  "structure": {
+    "species": [
+      "Al",
+      "Al"
+    ],
+    "supercell": [
+      3,
+      3,
+      3
+    ],
+    "lattice": [
+      [
+        2.86,
+        0,
+        0
+      ],
+      [
+        0,
+        2.86,
+        0
+      ],
+      [
+        0,
+        0,
+        2.86
+      ]
+    ],
+    "coords": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0.5,
+        0.5,
+        0.5
+      ]
+    ]
+  },
+  "composition": [
+    {
+      "W": 45,
+      "Al": 9
+    }
+  ],
+  "iteration": {
+    "mode": "systematic"
+  }
+}
