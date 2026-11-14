@@ -9,77 +9,25 @@
 #ifndef SQSGEN_OPTIMIZATION_SRO_H
 #define SQSGEN_OPTIMIZATION_SRO_H
 
-#include <utility>
-
-#include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::optimization {
 
   /**
-   * @brief Precomputed per-cell coefficients for the linearized pair objective.
+   * @brief Per-cell coefficients of one linearized objective term.
    *
-   * The objective is evaluated as the sum of |a + N * b| over shells and canonical
-   * species pairs (see compute_pair_objective). Both tensors are indexed
-   * (shell, species_i, species_j).
+   * A term is evaluated as  s * |A + N * B|  over the canonical cells of a tensor
+   * (see compute_pair_objective). The three tensors share the term's shape
+   * (pairs: (shell, xi, eta); triplets: (class, xi, eta, zeta)):
+   *   sro:    A = omega (target - 1),  B = omega f,  s = 1   (omega >= 0; lambda and 1/W folded in)
+   *   energy: A = 0,                   B = |J|,      s = sign(J)
+   * s = 0 marks a cell that does not contribute (omega = 0 or J = 0).
    */
-  template <class T> struct pair_objective_coefficients {
-    pair_tensor_t<T> a;
-    pair_tensor_t<T> b;
+  template <class Tensor> struct objective_terms {
+    Tensor A;
+    Tensor B;
+    Tensor s;
   };
-
-  template <class T> struct triplet_objective_coefficients {
-    triplet_tensor_t<T> a;
-    triplet_tensor_t<T> b;
-  };
-
-  /**
-   * @brief Scale each shell slice of a pair-weight tensor by its shell weight.
-   *
-   * @tparam T  Floating-point scalar type.
-   * @param pair_weights  Per-cell pair weights, indexed (shell, species_i, species_j).
-   * @param weights       Shell -> weight map; slice s is multiplied by weights[s].
-   * @return Copy of @p pair_weights with every selected shell slice scaled.
-   */
-  template <class T> pair_tensor_t<T> scaled_pair_weights(const pair_tensor_t<T>& pair_weights,
-                                                          const std::map<shell_t, T>& weights);
-
-  /**
-   * @brief Precompute the constant (a) and count (b) coefficients of the pair objective.
-   *
-   *   a = scaled_pair_weights * (alpha_target - 1)
-   *   b = scaled_pair_weights * prefactors
-   *
-   * @tparam T  Floating-point scalar type.
-   * @param scaled_pair_weights  Shell-weighted pair weights (see scaled_pair_weights).
-   * @param alpha_target         Target SRO parameters per cell.
-   * @param prefactors           Normalization prefactors per cell.
-   * @return Coefficients consumed by compute_pair_objective.
-   */
-  template <class T>
-  pair_objective_coefficients<T> pair_coefficients(const pair_tensor_t<T>& scaled_pair_weights,
-                                                   const pair_tensor_t<T>& alpha_target,
-                                                   const pair_tensor_t<T>& prefactors);
-
-  template <class T>
-  triplet_objective_coefficients<T> triplet_coefficients(const triplet_tensor_t<T>&)
-
-      /**
-       * @brief Group a structure's atoms by sublattice into contiguous index blocks.
-       *
-       * Reorders the sites so that every sublattice of @p composition occupies one
-       * contiguous half-open index range, which lets the shuffler permute each
-       * sublattice independently.
-       *
-       * @tparam T  Floating-point scalar type.
-       * @param structure    Structure to reorder.
-       * @param composition  Sublattices; each lists the site indices it owns.
-       * @return Tuple of (reordered structure, per-sublattice [lower, upper) bounds,
-       *         the permutation mapping the new site order back to the original indices).
-       */
-      template <class T>
-      auto compute_shuffling_bounds(core::structure<T> const& structure,
-                                    std::vector<sublattice> const& composition);
 
   /**
    * @brief Count the bonds of a configuration into a dense per-cell tensor. (Hot path.)
@@ -92,9 +40,9 @@ namespace sqsgen::optimization {
                    const configuration_t& species);
 
   /**
-   * @brief Evaluate the pair SRO objective for a given bond count. (Hot path.)
+   * @brief Evaluate the pair objective for a given bond count. (Hot path.)
    *
-   *   O = sum_s sum_{xi <= eta} | a(s, xi, eta) + N^s_{xi,eta} * b(s, xi, eta) |
+   *   O = sum_s sum_{xi <= eta} s(s, xi, eta) * | A(s, xi, eta) + N^s_{xi,eta} * B(s, xi, eta) |
    *
    * The bond count is read at the canonical cell xi <= eta, where the pair list
    * stored each bond exactly once:
@@ -103,11 +51,11 @@ namespace sqsgen::optimization {
    *
    * @tparam T  Floating-point scalar type.
    * @param bonds   Bond counts per cell (see count_pairs).
-   * @param coeffs  Precomputed coefficients a, b (see pair_coefficients).
+   * @param terms   Precomputed coefficients A, B, s (see sro_terms / energy_terms).
    * @return The scalar objective value O; lower is closer to the target.
    */
   template <class T> T compute_pair_objective(const pair_tensor_t<count_t>& bonds,
-                                              const pair_objective_coefficients<T>& coeffs);
+                                              const objective_terms<pair_tensor_t<T>>& terms);
 
   /**
    * @brief Count triangles per class and species triple into a dense tensor. (Hot path.)
