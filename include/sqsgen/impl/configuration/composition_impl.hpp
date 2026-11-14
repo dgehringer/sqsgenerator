@@ -120,6 +120,7 @@ namespace sqsgen::configuration {
         auto parsed_sites = validate_sites(spec, conf, index);
         if (!parsed_sites) return std::unexpected(std::move(parsed_sites).error());
         sites = std::move(parsed_sites).value();
+        continue;  // reserved key, not a species entry
       }
       auto symbol_key = std::format("{}.{}", key, symbol);
       auto atom = core::atom::from_symbol(symbol);
