@@ -134,6 +134,27 @@ namespace sqsgen::configuration {
               }},
           input);
     }
+
+    // "(1, 1, 2)/(13, 13, 26)" for error messages
+    inline std::string to_string(const core::triplet_key& key) {
+      return std::format("({}, {}, {})/({}, {}, {})", key.shells[0], key.shells[1], key.shells[2],
+                         key.species[0], key.species[1], key.species[2]);
+    }
+
+    inline result_t<specie_t> resolve_present_species(std::string_view key,
+                                                      const std::variant<int, std::string>& input,
+                                                      const core::sorted_vector<specie_t>& present,
+                                                      std::optional<std::string_view> where
+                                                      = std::nullopt) {
+      return validate_species(key, input, where).and_then([&](specie_t z) -> result_t<specie_t> {
+        if (!present.contains(z))
+          return std::unexpected(
+              configuration_error{std::string(key), error_code::not_found,
+                                  std::format("{}species {} does not occur in the composition",
+                                              where.value_or(""), z)});
+        return z;
+      });
+    }
   }  // namespace detail
 }  // namespace sqsgen::configuration
 
