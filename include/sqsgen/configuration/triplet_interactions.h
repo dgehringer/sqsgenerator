@@ -1,8 +1,25 @@
+//
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Dominik Gehringer
+//
+// This file is part of sqsgenerator, distributed under the MIT License.
+// See the LICENSE file in the project root for full license information.
+//
+
+#ifndef SQSGEN_CONFIGURATION_TRIPLET_INTERACTIONS_H
+#define SQSGEN_CONFIGURATION_TRIPLET_INTERACTIONS_H
+
+#include <array>
+#include <string>
+#include <variant>
+#include <vector>
 
 #include "sqsgen/core/structure.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
+
+  namespace core = sqsgen::core;
 
   using specie_input = std::variant<int, std::string>;  // atomic number or chemical symbol
   using shell_triple = std::array<shell_t, 3>;
@@ -28,4 +45,9 @@ namespace sqsgen::configuration {
   template <class T, sublattice_mode Mode>
   triplet_interactions_input<T, Mode> to_triplet_interactions_input(
       const triplet_interactions_t<T, Mode>& interactions);
+
 }  // namespace sqsgen::configuration
+
+#include "sqsgen/impl/configuration/triplet_interactions_impl.hpp"
+
+#endif  // SQSGEN_CONFIGURATION_TRIPLET_INTERACTIONS_H
