@@ -27,6 +27,21 @@ https://anaconda.org/conda-forge/sqsgenerator/badges/downloads.svg)
 
 
 > [!IMPORTANT]
+> **📣 Announcing sqsgen 0.6**
+>
+> We are actively working on improving **sqsgenerator**. The upcoming **sqsgen 0.6** release will bring **breaking changes** to the user input and remove some parameters. Here is what we are working on:
+>
+> - 🛠️ **Technical modernization** — migration to **C++23** and from *pybind11* to *nanobind*
+> - ⚡ **Minor performance improvements**
+> - 🧵 **MPI stability fixes and improvements**
+> - 🎨 **A redesigned WebApp UI**
+> - 🧩 **A new template system**
+> - 🔬 **A cluster-expansion (CE) mode**
+> - 🎲 **Seeds for deterministic runs** — reproducible results even in multithreaded mode
+>
+> Stay tuned, and feel free to open an issue with feedback or feature requests!
+
+> [!IMPORTANT]
 > Version 0.4 brings breaking changes. Most of the parameter remain the same, but some have been renamed or removed. Please refer to the [documentation](https://sqsgenerator.readthedocs.io/en/latest) for more details or open an issue in case you need help migrating your scripts.
 
 ## Highlights
