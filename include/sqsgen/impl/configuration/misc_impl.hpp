@@ -20,6 +20,7 @@
 
 #include "sqsgen/configuration/misc.h"
 #include "sqsgen/core/helpers/misc.h"
+#include "sqsgen/core/helpers/variant.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::configuration {
@@ -81,13 +82,8 @@ namespace sqsgen::configuration {
     return defaults::iteration_mode_default;
   }
 
-  inline result_t<iterations_t> validate_iterations_input(const iterations_input& input,
-                                                          iteration_mode mode) {
+  inline result_t<iterations_t> validate_iterations_input(const iterations_input& input) {
     if (input.has_value()) {
-      if (mode == iteration_mode::systematic)
-        return std::unexpected(
-            configuration_error{"iterations", error_code::bad_argument,
-                                "In systematic mode no iterations can be specified"});
       auto iterations = input.value();
       if (iterations == 0) {
         return std::unexpected(configuration_error{"iterations", error_code::bad_argument,
@@ -95,8 +91,7 @@ namespace sqsgen::configuration {
       }
       return input;
     } else {
-      return mode == iteration_mode::random ? std::make_optional(defaults::iterations_default)
-                                            : std::nullopt;
+      return std::make_optional(defaults::iterations_default);
     }
   }
 
@@ -139,25 +134,46 @@ namespace sqsgen::configuration {
   }
 
   inline result_t<seed_t> validate_seed_input(const seed_input& input,
-                                              const std::vector<sublattice>& composition,
-                                              iteration_mode mode) {
-    if (input.has_value()) {
-      if (mode == iteration_mode::systematic)
-        return std::unexpected(configuration_error{
-            "seed", error_code::bad_argument,
-            "You cannot specify a seed if you have set the iteration mode to \"systematic\". The "
-            "seed is only used for random iterations, but in systematic mode there is no "
-            "randomness involved."});
-      auto seed = input.value();
-      if (seed.size() != composition.size())
-        return std::unexpected(
-            configuration_error{"seed", error_code::invalid_size,
-                                std::format("The number of seeds specified ({}) does "
-                                            "not match the number of sublattices ({})",
-                                            seed.size(), composition.size())});
-      return seed;
-    }
-    return seed_t(composition.size(), defaults::seed_default);
+                                              const std::vector<sublattice>& composition) {
+    const std::size_t num_sublattices = composition.size();
+    const seed_spec spec = input.value_or(seed_spec(num_sublattices));
+    if (spec.size() != num_sublattices)
+      return std::unexpected(
+          configuration_error{"seed", error_code::bad_argument,
+                              std::format("{} seeds given, but there are {} sublattices",
+                                          spec.size(), num_sublattices)});
+
+    seed_t seeds;
+    seeds.reserve(num_sublattices);
+    for (const auto& seed : spec) seeds.push_back(seed);
+    return seeds;
+  }
+
+  inline result_t<iteration_t> validate_iteration_input(
+      const iteration_input& input, const std::vector<sublattice>& composition) {
+    const auto with_seed = [&]<class Result>(const auto& in) -> result_t<iteration_t> {
+      return validate_iterations_input(in.iterations).and_then([&](iterations_t iterations) {
+        return validate_seed_input(in.seed, composition).transform([&](seed_t seed) -> iteration_t {
+          return Result{.iterations = iterations, .seed = std::move(seed)};
+        });
+      });
+    };
+
+    return std::visit(
+        helpers::overloaded{
+            [&](const systematic_input&) -> result_t<iteration_t> {
+              if (composition.size() != 1)
+                return std::unexpected(
+                    configuration_error{"iteration", error_code::bad_argument,
+                                        "systematic mode supports exactly one sublattice"});
+              return systematic{};
+            },
+            [&](const random_input& in) { return with_seed.template operator()<random>(in); },
+            [&](const monte_carlo_input& in) {
+              return with_seed.template operator()<monte_carlo>(in);
+            },
+        },
+        input.value_or(random_input{}));
   }
 
   inline result_t<keep_t> validate_keep_input(const keep_input& input) {
