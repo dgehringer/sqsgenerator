@@ -95,11 +95,14 @@ namespace sqsgen::configuration {
           helpers::overloaded{
               [&](shell_radii_detection mode)
                   -> result_t<shell_radii_t<T, sublattice_mode::interact>> {
+                // canonicalize detected radii exactly like an explicit spec, so a
+                // detected set round-trips unchanged through to_input + re-parse
                 if (mode == shell_radii_detection::naive) {
-                  return core::distances_naive(structure, atol, rtol);
+                  return validate_radii<T>(core::distances_naive(structure, atol, rtol), atol);
                 }
                 if (mode == shell_radii_detection::peak) {
-                  return core::distances_histogram(structure, bin_width, peak_isolation);
+                  return validate_radii<T>(
+                      core::distances_histogram(structure, bin_width, peak_isolation), atol);
                 }
                 return std::unexpected(configuration_error{"shell_radii", error_code::unknown,
                                                            "Unknown shell detection mode"});
@@ -116,20 +119,22 @@ namespace sqsgen::configuration {
       return std::visit(
           helpers::overloaded{
               [&](shell_radii_detection mode) -> result_t<output_t> {
-                if (mode == shell_radii_detection::naive) {
-                  return structure | std::ranges::views::transform([&](const auto& structure) {
-                           return core::distances_naive(structure, atol, rtol);
-                         })
-                         | std::ranges::to<output_t>();
+                if (mode != shell_radii_detection::naive && mode != shell_radii_detection::peak)
+                  return std::unexpected(configuration_error{"shell_radii", error_code::unknown,
+                                                             "Unknown shell detection mode"});
+                // canonicalize detected radii exactly like an explicit spec (see interact mode)
+                output_t out;
+                out.reserve(structure.size());
+                for (const auto& sublattice : structure) {
+                  auto radii
+                      = mode == shell_radii_detection::naive
+                            ? core::distances_naive(sublattice, atol, rtol)
+                            : core::distances_histogram(sublattice, bin_width, peak_isolation);
+                  auto validated = validate_radii<T>(radii, atol);
+                  if (!validated) return std::unexpected(std::move(validated).error());
+                  out.push_back(std::move(validated).value());
                 }
-                if (mode == shell_radii_detection::peak) {
-                  return structure | std::ranges::views::transform([&](const auto& structure) {
-                           return core::distances_histogram(structure, bin_width, peak_isolation);
-                         })
-                         | std::ranges::to<output_t>();
-                }
-                return std::unexpected(configuration_error{"shell_radii", error_code::unknown,
-                                                           "Unknown shell detection mode"});
+                return out;
               },
               [&](const shell_radii_spec<T, Mode>& radii) -> result_t<output_t> {
                 if (radii.size() != structure.size()) {
