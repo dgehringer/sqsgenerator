@@ -65,8 +65,6 @@ namespace sqsgen::configuration {
             pair_targets_error(code, std::format("{}{}", where.value_or(""), message)));
       };
 
-      if (!input.has_value()) return pair_sro_t<T>{};  // every target 0
-
       const core::sorted_vector<specie_t> present(structure.species);
       const auto selected_shells = weights | std::views::keys;
 
@@ -138,7 +136,7 @@ namespace sqsgen::configuration {
 
         return out;
       };
-
+      if (!input.has_value()) return for_everything(T{0.0});
       return std::visit(helpers::overloaded{for_everything, from_entries}, input.value());
     }
 
