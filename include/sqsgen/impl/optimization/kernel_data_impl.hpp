@@ -20,8 +20,6 @@ namespace sqsgen::optimization {
 
   namespace core = sqsgen::core;
 
-  // ======================================================================= scratch
-
   template <class T> kernel_scratch make_scratch(const kernel_data<T>& data) {
     kernel_scratch scratch;
     scratch.lattices.reserve(data.lattices.size());
@@ -44,8 +42,6 @@ namespace sqsgen::optimization {
     }
     return scratch;
   }
-
-  // ======================================================================= coefficients
 
   template <class Tensor, class T>
   objective_terms<Tensor> sro_terms(const Tensor& prefactors, const Tensor& weights,
@@ -78,8 +74,6 @@ namespace sqsgen::optimization {
       s[i] = s[i] > scalar{0} ? scalar{1} : (s[i] < scalar{0} ? scalar{-1} : scalar{0});
     return terms;
   }
-
-  // ======================================================================= map -> tensor
 
   template <class T> pair_tensor_t<T> to_pair_tensor(const pair_sro_t<T>& values,
                                                      const std::vector<shell_t>& shells,
@@ -115,8 +109,6 @@ namespace sqsgen::optimization {
           }
     return tensor;
   }
-
-  // ======================================================================= tensor -> map
 
   template <class T> pair_sro_t<T> to_pair_sro(const pair_tensor_t<T>& tensor,
                                                const std::vector<shell_t>& shells,
