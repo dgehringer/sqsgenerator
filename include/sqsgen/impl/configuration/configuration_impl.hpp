@@ -9,8 +9,10 @@
 #ifndef SQSGEN_IMPL_CONFIGURATION_CONFIGURATION_IMPL_HPP
 #define SQSGEN_IMPL_CONFIGURATION_CONFIGURATION_IMPL_HPP
 
+#include <array>
 #include <expected>
 #include <optional>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -22,6 +24,24 @@
 #include "sqsgen/core/structure_utils.h"
 #include "sqsgen/io/glaze.h"
 #include "sqsgen/types.h"
+
+namespace glz {
+
+  template <> struct meta<
+      std::variant<sqsgen::configuration::systematic_input, sqsgen::configuration::random_input,
+                   sqsgen::configuration::monte_carlo_input>> {
+    static constexpr std::string_view tag = "mode";
+    static constexpr auto ids = std::array{"systematic", "random", "monte_carlo"};
+  };
+
+  template <class T, sqsgen::sublattice_mode Mode>
+  struct meta<std::variant<sqsgen::configuration::sro_objective_input<T, Mode>,
+                           sqsgen::configuration::energy_objective_input<T, Mode>>> {
+    static constexpr std::string_view tag = "mode";
+    static constexpr auto ids = std::array{"sro", "energy"};
+  };
+
+}  // namespace glz
 
 #define SQSGEN_TRY_ASSIGN(var, ...)                                                   \
   auto&& _res_##var = (__VA_ARGS__);                                                  \
@@ -76,6 +96,32 @@ namespace sqsgen::configuration {
         return out;
       }
     }
+    template <class T, sublattice_mode Mode>
+    result_t<objective_t<T, Mode>> validate_objective_input(
+        const objective_input<T, Mode>& input,
+        const sublattice_mode_nesting<core::structure<T>, Mode>& structure,
+        const sublattice_mode_nesting<core::triplet_class_mapping_t, Mode>& triplet_classes,
+        const shell_radii_t<T, Mode>& shell_radii, bool pairs, bool triplets) {
+      using result = result_t<objective_t<T, Mode>>;
+      const auto as_sro = [&](const sro_objective_input<T, Mode>& in) -> result {
+        return validate_sro_objective_input<T, Mode>(in, structure, triplet_classes, shell_radii,
+                                                     pairs, triplets)
+            .transform([](auto&& o) -> objective_t<T, Mode> { return std::move(o); });
+      };
+      // no objective given: default to an SRO objective (energy interactions have no defaults)
+      if (!input.has_value()) return as_sro(sro_objective_input<T, Mode>::empty());
+      return std::visit(
+          helpers::overloaded{as_sro,
+                              [&](const energy_objective_input<T, Mode>& in) -> result {
+                                return validate_energy_objective_input<T, Mode>(
+                                           in, structure, triplet_classes, pairs, triplets)
+                                    .transform([](auto&& o) -> objective_t<T, Mode> {
+                                      return std::move(o);
+                                    });
+                              }},
+          input.value());
+    }
+
   }  // namespace detail
 
   inline std::expected<configuration_input_variant_t, io::parser_error> read_input(
@@ -109,16 +155,14 @@ namespace sqsgen::configuration {
     if (!pairs && !triplets)
       return std::unexpected(configuration_error{"triplets", error_code::bad_argument,
                                                  "You cannot have no pairs and no triplets"});
-    SQSGEN_TRY_ASSIGN(_structure_config, validate_structure_input<T>(input.structure));
-
+    SQSGEN_TRY_ASSIGN(structure_config, validate_structure_input<T>(input.structure));
     SQSGEN_TRY_ASSIGN(
         composition,
-        validate_composition_input(input.composition, _structure_config.make_structure().species));
-    const structure_t<T, Mode> structure = _structure_config.template for_mode<Mode>(composition);
-    SQSGEN_TRY_ASSIGN(imode, validate_iteration_mode_input(input.iteration_mode, composition));
-    SQSGEN_TRY_ASSIGN(seed, validate_seed_input(input.seed, composition, imode));
-    SQSGEN_TRY_ASSIGN(iterations, validate_iterations_input(input.iterations, imode));
-    SQSGEN_TRY_ASSIGN(chunk_size, validate_chunk_size_input(input.chunk_size, iterations));
+        validate_composition_input(input.composition, structure_config.make_structure().species));
+    const structure_t<T, Mode> structure = structure_config.template for_mode<Mode>(composition);
+
+    SQSGEN_TRY_ASSIGN(iteration, validate_iteration_input(input.iteration, composition));
+    SQSGEN_TRY_ASSIGN(seed, validate_seed_input(input.seed, composition));
     SQSGEN_TRY_ASSIGN(keep, validate_keep_input(input.keep));
     SQSGEN_TRY_ASSIGN(max_results_per_objective,
                       validate_max_results_per_objective_input(input.max_results_per_objective));
@@ -129,21 +173,27 @@ namespace sqsgen::configuration {
     SQSGEN_TRY_ASSIGN(shell_radii,
                       validate_shell_radii_input<T, Mode>(input.shell_radii, structure, atol, rtol,
                                                           bin_width, peak_isolation));
-    SQSGEN_TRY_ASSIGN(pair_weights,
-                      validate_pair_weights_input<T, Mode>(input.pair_weights, shell_radii));
 
-    SQSGEN_TRY_ASSIGN(pair_targets, validate_pair_targets_input<T, Mode>(input.pair_targets,
-                                                                         structure, pair_weights));
-
-    auto triplet_classes = detail::compute_triplet_classes<T, Mode>(structure, shell_radii,
-                                                                    pair_weights, atol, rtol);
-    SQSGEN_TRY_ASSIGN(triplet_weights, validate_triplet_weights_input<T, Mode>(
-                                           input.triplet_weights, triplet_classes, shell_radii));
-
-    SQSGEN_TRY_ASSIGN(triplet_targets,
-                      validate_triplet_targets_input<T, Mode>(input.triplet_targets_input,
-                                                              structure, triplet_weights));
+    // the iteration count lives inside the iteration spec; a systematic run has none
+    const iterations_t iterations = std::visit(
+        helpers::overloaded{[](const systematic&) { return iterations_t{std::nullopt}; },
+                            [](const random& r) { return r.iterations; },
+                            [](const monte_carlo& m) { return m.iterations; }},
+        iteration);
+    SQSGEN_TRY_ASSIGN(chunk_size, validate_chunk_size_input(input.chunk_size, iterations));
     SQSGEN_TRY_ASSIGN(thread_config, validate_thread_config_input(input.thread_config));
+
+    // triplet classes are every triangle class present (all shells selected); the objective's own
+    // weights/targets are validated inside validate_objective_input
+    SQSGEN_TRY_ASSIGN(all_pair_weights, validate_pair_weights_input<T, Mode>(
+                                            pair_weights_input<T, Mode>{}, shell_radii));
+    auto triplet_classes = detail::compute_triplet_classes<T, Mode>(structure, shell_radii,
+                                                                    all_pair_weights, atol, rtol);
+
+    SQSGEN_TRY_ASSIGN(
+        objective, detail::validate_objective_input<T, Mode>(
+                       input.objective, structure, triplet_classes, shell_radii, pairs, triplets));
+
     return configuration<T, Mode>{
         .sublattice_mode = Mode,
         .prec = arithmethic_to_prec<T>(),
@@ -153,15 +203,11 @@ namespace sqsgen::configuration {
         .triplets = triplets,
         .bin_width = bin_width,
         .peak_isolation = peak_isolation,
-        .structure = std::move(_structure_config),
+        .structure = std::move(structure_config),
         .composition = std::move(composition),
-        .iteration_mode = imode,
         .shell_radii = std::move(shell_radii),
-        .pair_weights = std::move(pair_weights),
-        .pair_targets = std::move(pair_targets),
-        .triplet_weights = std::move(triplet_weights),
-        .triplet_targets = std::move(triplet_targets),
-        .iterations = iterations,
+        .iteration = std::move(iteration),
+        .objective = std::move(objective),
         .chunk_size = chunk_size,
         .keep = keep,
         .thread_config = std::move(thread_config),
@@ -172,6 +218,30 @@ namespace sqsgen::configuration {
 
   template <class T, sublattice_mode Mode>
   configuration_input<T, Mode> configuration<T, Mode>::to_input() const {
+    using iteration_variant = std::variant<systematic_input, random_input, monte_carlo_input>;
+    const iteration_input iteration_in = std::visit(
+        helpers::overloaded{
+            [](const systematic&) -> iteration_variant { return systematic_input{}; },
+            [](const random& r) -> iteration_variant {
+              return random_input{.iterations = r.iterations, .seed = std::make_optional(r.seed)};
+            },
+            [](const monte_carlo& m) -> iteration_variant {
+              return monte_carlo_input{.iterations = m.iterations,
+                                       .seed = std::make_optional(m.seed)};
+            }},
+        iteration);
+
+    using objective_variant
+        = std::variant<sro_objective_input<T, Mode>, energy_objective_input<T, Mode>>;
+    const objective_input<T, Mode> objective_in = std::visit(
+        helpers::overloaded{[](const sro_objective<T, Mode>& o) -> objective_variant {
+                              return to_sro_objective_input<T, Mode>(o);
+                            },
+                            [](const energy_objective<T, Mode>& o) -> objective_variant {
+                              return to_energy_objective_input<T, Mode>(o);
+                            }},
+        objective);
+
     return configuration_input<T, Mode>{
         .sublattice_mode = sublattice_mode,
         .prec = prec,
@@ -183,18 +253,14 @@ namespace sqsgen::configuration {
         .peak_isolation = peak_isolation,
         .structure = to_structure_input<T>(structure),
         .composition = to_composition_input(composition),
-        .iteration_mode = iteration_mode,
         .shell_radii = to_shell_radii_input<T, Mode>(shell_radii),
-        .pair_weights = to_pair_weights_input<T, Mode>(pair_weights),
-        .pair_targets = to_pair_targets_input<T, Mode>(pair_targets),
-        .triplet_weights = to_triplet_weights_input<T, Mode>(triplet_weights),
-        .triplet_targets_input = to_triplet_targets_input<T, Mode>(triplet_targets),
-        .iterations = iterations,
+        .iteration = iteration_in,
+        .objective = objective_in,
         .chunk_size = chunk_size,
         .keep = keep,
         .thread_config = thread_config,
         .max_results_per_objective = max_results_per_objective,
-        .seed = seed,
+        .seed = std::make_optional(seed),
     };
   }
 
