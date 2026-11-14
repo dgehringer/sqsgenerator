@@ -18,6 +18,7 @@
 #include "sqsgen/configuration.h"
 #include "sqsgen/core/helpers/misc.h"
 #include "sqsgen/core/helpers/variant.h"
+#include "sqsgen/core/sorted_vector.h"
 #include "sqsgen/core/structure.h"
 #include "sqsgen/core/structure_utils.h"
 #include "sqsgen/optimization/kernel_data.h"
@@ -27,7 +28,8 @@
 
 namespace sqsgen::optimization {
 
-  namespace cfg = sqsgen::configuration;
+  namespace core = sqsgen::core;
+  namespace configuration = sqsgen::configuration;
   namespace helpers = sqsgen::core::helpers;
 
   namespace detail {
@@ -35,8 +37,8 @@ namespace sqsgen::optimization {
     // packed index -> atomic number: the sorted, deduplicated species of the lattice. This is the
     // order the pair/triplet tensors are indexed in (compute_*_prefactors uses the same index_map).
     inline configuration_t unique_species(const configuration_t& species) {
-      configuration_t out;
-      for (const auto& [index, z] : helpers::index_map<std::size_t>(species)) out.push_back(z);
+      core::sorted_vector<specie_t> dedup(species);
+      configuration_t out(dedup.begin(), dedup.end());
       return out;
     }
 
@@ -56,11 +58,9 @@ namespace sqsgen::optimization {
         return (value[index]);
     }
 
-    inline std::uint64_t resolve_seed(const cfg::seed_t& seed, std::size_t index) {
+    inline std::uint64_t resolve_seed(const configuration::seed_t& seed, std::size_t index) {
       return seed[index].value_or(make_random_seed());
     }
-
-    // ------------------------------------------------------------------ pair / triplet data
 
     template <class T> pair_data<T> make_sro_pair_data(const core::structure<T>& structure,
                                                        const std::vector<T>& radii,
@@ -76,7 +76,6 @@ namespace sqsgen::optimization {
 
       const auto num_shells = static_cast<Eigen::Index>(data.shells.size());
       const auto num_species = static_cast<Eigen::Index>(species.size());
-      // per-cell weight tensor: the shell weight broadcast across every species pair of that shell
       pair_tensor_t<T> weight_tensor(num_shells, num_species, num_species);
       for (Eigen::Index s = 0; s < num_shells; ++s)
         for (Eigen::Index xi = 0; xi < num_species; ++xi)
@@ -165,7 +164,7 @@ namespace sqsgen::optimization {
     // layout, seeds and initial configuration are filled by the caller.
     template <class T, sublattice_mode Mode>
     lattice_data<T> build_lattice(const core::structure<T>& structure, const std::vector<T>& radii,
-                                  const cfg::objective_t<T, Mode>& objective, bool pairs,
+                                  const configuration::objective_t<T, Mode>& objective, bool pairs,
                                   bool triplets, T atol, T rtol, std::size_t index = 0) {
       lattice_data<T> lattice;
       lattice.species_packed = structure.packed_species();
@@ -173,7 +172,7 @@ namespace sqsgen::optimization {
 
       std::visit(
           helpers::overloaded{
-              [&](const cfg::sro_objective<T, Mode>& sro) {
+              [&](const configuration::sro_objective<T, Mode>& sro) {
                 if (pairs && sro.pairs.has_value()) {
                   const auto& weights = select<Mode>(sro.pairs->weights, index);
                   const auto& targets = select<Mode>(sro.pairs->targets, index);
@@ -189,7 +188,7 @@ namespace sqsgen::optimization {
                                                               lattice.species, atol, rtol, scale);
                 }
               },
-              [&](const cfg::energy_objective<T, Mode>& energy) {
+              [&](const configuration::energy_objective<T, Mode>& energy) {
                 if (pairs && energy.pairs.has_value())
                   lattice.pairs = make_energy_pair_data<T>(
                       structure, radii, select<Mode>(energy.pairs.value(), index), lattice.species,
@@ -206,15 +205,14 @@ namespace sqsgen::optimization {
   }  // namespace detail
 
   template <class T, sublattice_mode Mode>
-  kernel_data<T> make_kernel_data(const cfg::configuration<T, Mode>& config) {
+  kernel_data<T> make_kernel_data(const configuration::configuration<T, Mode>& config) {
     const T atol = config.atol;
     const T rtol = config.rtol;
 
     kernel_data<T> data;
-    data.block_size = config.chunk_size;  // reproducible reseeding granularity (scheduler's B)
+    data.block_size = config.chunk_size;  // use chunk_size for reseeding to start with
 
     if constexpr (Mode == sublattice_mode::interact) {
-      // one lattice over the whole supercell; one shuffled range per sublattice
       const core::structure<T> applied
           = config.structure.make_structure().apply_composition(config.composition);
       const site_layout layout = make_site_layout(
@@ -244,7 +242,7 @@ namespace sqsgen::optimization {
         lattice_data<T> lattice
             = detail::build_lattice<T, Mode>(sub, config.shell_radii[i], config.objective,
                                              config.pairs, config.triplets, atol, rtol, i);
-        // order maps the layout position back to the original supercell site of the sublattice
+
         lattice.order.assign(config.composition[i].sites.begin(),
                              config.composition[i].sites.end());
         lattice.ranges = {site_range{0, sub.size()}};
