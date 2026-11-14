@@ -47,7 +47,13 @@ namespace sqsgen::configuration {
   using seed_input = std::optional<seed_spec>;
   using seed_t = seed_spec;
 
-  struct systematic_input {};
+  struct systematic_input {
+    // Systematic iteration has no parameters; this placeholder exists only so the
+    // struct is not zero-field. glaze's keyed decoders (YAML, MsgPack) cannot hash
+    // an empty field set, so a tagged-variant alternative needs at least one member.
+    // Optional + always nullopt: absent on the wire, so the shape stays {"mode":"systematic"}.
+    std::optional<bool> _ = std::nullopt;
+  };
   struct random_input {
     iterations_input iterations;
     seed_input seed;
