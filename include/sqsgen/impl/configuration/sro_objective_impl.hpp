@@ -81,10 +81,10 @@ namespace sqsgen::configuration {
     } else
       _triplets = std::nullopt;
 
-    return sro_objective<T, Mode>{
-        .pairs = std::move(_pairs), .triplets = std::move(_triplets), .lambda = std::nullopt};
-  };
-}
+    return sro_objective<T, Mode>{.pairs = std::move(_pairs),
+                                  .triplets = std::move(_triplets),
+                                  .lambda = input.lambda.value_or(T{})};
+  }
 
 }  // namespace sqsgen::configuration
 
