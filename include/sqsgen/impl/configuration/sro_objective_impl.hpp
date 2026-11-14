@@ -52,24 +52,39 @@ namespace sqsgen::configuration {
                                  .targets = std::move(targets).value()};
   }
 
-  template <class T, sublattice_mode Mode> result_t<sro_objective<T, Mode>> validate_sro_input(
+  template <class T, sublattice_mode Mode>
+  result_t<sro_objective<T, Mode>> validate_sro_objective_input(
       const sro_objective_input<T, Mode>& input,
       const sublattice_mode_nesting<core::structure<T>, Mode>& structure,
       const sublattice_mode_nesting<core::triplet_class_mapping_t, Mode>& triplet_classes,
-      const shell_radii_t<T, Mode>& shell_radii) {
+      const shell_radii_t<T, Mode>& shell_radii, bool pairs, bool triplets) {
     using result_type = result_t<sro_objective<T, Mode>>;
-    return helpers::combine(
-               validate_sro_pairs_input<T, Mode>(
-                   input.pairs.value_or(sro_pairs_input<T, Mode>::empty()), structure, shell_radii),
-               validate_sro_triplets_input(
-                   input.triplets.value_or(sro_triplets_input<T, Mode>::empty()), structure,
-                   triplet_classes, shell_radii))
-        .and_then([](auto&& pairs_and_triplets) -> result_type {
-          auto& [pairs, triplets] = pairs_and_triplets;
-          return sro_objective<T, Mode>{
-              .pairs = std::move(pairs), .triplets = std::move(triplets), .lambda = std::nullopt};
-        });
-  }
+    std::optional<sro_pairs<T, Mode>> _pairs;
+    if (pairs) {
+      auto p = validate_sro_pairs_input<T, Mode>(
+          input.pairs.value_or(sro_pairs_input<T, Mode>::empty()), structure, shell_radii);
+      if (p)
+        _pairs = std::make_optional(std::move(p).value());
+      else
+        return std::unexpected(std::move(p).error());
+    } else
+      _pairs = std::nullopt;
+    std::optional<sro_triplets<T, Mode>> _triplets;
+    if (triplets) {
+      auto p = validate_sro_triplets_input(
+          input.triplets.value_or(sro_triplets_input<T, Mode>::empty()), structure, triplet_classes,
+          shell_radii);
+      if (p)
+        _triplets = std::make_optional(std::move(p).value());
+      else
+        return std::unexpected(std::move(p).error());
+    } else
+      _triplets = std::nullopt;
+
+    return sro_objective<T, Mode>{
+        .pairs = std::move(_pairs), .triplets = std::move(_triplets), .lambda = std::nullopt};
+  };
+}
 
 }  // namespace sqsgen::configuration
 
