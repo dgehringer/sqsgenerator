@@ -185,7 +185,7 @@ namespace sqsgen::core {
     Eigen::Tensor<T, 2> out(m.rows(), m.cols());
     for (Eigen::Index i = 0; i < m.rows(); ++i)
       for (Eigen::Index j = 0; j < m.cols(); ++j)
-        out(i, j) = m(i, j);  // logical copy — order-independent, transpose-safe
+        out(i, j) = m(i, j);  // logical copy - order-independent, transpose-safe
     return out;
   }
 
@@ -194,7 +194,7 @@ namespace sqsgen::core {
     if (t.dimension(0) != 3 || t.dimension(1) != 3)
       return std::unexpected(tensor_shape_error{
           tensor_shape_error::kind::size_mismatch,
-          std::format("lattice must be 3×3, got {}x{}", t.dimension(0), t.dimension(1))});
+          std::format("lattice must be 3x3, got {}x{}", t.dimension(0), t.dimension(1))});
     lattice_t<T> out;
     for (int i = 0; i < 3; ++i)
       for (int j = 0; j < 3; ++j) out(i, j) = t(i, j);
