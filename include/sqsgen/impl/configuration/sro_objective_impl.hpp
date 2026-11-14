@@ -59,7 +59,6 @@ namespace sqsgen::configuration {
       const sublattice_mode_nesting<core::structure<T>, Mode>& structure,
       const sublattice_mode_nesting<core::triplet_class_mapping_t, Mode>& triplet_classes,
       const shell_radii_t<T, Mode>& shell_radii, bool pairs, bool triplets) {
-    using result_type = result_t<sro_objective<T, Mode>>;
     std::optional<sro_pairs<T, Mode>> _pairs;
     if (pairs) {
       auto p = validate_sro_pairs_input<T, Mode>(
