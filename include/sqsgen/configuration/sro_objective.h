@@ -1,3 +1,13 @@
+//
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Dominik Gehringer
+//
+// This file is part of sqsgenerator, distributed under the MIT License.
+// See the LICENSE file in the project root for full license information.
+//
+
+#ifndef SQSGEN_CONFIGURATION_SRO_OBJECTIVE_H
+#define SQSGEN_CONFIGURATION_SRO_OBJECTIVE_H
 
 #include <optional>
 
@@ -71,3 +81,7 @@ namespace sqsgen::configuration {
       const shell_radii_t<T, Mode>& shell_radii);
 
 }  // namespace sqsgen::configuration
+
+#include "sqsgen/impl/configuration/sro_objective_impl.hpp"
+
+#endif  // SQSGEN_CONFIGURATION_SRO_OBJECTIVE_H
