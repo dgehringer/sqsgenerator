@@ -48,8 +48,9 @@ namespace sqsgen::configuration {
                                            T default_value, const std::string& name) {
     if (input.has_value()) {
       auto value = input.value();
-      auto eps = std::numeric_limits<T>::epsilon();
-      if (value <= T{0.0} || helpers::is_close(value, +eps) || helpers::is_close(value, -eps))
+      // reject non-positive and effectively-zero values; machine epsilon is the floor
+      // (a legitimate tolerance such as the 1e-5 default is well above it)
+      if (value <= std::numeric_limits<T>::epsilon())
         return std::unexpected(configuration_error{key, error_code::bad_argument,
                                                    std::format("The {} must be greater 0", name)});
       return value;
