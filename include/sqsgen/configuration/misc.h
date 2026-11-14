@@ -47,6 +47,29 @@ namespace sqsgen::configuration {
   using seed_input = std::optional<seed_spec>;
   using seed_t = seed_spec;
 
+  struct systematic_input {};
+  struct random_input {
+    iterations_input iterations;
+    seed_input seed;
+  };
+  struct monte_carlo_input {
+    iterations_input iterations;
+    seed_input seed;
+  };
+  using iteration_input
+      = std::optional<std::variant<systematic_input, random_input, monte_carlo_input>>;
+
+  struct systematic {};
+  struct random {
+    iterations_t iterations;
+    seed_t seed;
+  };
+  struct monte_carlo {
+    iterations_t iterations;
+    seed_t seed;
+  };
+  using iteration_t = std::variant<systematic, random, monte_carlo>;
+
   using keep_input = std::optional<std::size_t>;
   using keep_t = std::size_t;
 
@@ -75,8 +98,7 @@ namespace sqsgen::configuration {
   result_t<iteration_mode> validate_iteration_mode_input(iteration_mode_input,
                                                          const std::vector<sublattice>&);
 
-  result_t<iterations_t> validate_iterations_input(const iterations_input& input,
-                                                   iteration_mode mode);
+  result_t<iterations_t> validate_iterations_input(const iterations_input& input);
 
   result_t<chunk_size_t> validate_chunk_size_input(const chunk_size_input& input,
                                                    const iterations_t iterations);
@@ -87,8 +109,11 @@ namespace sqsgen::configuration {
   template <class T>
   result_t<peak_isolation_t<T>> validate_peak_isolation_input(const peak_isolation_input<T>&);
 
-  result_t<seed_t> validate_seed_input(const seed_input&, const std::vector<sublattice>&,
-                                       iteration_mode);
+  result_t<seed_t> validate_seed_input(const seed_input& input,
+                                       const std::vector<sublattice>& composition);
+
+  inline result_t<iteration_t> validate_iteration_input(const iteration_input& input,
+                                                        const std::vector<sublattice>& composition);
 
   result_t<keep_t> validate_keep_input(const keep_input&);
 
