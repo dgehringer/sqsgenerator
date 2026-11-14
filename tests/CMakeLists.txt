@@ -46,3 +46,8 @@ sqsgen_add_test(test_structure test_structure.cpp)
 add_custom_command(TARGET test_structure POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:test_structure>/assets)
+
+sqsgen_add_test(test_configuration test_configuration.cpp)
+add_custom_command(TARGET test_configuration POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:test_configuration>/assets)
