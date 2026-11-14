@@ -15,6 +15,7 @@
 #include "sqsgen/configuration/pair_targets.h"
 #include "sqsgen/configuration/pair_weights.h"
 #include "sqsgen/configuration/sro_objective.h"
+#include "sqsgen/configuration/triplet_targets.h"
 #include "sqsgen/configuration/triplet_weights.h"
 #include "sqsgen/core/helpers/expected.h"
 
@@ -84,6 +85,29 @@ namespace sqsgen::configuration {
     return sro_objective<T, Mode>{.pairs = std::move(_pairs),
                                   .triplets = std::move(_triplets),
                                   .lambda = input.lambda.value_or(T{})};
+  }
+
+  template <class T, sublattice_mode Mode>
+  sro_pairs_input<T, Mode> to_sro_pairs_input(const sro_pairs<T, Mode>& pairs) {
+    return sro_pairs_input<T, Mode>{.weights = to_pair_weights_input<T, Mode>(pairs.weights),
+                                    .targets = to_pair_targets_input<T, Mode>(pairs.targets)};
+  }
+
+  template <class T, sublattice_mode Mode>
+  sro_triplets_input<T, Mode> to_sro_triplets_input(const sro_triplets<T, Mode>& triplets) {
+    return sro_triplets_input<T, Mode>{
+        .weights = to_triplet_weights_input<T, Mode>(triplets.weights),
+        .targets = to_triplet_targets_input<T, Mode>(triplets.targets)};
+  }
+
+  template <class T, sublattice_mode Mode>
+  sro_objective_input<T, Mode> to_sro_objective_input(const sro_objective<T, Mode>& objective) {
+    return sro_objective_input<T, Mode>{
+        .pairs = objective.pairs.transform(
+            [](const sro_pairs<T, Mode>& p) { return to_sro_pairs_input<T, Mode>(p); }),
+        .triplets = objective.triplets.transform(
+            [](const sro_triplets<T, Mode>& t) { return to_sro_triplets_input<T, Mode>(t); }),
+        .lambda = std::make_optional(objective.lambda)};
   }
 
 }  // namespace sqsgen::configuration
