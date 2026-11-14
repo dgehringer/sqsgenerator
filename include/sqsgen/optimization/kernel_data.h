@@ -23,10 +23,9 @@ namespace sqsgen::optimization {
 
   // what every run needs, plus the optional orders
   template <class T, sublattice_mode S> struct kernel_data {
-    sublattice_mode_nesting<shuffler_t, S> shuffler;
     sublattice_mode_nesting<configuration_t, S> species_packed;
     std::optional<pair_data<T, S>> pairs;
     std::optional<triplet_data<T, S>> triplets;
-    T lambda{0};  // weight between pairs and triplets
+    T lambda{0};
   };
 }  // namespace sqsgen::optimization
