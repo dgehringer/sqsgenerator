@@ -14,8 +14,6 @@
 
 namespace sqsgen::optimization {
 
-  // ---------------------------------------------------------------- layout
-
   template <std::ranges::input_range R>
   site_layout make_site_layout(std::size_t num_sites, R&& sublattice_sites) {
     // owner[site] = sublattice index; sites in no sublattice get "none" and sort last
@@ -36,7 +34,7 @@ namespace sqsgen::optimization {
     site_layout layout;
     layout.order.resize(num_sites);
     std::iota(layout.order.begin(), layout.order.end(), site_t{0});
-    // stable: input order is kept inside each sublattice, so the layout is deterministic
+    // stable_sort: input order is kept inside each sublattice, so the layout is deterministic
     std::ranges::stable_sort(layout.order, {}, [&](site_t s) { return owner[s]; });
 
     layout.ranges.reserve(sizes.size());
@@ -89,7 +87,6 @@ namespace sqsgen::optimization {
 
   inline std::uint64_t make_random_seed() {
     std::random_device device;
-    // random_device returns 32-bit values; combine two
     return (std::uint64_t{device()} << 32) | std::uint64_t{device()};
   }
 
