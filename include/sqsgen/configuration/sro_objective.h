@@ -63,11 +63,34 @@ namespace sqsgen::configuration {
     }
   };
 
+  /**
+   * @brief Resolve and validate the pair part of an SRO objective.
+   *
+   * Two-stage: the pair weights are validated against the selected shells first, then the
+   * pair targets against those weights and @p structure. The first failing stage short-circuits.
+   *
+   * @param structure    structure the pair targets are checked against (e.g. species present).
+   * @param shell_radii  shell boundaries the weighted shells must fall within.
+   * @return the resolved weights and targets, or the first validation error.
+   */
   template <class T, sublattice_mode Mode> result_t<sro_pairs<T, Mode>> validate_sro_pairs_input(
       const sro_pairs_input<T, Mode>& input,
       const sublattice_mode_nesting<core::structure<T>, Mode>& structure,
       const shell_radii_t<T, Mode>& shell_radii);
 
+  /**
+   * @brief Resolve and validate the triplet part of an SRO objective.
+   *
+   * Two-stage: the triplet weights are validated against @p triplet_classes and the selected
+   * shells first, then the triplet targets against those weights and @p structure. The first
+   * failing stage short-circuits.
+   *
+   * @param structure        structure the triplet targets are checked against.
+   * @param triplet_classes  the symmetry-distinct triplet classes the weights and targets are keyed
+   * by.
+   * @param shell_radii      shell boundaries the weighted shells must fall within.
+   * @return the resolved weights and targets, or the first validation error.
+   */
   template <class T, sublattice_mode Mode>
   result_t<sro_triplets<T, Mode>> validate_sro_triplets_input(
       const sro_triplets_input<T, Mode>& input,
@@ -75,6 +98,20 @@ namespace sqsgen::configuration {
       const sublattice_mode_nesting<core::triplet_class_mapping_t, Mode>& triplet_classes,
       const shell_radii_t<T, Mode>& shell_radii);
 
+  /**
+   * @brief Resolve and validate a full SRO objective (pairs, triplets, lambda).
+   *
+   * @p pairs and @p triplets select which terms the objective carries: a selected term with no
+   * user input is validated from an empty input (all defaults), an unselected term becomes
+   * std::nullopt. @p lambda defaults to 0 when the input omits it.
+   *
+   * @param structure        structure the targets are checked against.
+   * @param triplet_classes  the triplet classes the triplet term is keyed by.
+   * @param shell_radii      shell boundaries the weighted shells must fall within.
+   * @param pairs            whether the objective includes the pair term.
+   * @param triplets         whether the objective includes the triplet term.
+   * @return the resolved objective, or the first validation error.
+   */
   template <class T, sublattice_mode Mode>
   result_t<sro_objective<T, Mode>> validate_sro_objective_input(
       const sro_objective_input<T, Mode>& input,
