@@ -19,7 +19,6 @@
 
 #include "sqsgen/configuration.h"
 #include "sqsgen/optimization/permutation.h"
-#include "sqsgen/optimization/sro.h"
 #include "sqsgen/types.h"
 
 namespace sqsgen::optimization {
