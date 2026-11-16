@@ -11,14 +11,17 @@
 
 #include "sqsgen/types.h"
 
-// Objective functions of one lattice.
-//
-// The counts are unsymmetrized: every pair / triangle increments exactly one cell.
-// The objective symmetrizes them: for each canonical cell it sums the counts of all cells
-// that describe the same cluster (Nbar), and evaluates one term per canonical cell.
-//
-//   sro:    term = s |A + Nbar B|
-//   energy: term = s B Nbar          (A = 0, B = |J|, s = sign J  =>  term = J Nbar)
+/**
+ * @file
+ * @brief Objective functions of one lattice.
+ *
+ * The counts are unsymmetrized: every pair / triangle increments exactly one cell.
+ * The objective symmetrizes them: for each canonical cell it sums the counts of all cells
+ * that describe the same cluster (Nbar), and evaluates one term per canonical cell.
+ *
+ *     sro:    term = s |A + Nbar B|
+ *     energy: term = s B Nbar          (A = 0, B = |J|, s = sign J  =>  term = J Nbar)
+ */
 
 namespace sqsgen::optimization {
 
