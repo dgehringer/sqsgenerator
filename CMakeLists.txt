@@ -90,6 +90,25 @@ if (BUILD_MPI)
   target_compile_options(mpi PRIVATE -Wall -Wextra)
 endif ()
 
+option(BUILD_PYTHON "Build the Python extension module (nanobind, stable ABI >= 3.12)" OFF)
+if (BUILD_PYTHON)
+  # nanobind ships inside the active virtualenv (installed with pip), not vcpkg.
+  # Ask the interpreter where its CMake package lives and target the limited API:
+  # a STABLE_ABI module pins Py_LIMITED_API to 0x030C0000, so one .abi3 build runs
+  # on CPython 3.12 and newer. Support for Python < 3.12 is dropped deliberately.
+  find_package(Python 3.12 REQUIRED
+          COMPONENTS Interpreter Development.Module Development.SABIModule)
+  execute_process(
+          COMMAND "${Python_EXECUTABLE}" -c "import nanobind; print(nanobind.cmake_dir())"
+          OUTPUT_VARIABLE nanobind_ROOT OUTPUT_STRIP_TRAILING_WHITESPACE
+          COMMAND_ERROR_IS_FATAL ANY)
+  find_package(nanobind CONFIG REQUIRED)
+
+  nanobind_add_module(_core STABLE_ABI NB_STATIC src/python.cpp)
+  target_link_libraries(_core PRIVATE Eigen3::Eigen Boost::multiprecision)
+  target_compile_features(_core PRIVATE cxx_std_23)
+endif ()
+
 option(BUILD_TESTS "Build the unit test suite" OFF)
 if (BUILD_TESTS)
   enable_testing()
