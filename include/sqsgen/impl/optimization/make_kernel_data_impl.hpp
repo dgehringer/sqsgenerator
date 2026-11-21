@@ -211,7 +211,7 @@ namespace sqsgen::optimization {
     const T rtol = config.rtol;
 
     kernel_data<T> data;
-    data.block_size = config.chunk_size;  // use chunk_size for reseeding to start with
+    data.block_size = config.chunk_size;
     data.objective = std::holds_alternative<configuration::sro_objective<T, Mode>>(config.objective)
                          ? objective_kind::sro
                          : objective_kind::energy;
