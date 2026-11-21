@@ -341,7 +341,6 @@ namespace {
         .def_ro("pairs", &cfg::pairs)
         .def_ro("triplets", &cfg::triplets)
         .def("to_input", &cfg::to_input)
-        // configuration owns Eigen data and is not glaze-serializable; its input form is.
         .def(
             "dump", [](const cfg& c, wire_format fmt) { return dump_bytes(c.to_input(), fmt); },
             "format"_a = wire_format::json)
