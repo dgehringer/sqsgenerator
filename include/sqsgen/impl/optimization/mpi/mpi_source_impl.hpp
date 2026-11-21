@@ -37,7 +37,8 @@ namespace sqsgen::optimization::mpi {
     return message;
   }
 
-  inline std::optional<optimization::package> mpi_source::next(const optimization::report& r) {
+  inline std::optional<optimization::package> mpi_source::next(const optimization::report& r,
+                                                               std::size_t) {
     pending request{.report = r};
     std::unique_lock lock(mutex);
     outbox.push_back(&request);

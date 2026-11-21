@@ -16,6 +16,19 @@
 
 namespace sqsgen::optimization {
 
+  inline void count_pairs(pair_tensor_t<count_t>& counts, const core::pair_list_t& pairs,
+                          const configuration_t& species) {
+    counts.setConstant(0);
+    for (const core::pair& p : pairs) ++counts(p.shell, species[p.i], species[p.j]);
+  }
+
+  inline void count_triplets(triplet_tensor_t<count_t>& counts,
+                             const core::triplet_list_t& triplets, const configuration_t& species) {
+    counts.setConstant(0);
+    for (const core::triplet& t : triplets)
+      ++counts(t.c, species[t.sites[0]], species[t.sites[1]], species[t.sites[2]]);
+  }
+
   namespace detail {
 
     // Calls fn(s, xi, eta, Nbar) once per canonical cell xi <= eta:

@@ -75,9 +75,9 @@ namespace sqsgen::optimization {
     return terms;
   }
 
-  template <class T> pair_tensor_t<T> to_pair_tensor(const pair_sro_t<T>& values,
-                                                     const std::vector<shell_t>& shells,
-                                                     const configuration_t& species, T missing) {
+  template <class T>
+  pair_tensor_t<T> to_pair_tensor(const pair_sro_t<T>& values, const std::vector<shell_t>& shells,
+                                  const std::vector<specie_t>& species, T missing) {
     const auto num_shells = static_cast<Eigen::Index>(shells.size());
     const auto num_species = static_cast<Eigen::Index>(species.size());
     pair_tensor_t<T> tensor(num_shells, num_species, num_species);
@@ -94,7 +94,7 @@ namespace sqsgen::optimization {
   template <class T>
   triplet_tensor_t<T> to_triplet_tensor(const triplet_sro_t<T>& values,
                                         const core::triplet_class_mapping_t& classes,
-                                        const configuration_t& species, T missing) {
+                                        const std::vector<specie_t>& species, T missing) {
     const auto num_classes = static_cast<Eigen::Index>(classes.size());
     const auto num_species = static_cast<Eigen::Index>(species.size());
     triplet_tensor_t<T> tensor(num_classes, num_species, num_species, num_species);

@@ -35,16 +35,17 @@ namespace sqsgen::optimization {
   }
 
   // Package size clamped in four steps; see scheduler::next in scheduler.h.
-  template <class T> inline std::optional<package> scheduler::next(const report<T>& r) {
+  inline std::optional<package> scheduler::next(const report& r) {
     if (r.stop) stop();
     if (finished()) return std::nullopt;
 
     const std::uint64_t B = settings.block_size;
     const std::uint64_t remaining = settings.total - cursor;
 
-    // 1. from the rate
+    // 1. from the rate (no measurement yet: one block B)
+    const double rate = r.rate.value_or(0.0);
     std::uint64_t size
-        = r.rate > 0.0 ? detail::size_from_rate(r.rate, settings.target_seconds, remaining) : B;
+        = rate > 0.0 ? detail::size_from_rate(rate, settings.target_seconds, remaining) : B;
 
     // 2. ramp-up: at most double the previous package
     if (r.done > 0)

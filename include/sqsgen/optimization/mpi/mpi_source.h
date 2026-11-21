@@ -67,7 +67,8 @@ namespace sqsgen::optimization::mpi {
     std::deque<pending*> outbox;
 
     // enqueue the request for the main thread and wait for the answer
-    std::optional<optimization::package> next(const optimization::report& r);
+    // thread: the reporting thread's index; unused here, the request carries only the report
+    std::optional<optimization::package> next(const optimization::report& r, std::size_t thread);
   };
 
   // worker rank, main thread: forward requests until all num_threads threads got done_msg
@@ -81,6 +82,6 @@ namespace sqsgen::optimization::mpi {
 
 }  // namespace sqsgen::optimization::mpi
 
-#include "sqsgen/impl/mpi/mpi_source_impl.hpp"
+#include "sqsgen/impl/optimization/mpi/mpi_source_impl.hpp"
 
 #endif  // SQSGEN_OPTIMIZATION_MPI_MPI_SOURCE_H

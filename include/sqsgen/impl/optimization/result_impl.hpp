@@ -50,14 +50,20 @@ namespace sqsgen::optimization {
   }
 
   template <class T, sublattice_mode Mode> T sqs_result<T, Mode>::total_objective() const {
+    // sum of the pair and triplet objective (over every sublattice in split mode)
+    T total{0};
     if constexpr (Mode == sublattice_mode::interact) {
-      return objective;
+      if (pairs) total += pairs->objective;
+      if (triplets) total += triplets->objective;
     } else if constexpr (Mode == sublattice_mode::split) {
-      return std::accumulate(objective.begin(), objective.end(), T{0.0});
+      if (pairs) total = std::accumulate(pairs->objective.begin(), pairs->objective.end(), total);
+      if (triplets)
+        total = std::accumulate(triplets->objective.begin(), triplets->objective.end(), total);
     } else {
       static_assert(Mode == sublattice_mode::interact || Mode == sublattice_mode::split,
                     "unhandled sublattice_mode");
     }
+    return total;
   }
 
   /**

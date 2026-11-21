@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <map>
 #include <ranges>
+#include <variant>
 #include <vector>
 
 #include "sqsgen/configuration.h"
@@ -211,6 +212,9 @@ namespace sqsgen::optimization {
 
     kernel_data<T> data;
     data.block_size = config.chunk_size;  // use chunk_size for reseeding to start with
+    data.objective = std::holds_alternative<configuration::sro_objective<T, Mode>>(config.objective)
+                         ? objective_kind::sro
+                         : objective_kind::energy;
 
     if constexpr (Mode == sublattice_mode::interact) {
       const core::structure<T> applied

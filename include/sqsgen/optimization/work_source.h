@@ -21,8 +21,8 @@
 namespace sqsgen::optimization {
 
   template <class W>
-  concept work_source = requires(W& w, const report& r) {
-    { w.next(r) } -> std::same_as<std::optional<package>>;
+  concept work_source = requires(W& w, const report& r, std::size_t thread) {
+    { w.next(r, thread) } -> std::same_as<std::optional<package>>;
   };
 
   /**
@@ -51,7 +51,8 @@ namespace sqsgen::optimization {
   struct local_source {
     shared_scheduler& shared;
 
-    std::optional<package> next(const report& r);
+    // thread: the reporting thread's index; unused here, the scheduler is shared
+    std::optional<package> next(const report& r, std::size_t thread);
   };
 
   // value = min(value, candidate), lock-free
@@ -68,6 +69,6 @@ namespace sqsgen::optimization {
 
 }  // namespace sqsgen::optimization
 
-#include "sqsgen/impl/work_source/work_source_impl.hpp"
+#include "sqsgen/impl/optimization/work_source_impl.hpp"
 
 #endif  // SQSGEN_OPTIMIZATION_WORK_SOURCE_H

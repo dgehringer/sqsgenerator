@@ -27,11 +27,23 @@ namespace sqsgen::optimization {
 
   using shell_triple = std::array<shell_t, 3>;
 
+  enum class objective_kind : std::uint8_t { sro, energy };
+
   template <class Tensor> struct objective_terms {
     Tensor A;
     Tensor B;
     Tensor s;
   };
+
+  // Count the bonds into counts(shell, xi, eta); reset to zero, then filled. Unsymmetrized:
+  // every pair increments exactly one cell (the objective sums the cells of a cluster).
+  void count_pairs(pair_tensor_t<count_t>& counts, const core::pair_list_t& pairs,
+                   const configuration_t& species);
+
+  // Count the triangles into counts(class, xi, eta, zeta); reset to zero, then filled.
+  // Unsymmetrized: every triangle increments exactly one cell, in stored (canonical) site order.
+  void count_triplets(triplet_tensor_t<count_t>& counts, const core::triplet_list_t& triplets,
+                      const configuration_t& species);
 
   // O_pairs = sum over shells, xi <= eta of  s |A + Nbar B|
   template <class T> T compute_pair_sro_objective(const pair_tensor_t<count_t>& bonds,

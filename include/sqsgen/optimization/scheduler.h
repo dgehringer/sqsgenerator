@@ -64,6 +64,6 @@ namespace sqsgen::optimization {
 
 }  // namespace sqsgen::optimization
 
-#include "sqsgen/impl/scheduler/scheduler_impl.hpp"
+#include "sqsgen/impl/optimization/scheduler_impl.hpp"
 
 #endif  // SQSGEN_OPTIMIZATION_SCHEDULER_H
