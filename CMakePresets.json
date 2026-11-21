@@ -49,6 +49,23 @@
       }
     },
     {
+      "name": "python",
+      "binaryDir": "${sourceDir}/build/python",
+      "generator": "Ninja",
+      "environment": {
+        "VCPKG_ROOT": "${sourceDir}/vcpkg"
+      },
+      "cacheVariables": {
+        "BUILD_WASM": "OFF",
+        "BUILD_PYTHON": "ON",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_MANIFEST_FEATURES": "python",
+        "Python_EXECUTABLE": "${sourceDir}/.venv/bin/python",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
       "name": "wasm-debug",
       "binaryDir": "${sourceDir}/build/wasm",
       "generator": "Ninja",
