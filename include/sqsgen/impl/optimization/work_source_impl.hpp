@@ -16,7 +16,6 @@ namespace sqsgen::optimization {
     return shared.sched.next(r);
   }
 
-  // r.best is not needed here: local threads share the gate as an atomic directly
   inline std::optional<package> local_source::next(const report& r, std::size_t) {
     return next_package(shared, r);
   }
