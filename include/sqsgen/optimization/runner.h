@@ -37,8 +37,6 @@ namespace sqsgen::optimization {
 
   using sqsgen::configuration::thread_config_t;
 
-  // ======================================================================= progress
-
   // one compute thread, as seen by the process that runs the scheduler
   struct thread_progress {
     std::uint32_t thread;  // index of the thread within its rank
@@ -102,13 +100,11 @@ namespace sqsgen::optimization {
     std::optional<package> next(const report& r, std::size_t thread);
   };
 
-  // ======================================================================= run context
-
   enum class mpi_role : std::uint8_t { single, head, worker };  // single = no MPI
 
   struct run_context {
     mpi_role role{mpi_role::single};
-    std::size_t num_threads{1};           // threads of this process
+    std::size_t num_threads{1};           // threads of the current process
     std::size_t num_remote_consumers{0};  // head only: threads of all other ranks
     std::stop_token stop;                 // stop request from the frontend
     progress_callback on_progress{};      // empty: no progress reporting
