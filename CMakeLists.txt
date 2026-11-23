@@ -19,12 +19,18 @@ add_compile_definitions(
         SQSGEN_MAJOR_VERSION=${VERSION_MAJOR}
 )
 
-option(BUILD_MPI "Build the distributed (MPI) target (C API only)" OFF)
+option(BUILD_CLI "Build the native debug/run CLI (needs the 'cli' vcpkg feature)" OFF)
+option(BUILD_MPI "Build the CLI with distributed (MPI) support (C API only)" OFF)
 
 # MPI is not available for Emscripten/WASM: never build the two together.
 if (BUILD_WASM AND BUILD_MPI)
   message(FATAL_ERROR
           "BUILD_WASM and BUILD_MPI are mutually exclusive: MPI is not supported for WASM/Emscripten builds")
+endif ()
+
+# The CLI is the only target allowed to build with MPI; MPI has no standalone target.
+if (BUILD_MPI AND NOT BUILD_CLI)
+  message(FATAL_ERROR "BUILD_MPI requires BUILD_CLI: the CLI is the only MPI-capable target")
 endif ()
 
 find_package(glaze CONFIG REQUIRED)
@@ -79,15 +85,32 @@ else ()
   target_compile_options(parse PRIVATE -Wall -Wextra)
 endif ()
 
-if (BUILD_MPI)
-  message("Building MPI module")
-  set(MPI_CXX_SKIP_MPICXX ON)
-  find_package(MPI REQUIRED)
-  add_executable(mpi
-    mpi/main.cpp
+if (BUILD_CLI)
+  message("Building CLI")
+  find_package(argparse CONFIG REQUIRED)
+  add_executable(sqsgen
+    src/main.cpp
   )
-  target_link_libraries(mpi PRIVATE MPI::MPI_CXX)
-  target_compile_options(mpi PRIVATE -Wall -Wextra)
+  target_link_libraries(sqsgen PRIVATE
+          absl::hash
+          absl::log
+          absl::str_format
+          argparse::argparse
+          Eigen3::Eigen
+          Boost::multiprecision
+          glaze::glaze
+          unordered_dense::unordered_dense
+  )
+  target_compile_options(sqsgen PRIVATE -Wall -Wextra)
+
+  # The CLI is the only MPI-capable target: link MPI into it instead of a separate executable.
+  if (BUILD_MPI)
+    message("  with MPI support")
+    set(MPI_CXX_SKIP_MPICXX ON)
+    find_package(MPI REQUIRED)
+    target_link_libraries(sqsgen PRIVATE MPI::MPI_CXX)
+    target_compile_definitions(sqsgen PRIVATE SQSGEN_WITH_MPI)
+  endif ()
 endif ()
 
 option(BUILD_PYTHON "Build the Python extension module (nanobind, stable ABI >= 3.12)" OFF)
