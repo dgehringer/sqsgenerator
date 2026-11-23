@@ -12,8 +12,13 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <condition_variable>
 #include <limits>
+#include <mutex>
+#include <stop_token>
 #include <thread>
+#include <type_traits>
+#include <variant>
 
 #include "sqsgen/optimization/optimization.h"
 
@@ -249,6 +254,20 @@ namespace sqsgen::optimization {
     }
   }
 
+  // Iteration count requested by the active mode: the alternative's `iterations`
+  // (nullopt falls back to the default), or nullopt for systematic (which derives
+  // its count from the number of arrangements).
+  inline configuration::iterations_t requested_iterations(const configuration::iteration_t& it) {
+    return std::visit(
+        []<class M>(const M& mode) -> configuration::iterations_t {
+          if constexpr (std::is_same_v<M, configuration::systematic>)
+            return std::nullopt;
+          else
+            return mode.iterations;
+        },
+        it);
+  }
+
   template <class T, sublattice_mode Mode, iteration_mode I>
   optimization_output<T, Mode> optimize(const configuration::configuration<T, Mode>& config,
                                         const run_context& context) {
@@ -272,7 +291,7 @@ namespace sqsgen::optimization {
     optimization_kernel<T, I, decltype(on_hit)> kernel{data, scratch, gate, on_hit, context.stop};
 
     const scheduler_settings settings{
-        .total = total_iterations<T, I>(data, config.iterations),
+        .total = total_iterations<T, I>(data, requested_iterations(config.iteration)),
         .block_size = data.block_size,
         .num_consumers = context.num_threads + context.num_remote_consumers,
         .target_seconds = 1.0,
@@ -281,8 +300,33 @@ namespace sqsgen::optimization {
     switch (context.role) {
       case mpi_role::single: {
         shared_scheduler shared(settings);
-        local_source source{shared};
+        local_source inner{shared};
+        progress_tracker tracker;
+        reset(tracker, settings.total);
+        // tracked_source folds each thread's report into `tracker` once per package
+        tracked_source<local_source> source{inner, tracker, /*rank=*/0};
+
+        // publish progress from a side thread while the compute threads run; it wakes
+        // every progress_interval and once more right after the run for a final frame
+        std::stop_source publish_stop;
+        std::jthread publisher;
+        if (context.on_progress)
+          publisher = std::jthread([&] {
+            std::mutex m;
+            std::condition_variable_any cv;
+            std::unique_lock lock(m);
+            while (!cv.wait_for(lock, publish_stop.get_token(), context.progress_interval,
+                                [&] { return publish_stop.stop_requested(); }))
+              context.on_progress(snapshot(tracker));
+          });
+
         execute(source, kernel, context.num_threads);
+
+        if (publisher.joinable()) {
+          publish_stop.request_stop();
+          publisher.join();
+        }
+        if (context.on_progress) context.on_progress(snapshot(tracker));
         break;
       }
 #ifdef SQSGEN_MPI
@@ -320,13 +364,16 @@ namespace sqsgen::optimization {
   template <class T, sublattice_mode Mode>
   optimization_output<T, Mode> optimize(const configuration::configuration<T, Mode>& config,
                                         const run_context& context) {
-    switch (config.iteration_mode) {
-      case iteration_mode::systematic:
-        return optimize<T, Mode, iteration_mode::systematic>(config, context);
-      case iteration_mode::random:
-      default:
-        return optimize<T, Mode, iteration_mode::random>(config, context);
-    }
+    return std::visit(
+        [&]<class M>(const M&) -> optimization_output<T, Mode> {
+          if constexpr (std::is_same_v<M, configuration::systematic>)
+            return optimize<T, Mode, iteration_mode::systematic>(config, context);
+          else
+            // random and monte_carlo both iterate by random shuffling; the Monte-Carlo
+            // acceptance kernel is not implemented yet, so both use the random kernel.
+            return optimize<T, Mode, iteration_mode::random>(config, context);
+        },
+        config.iteration);
   }
 
 }  // namespace sqsgen::optimization
