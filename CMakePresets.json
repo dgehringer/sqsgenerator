@@ -33,6 +33,22 @@
       }
     },
     {
+      "name": "cli",
+      "binaryDir": "${sourceDir}/build/cli",
+      "generator": "Ninja",
+      "environment": {
+        "VCPKG_ROOT": "${sourceDir}/vcpkg"
+      },
+      "cacheVariables": {
+        "BUILD_WASM": "OFF",
+        "BUILD_CLI": "ON",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_MANIFEST_FEATURES": "cli",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
       "name": "mpi",
       "binaryDir": "${sourceDir}/build/mpi",
       "generator": "Ninja",
@@ -41,10 +57,11 @@
       },
       "cacheVariables": {
         "BUILD_WASM": "OFF",
+        "BUILD_CLI": "ON",
         "BUILD_MPI": "ON",
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_MANIFEST_FEATURES": "mpi",
+        "VCPKG_MANIFEST_FEATURES": "cli;mpi",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
