@@ -43,7 +43,7 @@ namespace sqsgen::optimization {
     for (std::size_t t = 0; t < num_threads; ++t)
       threads.emplace_back([&source, &k, t] {
         report r = initial_report();
-        while (const auto p = source.next(r)) r = k.run(*p, t);
+        while (const auto p = source.next(r, t)) r = k.run(*p, t);
       });
   }
 
