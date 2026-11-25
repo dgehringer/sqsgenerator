@@ -33,8 +33,10 @@
 #include "sqsgen/optimization/runner.h"
 #include "sqsgen/types.h"
 
-#ifdef SQSGEN_WITH_MPI
+#ifdef SQSGEN_MPI
 #  include <mpi.h>
+
+#  include "sqsgen/optimization/mpi/runner.h"
 #endif
 
 namespace {
@@ -88,6 +90,30 @@ namespace {
     return std::nullopt;
   }
 
+  // The rank that owns the terminal: rank 0 under MPI (the head), always true when serial.
+  // Only this rank reads/writes files and prints to the console.
+  bool is_primary() {
+#ifdef SQSGEN_MPI
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    return rank == 0;
+#else
+    return true;
+#endif
+  }
+
+  // Same optimize() call drives both modes; only the run context differs. make_mpi_run_context
+  // is collective (it reduces the thread counts), so every rank must reach it.
+  opt::run_context make_run_context(const cfg::thread_config_t& threads, std::stop_token stop,
+                                    opt::progress_callback on_progress) {
+#ifdef SQSGEN_MPI
+    return opt::mpi::make_mpi_run_context(threads, std::move(stop), std::move(on_progress),
+                                          MPI_COMM_WORLD);
+#else
+    return opt::make_local_run_context(threads, std::move(stop), std::move(on_progress));
+#endif
+  }
+
   // Read and validate an input file into a concrete configuration variant.
   std::expected<cfg::configuration_variant_t, std::string> load_config(const fs::path& input) {
     const auto fmt = format_from_suffix(input);
@@ -114,6 +140,9 @@ namespace {
   // ---------------------------------------------------------------- preprocess
 
   int cmd_preprocess(const fs::path& input, std::optional<fs::path> output) {
+    // Validation/serialization is not collective; only the primary rank does it.
+    if (!is_primary()) return EXIT_SUCCESS;
+
     auto config = load_config(input);
     if (!config) {
       std::cerr << config.error() << '\n';
@@ -180,7 +209,7 @@ namespace {
 
     auto config = load_config(input);
     if (!config) {
-      std::cerr << config.error() << '\n';
+      if (is_primary()) std::cerr << config.error() << '\n';
       return EXIT_FAILURE;
     }
 
@@ -188,7 +217,8 @@ namespace {
     std::signal(SIGINT, on_sigint);
 
     // Fires on the scheduler's main thread, once per progress interval: it is the
-    // place both to draw the bar and to honour a pending Ctrl-C.
+    // place both to draw the bar and to honour a pending Ctrl-C. Under MPI only the
+    // head gets this callback (the factory drops it for workers).
     opt::progress_callback on_progress = [&](const opt::progress& p) {
       if (g_interrupted) stop.request_stop();
       if (!quiet) render_progress(p);
@@ -196,11 +226,13 @@ namespace {
 
     return std::visit(
         [&](const auto& conf) -> int {
-          const auto context
-              = opt::make_local_run_context(conf.thread_config, stop.get_token(), on_progress);
-          log::info("starting optimization on {} thread(s)", context.num_threads);
+          const auto context = make_run_context(conf.thread_config, stop.get_token(), on_progress);
+          if (is_primary()) log::info("starting optimization on {} thread(s)", context.num_threads);
 
+          // optimize() is collective under MPI: every rank calls it; only the head
+          // comes back with results.
           auto out = opt::optimize(conf, context);
+          if (!is_primary()) return EXIT_SUCCESS;
           if (!quiet) std::cerr << '\n';
 
           std::size_t num_results = 0;
@@ -223,8 +255,13 @@ namespace {
 }  // namespace
 
 int main(int argc, char** argv) {
-#ifdef SQSGEN_WITH_MPI
-  MPI_Init(&argc, &argv);
+#ifdef SQSGEN_MPI
+  // optimize() runs compute on std::jthreads while the main thread drives MPI, so the
+  // head/workers need at least MPI_THREAD_FUNNELED (only the main thread calls MPI).
+  int provided = 0;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+  if (provided < MPI_THREAD_FUNNELED && is_primary())
+    std::cerr << "warning: MPI runtime does not provide MPI_THREAD_FUNNELED\n";
 #endif
 
   argparse::ArgumentParser program("sqsgen");
@@ -264,15 +301,15 @@ int main(int argc, char** argv) {
                          run_cmd.get<bool>("--quiet"), level.value());
       }
     } else {
-      std::cerr << program;
+      if (is_primary()) std::cerr << program;
       status = EXIT_FAILURE;
     }
   } catch (const std::exception& e) {
-    std::cerr << e.what() << '\n';
+    if (is_primary()) std::cerr << e.what() << '\n';
     status = EXIT_FAILURE;
   }
 
-#ifdef SQSGEN_WITH_MPI
+#ifdef SQSGEN_MPI
   MPI_Finalize();
 #endif
   return status;
