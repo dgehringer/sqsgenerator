@@ -8,35 +8,13 @@
     "boost-multiprecision"
   ],
   "features": {
-    "native": {
+    "cli": {
       "description": "Native command line tools for SQS generator",
       "dependencies": [
-        "abseil"
-      ]
-    },
-    "python": {
-      "description": "Python bindings for SQS generator",
-      "dependencies": [
-        "eigen3",
-        "boost-multiprecision",
-        "nlohmann-json",
+        "argparse",
+        "abseil",
         "bshoshany-thread-pool",
-        {
-          "name": "abseil",
-          "platform": "!windows"
-        }
-      ]
-    },
-    "tests": {
-      "description": "Unit tests for SQS generator",
-      "dependencies": [
-        "catch2"
-      ]
-    },
-    "wasm": {
-      "description": "WebAssembly support for SQS generator",
-      "dependencies": [
-        "abseil"
+        "nlohmann-json"
       ]
     },
     "mpi": {
